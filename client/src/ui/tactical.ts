@@ -61,6 +61,8 @@ import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId, UnitSpecial } from '../../../shared/src/data/army.ts';
 import { SHIP_BEAST_DEFS, isShipBeast } from '../../../shared/src/data/shipbeasts.ts'; // the premium hulls' own (docs/02 §1.A.9)
 import { deckArt } from '../../../shared/src/data/fleet.ts';
+import { DECK_PW, deckMap } from '../../../shared/src/data/deckmaps.ts';
+import type { DeckMap } from '../../../shared/src/data/deckmaps.ts';
 import { BOSS_UNIT_STAND_IN, isBossUnit } from '../../../shared/src/data/bossunits.ts'; // the great ones ashore (2026-10-03)
 import { TITAN_STAND_IN, isTitan } from '../../../shared/src/data/titans.ts'; // docs/19 E10
 /** The figure that stands in for a great one ashore or a titan until its own is painted (null: none needed). */
@@ -431,6 +433,15 @@ function cover(g: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y:
   const k = Math.max(w / img.naturalWidth, h / img.naturalHeight);
   const dw = img.naturalWidth * k, dh = img.naturalHeight * k;
   g.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+}
+/** Owner, 2026-10-27 (the hexes «в воздухе»): a deck painting on its half-deck's box, zoomed so its plank band at the
+ *  waist spans DECK_PW of the box's five hex widths (its rails at the box's edges, not under the outer column), never
+ *  short of covering the box, and set its `dy` lower (shared/src/data/deckmaps.ts). */
+function layDeckArt(g: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number, m: DeckMap): void {
+  const k = Math.max((w * DECK_PW) / 5 / (2 * m.hw * img.naturalWidth), w / img.naturalWidth, h / img.naturalHeight);
+  const dw = img.naturalWidth * k, dh = img.naturalHeight * k;
+  const top = Math.max(y + h - dh, Math.min(y, y + (h - dh) / 2 + m.dy * h));
+  g.drawImage(img, x + (w - dw) / 2, top, dw, dh);
 }
 /** What stands on a hex as a painted three-quarter prop (owner, 2026-10-02: the battle as in Heroes), by the ground. */
 const PROP_OF: Record<string, (land: string) => string> = {
@@ -4201,8 +4212,12 @@ export class TacticalPanel {
       cover(sg, seaArt.img, 0, 0, this.size.cw + SEA_MARGIN * 2, this.size.ch + SEA_MARGIN * 2);
       for (const x of [0, 1] as const) {
         let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+        // The half-deck's whole box (owner, 2026-10-27: its hexes with no planks under them are water now, and the
+        // painting lies the same with them or without — shared/src/data/deckmaps.ts).
+        const odd = (i: number) => hexY(i) & 1;
         for (let i = 0; i < cells.length; i++) {
-          if (!deck(i) || (x === 0 ? hexX(i) >= 5 : hexX(i) <= 5)) continue;
+          const hx = hexX(i);
+          if (x === 0 ? hx >= 5 - odd(i) : hx <= 5 || hx >= TAC_W - odd(i)) continue;
           const p = this.lc(i);
           x0 = Math.min(x0, p.x - w / 2);
           x1 = Math.max(x1, p.x + w / 2);
@@ -4219,7 +4234,7 @@ export class TacticalPanel {
           g.translate(x0 + x1, 0);
           g.scale(-1, 1);
         }
-        cover(g, decks[x]!.img, x0, y0, x1 - x0, y1 - y0);
+        layDeckArt(g, decks[x]!.img, x0, y0, x1 - x0, y1 - y0, deckMap(v.heroes[x].hull ?? 'brig'));
         g.restore();
         // The hull's shadow on the water along its inner side.
         g.fillStyle = 'rgba(0,0,0,0.35)';

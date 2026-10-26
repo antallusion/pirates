@@ -25,6 +25,7 @@ import type { BtMods, PageFx } from '../../../shared/src/data/paths.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import { FAV_BONUS } from '../../../shared/src/data/drifts.ts';
 import { deckTheme, dressDeck, layDeck, plankRuns } from '../../../shared/src/data/tacprops.ts';
+import { deckVoids } from '../../../shared/src/data/deckmaps.ts';
 import { SK, skillOf } from '../../../shared/src/data/creatureskills.ts';
 import type { SkillId } from '../../../shared/src/data/creatureskills.ts';
 import { aiSkillChoice, castSkill, deathBlast, skillError, skillReady, skillTargets } from './tacskills.ts';
@@ -365,7 +366,7 @@ export const isShooter = (s: TacStack): boolean => sp(s, 'shooter');
 
 /** The two decks, the water between, the planks across it and what stands on deck, from a seed. The field is the
  *  same seen from either rail (the right deck mirrors the left), so neither side stands nearer the planks. */
-export function makeField(seed: number): TacCell[] {
+export function makeField(seed: number, hulls: readonly [string?, string?] = []): TacCell[] {
   const rng = new Rng(seed);
   const cells: TacCell[] = Array.from({ length: TAC_W * TAC_H }, () => '.');
   for (let y = 1; y < TAC_H; y += 2) cells[hexIndex(TAC_W - 1, y)] = '#'; // odd rows are a hex shorter
@@ -373,11 +374,19 @@ export function makeField(seed: number): TacCell[] {
     cells[hexIndex(TAC_GAP, y)] = '~';
     if (y & 1) cells[hexIndex(TAC_GAP - 1, y)] = '~';
   }
-  // Three planks where the grapples bit: amidships, and one fore and one aft.
-  for (const rows of [[0, 2], [4], [6, 8]]) cells[hexIndex(TAC_GAP, rng.pick(rows))] = '=';
+  // Owner, 2026-10-27: the hexes each deck's painting has no planks under (the bow's corners, the stern's posts —
+  // shared/src/data/deckmaps.ts) are water: no footing, nobody deploys there.
+  const voids = new Set([...deckVoids(hulls[0], 0), ...deckVoids(hulls[1], 1)]);
+  // Three planks where the grapples bit: amidships, and one fore and one aft — on rows both decks reach.
+  const lands = (y: number) => !voids.has(hexIndex(TAC_GAP - 1, y)) && !voids.has(hexIndex(TAC_GAP + 1, y));
+  for (const rows of [[0, 2], [4], [6, 8]]) {
+    const ok = rows.filter(lands);
+    cells[hexIndex(TAC_GAP, rng.pick(ok.length ? ok : rows))] = '=';
+  }
   // The left deck: her mast, a gun at the bow or the stern and a few things more, drawn anew each battle (owner,
   // 2026-10-18; shared/src/data/tacprops.ts layDeck); the right the same.
   layDeck(cells, rng);
+  for (const i of voids) if (cells[i] === '.') cells[i] = '~';
   return cells;
 }
 
@@ -667,7 +676,7 @@ export function newBattle(a: TacSideInput, b: TacSideInput, seed: number, now: n
   const max = sg ? Array.from({ length: TAC_H }, (_, y) => Math.max(1, Math.round(sg.max?.[y] ?? SIEGE.hp))) : [];
   const hp = sg ? max.map((m, y) => Math.max(0, Math.min(m, Math.round(sg.hp?.[y] ?? m)))) : [];
   // docs/19 E14: a bout of the Colosseum on its own sand (no deck of either ship: no holes, no fire).
-  const cells = sg ? makeSiegeField(seed, sg.type, hp, max) : land ? makeLandField(seed, land) : opts.arena ? makeArenaField(seed) : makeField(seed);
+  const cells = sg ? makeSiegeField(seed, sg.type, hp, max) : land ? makeLandField(seed, land) : opts.arena ? makeArenaField(seed) : makeField(seed, [a.hull, b.hull]);
   // Ashore (docs/18 II) the ship's guns are not there: no holes, no fire, no swivels.
   if (!land && !opts.arena) for (const [x, side] of [[a, 0], [b, 1]] as const) if ((x.holes ?? 0) > 0 || x.fire) scarDeck(cells, side, x.holes ?? 0, !!x.fire, seed);
   // Tactics (docs/17 H2; balance pass 2026-10-13, docs/31): each side's own, not the higher hand's — her first blows
