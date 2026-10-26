@@ -24,6 +24,8 @@ export const FACE_AIM = 0.32;
 export const FACE_AIM_MAX = 0.6;
 /** Where the face's middle stands, as a share of the hole's height from its top. */
 export const FACE_Y = 0.44;
+/** How much wider than the ring's measured hole the portrait is laid (under the ring's inner lip). */
+export const HOLE_BLEED = 1.12;
 /** The most a cosmetic frame is drawn wider than the avatar's box. */
 export const FRAME_GROW_MAX = 1.35;
 
@@ -121,7 +123,10 @@ export function avatarHtml(o: AvatarOpts): string {
   const g = ringFit(ring, stock);
   const f = faceFit(o.face);
   const key = portraitKey(o.face);
-  const inset = pct((1 - g.hole) / 2), side = pct(g.hole);
+  // (owner, 2026-10-26: a dark band showed between the face and the brass — the ring's inner lip is dark and
+  // half-clear) the portrait runs a little under the ring's inner edge, so the brass covers the seam
+  const hb = Math.min(0.98, g.hole * HOLE_BLEED);
+  const inset = pct((1 - hb) / 2), side = pct(hb);
   const bg = o.url ? `;background-image:url('${escAttr(o.url)}');background-size:${f.size};background-position:${f.pos}` : '';
   const face = `<span class="pav-face" style="left:${inset};top:${inset};width:${side};height:${side}${bg}"></span>`;
   const ringEl = ring && o.ringUrl

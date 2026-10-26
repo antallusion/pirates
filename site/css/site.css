@@ -239,9 +239,9 @@ p { margin: 0 0 1em; }
    in the middle) and the ring are shares of its side, so they grow and shrink together at every size */
 .pav { position: relative; display: inline-block; margin: 0; padding: 0; border: 0; border-radius: 50%; background: none; box-shadow: none; vertical-align: middle; line-height: 1; }
 .pav.pav { flex: none !important; box-sizing: border-box !important; width: var(--pav, 48px) !important; height: var(--pav, 48px) !important; min-width: var(--pav, 48px) !important; min-height: var(--pav, 48px) !important; max-width: none !important; max-height: none !important; aspect-ratio: 1 !important; }
-.pav > .pav-face { position: absolute; box-sizing: border-box; border-radius: 50%; background-color: #0a0e18; background-repeat: no-repeat; box-shadow: inset 0 0 calc(var(--pav, 48px) * 0.08) rgba(0, 0, 0, 0.65); }
+.pav > .pav-face { position: absolute; box-sizing: border-box; border-radius: 50%; background-color: #0a0e18; background-repeat: no-repeat; box-shadow: inset 0 0 calc(var(--pav, 48px) * 0.03) rgba(0, 0, 0, 0.45); }
 .pav > .pav-ring { position: absolute; z-index: 1; display: block; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; pointer-events: none; filter: drop-shadow(0 calc(var(--pav, 48px) * 0.03) calc(var(--pav, 48px) * 0.05) rgba(0, 0, 0, 0.7)); }
-.pav.pav-rim > .pav-face { box-shadow: 0 0 0 2px color-mix(in srgb, var(--tint, var(--gold2)) 80%, transparent), 0 3px 8px rgba(0, 0, 0, 0.6), inset 0 0 calc(var(--pav, 48px) * 0.08) rgba(0, 0, 0, 0.65); }
+.pav.pav-rim > .pav-face { box-shadow: 0 0 0 2px color-mix(in srgb, var(--tint, var(--gold2)) 80%, transparent), 0 3px 8px rgba(0, 0, 0, 0.6), inset 0 0 calc(var(--pav, 48px) * 0.03) rgba(0, 0, 0, 0.45); }
 .pav.pav-bare > .pav-face { box-shadow: 0 0 0 2px color-mix(in srgb, var(--tint, var(--gold2)) 80%, transparent), 0 3px 8px rgba(0, 0, 0, 0.6); }
 .pav > :not(.pav-face):not(.pav-ring) { z-index: 2; }
 
