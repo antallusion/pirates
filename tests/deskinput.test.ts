@@ -31,7 +31,9 @@ test('a left click on the open sea sails her there (simple HUD); a drag pans, a 
   assert.equal(leftClickSea({ ...base, simple: false }), 'fire', 'the detailed HUD fires as it always did');
   // the press is only kept with nothing under it, and the lift must land on the sea itself (not the HUD, not a window)
   assert.match(main, /seaPress = !mk && !pl \? \{ x: e\.clientX, y: e\.clientY \} : null;/);
-  const up = main.slice(main.indexOf("addEventListener('mouseup', (e) => {\n  const p = seaPress;"), main.indexOf("addEventListener('mouseup', (e) => {\n  const p = seaPress;") + 400);
+  const upAt = main.search(/addEventListener\('mouseup', \(e\) => \{\r?\n  const p = seaPress;/);
+  assert.ok(upAt > 0);
+  const up = main.slice(upAt, upAt + 400);
   assert.match(up, /e\.target !== canvas/);
   assert.match(up, /leftClickSea\(/);
   assert.match(up, /sailToScreen\(e\.clientX, e\.clientY\)/);
@@ -153,4 +155,14 @@ test('the level-up card is not modal for the game\'s keys: WASD, Space, the hotk
   assert.match(layer, /if \(layer\.passKeys\) return;/, 'it takes no focus as it opens (Space would press a pick)');
   const sheet = readFileSync(new URL('../client/src/ui/kit/sheet.ts', import.meta.url), 'utf8');
   assert.match(sheet, /passKeys: o\.passKeys/);
+});
+
+test('a window open (the settings, any other): F and every ship\'s key wait; only the windows\' own keys and Esc act', async () => {
+  const { keyActsInWindow } = await import('../client/src/ui/deskinput.ts');
+  for (const a of ['dock', 'fire', 'firePort', 'sailUp', 'rudderLeft', 'dash', 'board', 'land', 'repair', 'target', 'talent1', 'abilityZ']) assert.equal(keyActsInWindow(a), false, a);
+  for (const a of ['map', 'journal', 'help', 'mute']) assert.equal(keyActsInWindow(a), true, a);
+  const at = main.indexOf('if (modal && !keyActsInWindow(act)) return;');
+  assert.ok(at > 0, 'wired in the keymap\'s handler');
+  // after the keymap's lookup and Esc's own branch, before the key is held or the switch acts
+  assert.ok(at > main.indexOf("if (k === 'escape') {") && at < main.indexOf('  keys.add(k);', at) && at < main.indexOf("    case 'dock': {"));
 });

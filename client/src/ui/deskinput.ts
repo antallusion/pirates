@@ -61,3 +61,12 @@ export function soloModifier(k: string, e: { altKey: boolean; ctrlKey: boolean; 
   const others = (e.altKey && k !== 'alt' ? 1 : 0) + (e.ctrlKey && k !== 'control' ? 1 : 0) + (e.metaKey ? 1 : 0) + (e.shiftKey && k !== 'shift' ? 1 : 0);
   return others === 0;
 }
+
+/** The keymap's actions that still act with a window open: the windows' own keys (one opens, or shuts, its window;
+ *  the harbour's brings the port back) and the sound. Every ship's order — F (to sea / dock), the guns, the sails, the
+ *  helm — waits until the window is shut (batch-pc, owner 2026-10-26: F undocked her under the settings). Esc is
+ *  handled before the keymap. */
+const WINDOW_KEYS = new Set(['map', 'journal', 'talents', 'ship', 'crew', 'company', 'help', 'harbour', 'mute', 'readAloud']);
+export function keyActsInWindow(act: string): boolean {
+  return WINDOW_KEYS.has(act);
+}

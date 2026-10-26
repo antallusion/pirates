@@ -136,7 +136,7 @@ import { renderChoice, renderTattoos } from './ui/tattoos.ts';
 import { renderDice, tickDice } from './ui/dice.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
 import { TutorPointer, shotStage } from './ui/pointer.ts';
-import { leftClickSea, rightClickAct, soloModifier, wheelZoom, windowTab } from './ui/deskinput.ts';
+import { keyActsInWindow, leftClickSea, rightClickAct, soloModifier, wheelZoom, windowTab } from './ui/deskinput.ts';
 import { resumeAfterEnd, resumeOn } from './ui/resumesail.ts';
 import { hereAct } from './ui/questact.ts'; // owner, 2026-10-23: a quest step done in this port
 import { buzz, guardVibrate } from './haptics.ts';
@@ -2956,6 +2956,8 @@ addEventListener('keydown', (e) => {
   if (e.isTrusted) modTap = null;
   const act = actionFor(settings().keys, k);
   if (!act) return;
+  // (batch-pc: with a window open only the windows' own keys act — F, the guns, the helm wait until it is shut)
+  if (modal && !keyActsInWindow(act)) return;
   // Arrows and Space must not scroll the page.
   if (k === ' ' || k.startsWith('arrow') || /^f\d+$/.test(k)) e.preventDefault();
   if (e.repeat && act !== 'rudderLeft' && act !== 'rudderRight') return;
