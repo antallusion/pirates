@@ -1,7 +1,7 @@
 // The beasts' sea fight (owner, 2026-10-07: «акулы всякие они не должны убивать моих людей, как они команду могут
 // убить? я вот уже сражаюсь с акулой минуты 2, это не нормально вообще. где баланс?»): a captain's «Атаковать» on a
 // beast of her level, her helmsman and gun captains doing the rest (beastfight.ts). No beast takes a man; an ordinary
-// one dies in 10–20 s of her guns, a great whale in 20–30, a rare one in no more than 40; a beast that runs turns at
+// one dies in 10–20 s of her guns, a great whale in 20–30, a rare one in no more than 40 (owner 2026-10-26: NPC HP ×0.5 — halved: 5–10, 10–15, 20); a beast that runs turns at
 // bay, and a chase that finds nothing to hit is given up; the hunter's hour is not doubled by the quicker kill.
 // `node tools/mobile/beast-time.ts` prints the whole table.
 
@@ -59,7 +59,7 @@ test('a shark bites the hull and now and then the rudder — never the men — a
   clearBeasts(game);
 });
 
-test('the fight\'s length: an ordinary beast of her level 10–20 s of her guns, a great whale 20–30, a rare one no more than 40 (⚓1/3/5/8)', () => {
+test('the fight\'s length (owner 2026-10-26: NPC HP ×0.5): an ordinary beast of her level 5–10 s of her guns, a great whale 10–15, a rare one no more than 20 (⚓1/3/5/8)', () => {
   for (const r of measured()) {
     const [lo, hi] = BEAST_BAND[r.beast];
     assert.ok(r.fightMed <= hi && r.fightMed >= lo * 0.5, `⚓${r.level} ${r.beast} ⚓${r.blevel}: ${r.fightMed} s from the first broadside (band ${lo}–${hi})`);

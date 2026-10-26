@@ -24,10 +24,11 @@ export const BEAST_HULL: Record<number, ShipClassId> = { 1: 'sloop', 2: 'sloop',
 
 /** The bands the owner set (2026-10-07): an ordinary beast of her level dies in 10–20 s of guns at close range, a big
  *  whale in 20–30 s, a rare one in no more than 40 s. */
+// (owner 2026-10-26: NPC HP ×0.5 — every band halved: was 10–20, 20–30, 20–40)
 export const BEAST_BAND: Record<BeastId, [number, number]> = {
-  shark: [10, 20], orca: [10, 20], narwhal: [10, 20],
-  humpback: [20, 30], sperm_whale: [20, 30],
-  white_orca: [20, 40], young_serpent: [20, 40],
+  shark: [5, 10], orca: [5, 10], narwhal: [5, 10],
+  humpback: [10, 15], sperm_whale: [10, 15],
+  white_orca: [10, 20], young_serpent: [10, 20],
 };
 
 export interface BeastRun {

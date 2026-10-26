@@ -27,6 +27,7 @@ import { serverText } from '../client/src/lang/server.ts';
 import { SERVER_RU_ADMIN } from '../client/src/lang/server.ru.admin.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { applyDataLocale } from '../client/src/lang/data.ts';
+import { NPC_HP_MUL } from '../shared/src/data/seabalance.ts';
 import { averageShip, fairWeather, soloDps, squad } from './balance/zonebosses.ts';
 import { duelSea, putSide } from './balance/duel.ts';
 import { join, makeGame, steps } from './helpers.ts';
@@ -276,20 +277,22 @@ test('boarding gives the captain\'s gear, the guns the ship\'s (docs/21 §5)', (
   }
 });
 
-test('the squad sim (docs/21 §4): ten sink her in 15–20 min, five in 35–45, one alone never — and sinks', () => {
+test('the squad sim (docs/21 §4; owner 2026-10-26: NPC HP ×0.5): ten sink her in 6–10 min, five in 12–20, one alone never — and sinks', () => {
   const rows: string[] = [];
+  // (owner 2026-10-26: NPC HP ×0.5 — her hull halved, the squads' minutes too: was 15–20 and 35–45)
+  const TEN = [6, 10], FIVE = [12, 20], PRESS = 0.15; // (6.3–8.3 and 12.6–16.7 min on the cut's commit; hard pressed was > 0.3)
   for (const r of REGION_IDS) {
     const def = ZONE_BOSSES[r];
     const dps = soloDps(r);
     const ship = averageShip(def.level);
-    const hull = SHIP_CLASSES[def.classId].hull;
+    const hull = SHIP_CLASSES[def.classId].hull * NPC_HP_MUL; // owner 2026-10-26: NPC HP ×0.5 — the zone boss's hull too
     const ten = squad(def, hull, 10, dps, ship), five = squad(def, hull, 5, dps, ship), one = squad(def, hull, 1, dps, ship);
     rows.push(`${r} ⚓${def.level}: ${dps.toFixed(2)}/s · 10 → ${(ten.killSec! / 60).toFixed(1)} min · 5 → ${(five.killSec! / 60).toFixed(1)} min · 1 sinks at ${(one.sunkSec! / 60).toFixed(1)} min`);
-    assert.ok(ten.killSec !== null && ten.killSec >= 15 * 60 && ten.killSec <= 20 * 60, `${r}: ten in ${ten.killSec}s`);
+    assert.ok(ten.killSec !== null && ten.killSec >= TEN[0] * 60 && ten.killSec <= TEN[1] * 60, `${r}: ten in ${ten.killSec}s`);
     assert.equal(ten.alive, 10, `${r}: the ten live`);
-    assert.ok(five.killSec !== null && five.killSec >= 35 * 60 && five.killSec <= 45 * 60, `${r}: five in ${five.killSec}s`);
+    assert.ok(five.killSec !== null && five.killSec >= FIVE[0] * 60 && five.killSec <= FIVE[1] * 60, `${r}: five in ${five.killSec}s`);
     assert.equal(five.alive, 5, `${r}: the five live`);
-    assert.ok(five.hullLost > 0.3 && five.hullLost < 0.9, `${r}: five hard pressed (${five.hullLost})`);
+    assert.ok(five.hullLost > PRESS && five.hullLost < 0.9, `${r}: five hard pressed (${five.hullLost})`);
     assert.equal(one.killSec, null, `${r}: one alone never sinks her`);
     assert.ok(one.sunkSec !== null && one.sunkSec < 3600, `${r}: one alone sinks`);
   }
