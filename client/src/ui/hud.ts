@@ -202,13 +202,26 @@ export function fitTransient(): void {
     // …or all the passing words together over the budget's 15% of the screen (with a margin).
     return popupShare() > 0.14;
   };
-  body.classList.remove('pb-1', 'pb-2', 'pb-3');
+  const STEPS = ['pb-1', 'pb-2', 'pb-3'] as const; // (pb-3: a short screen — the hint waits too, its card stays)
+  // (batch-pc: from the step it stands at, measured as the page is laid — no class written while nothing changes. A
+  // terser step is never larger, so over at this step means over at every one before it: step on from here. Under the
+  // budget at a terser step: the plainer ones are tried again from the start, as before.)
+  let at = 0;
+  while (at < STEPS.length && body.classList.contains(STEPS[at])) at++;
+  if (at === 0 || over()) {
+    if (at === 0 && !over()) return;
+    while (at < STEPS.length) {
+      body.classList.add(STEPS[at++]);
+      if (at === STEPS.length || !over()) return;
+    }
+    return;
+  }
+  body.classList.remove(...STEPS);
   if (!over()) return;
-  body.classList.add('pb-1');
-  if (!over()) return;
-  body.classList.add('pb-2');
-  if (!over()) return;
-  body.classList.add('pb-3'); // a short screen: the hint waits too (its card stays where it was)
+  for (const c of STEPS) {
+    body.classList.add(c);
+    if (c === 'pb-3' || !over()) return;
+  }
 }
 
 /** What share of the screen the passing words cover now: the stack's hint, news and boss's card, the toasts in their
@@ -223,6 +236,49 @@ export function popupShare(): number {
     area += r.width * r.height;
   }
   return area / Math.max(1, innerWidth * innerHeight);
+}
+
+/** What the popup budget's measure depends on, read without a layout (batch-pc: fitTransient and the toasts' clipping
+ *  measured every frame of a sea fight — something in the stack or on <body> is touched each frame (a toast's live
+ *  counter, a class set again), and each touch forced a whole layout; 18 FPS on a desk slowed 4×): the screen, the
+ *  classes and inline styles that place the blocks (the pb-* steps and tq-out, the measure's own output, left out),
+ *  how many blocks, and the words of those matching `words` by their length. A block's size changing with the same
+ *  signature is a ResizeObserver's word (Hud's constructor). The same signature, the same rects: no measure. */
+export function layoutSig(sel: string, outCls: RegExp, words = ''): string {
+  const d = document, parts: (string | number)[] = [innerWidth, innerHeight, d.documentElement.getAttribute('style') ?? '', d.body.className.replace(outCls, ''), d.body.getAttribute('style') ?? ''];
+  for (const e of d.querySelectorAll<HTMLElement>(sel)) parts.push(e.id, e.className.replace(outCls, ''), e.getAttribute('style') ?? '', e.childElementCount, words && e.matches(words) ? e.textContent?.length ?? 0 : '');
+  return parts.join('|');
+}
+/** The blocks the popup budget sums (popupShare's and fitTransient's) and the stack they stand in. */
+export const BUDGET_SEL = '#hud-stack, #hud-tip, #hud-boss, #hud-feed, #advcard, #encounter, #toasts, #toasts > .toast, #hud-prompt .act-info';
+/** The action bar's hint line is laid anew with its words (no box kept to observe): counted by its words. */
+export const BUDGET_WORDS = '.act-info';
+// (k-toast-out: a leaving toast's fade — opacity only, the budget counts it the same until it is gone)
+export const PB_CLS = /\b(pb-[123]|k-toast-out)\b/g;
+/** The toasts' band and its toasts (the clipping's inputs). */
+export const CLIP_SEL = '#toasts, #toasts > *';
+export const CLIP_CLS = /\b(tq-out|k-toast-out)\b/g;
+
+/** Whether the minimap's cached island layer must be laid again: she sailed a quarter of the dial off its centre, the
+ *  scale changed (the Star Reader's night), an island came or went, or it is 3 s old (a find, a mist lifted). */
+export function miniLayerStale(l: { cx: number; cy: number; k: number; n: number; at: number }, own: { x: number; y: number }, range: number, k: number, n: number, now: number): boolean {
+  return l.k !== k || l.n !== n || now - l.at > 3000 || Math.abs(own.x - l.cx) > range / 2 || Math.abs(own.y - l.cy) > range / 2;
+}
+
+/** Run after the next frame is laid out and painted (a task queued from its animation frame): the page's layout is
+ *  clean then, and reading a rect costs nothing — read in the animation frame itself, before the game's own writes are
+ *  laid, each read forced a layout of its own (batch-pc). */
+export function afterLayout(f: () => void): void {
+  requestAnimationFrame(() => setTimeout(f, 0));
+}
+
+/** A CSS variable written only when its value changes (batch-pc: the toasts' placing wrote the same values again on
+ *  every resize of the bottom block — each write dirtied the styles and the next rect read forced a layout). */
+export function setVar(el: HTMLElement, k: string, v: string): void {
+  if (el.style.getPropertyValue(k) !== v) el.style.setProperty(k, v);
+}
+export function dropVar(el: HTMLElement, k: string): void {
+  if (el.style.getPropertyValue(k) !== '') el.style.removeProperty(k);
 }
 
 /** A place for the toasts' strip (h tall) in a side column, out of the screen's middle columns (the popup budget's
@@ -352,25 +408,42 @@ export class Hud {
     // The toast column stands on top of the bottom block, whatever its height (a prompt, a two-row action bar).
     const bottom = $('hud-bottom');
     // In the HUD's own pixels: the HUD is zoomed by the interface scale and density (docs/16 #40).
-    const zoom = () => Number(getComputedStyle($('hud')).zoom) || 1;
+    // (batch-pc: cached by what sets it — the interface scale on <html>, the density's class on <body>, the screen —
+    // a getComputedStyle per call forced a style pass several times a frame)
+    let zoomKey = '', zoomVal = 1;
+    const zoom = () => {
+      const k = `${document.documentElement.getAttribute('style') ?? ''}|${document.body.className}|${innerWidth}x${innerHeight}`;
+      if (k !== zoomKey) {
+        zoomKey = k;
+        zoomVal = Number(getComputedStyle($('hud')).zoom) || 1;
+      }
+      return zoomVal;
+    };
+    let placedAt = '';
     const place = () => {
       const r = bottom.getBoundingClientRect();
-      document.body.style.setProperty('--hb-top', `${r.height > 0 ? Math.max(0, innerHeight - r.top) / zoom() : 0}px`);
-      if (r.width > 0) document.body.style.setProperty('--hb-left', `${Math.round(r.left / zoom())}px`); // the desk's toasts keep left of it
+      setVar(document.body, '--hb-top', `${r.height > 0 ? Math.max(0, innerHeight - r.top) / zoom() : 0}px`);
+      if (r.width > 0) setVar(document.body, '--hb-left', `${Math.round(r.left / zoom())}px`); // the desk's toasts keep left of it
       // A short screen: the action bar's hint line takes the fire mode's line inside the bar (styles.css «ai-low»),
       // in the bottom band — over the buttons it stood in the screen's middle (QA circle: 64–68% of 640×360).
       const mode = bottom.querySelector<HTMLElement>('.ab-mode');
       const mr = mode?.getBoundingClientRect();
       const low = matchMedia(SHORT).matches && !!mr && mr.height > 0;
       document.body.classList.toggle('ai-low', low);
-      if (low) document.body.style.setProperty('--abm-b', `${Math.round((r.bottom - mr!.bottom) / zoom())}px`);
-      this.placeStrip(); // the toasts' band follows the block's height
+      if (low) setVar(document.body, '--abm-b', `${Math.round((r.bottom - mr!.bottom) / zoom())}px`);
+      // the toasts' band follows the block's height — when it moved (batch-pc: a button popping in resized the block
+      // frame by frame and each frame measured the whole top band again)
+      const at = `${Math.round(r.top)}|${Math.round(r.left)}|${Math.round(r.height)}|${low}|${innerWidth}x${innerHeight}`;
+      // (the simple HUD's band is the top one — the captain's plate, the chart, the corner's buttons — not the bottom's)
+      if (at === placedAt || simpleHud()) return;
+      placedAt = at;
+      this.placeStrip();
     };
     new ResizeObserver(place).observe(bottom);
     addEventListener('resize', place);
     // On a wide screen the toasts stand under the chart's lines, however many there are (a quest, world events).
     const region = $('hud-region');
-    const under = () => document.body.style.setProperty('--rg-bottom', `${Math.round(region.getBoundingClientRect().bottom / zoom())}px`);
+    const under = () => setVar(document.body, '--rg-bottom', `${Math.round(region.getBoundingClientRect().bottom / zoom())}px`);
     new ResizeObserver(under).observe(region);
     addEventListener('resize', under);
     // A short screen's bottom is the action bar's: there the toasts keep to the top row, from the fold button to the
@@ -388,7 +461,7 @@ export class Hud {
         const r = el.getBoundingClientRect();
         if (r.width && r.left > left && r.top < top + h && r.bottom > top) right = Math.min(right, r.left - 8 * z);
       }
-      const set = (k: string, v: number) => document.body.style.setProperty(k, `${Math.round(v / z)}px`);
+      const set = (k: string, v: number) => setVar(document.body, k, `${Math.round(v / z)}px`);
       set('--ts-top', top);
       set('--ts-left', left);
       set('--ts-w', Math.max(120 * z, right - left));
@@ -403,7 +476,7 @@ export class Hud {
         set('--tq-top', spot.top);
         set('--tq-left', spot.left);
         set('--tq-w', spot.w);
-      } else for (const k of ['--tq-top', '--tq-left', '--tq-w']) document.body.style.removeProperty(k);
+      } else for (const k of ['--tq-top', '--tq-left', '--tq-w']) dropVar(document.body, k);
     };
     new MutationObserver(() => this.placeStrip()).observe($('advcard'), { attributes: true, attributeFilter: ['class'] });
     // (the simple HUD's top band follows the captain's plate, the chart and the card unfolded or folded; the toasts the
@@ -434,11 +507,21 @@ export class Hud {
     new ResizeObserver(this.placeStrip).observe(stack);
     addEventListener('resize', this.placeStrip);
     // The popup budget: the hint, the news and a boss's card keep out of the screen's centre, terser step by step.
-    let fitting = false;
-    const fit = () => {
+    // (batch-pc: measured only when what it measures changed — layoutSig — not on every touch of the stack or <body>;
+    // the budget's steps are the same)
+    let fitting = false, fitSig = '', fitForced = false;
+    const fit = (force?: unknown) => {
+      if (force === true) fitForced = true;
       if (fitting) return;
       fitting = true;
-      requestAnimationFrame(() => { fitting = false; fitTransient(); });
+      afterLayout(() => {
+        fitting = false;
+        const sig = layoutSig(BUDGET_SEL, PB_CLS, BUDGET_WORDS);
+        if (sig === fitSig && !fitForced) return;
+        fitForced = false;
+        fitTransient();
+        fitSig = layoutSig(BUDGET_SEL, PB_CLS, BUDGET_WORDS);
+      });
     };
     new MutationObserver(fit).observe(stack, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
     new ResizeObserver(fit).observe(stack);
@@ -450,23 +533,45 @@ export class Hud {
     // A toast the band has no room for wraps into a column past its edge, clipped out of sight: hidden outright, so it
     // is neither half-drawn at the edge nor taken for one lying over the chart or the menu (docs/22: hudOverlap at
     // 640×360 and 800×450). It shows again when the ones before it are gone.
-    let clipping = false;
-    const clip = () => {
+    // (batch-pc: measured only when the band or its toasts changed — layoutSig — and the rects read in one pass before
+    // any class is written: a toggle between two reads forced a layout per toast)
+    let clipping = false, clipSig = '', clipForced = false;
+    const clip = (force?: unknown) => {
+      if (force === true) clipForced = true;
       if (clipping) return;
       clipping = true;
-      requestAnimationFrame(() => {
+      afterLayout(() => {
         clipping = false;
+        const sig = layoutSig(CLIP_SEL, CLIP_CLS);
+        if (sig === clipSig && !clipForced) return;
+        clipSig = sig;
+        clipForced = false;
         const b = this.toastsEl.getBoundingClientRect();
-        for (const t of this.toastsEl.children) {
+        const out = [...this.toastsEl.children].map((t) => {
           const r = t.getBoundingClientRect();
-          t.classList.toggle('tq-out', r.left >= b.right - 2 || r.right <= b.left + 2 || r.top >= b.bottom - 2 || r.bottom <= b.top + 2);
-        }
+          return r.left >= b.right - 2 || r.right <= b.left + 2 || r.top >= b.bottom - 2 || r.bottom <= b.top + 2;
+        });
+        [...this.toastsEl.children].forEach((t, i) => t.classList.toggle('tq-out', out[i]));
       });
     };
     new MutationObserver(clip).observe(this.toastsEl, { childList: true, subtree: true, characterData: true });
     new MutationObserver(clip).observe(document.body, { attributes: true, attributeFilter: ['class', 'style'] });
     new ResizeObserver(clip).observe(this.toastsEl);
     addEventListener('resize', clip);
+    // A block of the budget, or a toast, that grew or shrank (its words changed and wrapped): measured again; words
+    // changed in the same box (a toast's live counter, a boss's hull) are not.
+    const sized = new ResizeObserver(() => {
+      fit(true);
+      clip(true);
+    });
+    for (const id of [...TRANSIENT, 'advcard', 'encounter']) { const e = document.getElementById(id); if (e) sized.observe(e); }
+    for (const t of this.toastsEl.children) sized.observe(t);
+    new MutationObserver((ms) => {
+      for (const m of ms) {
+        for (const n of m.addedNodes) if (n instanceof Element) sized.observe(n);
+        for (const n of m.removedNodes) if (n instanceof Element) sized.unobserve(n);
+      }
+    }).observe(this.toastsEl, { childList: true });
     this.wireFold();
   }
 
@@ -506,7 +611,7 @@ export class Hud {
     if (!Number.isFinite(bandTop)) bandTop = 8 * z;
     // the left row of round buttons (the chat, «Остров», her offer: seahud.css) stands under the plate as it is seen
     const plateBottom = bandBottom || bandTop + 40 * z;
-    body.style.setProperty('--lr-top', `${Math.round((plateBottom + 8 * z) / z)}px`);
+    setVar(body, '--lr-top', `${Math.round((plateBottom + 8 * z) / z)}px`);
     bandBottom = Math.max(bandBottom, bandTop + 40 * z);
     // the round buttons under the chart (the chat's with the chart stepped up stands under its tab): the band keeps
     // clear of any that reach into it, the toasts of any beside them
@@ -534,11 +639,11 @@ export class Hud {
     // to the screen's middle cut her mark's name to «R…»).
     const half = Math.max(0, Math.min((right - left) / 2, 230 * z));
     const sw = Math.max(150 * z, half * 2), sx = Math.max(8 * z, (left + right) / 2 - sw / 2);
-    const set = (k: string, v: number) => body.style.setProperty(k, `${Math.round(v / z)}px`);
+    const set = (k: string, v: number) => setVar(body, k, `${Math.round(v / z)}px`);
     set('--sk-left', sx);
     set('--sk-w', sw);
     // the adventure card spans the whole free row, as tall as the plate (seahud.css; it stands outside the HUD's zoom)
-    const raw = (k: string, v: number) => body.style.setProperty(k, `${Math.round(v)}px`);
+    const raw = (k: string, v: number) => setVar(body, k, `${Math.round(v)}px`);
     raw('--tb-top', bandTop);
     raw('--tb-left', left);
     raw('--tb-w', Math.max(150 * z, cardRight - left));
@@ -547,7 +652,7 @@ export class Hud {
     // chest — they hide the column: 2026-10-15, «к цели: … · 4,6 км» and its «Стоп» went with it): stacked under the card.
     const as = document.getElementById('hud-autosail');
     let shift = 0;
-    body.style.removeProperty('--as-shift');
+    dropVar(body, '--as-shift');
     if (as && !as.classList.contains('hidden')) {
       const ar = as.getBoundingClientRect();
       for (const c of document.querySelectorAll('#advcard:not(.hidden), #encounter:not(.hidden), #surrender:not(.hidden), #lairchest:not(.hidden)')) {
@@ -640,7 +745,7 @@ export class Hud {
     const roomy = innerHeight - hb - 6 * z - h >= innerHeight * CENTRE.to - 1;
     const spot = desk || roomy || body.classList.contains('tac') ? null : sideSpot(46 * z, z);
     body.classList.toggle('tq-side', !!spot);
-    const set = (k: string, v: number) => body.style.setProperty(k, `${Math.round(v / z)}px`);
+    const set = (k: string, v: number) => setVar(body, k, `${Math.round(v / z)}px`);
     if (spot) {
       set('--tq-top', spot.top);
       set('--tq-left', spot.left);
@@ -1149,8 +1254,52 @@ export class Hud {
     if (nav !== this.navHtml) $('nav-text').innerHTML = this.navHtml = nav;
   }
 
+  private secLabel: { text: string; color: string; c: HTMLCanvasElement } | null = null;
+  private miniLayer: { c: HTMLCanvasElement; cx: number; cy: number; k: number; n: number; at: number } | null = null;
+  /** The minimap's islands on a layer 2W × 2H centred on (cx, cy) at the dial's scale (see drawMinimap). */
+  private miniIsles(state: ClientState, own: { x: number; y: number }, range: number, k: number, W: number, H: number): { c: HTMLCanvasElement; cx: number; cy: number } {
+    const now = performance.now();
+    const L0 = this.miniLayer;
+    if (L0 && !miniLayerStale(L0, own, range, k, state.islands.size, now)) return L0;
+    const c = L0?.c ?? document.createElement('canvas');
+    if (c.width !== W * 2 || c.height !== H * 2) [c.width, c.height] = [W * 2, H * 2];
+    const g = c.getContext('2d')!;
+    g.clearRect(0, 0, c.width, c.height);
+    const cx = own.x, cy = own.y, far = range * 2;
+    const tx = (x: number) => (x - cx) * k + W;
+    const ty = (y: number) => (y - cy) * k + H;
+    for (const is of state.islands.values()) {
+      if (Math.abs(is.x - cx) > far + is.r || Math.abs(is.y - cy) > far + is.r) continue;
+      // docs/18 III: her kind's colour; a hidden island not yet found, a pale smudge of mist.
+      if (is.mist) {
+        g.fillStyle = 'rgba(190,198,202,0.18)';
+        g.beginPath();
+        g.arc(tx(is.x), ty(is.y), Math.max(2, is.r * k), 0, Math.PI * 2);
+        g.fill();
+        continue;
+      }
+      g.fillStyle = isleFill(is, false);
+      g.beginPath();
+      for (let i = 0; i < is.poly.length; i += 4) {
+        if (i === 0) g.moveTo(tx(is.poly[i]), ty(is.poly[i + 1]));
+        else g.lineTo(tx(is.poly[i]), ty(is.poly[i + 1]));
+      }
+      g.closePath();
+      g.fill();
+    }
+    this.miniLayer = { c, cx, cy, k, n: state.islands.size, at: now };
+    return this.miniLayer;
+  }
+
+  /** The minimap drawn off the page and copied onto the dial in one stroke (batch-pc: the dial's canvas is on the page,
+   *  and each of its fonts set asked the page's styles first — a whole style pass forced in a sea fight, ~5% of a
+   *  slowed desk's frame; a canvas off the page asks nothing). */
+  private miniBack: HTMLCanvasElement | null = null;
+
   private drawMinimap(state: ClientState): void {
-    const c = this.minimap;
+    const vis = this.minimap;
+    const c = (this.miniBack ??= document.createElement('canvas'));
+    if (c.width !== vis.width || c.height !== vis.height) [c.width, c.height] = [vis.width, vis.height];
     const g = c.getContext('2d')!;
     const W = c.width, H = c.height;
     const own = state.ownDisplay;
@@ -1173,25 +1322,11 @@ export class Hud {
     g.strokeStyle = '#6a624f';
     this.miniView = { x: own.x, y: own.y, range };
     this.miniState = state;
-    for (const is of state.islands.values()) {
-      if (Math.abs(is.x - own.x) > range + is.r || Math.abs(is.y - own.y) > range + is.r) continue;
-      // docs/18 III: her kind's colour; a hidden island not yet found, a pale smudge of mist.
-      if (is.mist) {
-        g.fillStyle = 'rgba(190,198,202,0.18)';
-        g.beginPath();
-        g.arc(tx(is.x), ty(is.y), Math.max(2, is.r * k), 0, Math.PI * 2);
-        g.fill();
-        continue;
-      }
-      g.fillStyle = isleFill(is, false);
-      g.beginPath();
-      for (let i = 0; i < is.poly.length; i += 4) {
-        if (i === 0) g.moveTo(tx(is.poly[i]), ty(is.poly[i + 1]));
-        else g.lineTo(tx(is.poly[i]), ty(is.poly[i + 1]));
-      }
-      g.closePath();
-      g.fill();
-    }
+    // The islands from their cached layer (batch-pc: every island's outline filled again at each redraw was ~9% of a
+    // slowed desk's frame in a sea fight): drawn once for a dial twice as wide round a centre, laid again when she has
+    // sailed a quarter of the dial off it, the scale or the islands changed, or every few seconds (a find, a mist lifted).
+    const lay = this.miniIsles(state, own, range, k, W, H);
+    g.drawImage(lay.c, Math.round(W / 2 + (lay.cx - own.x) * k - W), Math.round(H / 2 + (lay.cy - own.y) * k - H));
     g.strokeStyle = 'rgba(90,160,150,0.7)';
     // Night navigation by lights: in the dark a shoal shows only within reach of a light — a lit lighthouse
     // (3.5 km, docs/16 #23: by the Crown, a keeper's pay or one's own island; its shoals in its warm light), a port
@@ -1445,14 +1580,24 @@ export class Hud {
       if (sec) {
         const band = bandOf(sec.l);
         const text = `⚓${band[0]}–${band[1]}`;
-        g.font = '700 10px Inter, sans-serif';
-        g.textAlign = 'center';
-        g.lineWidth = 3;
-        g.strokeStyle = 'rgba(0,0,0,0.85)';
-        g.strokeText(text, W / 2, H - 9);
-        g.fillStyle = THREAT_COLOR[threatTo(sec.l)];
-        g.fillText(text, W / 2, H - 9);
-        g.lineWidth = 1;
+        // (batch-pc: from its own small canvas, laid when the words change — the dial's font set at every redraw asked
+        // the page's styles each time, most of the minimap's cost in a sea fight)
+        const color = THREAT_COLOR[threatTo(sec.l)];
+        let lab = this.secLabel;
+        if (!lab || lab.text !== text || lab.color !== color || lab.c.width !== W) {
+          const c = lab?.c ?? document.createElement('canvas');
+          [c.width, c.height] = [W, 16];
+          const q = c.getContext('2d')!;
+          q.font = '700 10px Inter, sans-serif';
+          q.textAlign = 'center';
+          q.lineWidth = 3;
+          q.strokeStyle = 'rgba(0,0,0,0.85)';
+          q.strokeText(text, W / 2, 12);
+          q.fillStyle = color;
+          q.fillText(text, W / 2, 12);
+          lab = this.secLabel = { text, color, c };
+        }
+        g.drawImage(lab.c, 0, H - 9 - 12);
       }
     }
     // Holders of the legendary chart you can hear, and where a cursed map pulls: ticks at the rim.
@@ -1790,6 +1935,9 @@ export class Hud {
     g.fill();
     g.lineWidth = 1;
     g.restore();
+    const vg = vis.getContext('2d')!;
+    vg.clearRect(0, 0, vis.width, vis.height);
+    vg.drawImage(c, 0, 0);
   }
 
 
@@ -2298,7 +2446,7 @@ function slot(o: { data: string; cls: string; art: string; glyph: string; name: 
 /** Where the ship panel drops from: the unit frame's lowest drawn edge (kept until the frame has been drawn). */
 function placeShipPanel(): void {
   const low = Math.max(0, ...[...$('hud-captain').querySelectorAll('*')].map((e) => e.getBoundingClientRect()).filter((r) => r.height > 0).map((r) => r.bottom));
-  if (low > 40) document.body.style.setProperty('--uf-bottom', `${Math.round(low)}px`);
+  if (low > 40) setVar(document.body, '--uf-bottom', `${Math.round(low)}px`);
 }
 
 /** The key an action is bound to (the player may have rebound it), as a small chip; none on a touch screen. */
