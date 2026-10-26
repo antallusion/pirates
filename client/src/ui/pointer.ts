@@ -189,18 +189,63 @@ function targetsOf(f: PointerFacts): string[] {
 /** Where the finger stands for a button's box, and which way it points: from the left, pointing right, when there is
  *  room (above «Огонь» it lay over «Действие» and seemed to mean it, QA 2026-10-06); a button at the left edge (the
  *  wheel) gets it from above, pointing down, or from below, pointing up, when there is no room above. Pure. */
-export type PointerDir = 'down' | 'up' | 'right';
-export function pointerSpot(r: { left: number; top: number; width: number; height: number }, size: number, vw: number, vh: number, covers: (x: number, y: number) => boolean = () => false): { x: number; y: number; dir: PointerDir } {
+export type PointerDir = 'down' | 'up' | 'right' | 'left';
+/** `covers(x, y, size)`: how much of what must stay readable the finger's box at (x, y) would lie over — another button,
+ *  a price, a label (0 = nothing). The first place in the order that covers nothing wins; when each covers something, the
+ *  one that covers least (batch-pc, owner 2026-10-26: at 1366×768 the finger left of the market's «Купить» lay over the
+ *  price column of «Провизия» — a price is no button, and only buttons were looked for). */
+export function pointerSpot(r: { left: number; top: number; width: number; height: number }, size: number, vw: number, vh: number, covers: (x: number, y: number, size: number) => number | boolean = () => 0): { x: number; y: number; dir: PointerDir } {
   const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
   // From the left, pointing right, whenever there is room: above a button in a column or a grid of choices (the
   // prize's five) it lay over the button above and seemed to mean that one (QA 2026-10-07).
   // (Not over another button there: by «В море» it lay over «В гавань» and hid its word, docs/30.)
   const ly = Math.max(4, Math.min(vh - size - 4, cy - size / 2));
-  if (r.left - size - 4 >= 4 && !covers(r.left - size / 2 - 4, ly + size / 2)) return { x: r.left - size - 4, y: ly, dir: 'right' };
   const x = Math.max(4, Math.min(vw - size - 4, cx - size / 2));
-  const above = r.top - size - 4;
-  if (above >= 4) return { x, y: above, dir: 'down' };
-  return { x, y: Math.min(vh - size - 4, r.top + r.height + 4), dir: 'up' };
+  const spots: { x: number; y: number; dir: PointerDir; fits: boolean }[] = [
+    { x: r.left - size - 4, y: ly, dir: 'right', fits: r.left - size - 4 >= 4 },
+    { x, y: r.top - size - 4, dir: 'down', fits: r.top - size - 4 >= 4 },
+    { x, y: r.top + r.height + 4, dir: 'up', fits: r.top + r.height + size + 4 <= vh - 4 },
+    { x: r.left + r.width + 4, y: ly, dir: 'left', fits: r.left + r.width + size + 4 <= vw - 4 },
+  ];
+  let best: { x: number; y: number; dir: PointerDir } | null = null, least = Infinity;
+  for (const s of spots) {
+    if (!s.fits) continue;
+    const c = Number(covers(s.x, s.y, size));
+    if (c === 0) return { x: s.x, y: s.y, dir: s.dir };
+    if (c < least) [best, least] = [{ x: s.x, y: s.y, dir: s.dir }, c];
+  }
+  return best ?? { x, y: Math.min(vh - size - 4, r.top + r.height + 4), dir: 'up' };
+}
+
+/** What a finger's box at (x, y) would hide (pointerSpot's `covers`), over the points of a 3×3 grid on it: a word (a
+ *  price, a label — the target row's own name too) weighs most, then another row's button or a field, a picture, and
+ *  least a button of the target's own row (its «Продать» beside «Купить» — the ring shows which one is meant). The target
+ *  and the finger are no matter. `hit` the page's elementFromPoint; `onWord` whether a point lies on a word's glyphs. */
+export const COVER = { word: 10, button: 4, picture: 2, rowButton: 1 } as const;
+export function coverCount(x: number, y: number, size: number, target: Element, hit: (x: number, y: number) => Element | null, onWord: (e: Element, x: number, y: number) => boolean = wordAt): number {
+  let n = 0;
+  const row = target.closest('.w-row, tr, li');
+  for (const fx of [0.2, 0.5, 0.8]) for (const fy of [0.2, 0.5, 0.8]) {
+    const px = x + size * fx, py = y + size * fy;
+    const e = hit(px, py);
+    if (!e || e === target || target.contains(e) || e.closest('#tut-finger')) continue;
+    const ctl = e.closest('button, [role="button"], a[href], input, select, textarea');
+    if (ctl) n += row && row.contains(ctl) ? COVER.rowButton : COVER.button;
+    else if (e.matches('img, svg, canvas') || e.closest('svg')) n += COVER.picture;
+    else if (onWord(e, px, py)) n += COVER.word;
+  }
+  return n;
+}
+/** Whether (x, y) lies on the glyphs of one of the element's own words (a block's box is wider than its words: a line of
+ *  text across the window is no matter where its words do not reach). */
+function wordAt(e: Element, x: number, y: number): boolean {
+  for (const c of e.childNodes) {
+    if (c.nodeType !== 3 || !c.textContent?.trim()) continue;
+    const range = document.createRange();
+    range.selectNodeContents(c);
+    for (const r of range.getClientRects()) if (x >= r.left - 2 && x <= r.right + 2 && y >= r.top - 2 && y <= r.bottom + 2) return true;
+  }
+  return false;
 }
 
 const HAND = `<svg viewBox="0 0 48 48" width="100%" height="100%" aria-hidden="true" focusable="false">
@@ -214,6 +259,9 @@ export class TutorPointer {
   private ringed: HTMLElement | null = null;
   private facts: PointerFacts = { stage: null, touch: false, docked: false, battle: false };
   private size = 44;
+  private spot: { x: number; y: number; dir: PointerDir } | null = null;
+  private spotKey = '';
+  private spotAt = 0;
 
   constructor() {
     const el = document.createElement('div');
@@ -247,13 +295,18 @@ export class TutorPointer {
       return;
     }
     const r = t.getBoundingClientRect();
-    const spot = pointerSpot(r, this.size, innerWidth, innerHeight, (x, y) => {
-      const under = document.elementFromPoint(x, y)?.closest('button, [role="button"]');
-      return !!under && under !== t && !t.contains(under) && !under.closest('#tut-finger');
-    });
+    // (the place weighed again when the button moved, or twice a second — what lies about it may change)
+    const key = `${Math.round(r.left)},${Math.round(r.top)},${Math.round(r.width)},${Math.round(r.height)},${innerWidth}x${innerHeight}`;
+    const now = performance.now();
+    if (!this.spot || key !== this.spotKey || now - this.spotAt > 500) {
+      this.spot = pointerSpot(r, this.size, innerWidth, innerHeight, (x, y, size) => coverCount(x, y, size, t, (px, py) => document.elementFromPoint(px, py)));
+      [this.spotKey, this.spotAt] = [key, now];
+    }
+    const spot = this.spot;
     this.el.classList.remove('hidden');
     this.el.classList.toggle('up', spot.dir === 'up');
     this.el.classList.toggle('right', spot.dir === 'right');
+    this.el.classList.toggle('left', spot.dir === 'left');
     this.el.style.transform = `translate(${Math.round(spot.x)}px, ${Math.round(spot.y)}px)`;
   }
 
