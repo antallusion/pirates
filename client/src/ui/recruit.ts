@@ -93,7 +93,10 @@ export class RecruitWindow {
     this.send = send;
   }
 
+  /** Bring the selected kind into sight on the next render (the window just opened). */
+  private seek = false;
   open(src: 'port' | 'isle' | 'lair' | 'way'): void {
+    this.seek = true;
     this.sel = null;
     this.n = 0;
     this.send({ t: 'h3', action: 'dwell', src });
@@ -169,6 +172,9 @@ export class RecruitWindow {
     root.innerHTML = `${head}<div class="modal-body rc-body"><div class="rc-army"><span class="muted">${esc(L('army'))}</span>${armyRow(v.army, v.slots)}</div>${res}
       <div class="rc-main"><div class="rc-list">${cards}</div><div class="rc-side">${pick}${hasUp ? `<div class="rc-train"><h4 class="card-h">${esc(L('train'))}</h4><p class="muted">${esc(L('train.text'))}</p>${ups}</div>` : ''}</div></div></div>`;
     this.bind(root, state);
+    // the advice's best kind in sight as the window opens (it may stand low in a waystation's list)
+    if (this.seek && v.best && this.sel === v.best) root.querySelector('.rc-unit.sel')?.scrollIntoView({ block: 'nearest' });
+    this.seek = false;
   }
 
   /** «N юнг сойдут на берег»: the hands who make room for the men picked (none: empty). */

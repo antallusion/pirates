@@ -969,7 +969,9 @@ export class Hud {
   private drawAdvice(state: ClientState): void {
     const a = state.self?.advice;
     let el = document.getElementById('hud-advice');
-    const show = !!a && a.weak && !!a.step && !document.body.classList.contains('in-battle');
+    // (never over a window, the island or a boarding: the sea's own hint)
+    const covered = !document.getElementById('modal')?.classList.contains('hidden') || !!document.querySelector('#isle:not(.hidden), #board-tac:not(.hidden), .k-sheet-root.k-open');
+    const show = !!a && a.weak && !!a.step && !covered;
     if (!show) {
       if (el && !el.classList.contains('hidden')) el.classList.add('hidden');
       this.adviceKey = '';
@@ -1002,10 +1004,10 @@ export class Hud {
     const now = performance.now();
     if (key !== this.adviceKey || now - this.adviceAt > 1000) {
       this.adviceAt = now;
-      const r = $('hud-captain').getBoundingClientRect();
-      if (r.height > 0) {
-        el.style.left = `${Math.round(r.left)}px`;
-        el.style.top = `${Math.round(r.bottom + 4)}px`;
+      const at = advicePlace(el);
+      if (at) {
+        el.style.left = `${at.x}px`;
+        el.style.top = `${at.y}px`;
       }
     }
     if (key === this.adviceKey) return;
@@ -2498,6 +2500,19 @@ function slot(o: { data: string; cls: string; art: string; glyph: string; name: 
 }
 
 /** A label without its keyboard hint ("[Q] Port" → "Port") on touch screens. */
+/** The weak army's badge under her frame, below whatever round buttons stand there (the phone's quick row): the first
+ *  free band of the left column, measured by what lies under a few points of it. */
+function advicePlace(self: HTMLElement): { x: number; y: number } | null {
+  const r = $('hud-captain').getBoundingClientRect();
+  if (r.height <= 0) return null;
+  const x = Math.round(r.left), H = innerHeight;
+  const busy = (px: number, py: number) => document.elementsFromPoint(px, py).some((e) => !self.contains(e) && e !== self && e.closest('button, a, [role="button"], .hud-block, #hud-captain, #hud-goals, #hud-stack > :not(.hidden)') && !e.closest('#hud-advice'));
+  for (let y = Math.round(r.bottom + 4); y < H * 0.6; y += 6) {
+    if (![8, 70, 140].some((dx) => busy(x + dx, y + 2) || busy(x + dx, y + 28))) return { x, y };
+  }
+  return { x, y: Math.round(r.bottom + 4) };
+}
+
 /** Where the ship panel drops from: the unit frame's lowest drawn edge (kept until the frame has been drawn). */
 function placeShipPanel(): void {
   const low = Math.max(0, ...[...$('hud-captain').querySelectorAll('*')].map((e) => e.getBoundingClientRect()).filter((r) => r.height > 0).map((r) => r.bottom));

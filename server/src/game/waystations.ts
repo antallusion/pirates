@@ -553,6 +553,7 @@ export function wayDwellView(game: Game, s: PlayerSession): DwellView | null {
     const units = r.units.filter((x) => !here.has(x.u));
     if (units.length) rows.push({ ...r, units });
   }
+  rows.sort((a, b) => a.tier - b.tier);
   return {
     src: 'way', place: w.kind, rows, ups: [], best: own?.best ?? null, army: ship.army.map((x) => ({ ...x })), slots: ship.armySlots, crew: ship.crew, crewMax: ship.stats.crewMax,
     gold: Math.floor(s.profile!.gold), have: {}, why: resBusy(game, s), week: weekView(game), picked: pickedRoom(s), pickedMax: pickedMax(s),
