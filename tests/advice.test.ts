@@ -1,15 +1,21 @@
 // The advice mailer's rules (shared/src/data/advice.ts) and its e-mail (server/src/game/advice.ts adviceMail).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ADVICE_DAY_GAP, ADVICE_FAR, ADVICE_KIND_GAP, adviceHints, advicePatterns, adviceUnsubscribe, letterWords, markSent, newAdviceState, notACaptain, outsideWords, pickHint } from '../shared/src/data/advice.ts';
-import type { AdviceCaptain } from '../shared/src/data/advice.ts';
+import { ADVICE_DAY_GAP, ADVICE_FAR, ADVICE_KIND_GAP, adviceHints, captainFromSave, isleFromHolding, advicePatterns, adviceUnsubscribe, letterWords, markSent, newAdviceState, notACaptain, outsideWords, pickHint } from '../shared/src/data/advice.ts';
+import type { HintCaptain } from '../shared/src/data/advice.ts';
+import type { AdviceCaptain } from '../shared/src/data/armyadvice.ts';
 import { armyAdvice } from '../shared/src/data/armyadvice.ts';
 import { adviceMail } from '../server/src/game/advice.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { serverText } from '../client/src/lang/server.ts';
 
-const cap = (o: Partial<AdviceCaptain> = {}): AdviceCaptain => ({ acc: 1, name: 'Николай', level: 14, army: [{ u: 'deckhand', n: 60 }], shipLevel: 6, town: { hall: 1 }, online: true, awayMs: 0, campaign: { ch: 3, k: 1, size: 8 }, ...o });
-const kinds = (c: AdviceCaptain) => adviceHints(c).map((h) => h.kind);
+type Opt = Partial<Omit<HintCaptain, 'cap'>> & Partial<AdviceCaptain> & { town?: AdviceCaptain['isle'] };
+const cap = (o: Opt = {}): HintCaptain => {
+  const { acc = 1, name = 'Николай', online = true, awayMs = 0, campaign = { ch: 3, k: 1, size: 8 }, town, ...a } = o;
+  const isle = 'town' in o ? (town ?? null) : { hall: 1 };
+  return { acc, name, online, awayMs, campaign, cap: { level: 14, shipLevel: 6, army: [{ u: 'deckhand', n: 60 }], crewMax: 60, slots: 5, gold: 5000, isle, ...a } };
+};
+const kinds = (c: HintCaptain) => adviceHints(c).map((h) => h.kind);
 
 test('a top captain with deckhands and a raw island: island first, then army', () => {
   assert.deepEqual(kinds(cap()), ['island', 'army']);
@@ -112,11 +118,34 @@ test('the unsubscribe: only her token turns her e-mails off', () => {
   assert.equal((kv.get('advice:5') as { emailOff?: boolean }).emailOff, true);
 });
 
-test('the placeholder armyAdvice: deckhands at ⚓14 are weak, the step hires the island’s tier', () => {
-  const a = armyAdvice({ level: 14, army: [{ u: 'deckhand', n: 90 }], town: { hall: 1, dw1: 1, dw2: 1 }, shipLevel: 6 });
-  assert.ok(a && a.weak && a.ratio < 0.7);
-  assert.equal(a!.step.kind, 'hire');
-  assert.equal(armyAdvice({ level: 14, army: [{ u: 'deckhand', n: 90 }], town: { hall: 1 } })!.step.building, 'dw2');
+test('the real armyAdvice: deckhands at ⚓14 are weak; its step becomes the army letter; a null step — no army hint', () => {
+  const a = armyAdvice({ level: 14, shipLevel: 6, army: [{ u: 'deckhand', n: 90 }], crewMax: 90, slots: 5, gold: 9000, isle: { hall: 1, dw1: 1, dw2: 1 } });
+  assert.ok(a && a.weak && a.step);
+  assert.equal(a!.step!.kind, 'hire');
+  const h = adviceHints(cap({ army: [{ u: 'deckhand', n: 90 }], crewMax: 90, town: { hall: 1, dw1: 1, dw2: 1 } })).find((x) => x.kind === 'army');
+  assert.ok(h);
+  assert.match(outsideWords(h!, 'ru', 'Ник').line, /Наймите/);
+  // strong: no step, no army hint
+  assert.ok(!kinds(cap({ army: [{ u: 'boarder', n: 60 }], town: { hall: 1, dw1: 1, dw2: 1 } })).includes('army'));
+});
+
+test('every army step kind has its letter (claim, upgrade, silver, fill, build, hire)', () => {
+  const table = new Map(advicePatterns());
+  const step = (k: string, x: Record<string, unknown> = {}) => ({ kind: 'army' as const, army: { weak: true, ratio: 0.3, power: 1, norm: 3, best: null, step: { kind: k as 'hire', textRu: 'т', textEn: 't', ...x } } });
+  for (const h of [step('claim'), step('fill'), step('silver', { unit: 'marine' }), step('hire', { unit: 'sea_guard' }), step('build', { building: 'dw3', level: 1 }), step('upgrade', { building: 'keep', level: 2 })]) {
+    const w = letterWords(h, 'en')!;
+    assert.ok(table.has(w.body), w.body);
+  }
+});
+
+test('a saved captain reads as captainAdvice would: hammocks from the hull, the island from the holding', () => {
+  const isle = isleFromHolding({ buildings: [{ id: 'warehouse', level: 2 }], yard: { town: { b: { hall: 1, dw1: 1 } } } });
+  assert.equal(isle!.hall, 1);
+  assert.equal(isle!.dw2, 0);
+  assert.equal(isle!.warehouse, 2);
+  const c = captainFromSave({ level: 12, gold: 300, army: [{ u: 'deckhand', n: 40 }], loadout: { classId: 'sloop' }, captain: 'corsair', talents: {} }, isle);
+  assert.ok(c && c.crewMax > 0 && c.slots >= 3 && c.shipLevel >= 1);
+  assert.equal(captainFromSave({ level: 3, loadout: { classId: 'nope' } }, null), null);
 });
 
 test('the client shows the letter in Russian', () => {

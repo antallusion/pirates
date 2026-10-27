@@ -662,6 +662,12 @@ setInterval(() => {
 }, 400);
 let lastDoubloons = -1;
 hud.onThrone = () => openThrone();
+// Owner, 2026-10-28 (armyadvice.ts): the weak army's hint — the hire window where she is (a port, a waystation), or the island.
+hud.onAdvice = (to) => {
+  if (to === 'hire' && state.self?.dockedAt) return openRecruit('port');
+  if (to === 'hire' && state.wayView) return openRecruit('way');
+  openBase();
+};
 // The premium shop (owner, 2026-10-03): from the micro menu and the cabin; `topup` opens it at the packs.
 const premiumWindow = new PremiumWindow((m) => net.send(m));
 premiumWindow.toast = (msg, kind) => hud.toast(msg, kind);

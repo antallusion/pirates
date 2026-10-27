@@ -13,17 +13,22 @@
 // away two weeks and more. The letter's words are English with exact Russian twins (advicePatterns): the client shows
 // them in her language; the e-mail and the notices are written in her language at once.
 
-import { UNITS } from './army.ts';
+import { UNITS, armySlots } from './army.ts';
 import type { ArmyStack } from './army.ts';
 import { armyAdvice } from './armyadvice.ts';
-import type { ArmyAdvice } from './armyadvice.ts';
-import { TIER_SHIP_LEVEL, TOWN } from './town.ts';
+import type { AdviceCaptain, ArmyAdvice } from './armyadvice.ts';
+import { TIER_SHIP_LEVEL, TOWN, deepAllowed } from './town.ts';
 import type { TownId } from './town.ts';
+import { TREE_BASE, TREE_IDS, TREE_TOWN } from './isletree.ts';
+import type { TreeId } from './isletree.ts';
+import { SHIP_CLASSES } from './ships.ts';
+import { computeShipStats } from '../sim/shipstats.ts';
+import { shipLevelOf } from './shiplevel.ts';
 
 const DAY = 86_400_000;
 
-export type AdviceKind = 'island' | 'tier' | 'army' | 'return';
-export const ADVICE_KINDS: AdviceKind[] = ['island', 'tier', 'army', 'return'];
+export type HintKind = 'island' | 'tier' | 'army' | 'return';
+export const HINT_KINDS: HintKind[] = ['island', 'tier', 'army', 'return'];
 export type AdviceChannel = 'letter' | 'email' | 'push';
 export const ADVICE_CHANNELS: AdviceChannel[] = ['letter', 'email', 'push'];
 export type AdviceLang = 'ru' | 'en';
@@ -41,16 +46,13 @@ export const ADVICE_FAR = 14 * DAY;
 /** The plural names of each tier's men (index: the tier). */
 export const TIER_MEN: [string, string][] = [['', ''], ['Deckhands', 'Юнги'], ['Marines', 'Морпехи'], ['Musketeers', 'Мушкетёры'], ['Gunners', 'Канониры'], ['Boarders', 'Абордажники'], ['Officers’ guards', 'Офицерские гвардейцы'], ['The drowned', 'Утопленники']];
 
-/** A captain as the hints see her (the server: from her session or her saved profile and island). */
-export interface AdviceCaptain {
+/** A captain as the hints see her: the army's advice reads `cap` (shared/src/data/armyadvice.ts — the server's
+ *  captainAdvice for a session, captainFromSave for a saved profile); the rest is the mailer's own. */
+export interface HintCaptain {
   acc: number;
   name: string;
-  level: number;
-  army: readonly ArmyStack[];
-  /** Her ship's level (the tiers she may berth). */
-  shipLevel: number;
-  /** Her island's town buildings by level; null: no island of her own. */
-  town: Partial<Record<string, number>> | null;
+  /** Null: no ship (nothing to advise on the army or the island's tiers). */
+  cap: AdviceCaptain | null;
   online: boolean;
   /** Ms since she went ashore (0 aboard). */
   awayMs: number;
@@ -58,41 +60,88 @@ export interface AdviceCaptain {
   campaign: { ch: number; k: number; size: number } | null;
 }
 
+/** A saved profile's fields the advice reads (the server's Profile has them all). */
+export interface SavedCaptain {
+  level: number;
+  gold?: number;
+  army?: ArmyStack[];
+  loadout: { classId: string; level?: number };
+  captain?: string;
+  talents?: Record<string, number>;
+  curse?: number;
+  reputation?: Partial<Record<string, number>>;
+}
+
+/** Her island's tree levels from the saved holding: the town's buildings and the base's (as server town.ts
+ *  treeLevels reads them). Null: no island of her own. */
+export function isleFromHolding(h: { buildings?: { id: string; level?: number }[]; yard?: { town?: { b?: Record<string, number> } } } | null | undefined): Partial<Record<string, number>> | null {
+  if (!h) return null;
+  const out: Partial<Record<string, number>> = {};
+  const b = h.yard?.town?.b ?? { hall: 1 };
+  for (const id of TREE_TOWN) out[id] = Math.max(0, Math.floor(b[id] ?? 0));
+  for (const id of TREE_BASE) out[id] = Math.max(0, ...(h.buildings ?? []).filter((x) => x.id === id).map((x) => Math.max(1, x.level ?? 1)));
+  return out;
+}
+
+/** The advice's captain from a saved profile (a captain away: no live ship): the same fields captainAdvice reads, the
+ *  hull's hammocks by her loadout, her captain and talents (gear and passing effects aside). Null: no ship to read. */
+export function captainFromSave(p: SavedCaptain, isle: Partial<Record<string, number>> | null): AdviceCaptain | null {
+  const cls = SHIP_CLASSES[p.loadout?.classId as keyof typeof SHIP_CLASSES];
+  if (!cls) return null;
+  let crewMax = 0, shipLevel = 1;
+  try {
+    const st = computeShipStats(p.loadout as Parameters<typeof computeShipStats>[0], (p.captain ?? 'corsair') as Parameters<typeof computeShipStats>[1], (p.talents ?? {}) as Parameters<typeof computeShipStats>[2]);
+    crewMax = st.crewMax;
+    shipLevel = shipLevelOfSave(p);
+  } catch {
+    return null;
+  }
+  return {
+    level: p.level, shipLevel, army: p.army ?? [], crewMax, slots: armySlots(cls.tier), gold: Math.floor(p.gold ?? 0), isle,
+    deep: deepAllowed(p.curse ?? 0, p.reputation?.choir ?? 0, false),
+  };
+}
+
+const shipLevelOfSave = (p: SavedCaptain): number => shipLevelOf(p.loadout as Parameters<typeof shipLevelOf>[0]);
+
 export interface Hint {
-  kind: AdviceKind;
-  /** island: the building to raise next ('' — claim an island first); tier/army: the building or the tier involved. */
+  kind: HintKind;
+  /** island: the building to raise next ('' — claim an island first); tier: the dwelling. */
   building?: TownId | '';
   tier?: number;
+  /** army: the advice, its step never null. */
   army?: ArmyAdvice;
   /** return: the campaign's chapter she stands in. */
   chapter?: number;
 }
 
-const lvl = (town: Partial<Record<string, number>> | null, id: string): number => Math.max(0, Math.floor(town?.[id] ?? 0));
+const lvl = (isle: Partial<Record<string, number>> | null, id: string): number => Math.max(0, Math.floor(isle?.[id] ?? 0));
 const tierOf = (u: string | undefined): number => (u && UNITS[u as keyof typeof UNITS] ? UNITS[u as keyof typeof UNITS].tier : 0);
 
 /** The island never raised: none, or its hall at 1 and no Marine Barracks. */
-export const isleRaw = (town: Partial<Record<string, number>> | null): boolean => !town || (lvl(town, 'hall') <= 1 && lvl(town, 'dw2') === 0);
+export const isleRaw = (isle: Partial<Record<string, number>> | null): boolean => !isle || (lvl(isle, 'hall') <= 1 && lvl(isle, 'dw2') === 0);
 
 /** Not a captain to write to: a bot of the load tests, an NPC, a QA account. */
 export const notACaptain = (name: string): boolean => /^(bot|npc|qa|test)(\b|[\s_\-\d])/i.test(String(name ?? '').trim());
 
 /** The hints due for her, the most useful first. */
-export function adviceHints(c: AdviceCaptain): Hint[] {
+export function adviceHints(c: HintCaptain): Hint[] {
   const out: Hint[] = [];
   if (notACaptain(c.name)) return out;
-  if (c.level >= ADVICE_ISLE_LEVEL && isleRaw(c.town)) out.push({ kind: 'island', building: !c.town ? '' : lvl(c.town, 'dw1') === 0 ? 'dw1' : 'dw2' });
-  if (c.town) {
-    for (let t = 7; t >= 2; t--) {
-      if (lvl(c.town, `dw${t}`) === 0 || c.shipLevel < TIER_SHIP_LEVEL[t]) continue;
-      if (c.army.some((s) => tierOf(s.u) >= t)) break; // her best open tier is aboard
-      out.push({ kind: 'tier', tier: t, building: `dw${t}` as TownId });
-      break;
+  const cap = c.cap;
+  if (cap) {
+    if (cap.level >= ADVICE_ISLE_LEVEL && isleRaw(cap.isle)) out.push({ kind: 'island', building: !cap.isle ? '' : lvl(cap.isle, 'dw1') === 0 ? 'dw1' : 'dw2' });
+    if (cap.isle) {
+      for (let t = 7; t >= 2; t--) {
+        if (lvl(cap.isle, `dw${t}`) === 0 || cap.shipLevel < TIER_SHIP_LEVEL[t] || (t === 7 && !cap.deep)) continue;
+        if (cap.army.some((s) => tierOf(s.u) >= t)) break; // her best open tier is aboard
+        out.push({ kind: 'tier', tier: t, building: `dw${t}` as TownId });
+        break;
+      }
     }
+    const a = armyAdvice(cap);
+    if (a?.weak && a.step) out.push({ kind: 'army', army: a });
   }
-  const a = armyAdvice({ level: c.level, army: c.army, town: c.town, shipLevel: c.shipLevel });
-  // (from the island's level: below it a green crew is the sea's own, and the hint would only be noise)
-  if (a?.weak && c.level >= ADVICE_ISLE_LEVEL) out.push({ kind: 'army', army: a });
   if (!c.online && c.awayMs >= ADVICE_AWAY && c.campaign) out.push({ kind: 'return', chapter: c.campaign.ch });
   return out;
 }
@@ -101,7 +150,7 @@ export function adviceHints(c: AdviceCaptain): Hint[] {
 
 /** What was sent to her, by channel and kind (wall ms), and the day's last on each channel. */
 export interface AdviceState {
-  last: Partial<Record<AdviceChannel, Partial<Record<AdviceKind, number>>>>;
+  last: Partial<Record<AdviceChannel, Partial<Record<HintKind, number>>>>;
   /** The last letter; the last e-mail or VK/Telegram message (one a day, all together). */
   letterAt: number;
   outAt: number;
@@ -125,7 +174,7 @@ export function adviceUnsubscribe(kv: { getKv<T>(k: string): T | undefined; setK
 }
 
 /** The hint due on a channel now (null: none, by the limits). Pure. */
-export function pickHint(hints: readonly Hint[], st: AdviceState, ch: AdviceChannel, now: number, c: Pick<AdviceCaptain, 'online' | 'awayMs'>): Hint | null {
+export function pickHint(hints: readonly Hint[], st: AdviceState, ch: AdviceChannel, now: number, c: Pick<HintCaptain, 'online' | 'awayMs'>): Hint | null {
   if (ch === 'letter') {
     if (now - st.letterAt < ADVICE_DAY_GAP) return null;
   } else {
@@ -143,7 +192,7 @@ export function pickHint(hints: readonly Hint[], st: AdviceState, ch: AdviceChan
 }
 
 /** Marks a hint sent on a channel. */
-export function markSent(st: AdviceState, ch: AdviceChannel, kind: AdviceKind, now: number): void {
+export function markSent(st: AdviceState, ch: AdviceChannel, kind: HintKind, now: number): void {
   (st.last[ch] ??= {})[kind] = now;
   if (ch === 'letter') st.letterAt = now;
   else st.outAt = now;
@@ -153,6 +202,14 @@ export function markSent(st: AdviceState, ch: AdviceChannel, kind: AdviceKind, n
 
 const bName = (id: TownId | '' | undefined, lang: AdviceLang): string => (id ? TOWN[id].names[0][lang === 'ru' ? 1 : 0] : '');
 const men = (t: number | undefined, lang: AdviceLang): string => TIER_MEN[Math.max(1, Math.min(7, t ?? 1))][lang === 'ru' ? 1 : 0];
+
+const BASE_NAMES: Record<string, [string, string]> = { warehouse: ['Warehouse', 'Склад'], shipyard: ['Shipyard', 'Верфь'], battery: ['Shore battery', 'Береговая батарея'], fort: ['Fort', 'Форт'] };
+/** A building of the island's tree by its first name. */
+const treeName = (id: string, lang: AdviceLang): string => {
+  const t = (TOWN as Record<string, { names: [string, string][] } | undefined>)[id];
+  const n = t ? t.names[0] : (BASE_NAMES[id] ?? [id, id]);
+  return n[lang === 'ru' ? 1 : 0];
+};
 
 /** The letter's words (English; its Russian twin in advicePatterns): the subject and the body. Null: no letter. */
 export function letterWords(h: Hint, lang: AdviceLang = 'en'): { subject: string; body: string } | null {
@@ -171,15 +228,32 @@ export function letterWords(h: Hint, lang: AdviceLang = 'en'): { subject: string
       ? { subject: `${m} ждут вас`, body: `Капитан, на вашем острове уже стоит «${bName(h.building, 'ru')}», а бойцов оттуда на борту нет. ${m} намного сильнее юнг: наймите их ${ANY} и поставьте в первые отряды.` }
       : { subject: `${m} are waiting for you`, body: `Captain, the ${bName(h.building, 'en')} stands on your island, yet none of its men are aboard. ${m} are far stronger than deckhands: hire them ${ANY} and put them in your first stacks.` };
   }
-  if (h.kind === 'army' && h.army) {
+  if (h.kind === 'army' && h.army?.step) {
     const subject = ru ? 'Команда слабовата для вашего уровня' : 'Your crew is weak for your level';
     const lead = ru ? 'Капитан, в абордаже ваша команда стоит меньше, чем море ждёт от капитана вашего уровня.' : 'Captain, in a boarding your crew is worth less than the sea expects of a captain of your level.';
     const s = h.army.step;
     const t = tierOf(s.unit);
-    if (s.kind === 'hire' && t >= 1) return { subject, body: ru ? `${lead} Следующий шаг: наймите бойцов «${men(t, 'ru')}» ${ANY}.` : `${lead} Next step: hire ${men(t, 'en').toLowerCase()} ${ANY}.` };
-    if (s.kind === 'build' && s.building && s.building in TOWN) return { subject, body: ru ? `${lead} Следующий шаг: постройте на острове «${bName(s.building as TownId, 'ru')}» — оно откроет бойцов посильнее.` : `${lead} Next step: build the ${bName(s.building as TownId, 'en')} on your island: it opens stronger men.` };
-    if (s.kind === 'island') return { subject, body: ru ? `${lead} Следующий шаг: займите свой остров и постройте на нём «${bName('dw2', 'ru')}».` : `${lead} Next step: claim an island of your own and build the ${bName('dw2', 'en')} on it.` };
-    return { subject, body: ru ? `${lead} Следующий шаг: заполните отряды лучшими бойцами, каких можно нанять.` : `${lead} Next step: fill your stacks with the best men you can hire.` };
+    const body = (r: string, e: string) => ({ subject, body: `${lead} ${ru ? r : e}` });
+    switch (s.kind) {
+      case 'hire':
+        if (t >= 1) return body(`Следующий шаг: наймите бойцов «${men(t, 'ru')}» ${ANY}.`, `Next step: hire ${men(t, 'en').toLowerCase()} ${ANY}.`);
+        break;
+      case 'silver':
+        if (t >= 1) return body(`Следующий шаг: на бойцов «${men(t, 'ru')}» не хватает серебра — берите задания в порту, выигрывайте абордажи и продавайте добычу.`, `Next step: your purse is too light for ${men(t, 'en').toLowerCase()} — take port jobs, win boardings and sell the plunder.`);
+        break;
+      case 'build':
+      case 'upgrade':
+        if (s.building && (TREE_IDS as string[]).includes(s.building)) {
+          const n = Math.max(1, s.level ?? 1);
+          return body(`Следующий шаг на острове: «${treeName(s.building, 'ru')}», уровень ${n}. Каждое жилище открывает бойцов посильнее для найма ${ANY}.`, `Next step on your island: the ${treeName(s.building, 'en')}, level ${n}. Every dwelling opens stronger men to hire ${ANY}.`);
+        }
+        break;
+      case 'claim':
+        return body(`Следующий шаг: займите свой остров и постройте на нём «${bName('dw2', 'ru')}».`, `Next step: claim an island of your own and build the ${bName('dw2', 'en')} on it.`);
+      case 'fill':
+        return body('Следующий шаг: половина гамаков пуста — наберите команду в таверне любого порта.', 'Next step: half your hammocks are empty — sign men on at any port’s tavern.');
+    }
+    return body('Следующий шаг: заполните отряды лучшими бойцами, каких можно нанять.', 'Next step: fill your stacks with the best men you can hire.');
   }
   return null;
 }
@@ -195,11 +269,18 @@ export function advicePatterns(): [string, string][] {
   add({ kind: 'island', building: 'dw1' });
   add({ kind: 'island', building: 'dw2' });
   for (let t = 2; t <= 7; t++) add({ kind: 'tier', tier: t, building: `dw${t}` as TownId });
-  const army = (step: ArmyAdvice['step']): Hint => ({ kind: 'army', army: { weak: true, ratio: 0, step } });
-  for (const u of Object.keys(UNITS)) add(army({ kind: 'hire', unit: u, textRu: '', textEn: '' }));
-  for (let t = 1; t <= 7; t++) add(army({ kind: 'build', building: `dw${t}`, textRu: '', textEn: '' }));
-  add(army({ kind: 'island', textRu: '', textEn: '' }));
-  add(army({ kind: 'fill', textRu: '', textEn: '' }));
+  type Step = NonNullable<ArmyAdvice['step']>;
+  const army = (step: Omit<Step, 'textRu' | 'textEn'>): Hint => ({ kind: 'army', army: { weak: true, ratio: 0, power: 0, norm: 1, best: null, step: { ...step, textRu: '', textEn: '' } } });
+  for (const u of Object.keys(UNITS) as Step['unit'][]) {
+    add(army({ kind: 'hire', unit: u }));
+    add(army({ kind: 'silver', unit: u }));
+  }
+  for (const b of TREE_IDS as TreeId[]) for (let n = 1; n <= 5; n++) {
+    add(army({ kind: 'build', building: b, level: n }));
+    add(army({ kind: 'upgrade', building: b, level: n }));
+  }
+  add(army({ kind: 'claim' }));
+  add(army({ kind: 'fill' }));
   out.push(['The Harbour Master', 'Начальник порта']);
   return [...new Map(out).entries()];
 }
@@ -218,14 +299,18 @@ export function outsideWords(h: Hint, lang: AdviceLang, name: string): { subject
   if (!w) return { subject: '', paras: [], line: '' };
   let body = w.body.replace(/^(Капитан|Captain),\s*/, `${who}, `);
   // the army's step in the helper's own words, when it gave them
-  if (h.kind === 'army' && h.army) {
+  let armyLine = '';
+  if (h.kind === 'army' && h.army?.step) {
     const t = (ru ? h.army.step.textRu : h.army.step.textEn).trim();
-    if (t) body = body.replace(/(Следующий шаг|Next step): .*$/, `$1: ${t}`);
+    if (t) {
+      body = body.replace(/(Следующий шаг|Next step)( на острове| on your island)?: .*$/s, `$1: ${t}`);
+      armyLine = ru ? `${who}, команда слабовата для вашего уровня. ${t}` : `${who}, your crew is weak for your level. ${t}`;
+    }
   }
   const line = h.kind === 'island'
     ? ru ? `${who}, ключ к сильной команде — ваш остров: ${h.building ? '' : 'займите его, '}постройте «${bName('dw2', 'ru')}» и нанимайте морпехов в любом порту.` : `${who}, your island is the key to a strong crew: ${h.building ? '' : 'claim one, '}build the ${bName('dw2', 'en')} and hire marines in any port.`
     : h.kind === 'tier'
       ? ru ? `${who}, на вашем острове готовы ${men(h.tier, 'ru').toLowerCase()}: наймите их на острове или в любом порту.` : `${who}, ${men(h.tier, 'en').toLowerCase()} are ready on your island: hire them there or in any port.`
-      : body;
+      : armyLine || body;
   return { subject: w.subject, paras: [body], line };
 }

@@ -289,15 +289,18 @@ export function levelUpSheet(state: ClientState, send: (m: ClientMsg) => void): 
     // docs/31: every skill at expert — the level's primary is hers to choose.
     const focus = !skill && h?.focus ? h.focus : null;
     if (!h || (!skill && !focus)) return void sheet.close('code');
-    const key = JSON.stringify([lang(), state.self!.level, h.pending, h.offer, focus]);
+    // Owner, 2026-10-28: from level 5 one line about the island (its next step for a weak army: armyadvice.ts)
+    const adv = state.self!.advice;
+    const isle = state.self!.level >= 5 ? (adv?.weak && adv.step ? (lang() === 'ru' ? adv.step.textRu : adv.step.textEn) : L('luIsle')) : '';
+    const key = JSON.stringify([lang(), state.self!.level, h.pending, h.offer, focus, isle]);
     if (key === last) return;
     last = key;
-    sheet.body.innerHTML = focus
+    sheet.body.innerHTML = (isle ? `<p class="lu-isle">${icon('tab_isles', '', 'ico-sm')}${esc(isle)}</p>` : '') + (focus
       ? `<p class="lu-sub">${esc(L('focusTitle', { n: focus.lv }))}${focus.pending > 1 ? ` · ${esc(L('pending', { n: focus.pending }))}` : ''}</p><div class="lu-picks">${focus.offer.map((p, i) => `<button type="button" class="lu-pick" data-lupick="${i}">${icon(PRIM_ICON[p], '✦', 'lu-ico')}<span class="lu-t"><b>${esc(T(PRIM_NAMES[p]))} +1</b><small>${esc(T(PRIM_TEXT[p]))}</small></span></button>`).join('')}</div>`
       : `<p class="lu-sub">${esc(W('cap.pick'))}${h.pending > 1 ? ` · ${esc(L('pending', { n: h.pending }))}` : ''}</p><div class="lu-picks">${h.offer.map((o, i) => {
       const d = SKILLS[o.id];
       return `<button type="button" class="lu-pick" data-lupick="${i}">${icon(d.icon, '✦', 'lu-ico')}<span class="lu-t"><b>${esc(T(d.name))}</b><span class="hx-rank">${esc(o.r === 1 ? L('newSkill') : L('raise', { rank: T(RANK_NAMES[o.r - 1]) }))}</span>${pips(o.r)}<small>${esc(T(d.text[o.r - 1]))}</small></span></button>`;
-    }).join('')}</div>`;
+    }).join('')}</div>`);
     // One pick per offer: a second tap before the redraw went to the next level's offer, unseen (docs/23 item 94). The
     // redraw (a new key: the next offer, or none) brings fresh buttons.
     let picked = false;

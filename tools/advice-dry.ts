@@ -5,11 +5,11 @@
 // (shared/src/data/advice.ts); her island, her notices' links and the hints already sent from the kv table.
 
 import { DatabaseSync } from 'node:sqlite';
-import { ADVICE_CHANNELS, adviceHints, letterWords, newAdviceState, notACaptain, outsideWords, pickHint } from '../shared/src/data/advice.ts';
-import type { AdviceCaptain, AdviceChannel, AdviceState } from '../shared/src/data/advice.ts';
+import { ADVICE_CHANNELS, adviceHints, captainFromSave, isleFromHolding, letterWords, newAdviceState, notACaptain, outsideWords, pickHint } from '../shared/src/data/advice.ts';
+import type { AdviceChannel, AdviceState, HintCaptain, SavedCaptain } from '../shared/src/data/advice.ts';
+import { armyAdvice } from '../shared/src/data/armyadvice.ts';
 import { CAMPAIGN_SIZE } from '../shared/src/data/campaign/plan.ts';
 import { chapterOfSlot } from '../shared/src/data/campaign/progress.ts';
-import { shipLevelOf } from '../shared/src/data/shiplevel.ts';
 
 const path = process.argv[2];
 if (!path) {
@@ -22,7 +22,7 @@ const kv = <T,>(k: string): T | undefined => {
   return r ? (JSON.parse(r.value) as T) : undefined;
 };
 const now = Date.now();
-type Hold = { owned?: boolean; owner: { kind: string; id: number }; yard?: { town?: { b: Record<string, number> } } };
+type Hold = { owned?: boolean; owner: { kind: string; id: number }; buildings?: { id: string; level?: number }[]; yard?: { town?: { b: Record<string, number> } } };
 const holdings = Object.values(kv<Record<string, Hold>>('holdings') ?? {});
 const rows = db.prepare('SELECT a.id, a.name, a.email, a.email_verified, a.last_seen, c.data FROM accounts a JOIN captains c ON c.account_id = a.id').all() as { id: number; name: string; email: string | null; email_verified: number; last_seen: number; data: string }[];
 const links = new Map<number, string[]>();
@@ -33,7 +33,7 @@ const by: Record<string, number> = {};
 let n = 0;
 for (const r of rows) {
   if (notACaptain(r.name)) continue;
-  let p: { level: number; army?: { u: string; n: number }[]; loadout: { classId: string; level?: number }; campaign?: { at: number; started?: boolean }; ashoreAt?: number };
+  let p: SavedCaptain & { campaign?: { at: number; started?: boolean }; ashoreAt?: number };
   try {
     p = JSON.parse(r.data);
   } catch {
@@ -41,16 +41,9 @@ for (const r of rows) {
   }
   const h = holdings.find((x) => x.owned && x.owner.kind === 'player' && x.owner.id === r.id);
   const tgn = kv<{ on: boolean | null; chat: number; blocked: boolean; vk?: number; vkOff?: boolean; lang: 'ru' | 'en'; seen: number }>(`tgn:${r.id}`);
-  let shipLevel = 1;
-  try {
-    shipLevel = shipLevelOf(p.loadout as Parameters<typeof shipLevelOf>[0]);
-  } catch {
-    /* an old save */
-  }
   const seen = p.ashoreAt ?? tgn?.seen ?? r.last_seen;
-  const c: AdviceCaptain = {
-    acc: r.id, name: r.name, level: p.level, army: (p.army ?? []) as AdviceCaptain['army'], shipLevel,
-    town: h ? (h.yard?.town?.b ?? { hall: 1 }) : null, online: false, awayMs: Math.max(0, now - seen),
+  const c: HintCaptain = {
+    acc: r.id, name: r.name, cap: captainFromSave(p, isleFromHolding(h)), online: false, awayMs: Math.max(0, now - seen),
     campaign: p.campaign && p.campaign.at < CAMPAIGN_SIZE ? chapterOfSlot(p.campaign.at) : null,
   };
   const st: AdviceState = { ...newAdviceState(), ...(kv<AdviceState>(`advice:${r.id}`) ?? {}) };
@@ -76,7 +69,8 @@ for (const r of rows) {
   if (!plan.length) continue;
   n++;
   const away = Math.round(c.awayMs / 3_600_000);
-  lines.push(`#${r.id} ${r.name} ⚓${c.level} [${(links.get(r.id) ?? []).join('+') || 'browser'}${can.email ? '+email' : ''}] away ${away}h, hints ${hints.map((x) => x.kind).join('/')} → ${plan.join(' | ')}`);
+  const aa = c.cap ? armyAdvice(c.cap) : null;
+  lines.push(`#${r.id} ${r.name} ⚓${p.level} ratio ${aa?.ratio ?? '-'} [${(links.get(r.id) ?? []).join('+') || 'browser'}${can.email ? '+email' : ''}] away ${away}h, hints ${hints.map((x) => x.kind).join('/')} → ${plan.join(' | ')}`);
 }
 console.log(lines.join('\n'));
 console.log(`\n${n} captains would get something; by channel:kind ${JSON.stringify(by)}`);

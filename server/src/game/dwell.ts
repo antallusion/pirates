@@ -40,8 +40,13 @@ import type { PlayerSession } from './player.ts';
 import { islePools, isleWeekGrowth, keepsDeep, townHave, townLevel } from './town.ts';
 import { DWELL_UP_LEVEL } from '../../../shared/src/data/isletree.ts';
 import { freeCargo, jobCargo, questEvent } from './quests.ts'; // playthrough C: her jobs' cargo is not hers to spend
+import { mooredAt } from './waystations.ts';
+import { captainAdvice } from './armyadvice.ts';
 
-type Src = 'port' | 'isle';
+// Owner, 2026-10-28: «качаешь остров — открываются новые бойцы рангом выше, нанимать можно в портах или плавучих
+// портах. ключ — это остров». Her island's dwellings open their tiers in every port and at every floating waystation
+// ('way'): the men are the island's own pool (a port's own dwelling of the tier adds its men), at the port's price.
+type Src = 'port' | 'isle' | 'way';
 
 /** The trade each tier's men are counted under in the company's pools (the tavern's professions). */
 const POOL_OF: Profession[] = ['sailor', 'sailor', 'marine', 'gunner', 'gunner', 'marine', 'marine', 'sailor'];
@@ -105,6 +110,30 @@ interface Here {
   /** tier → the upgraded kind too (and stacks trained up here) */
   dwell: Map<number, boolean>;
   why: string | null;
+  /** Her island's yard (a port's or a waystation's tiers opened by it draw on its pools). */
+  own: Yard | null;
+  /** The tiers here opened by her island (2 and up), and the port's own among them. */
+  remote: Set<number>;
+  native: Set<number>;
+}
+
+/** Her island's dwellings, as the tiers they open (tier → the upgraded kind too). */
+function isleDwell(y: Yard): Map<number, boolean> {
+  const dwell = new Map<number, boolean>();
+  for (let t = 1; t <= 7; t++) {
+    const L = townLevel(y, dwellingOf(t));
+    if (L > 0) dwell.set(t, L >= DWELL_UP_LEVEL); // docs/29: the upgraded kind from the dwelling's third level
+  }
+  return dwell;
+}
+
+/** The tiers her island opens far from it (the hands are every tavern's and every waystation's own). */
+function remoteOf(game: Game, s: PlayerSession): { y: Yard; dwell: Map<number, boolean> } | null {
+  const m = ownBase(game, s);
+  if (typeof m === 'string') return null;
+  const dwell = isleDwell(m.y);
+  dwell.delete(1);
+  return { y: m.y, dwell };
 }
 
 function here(game: Game, s: PlayerSession, src: Src): Here | string {
@@ -113,31 +142,50 @@ function here(game: Game, s: PlayerSession, src: Src): Here | string {
   if (src === 'port') {
     const port = ship.docked ? game.portById(ship.docked) : undefined;
     if (!port) return 'You must be in port';
-    return { src, place: port.name, port, h: null, y: null, dwell: new Map(portDwellings(port).map((d) => [d.tier, d.up])), why: null };
+    const dwell = new Map(portDwellings(port).map((d) => [d.tier, d.up]));
+    const native = new Set(dwell.keys());
+    const r = remoteOf(game, s);
+    const remote = new Set<number>();
+    if (r) for (const [t, up] of r.dwell) {
+      remote.add(t);
+      dwell.set(t, (dwell.get(t) ?? false) || up);
+    }
+    return { src, place: port.name, port, h: null, y: null, dwell, why: null, own: r?.y ?? null, remote, native };
+  }
+  if (src === 'way') {
+    const w = mooredAt(game, s);
+    if (!w) return 'Moor at a floating waystation first.';
+    const r = remoteOf(game, s);
+    if (!r) return 'You have no island of your own.';
+    return { src, place: w.kind, port: null, h: null, y: null, dwell: r.dwell, why: null, own: r.y, remote: new Set(r.dwell.keys()), native: new Set() };
   }
   const m = ownBase(game, s);
   if (typeof m === 'string') return m;
   const { h, y, isl } = m;
-  const dwell = new Map<number, boolean>();
-  for (let t = 1; t <= 7; t++) {
-    const L = townLevel(y, dwellingOf(t));
-    if (L > 0) dwell.set(t, L >= DWELL_UP_LEVEL); // docs/29: the upgraded kind from the dwelling's third level
-  }
+  const dwell = isleDwell(y);
   const why = lyingOff(game, s, h) ? null : 'Bring your ship to the island to take the men aboard.';
-  return { src, place: isl.name, port: null, h, y, dwell, why };
+  return { src, place: isl.name, port: null, h, y, dwell, why, own: y, remote: new Set(), native: new Set(dwell.keys()) };
 }
 
+/** Far from the island (a port, a waystation): the port's price, the hold's resources. */
+const far = (at: Here) => at.src !== 'isle';
+
 function poolsOf(game: Game, at: Here): number[] {
+  const own = at.own && at.remote.size ? islePools(game, at.own) : null;
   if (at.port) {
     const p = [...portPools(game, at.port)];
     p[1] = Math.floor(game.tavernCrew.get(at.port.id) ?? 0);
+    for (let t = 2; t <= 7; t++) p[t] = (at.native.has(t) ? p[t] ?? 0 : 0) + (own && at.remote.has(t) ? own[t] ?? 0 : 0);
     return p;
   }
+  if (at.src === 'way') return [0, 0, ...[2, 3, 4, 5, 6, 7].map((t) => (own && at.remote.has(t) ? own[t] ?? 0 : 0))];
   return islePools(game, at.y!);
 }
 
 function growthOf(game: Game, at: Here, tier: number): number {
-  if (at.port) return tier === 1 ? 0 : portGrowth(tier, at.port.size) * weekGrowth(weekNow(game), tier);
+  const own = at.own && at.remote.has(tier) ? isleWeekGrowth(game, at.own, tier) : 0;
+  if (at.port) return tier === 1 ? 0 : (at.native.has(tier) ? portGrowth(tier, at.port.size) * weekGrowth(weekNow(game), tier) : 0) + own;
+  if (at.src === 'way') return own;
   return isleWeekGrowth(game, at.y!, tier);
 }
 
@@ -148,11 +196,11 @@ function perMan(game: Game, s: PlayerSession, at: Here, u: UnitId): number {
     const base = recruitCost(game, at.port, s.profile!, 'sailor', s.ship);
     return u === 'sailor' ? Math.round(base * 1.5) : base;
   }
-  return UNITS[u].cost * (at.port ? PORT_MARKUP : 1);
+  return UNITS[u].cost * (far(at) ? PORT_MARKUP : 1);
 }
 
 function priceOf(game: Game, s: PlayerSession, at: Here, u: UnitId, n: number): Price {
-  const p = recruitPrice(u, n, !!at.port);
+  const p = recruitPrice(u, n, far(at));
   if (at.port && UNITS[u].tier === 1) p.silver = Math.round(n * perMan(game, s, at, u));
   const off = recruitLift(s.profile); // docs/19 E2: the Merchant's recruiter's purse
   if (off > 0) p.silver = Math.round(p.silver * (1 - off));
@@ -226,15 +274,20 @@ export function recruit(game: Game, s: PlayerSession, src: Src, u: UnitId, want:
   if (ship.shipLevel < TIER_SHIP_LEVEL[d.tier]) return tierWhy(d.tier);
   const pools = poolsOf(game, at);
   const picked = d.tier >= PICKED_TIER ? pickedRoom(s) : Infinity;
-  const might = mightRoom(ship.army, u, ship.shipLevel, ship.stats.crewMax, ship.armySlots);
-  const n = Math.min(Math.floor(Number(want)), Math.floor(pools[d.tier] ?? 0), ship.stats.crewMax - ship.crew, picked, might);
+  // Owner, 2026-10-28: the hands go ashore to make room for better men (a full hold of deckhands hired nothing).
+  const swap = swapOf(ship.army, d.tier);
+  const might = mightRoom(swap ? sansHands(ship.army) : ship.army, u, ship.shipLevel, ship.stats.crewMax, ship.armySlots);
+  const free = ship.stats.crewMax - ship.crew;
+  const n = Math.min(Math.floor(Number(want)), Math.floor(pools[d.tier] ?? 0), free + swap, picked, might);
   if (!Number.isFinite(n) || n <= 0) {
-    if (ship.crew >= ship.stats.crewMax) return lackHammocks(1, ship.crew, ship.stats.crewMax);
+    if (ship.crew >= ship.stats.crewMax && !swap) return lackHammocks(1, ship.crew, ship.stats.crewMax);
     if (picked <= 0) return `A ship of level ${ship.shipLevel} berths ${pickedMax(s)} picked men (tier 4 and up) at most.`;
     if (might <= 0) return mightWhy(ship.shipLevel);
     return 'Nobody waiting in that dwelling this week.';
   }
-  if (!ship.army.some((x) => x.u === u) && ship.army.length >= ship.armySlots) return lackSlot(ship.army.length, ship.armySlots);
+  const ashore = Math.max(0, n - Math.max(0, free));
+  const after = ashore > 0 ? sendAshore(ship.army, ashore) : ship.army;
+  if (!after.some((x) => x.u === u) && after.length >= ship.armySlots) return lackSlot(after.length, ship.armySlots);
   const price = priceOf(game, s, at, u, n);
   const l = lack(game, s, at, price.goods);
   if (l) return l;
@@ -242,20 +295,56 @@ export function recruit(game: Game, s: PlayerSession, src: Src, u: UnitId, want:
   p.gold -= price.silver;
   take(game, s, at, price.goods);
   game.db.ledger(s.accountId, 'recruit', -price.silver, `${src}:${u}:${n}`);
-  // Taken from the pool: the tavern's waterfront, the port's dwelling, the island's.
+  if (ashore > 0) {
+    ship.setArmy(after);
+    ship.companyKey = '';
+  }
+  // Taken from the pool: the tavern's waterfront, the port's dwelling, the island's (her island's from afar: the
+  // port's own dwelling first).
   if (at.port && d.tier === 1) game.tavernCrew.set(at.port.id, Math.max(0, (game.tavernCrew.get(at.port.id) ?? 0) - n));
-  else if (at.port) {
-    const e = portState(game);
-    e.st[at.port.id].p[d.tier] = Math.max(0, (e.st[at.port.id].p[d.tier] ?? 0) - n);
-    e.dirty = true;
+  else if (at.port || at.src === 'way') {
+    let rest = n;
+    if (at.port && at.native.has(d.tier)) {
+      const e = portState(game);
+      const had = portPools(game, at.port)[d.tier] ?? 0;
+      const k = Math.min(rest, Math.floor(had));
+      e.st[at.port.id].p[d.tier] = Math.max(0, had - k);
+      e.dirty = true;
+      rest -= k;
+    }
+    if (rest > 0 && at.own && at.remote.has(d.tier)) {
+      const pool = islePools(game, at.own);
+      pool[d.tier] = Math.max(0, (pool[d.tier] ?? 0) - rest);
+      game.holdings.touch();
+    }
   } else {
     at.y!.town!.pool[d.tier] = Math.max(0, (at.y!.town!.pool[d.tier] ?? 0) - n);
     game.holdings.touch();
   }
   signOn(game, s, u, n);
-  game.toastShip(ship, `${n} ${plural(u, n)} sign on for ${price.silver} silver.`, 'good');
+  game.toastShip(ship, ashore > 0 ? `${n} ${plural(u, n)} sign on for ${price.silver} silver; ${ashore} hands go ashore to make room.` : `${n} ${plural(u, n)} sign on for ${price.silver} silver.`, 'good');
   questEvent(game, s, { k: 'recruit', n }); // docs/36: men signed on (the campaign's step)
   return null;
+}
+
+/** The hands (tier 1) aboard who may go ashore for men of `tier` (2 and up) when the hammocks are full. */
+const isHand = (u: UnitId) => UNITS[u]?.tier === 1 && !UNITS[u].beast;
+export function swapOf(army: readonly ArmyStack[], tier: number): number {
+  return tier >= 2 ? army.filter((x) => isHand(x.u)).reduce((a, x) => a + x.n, 0) : 0;
+}
+/** The army without its hands (the might cap counts the empty hammocks as deckhands: the same weight). */
+export const sansHands = (army: readonly ArmyStack[]): ArmyStack[] => army.filter((x) => !isHand(x.u)).map((x) => ({ ...x }));
+/** `n` hands ashore: the deckhands first, then the seasoned sailors, then any other hands (a copy). */
+export function sendAshore(army: readonly ArmyStack[], n: number): ArmyStack[] {
+  const out = army.map((x) => ({ ...x }));
+  const order = (x: ArmyStack) => (x.u === 'deckhand' ? 0 : x.u === 'sailor' ? 1 : 2);
+  for (const x of [...out].filter((y) => isHand(y.u)).sort((a, b) => order(a) - order(b))) {
+    if (n <= 0) break;
+    const k = Math.min(n, x.n);
+    x.n -= k;
+    n -= k;
+  }
+  return out.filter((x) => x.n > 0);
 }
 
 /** Picked men (tier 4 and up) she may still berth, and at most. */
@@ -326,7 +415,7 @@ export function train(game: Game, s: PlayerSession, src: Src, u: UnitId, want: n
   if (stack && might <= 0) return mightWhy(ship.shipLevel);
   if (!stack || !Number.isFinite(n) || n <= 0) return 'None of them aboard.';
   if (n < stack.n && !ship.army.some((x) => x.u === to) && ship.army.length >= ship.armySlots) return lackSlot(ship.army.length, ship.armySlots);
-  const price = upgradePrice(u, n, !!at.port)!;
+  const price = upgradePrice(u, n, far(at))!;
   const l = lack(game, s, at, price.goods);
   if (l) return l;
   const p = s.profile!;
@@ -364,10 +453,12 @@ export function dwellView(game: Game, s: PlayerSession, src: Src): DwellView | n
   for (const [tier, up] of [...at.dwell].sort((a, b) => a[0] - b[0])) {
     const base = TIER_UNIT[tier];
     const kinds: UnitId[] = up ? [base, UNITS[base].upgrade!] : [base];
+    const swap = swapOf(ship.army, tier);
     rows.push({
       tier, name: at.port && tier === 1 ? 'tavern' : dwellingOf(tier), up, pool: Math.floor(pools[tier] ?? 0), growth: Math.round(growthOf(game, at, tier) * 10) / 10,
-      units: kinds.map((u) => { const room = mightLeft(s, u); return { u, per: Math.round(perMan(game, s, at, u) * 100) / 100, goods: UNIT_GOODS[u] ?? {}, room: Number.isFinite(room) ? room : -1 }; }),
+      units: kinds.map((u) => { const room = mightRoom(swap ? sansHands(ship.army) : ship.army, u, ship.shipLevel, ship.stats.crewMax, ship.armySlots); return { u, per: Math.round(perMan(game, s, at, u) * 100) / 100, goods: UNIT_GOODS[u] ?? {}, room: Number.isFinite(room) ? room : -1 }; }),
       why: UNITS[base].deep && !deep ? 'Only a captain of the Choir or of a cursed ship keeps the drowned.' : ship.shipLevel < TIER_SHIP_LEVEL[tier] ? tierWhy(tier) : null,
+      ...(at.remote.has(tier) ? { isle: true } : {}), ...(swap ? { swap } : {}),
     });
   }
   if (src === 'isle' && dwellHooks.isleRows) rows.push(...dwellHooks.isleRows(game, s));
@@ -376,8 +467,8 @@ export function dwellView(game: Game, s: PlayerSession, src: Src): DwellView | n
     const d = UNITS[x.u];
     if (!d.upgrade || !at.dwell.get(d.tier)) continue;
     if (UNITS[d.upgrade].deep && !deep) continue;
-    const one = upgradePrice(x.u, 1, !!at.port)!;
-    const per = (UNITS[d.upgrade].cost - d.cost) * (at.port ? PORT_MARKUP : 1);
+    const one = upgradePrice(x.u, 1, far(at))!;
+    const per = (UNITS[d.upgrade].cost - d.cost) * (far(at) ? PORT_MARKUP : 1);
     const goods: Partial<Record<GoodId, number>> = {};
     for (const g of Object.keys(one.goods) as GoodId[]) goods[g] = Math.max(0, (UNIT_GOODS[d.upgrade]?.[g] ?? 0) - (UNIT_GOODS[x.u]?.[g] ?? 0));
     ups.push({ u: x.u, to: d.upgrade, n: x.n, per, goods, room: Math.min(x.n, mightLeft(s, d.upgrade, x.u)) });
@@ -386,6 +477,7 @@ export function dwellView(game: Game, s: PlayerSession, src: Src): DwellView | n
     src, place: at.place, rows, ups, army: ship.army.map((x) => ({ ...x })), slots: ship.armySlots, crew: ship.crew, crewMax: ship.stats.crewMax,
     gold: Math.floor(s.profile!.gold), have: have(game, s, at), why: at.why ?? busy(game, s), week: weekView(game), picked: pickedRoom(s), pickedMax: pickedMax(s),
     might: Math.round(armyWeight(ship.army)), mightMax: Math.round(mightCap(ship.shipLevel, ship.stats.crewMax, ship.armySlots)),
+    best: captainAdvice(game, s)?.best ?? null,
   };
 }
 

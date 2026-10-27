@@ -12,13 +12,14 @@
 
 import { randomBytes } from 'node:crypto';
 import { ADVICE_CHANNELS, adviceHints, adviceKey as skey, letterWords, markSent, newAdviceState, notACaptain, outsideWords, pickHint } from '../../../shared/src/data/advice.ts';
-import type { AdviceCaptain, AdviceChannel, AdviceLang, AdviceState, Hint } from '../../../shared/src/data/advice.ts';
+import { armyAdvice } from '../../../shared/src/data/armyadvice.ts';
+import { captainFromSave } from '../../../shared/src/data/advice.ts';
+import type { AdviceChannel, AdviceLang, AdviceState, Hint, HintCaptain, SavedCaptain } from '../../../shared/src/data/advice.ts';
+import type { AdviceCaptain } from '../../../shared/src/data/armyadvice.ts';
+import { adviceCaptain as liveCaptain, isleOfAccount } from './armyadvice.ts';
 import { CAMPAIGN_SIZE } from '../../../shared/src/data/campaign/plan.ts';
 import { chapterOfSlot } from '../../../shared/src/data/campaign/progress.ts';
-import { shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
-import type { ArmyStack } from '../../../shared/src/data/army.ts';
 import type { Mailer } from '../mail.ts';
-import { ownIsland } from './estate.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { deliver } from './post.ts';
@@ -45,22 +46,20 @@ function tally(game: Game, ch: AdviceChannel, kind: string): void {
 
 // ------------------------------------------------------------------------------------------------ her, as the hints see her
 
-/** A captain from her profile (and her ship when aboard). */
-export function adviceCaptain(game: Game, acc: number, name: string, p: Profile, s?: PlayerSession | null): AdviceCaptain {
+/** A captain from her profile: aboard, the live ship as captainAdvice reads it (server armyadvice.ts); away, the same
+ *  fields from the save (captainFromSave) and her island's tree. */
+export function hintCaptain(game: Game, acc: number, name: string, p: Profile, s?: PlayerSession | null): HintCaptain {
   const online = !!s && game.sessions.has(s);
-  const army: ArmyStack[] = s?.ship ? s.ship.army.map((x) => ({ u: x.u, n: x.n })) : (p.army ?? []);
-  let shipLevel = 1;
+  let cap: AdviceCaptain | null = null;
   try {
-    shipLevel = s?.ship ? s.ship.shipLevel : shipLevelOf(p.loadout);
+    cap = s?.ship ? liveCaptain(game, s) : captainFromSave(p as unknown as SavedCaptain, isleOfAccount(game, acc));
   } catch {
-    shipLevel = 1;
+    cap = null;
   }
-  const h = ownIsland(game, acc);
-  const town = h ? ((h.yard?.town?.b ?? { hall: 1 }) as Partial<Record<string, number>>) : null;
   const camp = p.campaign;
   const campaign = camp && camp.started !== false && camp.at < CAMPAIGN_SIZE ? chapterOfSlot(camp.at) : null;
   const awayMs = online ? 0 : Math.max(0, game.wallNow() - (p.ashoreAt ?? tgnState(game, acc)?.seen ?? game.wallNow()));
-  return { acc, name, level: p.level, army, shipLevel, town, online, awayMs, campaign };
+  return { acc, name, cap, online, awayMs, campaign };
 }
 
 /** Her language outside the game: her VK or Telegram's, else Russian (the game's own sea). */
@@ -119,7 +118,7 @@ export interface AdvicePlan {
 }
 
 /** What is due to her now on each channel (the limits; `force`: the limits ignored, her switches kept). */
-export function advicePlan(game: Game, c: AdviceCaptain, st: AdviceState, opts: { force?: boolean; channels?: AdviceChannel[] } = {}): AdvicePlan[] {
+export function advicePlan(game: Game, c: HintCaptain, st: AdviceState, opts: { force?: boolean; channels?: AdviceChannel[] } = {}): AdvicePlan[] {
   const now = game.wallNow();
   const hints = adviceHints(c);
   if (!hints.length) return [];
@@ -144,7 +143,7 @@ export function advicePlan(game: Game, c: AdviceCaptain, st: AdviceState, opts: 
 }
 
 /** The plan carried out: marked first (two passes at once cannot send twice), then sent. */
-export async function adviceSend(game: Game, c: AdviceCaptain, plan: AdvicePlan[], mailer: Mailer | null, base: string): Promise<string[]> {
+export async function adviceSend(game: Game, c: HintCaptain, plan: AdvicePlan[], mailer: Mailer | null, base: string): Promise<string[]> {
   if (!plan.length) return [];
   const now = game.wallNow();
   const st = adviceState(game, c.acc);
@@ -182,7 +181,7 @@ const baseOf = (game: Game): string => game.auth?.publicUrl ?? '';
 /** One captain looked at and written to. */
 function adviseSession(game: Game, s: PlayerSession): void {
   if (!s.authed || !s.profile || notACaptain(s.name)) return;
-  const c = adviceCaptain(game, s.accountId, s.name, s.profile, s);
+  const c = hintCaptain(game, s.accountId, s.name, s.profile, s);
   const plan = advicePlan(game, c, adviceState(game, s.accountId), { channels: ['letter'] });
   if (plan.length) void adviceSend(game, c, plan, mailerOf(game), baseOf(game));
 }
@@ -217,8 +216,8 @@ export function stepAdvice(game: Game): void {
 }
 
 /** The captains away and what each would be sent now (the day's pass; the admin's dry run). */
-export function adviceDry(game: Game): { c: AdviceCaptain; plan: AdvicePlan[] }[] {
-  const out: { c: AdviceCaptain; plan: AdvicePlan[] }[] = [];
+export function adviceDry(game: Game): { c: HintCaptain; plan: AdvicePlan[] }[] {
+  const out: { c: HintCaptain; plan: AdvicePlan[] }[] = [];
   for (const row of game.db.allCaptains()) {
     if (notACaptain(row.name)) continue;
     const s = game.sessionByAccount(row.account_id);
@@ -230,7 +229,7 @@ export function adviceDry(game: Game): { c: AdviceCaptain; plan: AdvicePlan[] }[
       continue;
     }
     if (!p || typeof p.level !== 'number') continue;
-    const c = adviceCaptain(game, row.account_id, row.name, p, null);
+    const c = hintCaptain(game, row.account_id, row.name, p, null);
     const plan = advicePlan(game, c, adviceState(game, row.account_id));
     if (plan.length) out.push({ c, plan });
   }
@@ -239,7 +238,7 @@ export function adviceDry(game: Game): { c: AdviceCaptain; plan: AdvicePlan[] }[
 
 // ------------------------------------------------------------------------------------------------ the admin
 
-const lineOf = (c: AdviceCaptain, plan: AdvicePlan[]) => `${c.name} (#${c.acc}, ⚓${c.level}): ${plan.map((p) => `${p.ch}:${p.hint.kind}`).join(', ')}`;
+const lineOf = (c: HintCaptain, plan: AdvicePlan[]) => `${c.name} (#${c.acc}, ⚓${c.cap?.level ?? '?'}): ${plan.map((p) => `${p.ch}:${p.hint.kind}`).join(', ')}`;
 
 /** `/advice [dry | preview <name> | send <name> | stats]`: who would get what now (nothing sent), one captain's hints
  *  in full, one captain's hints sent now (the limits ignored, her switches kept), the figures. */
@@ -263,11 +262,11 @@ export function adminAdvice(game: Game, s: PlayerSession, args: string[]): strin
     }
   })();
   if (!prof) return `${acc.name} has no captain yet.`;
-  const c = adviceCaptain(game, acc.id, acc.name, prof, sess);
+  const c = hintCaptain(game, acc.id, acc.name, prof, sess);
   const force = cmd === 'send';
   const plan = advicePlan(game, c, adviceState(game, acc.id), { force });
   const hints = adviceHints(c).map((h) => h.kind).join(', ') || 'none';
-  const head = `${acc.name} (#${acc.id}, ⚓${c.level}, ship ⚓${c.shipLevel}, island ${c.town ? JSON.stringify(c.town) : 'none'}, ${c.online ? 'aboard' : `away ${Math.round(c.awayMs / 3_600_000)} h`}): hints ${hints}; language ${adviceLang(game, acc.id)}.`;
+  const head = `${acc.name} (#${acc.id}, ⚓${c.cap?.level ?? '?'}, ship ⚓${c.cap?.shipLevel ?? '?'}, island ${c.cap?.isle ? JSON.stringify(c.cap.isle) : 'none'}, army ${c.cap ? `${armyAdvice(c.cap)?.ratio ?? '-'} of the norm` : '-'}, ${c.online ? 'aboard' : `away ${Math.round(c.awayMs / 3_600_000)} h`}): hints ${hints}; language ${adviceLang(game, acc.id)}.`;
   const body = plan.map((p) => `[${p.ch}:${p.hint.kind}] ${p.subject} — ${p.text}`).join('\n') || 'Nothing due by the limits.';
   if (force && plan.length) void adviceSend(game, c, plan, mailerOf(game), baseOf(game)).then((d) => console.log(`[advice] forced to #${acc.id}: ${d.join(', ') || 'nothing went'}`));
   return `${head}\n${force ? 'SENDING:\n' : ''}${body}`;

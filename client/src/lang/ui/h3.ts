@@ -79,6 +79,9 @@ export const EN = {
   'port.dwell': 'Dwellings',
   'port.dwell.text': 'Men of the seven tiers grow here week by week: {list}.',
   'port.dwell.btn': 'Recruit an army',
+  'best': 'best choice',
+  'isle.tag': 'your island',
+  'swap': '{n} hands go ashore to make room.',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -156,4 +159,7 @@ export const RU: Record<keyof typeof EN, string> = {
   'port.dwell': 'Жилища',
   'port.dwell.text': 'Здесь неделя за неделей растут бойцы: {list}.',
   'port.dwell.btn': 'Нанять армию',
+  'best': 'лучший выбор',
+  'isle.tag': 'ваш остров',
+  'swap': 'Юнги сойдут на берег, чтобы освободить места: {n}.',
 };
