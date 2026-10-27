@@ -7,8 +7,8 @@
 // ring and the portrait grow and shrink together and nothing can be squeezed apart:
 //   the hole  a circle in the box's middle, its diameter the ring's measured hole (portraitfaces.ts RING_HOLES); the
 //             portrait is the hole's background, the face (PORTRAIT_FACES) `FACE_AIM` of the hole's height and on its
-//             middle; a face painted near its picture's edge is shown a little closer, so the picture still covers
-//             the whole hole and the face stays in the middle (never a bare edge);
+//             middle line; a face painted near its picture's side is shown a little closer, so the picture still
+//             covers the whole hole and the face stays in the middle (never a bare edge, never off-centre);
 //   the ring  its picture laid so that its own hole is the box's hole. A cosmetic frame (`frame.*`) is drawn so its
 //             hole is the stock ring's, at most FRAME_GROW_MAX times the box (a bulky frame's portrait is a little
 //             smaller rather than the frame spreading over its neighbours).
@@ -16,7 +16,8 @@
 
 import { PORTRAIT_FACES, RING_HOLES } from './portraitfaces.ts';
 
-/** The share of the hole's height the face takes, and the most it may take for a face painted near its edge. */
+/** The share of the hole's height the face takes, and the most it may ever take (a face painted near its picture's side
+ *  is shown a little closer so that it still stands on the hole's middle line). */
 // (owner, 2026-10-26: «лица обрезаются рамкой, нужно брать вид более общий, чтобы часть тела залезала тоже … чтобы
 // голова на рамку не лезла» — head and shoulders: the face a third of the hole, a little above its middle, so the hat
 // and the hair stay inside the ring and the shoulders show below)
@@ -24,6 +25,9 @@ export const FACE_AIM = 0.32;
 export const FACE_AIM_MAX = 0.6;
 /** Where the face's middle stands, as a share of the hole's height from its top. */
 export const FACE_Y = 0.44;
+/** A face painted at its picture's very top rises above FACE_Y rather than the picture being blown up (owner,
+ *  2026-10-27: the reaver's bald head filled the whole card), but its top keeps this share of the hole's height clear. */
+export const FACE_TOP_MIN = 0.06;
 /** How much wider than the ring's measured hole the portrait is laid (under the ring's inner lip). */
 export const HOLE_BLEED = 1.12;
 /** The most a cosmetic frame is drawn wider than the avatar's box. */
@@ -52,26 +56,26 @@ export interface FaceFit {
 const pct = (v: number) => `${(Math.round(v * 10000) / 100).toString()}%`;
 
 /** The portrait set in a hole 1 wide and `hole` high (1: a circle; 4/3: the captain's choice's cards): the face `aim`
- *  of the hole's height, its middle on the hole's middle, the picture over the whole hole. */
+ *  of the hole's height, its middle always on the hole's vertical middle line (owner, 2026-10-27: «главное чтобы оно
+ *  отцентровано к картинке было» — a face painted near its picture's side is shown a little closer rather than off
+ *  the middle), at FACE_Y of the height unless the picture's top would show (then it rises, its top FACE_TOP_MIN clear);
+ *  the picture always over the whole hole. */
 export function faceFit(key: string, hole = 1, aim = FACE_AIM): FaceFit {
   const [cx, cy, fh, aspect] = faceBox(key);
-  let t = aim;
-  for (;;) {
-    let ih = (t * hole) / fh;
-    let iw = ih / aspect;
-    const k = Math.max(1, 1 / iw, hole / ih);
-    iw *= k;
-    ih *= k;
-    const ox = 0.5 - cx * iw, oy = hole * FACE_Y - cy * ih;
-    const fits = ox <= 1e-9 && ox >= 1 - iw - 1e-9 && oy <= 1e-9 && oy >= hole - ih - 1e-9;
-    if (fits || t >= FACE_AIM_MAX - 1e-9) {
-      const x = Math.min(0, Math.max(1 - iw, ox)), y = Math.min(0, Math.max(hole - ih, oy));
-      // background-position: the offset as a share of (box − picture)
-      const px = iw - 1 > 1e-9 ? x / (1 - iw) : 0.5, py = ih - hole > 1e-9 ? y / (hole - ih) : 0.5;
-      return { iw, ih, ox: x, oy: y, size: `${pct(iw)} auto`, pos: `${pct(px)} ${pct(py)}` };
-    }
-    t = Math.min(FACE_AIM_MAX, t + 0.02);
-  }
+  let ih = (aim * hole) / fh;
+  let iw = ih / aspect;
+  // cover the hole, and leave room on either side of the face's middle for half the hole
+  let k = Math.max(1, 1 / iw, hole / ih, 0.5 / (cx * iw), 0.5 / ((1 - cx) * iw));
+  // the face's top (when the picture's top edge holds it up) at least FACE_TOP_MIN below the hole's top
+  const top = cy - fh / 2;
+  if (top > 0) k = Math.max(k, (FACE_TOP_MIN * hole) / (top * ih));
+  iw *= k;
+  ih *= k;
+  const x = Math.min(0, Math.max(1 - iw, 0.5 - cx * iw));
+  const y = Math.min(0, Math.max(hole - ih, hole * FACE_Y - cy * ih));
+  // background-position: the offset as a share of (box − picture)
+  const px = iw - 1 > 1e-9 ? x / (1 - iw) : 0.5, py = ih - hole > 1e-9 ? y / (hole - ih) : 0.5;
+  return { iw, ih, ox: x, oy: y, size: `${pct(iw)} auto`, pos: `${pct(px)} ${pct(py)}` };
 }
 
 /** The stock rings: the game's (`ui.ring`), the HUD's unit frame (`ui.portrait_ring`), the site's brass porthole. */

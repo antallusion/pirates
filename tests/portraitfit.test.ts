@@ -9,7 +9,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { CAPTAINS, CAPTAIN_IDS } from '../shared/src/data/captains.ts';
 import { FRAMES } from '../shared/src/data/cosmetics.ts';
 import { PORTRAIT_FACES, RING_HOLES } from '../shared/src/data/portraitfaces.ts';
-import { FACE_AIM, FACE_AIM_MAX, FACE_Y, FRAME_GROW_MAX, avatarHtml, faceBox, faceFit, portraitKey, ringFit } from '../shared/src/data/portraitfit.ts';
+import { FACE_AIM, FACE_AIM_MAX, FACE_TOP_MIN, FACE_Y, FRAME_GROW_MAX, avatarHtml, faceBox, faceFit, portraitKey, ringFit } from '../shared/src/data/portraitfit.ts';
 
 /** A WebP's pixel size from its header (VP8, VP8L or VP8X). */
 function webpSize(file: string): [number, number] {
@@ -53,7 +53,11 @@ test('the face in the hole\'s middle, the same share of it, the picture over the
     const share = fh * f.ih;
     assert.ok(share >= FACE_AIM - 0.005 && share <= FACE_AIM_MAX + 0.005, `${k}: the face ${share.toFixed(2)} of the hole`);
     const cx = f.ox + x * f.iw, cy = f.oy + y * f.ih;
-    assert.ok(Math.abs(cx - 0.5) < 0.02 && Math.abs(cy - FACE_Y) < 0.04, `${k}: the face's middle at ${cx.toFixed(3)}, ${cy.toFixed(3)}`);
+    // (owner, 2026-10-27: «главное чтобы оно отцентровано к картинке было») on the middle line exactly; at FACE_Y, or
+    // higher only when the picture's top holds it up, and then its top still clear of the rim
+    assert.ok(Math.abs(cx - 0.5) < 0.002, `${k}: the face's middle at x ${cx.toFixed(3)}`);
+    assert.ok(cy <= FACE_Y + 0.002 && (Math.abs(cy - FACE_Y) < 0.002 || Math.abs(f.oy) < 1e-9), `${k}: the face's middle at y ${cy.toFixed(3)}`);
+    assert.ok(cy - (fh * f.ih) / 2 >= FACE_TOP_MIN - 1e-6, `${k}: the face's top clear of the rim`);
     // the face whole inside the hole (its box, as wide as 0.8 of its height)
     const hw = (fh * f.ih * 0.8) / 2, hh = (fh * f.ih) / 2;
     assert.ok(Math.hypot(Math.max(Math.abs(cx - 0.5) + hw, 0), Math.abs(cy - 0.5) + hh) < 0.62, `${k}: the face's corners near the rim`);
@@ -62,6 +66,22 @@ test('the face in the hole\'s middle, the same share of it, the picture over the
     if (f.iw > 1.0001) assert.ok(Math.abs(px * (1 - f.iw) - f.ox) < 0.001, `${k}: position x`);
     if (f.ih > 1.0001) assert.ok(Math.abs(py * (1 - f.ih) - f.oy) < 0.001, `${k}: position y`);
     assert.ok(Math.abs(parseFloat(f.size) / 100 - f.iw) < 0.001 && f.size.endsWith(' auto'), `${k}: the size keeps the picture's aspect`);
+  }
+});
+
+test('the captain choice\'s 3:4 cards: the face on the middle line, head and shoulders, whole inside the card', () => {
+  // (owner, 2026-10-27: «четко размещать лицо как у верхних двух везде. и показывать часть тела, прям крупно делать не
+  // надо лицо, главное чтобы оно отцентровано к картинке было» — client/src/ui/captain.ts CARD_FACE)
+  const hole = 4 / 3;
+  for (const id of CAPTAIN_IDS) {
+    const k = portraitKey(CAPTAINS[id].portrait);
+    const f = faceFit(k, hole, 0.36);
+    const [x, y, fh] = faceBox(k);
+    const share = (fh * f.ih) / hole, cx = f.ox + x * f.iw, cy = (f.oy + y * f.ih) / hole;
+    assert.ok(f.iw >= 1 - 1e-9 && f.ih >= hole - 1e-9 && f.ox <= 1e-9 && f.oy <= 1e-9 && f.ox >= 1 - f.iw - 1e-9 && f.oy >= hole - f.ih - 1e-9, `${k}: no bare edge`);
+    assert.ok(Math.abs(cx - 0.5) < 0.002, `${k}: centred (${cx.toFixed(3)})`);
+    assert.ok(share > 0.3 && share < 0.42, `${k}: head and shoulders, the face ${share.toFixed(2)} of the card`);
+    assert.ok(cy - share / 2 > 0.05 && cy + share / 2 < 0.75, `${k}: the face whole, the shoulders below it`);
   }
 });
 
