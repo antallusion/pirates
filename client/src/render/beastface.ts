@@ -18,11 +18,13 @@ export interface BeastFace {
   fig: boolean;
 }
 
-/** The face a kind shows: a creature's own figure once painted (a premium hull's own kind's, or the figure that stands
- *  in for it, shared/src/data/fleet.ts); anything else its own art. */
+/** The face a kind shows: its own battle figure (every one of the 271 kinds has one, men, the world's armies' kinds and
+ *  creatures alike — owner, 2026-10-27: «надо фактических существ показывать»; a faction kind used to show the art of
+ *  the pirate kind whose place it takes, the deep's spawn a stand-in picture of hands rising from the water), or the
+ *  figure that stands in for it while it is painted (shared/src/data/unitart.ts, fleet.ts); else its own art. */
 export function beastFace(u: string): BeastFace {
   const def = UNITS[u as UnitId];
-  if ((def?.beast || isShipBeast(u)) && assetUrl(`unit.${u}`)) return { id: `unit.${u}`, fig: true };
+  if ((def || isShipBeast(u)) && assetUrl(`unit.${u}`)) return { id: `unit.${u}`, fig: true };
   return { id: def?.art ?? 'icon.prof_sailor', tint: BEAST_TINT[u as keyof typeof BEAST_TINT] ?? (isBossUnit(u) ? BOSS_UNIT_STAND_IN[u].tint : isTitan(u) ? TITAN_STAND_IN[u].tint : undefined), fig: false };
 }
 

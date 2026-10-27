@@ -3233,25 +3233,65 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 /* A phone on its side keeps a short stack: the signal flags ride at its top so a finger always finds them. */
 @media (max-height: 520px) { #hud-stack > #hud-signals { order: -2; } }
 
-/* ---------- the ship's army (docs/17 H1): HoMM3's row of army slots — each stack's face, its count in the corner,
-   its tier in pips, the upgraded kinds in gold; her empty slots left open. */
+/* ---------- the ship's army (docs/17 H1): HoMM3's row of army slots; her empty slots left open. Owner, 2026-10-27
+   («существ ... сделать им какой-то фон относительно их статуса и цифры рейтинга»): each stack's whole battle figure
+   standing on a code-drawn ground in its tier's colour (I iron … VII gold), an upgraded kind in a gold rim with a
+   chevron by its numeral, the rare / legendary / mythic kinds in their own glow; the tier's numeral top left, the
+   stack's might (armyPower) top right, the count bottom right. */
 .army-card .card-h { flex-wrap: wrap; }
 .army-sum { font-family: var(--sans, inherit); font-size: 12px; margin-left: auto; }
 .army-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin: 4px 0 8px; }
-.army-slot { position: relative; aspect-ratio: 1; min-width: 0; border-radius: 6px; border: 2px solid #5c4a33; background: radial-gradient(circle at 50% 35%, #2a2118, #120e0a); box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.8); overflow: hidden; }
-.army-slot.up { border-color: #c9a45a; box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.8), 0 0 6px rgba(224, 184, 98, 0.35); }
-.army-slot.empty { border-style: dashed; border-color: #3a3024; background: rgba(20, 16, 12, 0.6); }
-.army-slot .army-face { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; object-fit: cover; }
-.army-n { position: absolute; right: 2px; bottom: 2px; min-width: 16px; padding: 0 3px; font-size: 12px; line-height: 16px; text-align: center; border-radius: 4px; background: rgba(8, 6, 4, 0.9); color: #f2ead8; border: 1px solid #8a6a44; }
-.army-tier { position: absolute; left: 3px; top: 1px; font-style: normal; font-size: 9px; letter-spacing: -1px; color: rgba(240, 230, 210, 0.85); text-shadow: 0 0 3px #000; }
-.army-slot.up .army-tier { color: var(--gold); }
+.army-slot, .army-thumb { --tc: #8a8f96; }
+.army-slot.t2, .army-thumb.t2 { --tc: #74a35c; }
+.army-slot.t3, .army-thumb.t3 { --tc: #3fb0a6; }
+.army-slot.t4, .army-thumb.t4 { --tc: #4f8ee0; }
+.army-slot.t5, .army-thumb.t5 { --tc: #a06ae0; }
+.army-slot.t6, .army-thumb.t6 { --tc: #e0604f; }
+.army-slot.t7, .army-thumb.t7 { --tc: #f0b43c; }
+.army-slot { position: relative; aspect-ratio: 4 / 5; min-width: 0; border-radius: 7px; overflow: hidden; container-type: inline-size;
+  border: 2px solid color-mix(in srgb, var(--tc) 62%, #2a2117);
+  background:
+    radial-gradient(ellipse 75% 38% at 50% 92%, color-mix(in srgb, var(--tc) 55%, transparent), transparent 72%),
+    radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--tc) 26%, #1d1712), #0c0a08 78%);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.85), inset 0 1px 0 color-mix(in srgb, var(--tc) 40%, transparent); }
+.army-slot.up { border-color: #e3bd68; box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.85), inset 0 0 0 1px rgba(255, 220, 140, 0.35), 0 0 7px rgba(240, 196, 100, 0.45); }
+.army-slot.r-rare { box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.85), inset 0 0 0 1px rgba(150, 190, 255, 0.45), 0 0 8px rgba(110, 160, 255, 0.55); }
+.army-slot.r-legend { box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.85), inset 0 0 0 1px rgba(255, 190, 110, 0.5), 0 0 9px rgba(255, 150, 50, 0.65); }
+.army-slot.r-myth { box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.85), inset 0 0 0 1px rgba(255, 120, 120, 0.5), 0 0 10px rgba(230, 40, 50, 0.65); }
+.army-slot:is(.r-rare, .r-legend, .r-myth)::before { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(125deg, transparent 30%, rgba(255, 255, 255, 0.07) 45%, transparent 60%); }
+.army-slot.empty { border-style: dashed; border-color: #3a3024; background: rgba(20, 16, 12, 0.6); box-shadow: none; }
+.army-slot > img.army-face, .army-slot > img.army-face.fig { position: absolute; left: 4%; right: 4%; top: 15%; bottom: 3%; width: 92%; height: 82%; margin: 0;
+  object-fit: contain; object-position: 50% 100%; background: none; border-radius: 0; padding: 0; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.8)); }
+.army-tier { position: absolute; left: 3px; top: 3px; z-index: 1; display: inline-flex; align-items: center; gap: 2px; min-width: 18px; height: 16px; padding: 0 4px; box-sizing: border-box; justify-content: center;
+  font: 700 11px/16px Georgia, 'Times New Roman', serif; font-style: normal; letter-spacing: 0; color: #120d08;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tc) 70%, #fff), var(--tc) 55%, color-mix(in srgb, var(--tc) 70%, #000));
+  border-radius: 3px 3px 8px 8px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.7), 0 1px 2px rgba(0, 0, 0, 0.6); text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35); }
+.army-up { display: inline-block; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 6px solid #fff3c4;
+  filter: drop-shadow(0 0 1px #000); text-decoration: none; }
+.army-rate { position: absolute; right: 3px; top: 3px; z-index: 1; display: inline-flex; align-items: center; gap: 2px; height: 16px; padding: 0 4px 0 2px; border-radius: 4px;
+  font: 700 11px/16px var(--sans, inherit); font-variant-numeric: tabular-nums; color: #ffe7b0; background: rgba(8, 6, 4, 0.86); border: 1px solid color-mix(in srgb, var(--tc) 55%, #5c4a33); }
+.army-rate-ico { width: 12px; height: 12px; margin: 0; flex: none; object-fit: contain; }
+.army-n { position: absolute; right: 3px; bottom: 3px; z-index: 1; min-width: 16px; padding: 0 4px; font-size: 12px; font-weight: 700; line-height: 16px; text-align: center; font-variant-numeric: tabular-nums;
+  border-radius: 4px; background: rgba(8, 6, 4, 0.9); color: #f6eedb; border: 1px solid #8a6a44; }
+@container (max-width: 78px) { .army-rate-ico { display: none; } .army-rate { padding: 0 3px; } }
+@container (max-width: 58px) { .army-rate { top: auto; bottom: 3px; left: 3px; right: auto; font-size: 9.5px; height: 14px; line-height: 14px; } .army-tier { min-width: 15px; height: 14px; font-size: 9.5px; padding: 0 2px; } .army-n { font-size: 10px; line-height: 14px; } }
 .army-list { display: flex; flex-direction: column; gap: 4px; }
 .army-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.army-thumb { flex: none; width: 40px; height: 40px; border-radius: 6px; box-sizing: border-box; position: relative; overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--tc) 62%, #2a2117);
+  background: radial-gradient(ellipse 80% 40% at 50% 92%, color-mix(in srgb, var(--tc) 50%, transparent), transparent 72%), radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--tc) 24%, #1d1712), #0c0a08 80%); }
+.army-thumb.up { border-color: #e3bd68; }
+.army-thumb.r-rare { box-shadow: 0 0 5px rgba(110, 160, 255, 0.6); }
+.army-thumb.r-legend { box-shadow: 0 0 5px rgba(255, 150, 50, 0.7); }
+.army-thumb.r-myth { box-shadow: 0 0 5px rgba(230, 40, 50, 0.7); }
 .army-face-sm { width: 30px; height: 30px; flex: none; border-radius: 50%; object-fit: cover; border: 1px solid #5c4a33; }
+.army-thumb > img.army-face-sm, .army-thumb > img.army-face-sm.fig { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 2px 1px 1px; box-sizing: border-box; border: 0; border-radius: 0; background: none; object-fit: cover; object-position: 50% 6%; }
+.army-line-rate { display: inline-flex; align-items: center; gap: 2px; margin-left: 4px; font-size: 11px; font-weight: 700; color: #ffe7b0; font-variant-numeric: tabular-nums; vertical-align: 1px; }
 .army-line .item-text { min-width: 0; }
 .army-line .item-text > span { font-size: 11px; }
 .army-hint { font-size: 11.5px; margin: 8px 0 0; }
-@media (max-width: 560px) { .army-row { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; } .army-n { font-size: 10.5px; line-height: 14px; min-width: 13px; } }
+@media (max-width: 560px) { .army-row { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; } }
 /* Her army at a glance in the target frame. */
 .tg-army { display: flex; align-items: center; gap: 4px; margin: 3px 0 1px; font-size: 11.5px; min-width: 0; flex-wrap: wrap; }
 .tg-army-w { color: #f3c9a0; font-weight: 600; }

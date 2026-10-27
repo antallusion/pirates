@@ -135,7 +135,7 @@
   .tb-rs i { font-size: var(--f-fs-s); line-height: 14px; }
   body.simple #touch > #tc-ammo .tc-ammo-n { font-size: var(--f-fs-s); }
   .tal-main .tier-label, #modal-panel .tier-label { font-size: var(--f-fs-s); }
-  .army-slot > i.army-tier { font-size: var(--f-fs-s); }
+  .army-slot > i.army-tier, .army-slot > .army-rate { font-size: var(--f-fs-s); }
   #modal-panel label.check { min-height: var(--f-tap); display: flex; align-items: center; gap: 8px; }
   /* the level's choice in the Hero tab: its words whole (they were clamped to two lines) */
   .cap-body .hx-pick-t small { display: block; -webkit-line-clamp: unset; overflow: visible; }
