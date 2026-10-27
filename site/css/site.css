@@ -363,6 +363,8 @@ p { margin: 0 0 1em; }
 /* ---- the features as full-width banners that slide over one another as the page scrolls (site.js sets --p: how far
    the next banner has come over this one) */
 .feats-head { padding-bottom: 8px; }
+.trailer { position: relative; max-width: 960px; margin: 28px auto 0; aspect-ratio: 16 / 9; border-radius: var(--r-lg); overflow: hidden; border: 1px solid rgba(245, 196, 81, 0.28); background: #05070c; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6); }
+.trailer iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .stack { position: relative; }
 .bnr { position: sticky; top: 0; height: 100vh; height: 100svh; padding: 84px 14px 14px; display: flex; }
 .bnr-card {

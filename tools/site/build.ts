@@ -280,6 +280,9 @@ const FEATURES: { icon: string; art: string; title: Tr; text: Tr }[] = [
   { icon: 'ico/hot', art: K('hero/cabin'), title: ['The endgame of the Throne', 'Эндгейм «Престол»'], text: ['Zone bosses for fleets of captains, the Seals of the Deep, the Colosseum, contracts of the Admiralty, guild wars and the glory ranks beyond level 60.', 'Боссы морских зон для флотилий капитанов, Печати глубин, Колизей, контракты Адмиралтейства, войны гильдий и ранги славы после 60-го уровня.'] },
 ];
 
+/** The trailer on YouTube (owner, 2026-10-27: «добавь на сайт видос во второй блок»). */
+const TRAILER = 'hZJzeb5K7fQ';
+
 function home(lang: Lang): string {
   const pick = ['young_kraken', 'white_whale', 'crab_queen', 'sea_hydra', 'cloud_whale', 'wreck_titan', 'coral_colossus', 'deep_spawn', 'life_guard', 'mermaid']
     .map((id) => BY_ID.get(id)).filter((c): c is Creature => !!c && !!c.figure);
@@ -291,7 +294,8 @@ function home(lang: Lang): string {
   ];
   const body = `
 <section class="wrap statbar reveal">${stats.map(([n, t]) => `<div class="statbar-i"><b>${n}</b><span>${L(lang, t)}</span></div>`).join('')}</section>
-<section class="wrap sec feats-head">${sectionHead(lang === 'ru' ? 'Чем живёт море' : 'What the sea is made of', lang === 'ru' ? 'Heroes of Might and Magic, только пиратская' : 'Heroes of Might and Magic, gone pirate', lang)}</section>
+<section class="wrap sec feats-head">${sectionHead(lang === 'ru' ? 'Чем живёт море' : 'What the sea is made of', lang === 'ru' ? 'Heroes of Might and Magic, только пиратская' : 'Heroes of Might and Magic, gone pirate', lang)}
+<div class="trailer reveal"><iframe src="https://www.youtube-nocookie.com/embed/${TRAILER}?rel=0" title="${lang === 'ru' ? 'GRAVETIDE — трейлер' : 'GRAVETIDE — trailer'}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div></section>
 <section class="stack" aria-label="${lang === 'ru' ? 'Особенности игры' : 'Game features'}">${FEATURES.map((f, i) => `<article class="bnr${i % 2 ? ' flip' : ''}" style="z-index:${i + 1}"><div class="bnr-card"><img class="bnr-art" src="${f.art}" alt="" loading="${i ? 'lazy' : 'eager'}" decoding="async"><span class="bnr-shade"></span>
 <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
 <div class="wrap bnr-txt"><div class="bnr-in"><p class="kicker"><img src="${K(f.icon)}" alt="" width="28" height="28">${String(i + 1).padStart(2, '0')} / ${String(FEATURES.length).padStart(2, '0')}</p><h3>${T(L(lang, f.title), lang)}</h3><p>${T(L(lang, f.text), lang)}</p></div></div></div></article>`).join('')}</section>
