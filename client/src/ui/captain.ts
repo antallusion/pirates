@@ -16,6 +16,10 @@ import { $, esc, icon, quote } from './dom.ts';
 import { dict, onLang, t } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/captain.ts';
 
+/** The face's share of a card's height: head and shoulders, as the corsair's and the smuggler's (owner, 2026-10-27:
+ *  «четко размещать лицо как у верхних двух везде … прям крупно делать не надо»). */
+const CARD_FACE = 0.36;
+
 const L = dict(EN, RU);
 
 /** The premium captains are bought (owner, 2026-10-19: «премиум героев можно на старте выбрать бесплатно, а они должны
@@ -101,7 +105,7 @@ export function showCaptainSelect(onPick: (id: CaptainId, shipName: string, tuto
         ? `<span class="cpx-price" title="${esc(L('lockedTitle', { price: priceText(captainPrice(id)) }))}">${lockSvg()}${priceHtml(captainPrice(id), { cls: 'cpx-pr' })}</span>`
         : `<span class="cpx-price owned">${esc(L(shop.owned.has(id) ? 'premiumOwned' : 'premiumShort'))}</span>`;
       return `<button type="button" class="captain-card cpx-cap${id === current ? ' active' : ''}${shut ? ' cc-shut' : ''}" data-id="${id}" role="option" aria-selected="${id === current}" aria-label="${esc(c.archetype)}">
-        <span class="cpx-face" style="background-image:${art(c.portrait)};${faceBgStyle(c.portrait, 4 / 3, 0.3)}" data-pav="${id}"><span class="cpx-school" style="background-image:${art(`icon.school_${id}`)}"></span></span>${tag}</button>`;
+        <span class="cpx-face" style="background-image:${art(c.portrait)};${faceBgStyle(c.portrait, 4 / 3, CARD_FACE)}" data-pav="${id}"><span class="cpx-school" style="background-image:${art(`icon.school_${id}`)}"></span></span>${tag}</button>`;
     }).join('');
     list.querySelectorAll<HTMLElement>('.captain-card').forEach((el) => (el.onclick = () => {
       if (current === el.dataset.id) return;

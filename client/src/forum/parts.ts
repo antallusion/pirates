@@ -2,7 +2,7 @@
 // coins, the rows of sections and topics, the fresh-topic cards and the post card — HTML strings, every word escaped.
 
 import { REACTION_EMOJI, REACTIONS } from '../../../shared/src/forum/meta.ts';
-import { avatarHtml, faceBgStyle } from '../../../shared/src/data/portraitfit.ts';
+import { FACE_AIM, avatarHtml, faceBgStyle } from '../../../shared/src/data/portraitfit.ts';
 import { ago, count, esc, noun, fmtNum, fullDate, href, ico, isoDate, K, LANG, state, t, tx } from './core.ts';
 
 export interface UserLite { id: number; name: string; role: string; avatar: string; rank: number; captain: string | null; level: number | null; online: boolean }
@@ -20,9 +20,10 @@ export function tint(u: { role: string; captain: string | null } | null): string
 export const userHref = (u: { id: number }): string => href(`u/${u.id}`);
 
 /** A portrait in a bare circle or square (its class sets the size): the face in the middle (shared/src/data/portraitfit.ts;
- *  owner, 2026-10-26: «все лица должны находиться четко во фрейме»), never an <img> cut from its top by cover. */
+ *  owner, 2026-10-26: «все лица должны находиться четко во фрейме»; the same head and shoulders as every ring, owner
+ *  2026-10-27), never an <img> cut from its top by cover. */
 export const faceSpan = (url: string, cls: string, style = ''): string =>
-  `<span class="${cls} f-face" role="img" aria-hidden="true" style="${style}background-image:url('${esc(url)}');${faceBgStyle(url, 1, 0.6)}"></span>`;
+  `<span class="${cls} f-face" role="img" aria-hidden="true" style="${style}background-image:url('${esc(url)}');${faceBgStyle(url, 1, FACE_AIM)}"></span>`;
 
 /** A member's avatar: the site's brass porthole round her portrait (m, l), a thin ring of her colour (xs, s), or the
  *  author's square frame on a post (l, square) — the round ones the game's avatar (portraitfit.ts avatarHtml: one box,

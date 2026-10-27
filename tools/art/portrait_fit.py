@@ -39,112 +39,113 @@ SHEETS = os.path.join(ROOT, 'assets', 'raw', 'faces')
 # (hairline or hat brim to chin) as a share of the picture's height. Read by eye, checked on the sheets.
 FACES = {
     # the six captains (whole figures, 422×560)
-    'corsair': (0.470, 0.178, 0.100),
-    'smuggler': (0.500, 0.180, 0.110),
-    'reaver': (0.490, 0.086, 0.095),
-    'navigator': (0.520, 0.115, 0.090),
-    'drowned': (0.700, 0.295, 0.200),
-    'admiral': (0.450, 0.106, 0.095),
+    'corsair': (0.500, 0.190, 0.120),
+    'smuggler': (0.500, 0.195, 0.140),
+    'reaver': (0.500, 0.100, 0.120),
+    'navigator': (0.500, 0.150, 0.120),
+    'drowned': (0.685, 0.290, 0.170),
+    'admiral': (0.405, 0.135, 0.110),
     # the barons (busts to the waist, 448×560)
     'baron_ashen_isles': (0.490, 0.210, 0.175),
     'baron_black_coast': (0.490, 0.200, 0.190),
     'baron_dead_mans_expanse': (0.510, 0.215, 0.200),
-    'baron_drowned_crown': (0.500, 0.290, 0.160),
+    'baron_drowned_crown': (0.500, 0.280, 0.160),
     'baron_gravewater': (0.500, 0.215, 0.190),
     'baron_leviathan_reach': (0.500, 0.210, 0.190),
-    'baron_whispering': (0.500, 0.237, 0.215),
+    'baron_whispering': (0.500, 0.245, 0.180),
     # the quest givers (451×560)
-    'giver_apothecary_f': (0.520, 0.205, 0.140),
-    'giver_apothecary_m': (0.520, 0.190, 0.160),
-    'giver_bosun_m': (0.490, 0.200, 0.180),
-    'giver_cartographer_f': (0.520, 0.205, 0.170),
-    'giver_cartographer_m': (0.460, 0.210, 0.180),
+    'giver_apothecary_f': (0.545, 0.205, 0.140),
+    'giver_apothecary_m': (0.465, 0.215, 0.170),
+    'giver_bosun_m': (0.490, 0.210, 0.180),
+    'giver_cartographer_f': (0.510, 0.220, 0.160),
+    'giver_cartographer_m': (0.420, 0.240, 0.180),
     'giver_cultist_f': (0.410, 0.275, 0.130),
     'giver_cultist_m': (0.490, 0.200, 0.160),
     'giver_envoy_f': (0.480, 0.190, 0.150),
-    'giver_envoy_m': (0.530, 0.195, 0.170),
-    'giver_fence_f': (0.480, 0.235, 0.190),
-    'giver_fence_m': (0.510, 0.200, 0.160),
+    'giver_envoy_m': (0.540, 0.215, 0.170),
+    'giver_fence_f': (0.430, 0.255, 0.180),
+    'giver_fence_m': (0.470, 0.200, 0.160),
     'giver_fishwife_f': (0.480, 0.205, 0.160),
-    'giver_garrison_captain_m': (0.500, 0.190, 0.160),
+    'giver_garrison_captain_m': (0.480, 0.190, 0.160),
     'giver_harbour_master_f': (0.490, 0.205, 0.160),
-    'giver_harbour_master_m': (0.480, 0.200, 0.170),
-    'giver_hermit_f': (0.520, 0.215, 0.170),
-    'giver_hermit_m': (0.500, 0.200, 0.170),
-    'giver_lighthouse_keeper_f': (0.530, 0.220, 0.160),
-    'giver_lighthouse_keeper_m': (0.480, 0.215, 0.160),
+    'giver_harbour_master_m': (0.490, 0.215, 0.170),
+    'giver_hermit_f': (0.535, 0.220, 0.170),
+    'giver_hermit_m': (0.520, 0.205, 0.170),
+    'giver_lighthouse_keeper_f': (0.500, 0.230, 0.160),
+    'giver_lighthouse_keeper_m': (0.500, 0.220, 0.170),
     'giver_merchant_f': (0.500, 0.210, 0.160),
     'giver_merchant_m': (0.460, 0.215, 0.160),
-    'giver_old_needle': (0.450, 0.210, 0.150),
-    'giver_old_salt_m': (0.470, 0.220, 0.160),
-    'giver_pearl_diver_f': (0.470, 0.200, 0.160),
-    'giver_pearl_diver_m': (0.500, 0.190, 0.160),
-    'giver_priest_f': (0.450, 0.210, 0.160),
-    'giver_priest_m': (0.480, 0.200, 0.170),
-    'giver_shipwright_f': (0.470, 0.205, 0.160),
-    'giver_shipwright_m': (0.510, 0.200, 0.170),
-    'giver_smuggler_f': (0.480, 0.210, 0.150),
-    'giver_smuggler_m': (0.490, 0.195, 0.140),
-    'giver_tavern_keeper_m': (0.490, 0.180, 0.150),
-    'giver_whaler_m': (0.520, 0.185, 0.150),
-    'giver_widow_f': (0.430, 0.215, 0.160),
+    'giver_old_needle': (0.440, 0.225, 0.160),
+    'giver_old_salt_m': (0.490, 0.240, 0.160),
+    'giver_pearl_diver_f': (0.470, 0.230, 0.160),
+    'giver_pearl_diver_m': (0.500, 0.200, 0.160),
+    'giver_priest_f': (0.440, 0.245, 0.150),
+    'giver_priest_m': (0.480, 0.215, 0.170),
+    'giver_shipwright_f': (0.470, 0.230, 0.160),
+    'giver_shipwright_m': (0.500, 0.210, 0.170),
+    'giver_smuggler_f': (0.470, 0.215, 0.140),
+    'giver_smuggler_m': (0.490, 0.215, 0.160),
+    'giver_tavern_keeper_m': (0.490, 0.200, 0.160),
+    'giver_whaler_m': (0.520, 0.205, 0.150),
+    'giver_widow_f': (0.440, 0.230, 0.160),
     # the ship's officers (320×400)
-    'officer_anwen_coil': (0.540, 0.200, 0.160),
-    'officer_ezekiel_thorne': (0.520, 0.215, 0.150),
-    'officer_iron_jaw': (0.520, 0.175, 0.160),
-    'officer_old_bones': (0.420, 0.231, 0.200),
-    'officer_ruy_ketch': (0.460, 0.165, 0.190),
-    'officer_tallow_marsh': (0.480, 0.231, 0.190),
+    'officer_anwen_coil': (0.570, 0.210, 0.160),
+    'officer_ezekiel_thorne': (0.540, 0.220, 0.150),
+    'officer_iron_jaw': (0.520, 0.190, 0.160),
+    'officer_old_bones': (0.390, 0.245, 0.170),
+    'officer_ruy_ketch': (0.450, 0.175, 0.150),
+    'officer_tallow_marsh': (0.450, 0.260, 0.160),
     # the 24 pirate faces (head-and-shoulders, 448×560)
-    'pirate_00': (0.490, 0.340, 0.360),
-    'pirate_01': (0.470, 0.410, 0.280),
-    'pirate_02': (0.530, 0.410, 0.280),
-    'pirate_03': (0.470, 0.330, 0.310),
-    'pirate_04': (0.500, 0.330, 0.300),
-    'pirate_05': (0.470, 0.300, 0.300),
-    'pirate_06': (0.470, 0.310, 0.300),
-    'pirate_07': (0.490, 0.300, 0.310),
-    'pirate_08': (0.480, 0.320, 0.340),
-    'pirate_09': (0.470, 0.360, 0.300),
-    'pirate_10': (0.500, 0.360, 0.300),
-    'pirate_11': (0.480, 0.360, 0.300),
-    'pirate_12': (0.470, 0.370, 0.280),
-    'pirate_13': (0.470, 0.300, 0.300),
-    'pirate_14': (0.500, 0.390, 0.250),
-    'pirate_15': (0.470, 0.330, 0.320),
-    'pirate_16': (0.460, 0.350, 0.300),
-    'pirate_17': (0.420, 0.290, 0.310),
-    'pirate_18': (0.430, 0.330, 0.360),
-    'pirate_19': (0.400, 0.310, 0.320),
-    'pirate_20': (0.400, 0.310, 0.300),
-    'pirate_21': (0.320, 0.310, 0.260),
-    'pirate_22': (0.460, 0.300, 0.300),
-    'pirate_23': (0.450, 0.290, 0.300),
+    'pirate_00': (0.500, 0.350, 0.340),
+    'pirate_01': (0.480, 0.440, 0.280),
+    'pirate_02': (0.510, 0.430, 0.280),
+    'pirate_03': (0.470, 0.360, 0.300),
+    'pirate_04': (0.500, 0.370, 0.300),
+    'pirate_05': (0.450, 0.330, 0.300),
+    'pirate_06': (0.470, 0.370, 0.300),
+    'pirate_07': (0.480, 0.350, 0.300),
+    'pirate_08': (0.470, 0.360, 0.320),
+    'pirate_09': (0.450, 0.400, 0.320),
+    'pirate_10': (0.500, 0.400, 0.320),
+    'pirate_11': (0.480, 0.400, 0.320),
+    'pirate_12': (0.470, 0.390, 0.280),
+    'pirate_13': (0.450, 0.320, 0.300),
+    'pirate_14': (0.520, 0.410, 0.260),
+    'pirate_15': (0.450, 0.350, 0.300),
+    'pirate_16': (0.450, 0.375, 0.300),
+    'pirate_17': (0.420, 0.315, 0.310),
+    'pirate_18': (0.450, 0.330, 0.330),
+    'pirate_19': (0.400, 0.335, 0.320),
+    'pirate_20': (0.410, 0.325, 0.300),
+    'pirate_21': (0.320, 0.370, 0.270),
+    'pirate_22': (0.440, 0.320, 0.300),
+    'pirate_23': (0.440, 0.320, 0.300),
     # the island's residents (448×560)
-    'res_carpenter_f': (0.550, 0.186, 0.210),
-    'res_carpenter_m': (0.510, 0.220, 0.170),
-    'res_cartographer_f': (0.310, 0.220, 0.150),
-    'res_cartographer_m': (0.500, 0.210, 0.160),
-    'res_cook_f': (0.580, 0.146, 0.210),
-    'res_cook_m': (0.520, 0.190, 0.180),
-    'res_fisher_f': (0.520, 0.146, 0.210),
-    'res_fisher_m': (0.520, 0.220, 0.170),
-    'res_gunner_f': (0.500, 0.156, 0.210),
-    'res_gunner_m': (0.500, 0.203, 0.200),
-    'res_herbalist_f': (0.530, 0.186, 0.190),
-    'res_herbalist_m': (0.500, 0.200, 0.180),
-    'res_pilot_f': (0.530, 0.156, 0.210),
-    'res_pilot_m': (0.500, 0.190, 0.180),
-    'res_smith_f': (0.550, 0.176, 0.210),
-    'res_smith_m': (0.500, 0.193, 0.190),
+    'res_carpenter_f': (0.570, 0.195, 0.170),
+    'res_carpenter_m': (0.510, 0.220, 0.190),
+    'res_cartographer_f': (0.280, 0.215, 0.170),
+    'res_cartographer_m': (0.500, 0.220, 0.190),
+    'res_cook_f': (0.570, 0.170, 0.180),
+    'res_cook_m': (0.510, 0.220, 0.210),
+    'res_fisher_f': (0.460, 0.170, 0.160),
+    'res_fisher_m': (0.520, 0.290, 0.170),
+    'res_gunner_f': (0.470, 0.190, 0.180),
+    'res_gunner_m': (0.490, 0.230, 0.210),
+    'res_herbalist_f': (0.510, 0.190, 0.180),
+    'res_herbalist_m': (0.500, 0.215, 0.190),
+    'res_pilot_f': (0.530, 0.185, 0.170),
+    'res_pilot_m': (0.480, 0.215, 0.210),
+    'res_smith_f': (0.550, 0.195, 0.190),
+    'res_smith_m': (0.500, 0.240, 0.230),
     # a turned skipper
-    'skipper_1': (0.500, 0.200, 0.180),
+    'skipper_1': (0.500, 0.225, 0.210),
 }
 
-# The share of the hole's height the face takes, and the most it may take when a face painted near the picture's edge
-# needs a closer view to stand in the middle with no bare edge (shared/src/data/portraitfit.ts: the same numbers).
-AIM = 0.6
-AIM_MAX = 0.84
+# The face's share of the hole's height, where its middle stands, and the room kept above a face painted at its
+# picture's very top (shared/src/data/portraitfit.ts: FACE_AIM, FACE_Y, FACE_TOP_MIN — the same numbers).
+AIM = 0.32
+FACE_Y = 0.44
+TOP_MIN = 0.06
 
 RINGS = {
     'ui': 'assets/ui/ring.webp',
@@ -171,22 +172,19 @@ def measure_ring(path):
     return {'x': round(cx / w, 4), 'y': round(cy / h, 4), 'd': round(2 * r / w, 4), 'aspect': round(h / w, 4)}
 
 
-def fit(face, aspect, aim=AIM):
-    """The portrait in a hole 1 wide: its width and height and its offset (the same as faceFit in portraitfit.ts)."""
+def fit(face, aspect, aim=AIM, hole=1.0):
+    """The portrait in a hole 1 wide and `hole` high: its width and height and its offset (faceFit in portraitfit.ts):
+    the face `aim` of the height, its middle always on the hole's vertical middle line, at FACE_Y unless the picture's
+    top would show (then it rises, its top TOP_MIN clear), the picture over the whole hole."""
     cx, cy, fh = face
-    best = None
-    t = aim
-    while True:
-        ih = t / fh
-        iw = ih / aspect
-        k = max(1.0, 1 / iw, 1 / ih)
-        iw, ih = iw * k, ih * k
-        ox, oy = 0.5 - cx * iw, 0.5 - cy * ih
-        ok = (1 - iw) - 1e-9 <= ox <= 1e-9 and (1 - ih) - 1e-9 <= oy <= 1e-9
-        best = (iw, ih, min(0.0, max(1 - iw, ox)), min(0.0, max(1 - ih, oy)))
-        if ok or t >= AIM_MAX - 1e-9:
-            return best
-        t = min(AIM_MAX, t + 0.02)
+    ih = aim * hole / fh
+    iw = ih / aspect
+    k = max(1.0, 1 / iw, hole / ih, 0.5 / (cx * iw), 0.5 / ((1 - cx) * iw))
+    top = cy - fh / 2
+    if top > 0:
+        k = max(k, TOP_MIN * hole / (top * ih))
+    iw, ih = iw * k, ih * k
+    return iw, ih, min(0.0, max(1 - iw, 0.5 - cx * iw)), min(0.0, max(hole - ih, hole * FACE_Y - cy * ih))
 
 
 def ring_box(ring, stock):
