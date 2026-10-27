@@ -65,6 +65,9 @@ export const EN = {
   spBtn: 'Speed up',
   spWhere: 'More speed-ups: the loot of the creatures on the islands and the daily gift.',
   spShop: 'Shop',
+  armyNext: 'Next upgrade opens',
+  armyUnit: '{unit} (tier {t})',
+  armyTip: '{b}: the men it opens are hired in any port and floating waystation',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -129,4 +132,7 @@ export const RU: Record<keyof typeof EN, string> = {
   spBtn: 'Ускорить',
   spWhere: 'Ещё ускорители: добыча с существ на островах и ежедневный подарок.',
   spShop: 'Лавка',
+  armyNext: 'Следующее улучшение откроет',
+  armyUnit: '{unit} (ранг {t})',
+  armyTip: '{b}: открытых бойцов нанимают в любом порту и плавучем доме',
 };

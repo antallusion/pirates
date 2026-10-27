@@ -35,6 +35,11 @@ import { supplyTab } from './supply.ts';
 import { wireGuildYard } from './social.ts';
 import { placeName } from './maps.ts';
 import { T29, treeLabel } from './isletree.ts';
+import { DWELL_UP_LEVEL } from '../../../shared/src/data/isletree.ts';
+import { TIER_SHIP_LEVEL, TIER_UNIT, dwellingOf } from '../../../shared/src/data/town.ts';
+import { UNITS } from '../../../shared/src/data/army.ts';
+import { shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
+import { unitIcon, unitName } from './army.ts';
 
 const L = dict(EN, RU);
 const PM = dict(PM_EN, PM_RU);
@@ -90,6 +95,8 @@ export class IsleScene {
   private hintEl!: HTMLElement;
   /** docs/29 §8: the advice's ribbon (what to build next). */
   private recEl!: HTMLElement;
+  /** Owner, 2026-10-28: «следующее улучшение откроет: …» — the next dwelling and the men it opens. */
+  private armyEl!: HTMLElement;
   private map: IsoMap = 'temperate';
   private cam: Cam = { x: 0, y: 0, s: 1 };
   private framed = false;
@@ -172,7 +179,7 @@ export class IsleScene {
     root.className = 'hidden';
     root.setAttribute('role', 'application');
     root.innerHTML = `<div class="is-view"><div class="is-world"><img class="is-map" alt="" draggable="false"><svg class="is-ground" viewBox="0 0 ${ISO_W} ${ISO_H}" width="${ISO_W}" height="${ISO_H}" aria-hidden="true"></svg><div class="is-pics"></div><div class="is-tags"></div></div></div>
-      <header class="is-top"></header><nav class="is-side"></nav><div class="is-queue" role="list"></div><p class="is-hint" role="status"></p><button type="button" class="is-rec hidden" data-irec></button>
+      <header class="is-top"></header><nav class="is-side"></nav><div class="is-queue" role="list"></div><p class="is-hint" role="status"></p><button type="button" class="is-rec hidden" data-irec></button><button type="button" class="is-army hidden" data-iarmy></button>
       <aside class="is-card hidden" aria-live="polite"></aside>`;
     document.body.append(root);
     this.root = root;
@@ -189,6 +196,11 @@ export class IsleScene {
     this.hintEl = root.querySelector('.is-hint')!;
     this.recEl = root.querySelector('.is-rec')!;
     this.recEl.addEventListener('click', () => this.openPanel('plan'));
+    this.armyEl = root.querySelector('.is-army')!;
+    this.armyEl.addEventListener('click', () => {
+      const id = this.armyEl.dataset.town as TownId | undefined;
+      if (id) this.select({ town: id }, true);
+    });
     this.wireCamera();
     if (IsleFx.allowed()) this.fx = new IsleFx(this.world);
     addEventListener('resize', () => {
@@ -229,6 +241,7 @@ export class IsleScene {
       this.sideEl.innerHTML = '';
       this.queueEl.innerHTML = '';
       this.recEl.classList.add('hidden');
+      this.armyEl.classList.add('hidden');
       this.hintEl.textContent = state.baseAt ? L('none') : L('loading');
       this.cardEl.classList.add('hidden');
       return;
@@ -254,6 +267,13 @@ export class IsleScene {
     this.recEl.innerHTML = this.recHtml(v);
     this.recEl.classList.toggle('hidden', !v.plan?.steps.length);
     this.recEl.title = L('recTip');
+    const next = this.armyNext(v, state);
+    this.armyEl.classList.toggle('hidden', !next);
+    if (next) {
+      this.armyEl.dataset.town = next.id;
+      this.armyEl.title = L('armyTip', { b: treeLabel(next.id, next.level) });
+      this.armyEl.innerHTML = `${unitIcon(next.unit, 'is-army-face')}<span class="is-rec-m"><span class="is-rec-h">${esc(L('armyNext'))}</span><b>${esc(L('armyUnit', { unit: unitName(next.unit), t: next.tier }))}</b></span>`;
+    }
     if (!this.framed) {
       this.frame();
       this.framed = true;
@@ -674,6 +694,18 @@ export class IsleScene {
   // ------------------------------------------------------------------------------------------------ the advice
 
   /** The ribbon: the planner's next step and whether it may start now. */
+  /** The next dwelling her ship can use (founded, then raised to the upgraded kind) and the men it opens. */
+  private armyNext(v: BaseView, state: ClientState): { id: TownId; level: number; unit: import('../../../shared/src/data/army.ts').UnitId; tier: number } | null {
+    const things = v.town?.things;
+    if (!things || !state.self) return null;
+    const ship = shipLevelOf(state.self.loadout);
+    const lv = (t: number) => things.find((x) => x.id === dwellingOf(t))?.level ?? 0;
+    const fits = (t: number) => ship >= TIER_SHIP_LEVEL[t] && (t !== 7 || !!v.town?.deep);
+    for (let t = 2; t <= 7; t++) if (fits(t) && lv(t) === 0) return { id: dwellingOf(t), level: 1, unit: TIER_UNIT[t], tier: t };
+    for (let t = 2; t <= 7; t++) if (fits(t) && lv(t) < DWELL_UP_LEVEL) return { id: dwellingOf(t), level: lv(t) + 1, unit: UNITS[TIER_UNIT[t]].upgrade!, tier: t };
+    return null;
+  }
+
   private recHtml(v: BaseView): string {
     const st = v.plan?.steps[0];
     if (!st) return '';

@@ -296,6 +296,7 @@ import { findMessage, stepSeaFinds } from './seafinds.ts'; // docs/19 D5: the se
 import { roamMessage, stepRoamers } from './roamers.ts'; // docs/19 D7: the creatures roaming the sea
 import { premiumMessage, sendBalance } from './premium.ts'; // the premium shop (owner, 2026-10-03)
 import { gameCheckout } from './webshop.ts'; // the web game's YooKassa top-up (owner, 2026-10-21)
+import { captainAdvice } from './armyadvice.ts'; // the weak army's next step (owner, 2026-10-28)
 import { captainShopMessage, ownsCaptain } from './captainshop.ts'; // premium captains cost money (owner, 2026-10-19)
 import { levelGifts, stepShop, xpBoost } from './shop.ts';
 import { sendPromo, stepPromo } from './promo.ts'; // the shop's goods (owner, 2026-10-15)
@@ -5114,6 +5115,7 @@ export class Game {
   pushSelf(s: PlayerSession, force = false): void {
     if (!s.profile) return;
     const state = toPrivateState(s, this.now, this.worldView(s));
+    state.advice = captainAdvice(this, s);
     const prev = this.lastSelf.get(s);
     const fields = new Map<string, string>();
     for (const [k, v] of Object.entries(state)) fields.set(k, JSON.stringify(k === 'stats' ? { ...(v as PrivateState['stats']), distance: Math.floor((v as PrivateState['stats']).distance / 1000) } : v, selfKey) ?? 'null');

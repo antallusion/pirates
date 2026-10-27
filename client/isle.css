@@ -247,6 +247,17 @@ body.reduce-motion #isle .is-pic.work { animation: none; }
 #isle .is-rec-h { font-size: var(--is-fs-s); color: var(--fog, #9aa3a8); }
 #isle .is-rec-m b { font-size: var(--is-fs); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #isle .is-rec-d { flex: none; width: 8px; height: 8px; border-radius: 50%; background: #8a7f6a; }
+/* owner, 2026-10-28: «следующее улучшение откроет» — over the advice's ribbon, the men the next dwelling opens */
+#isle .is-army {
+  position: absolute; z-index: 10; bottom: calc(var(--is-pad-b) + var(--is-rec-h) + 6px); right: var(--is-pad-r); width: var(--is-rec-w); min-height: var(--is-rec-h); box-sizing: border-box;
+  display: flex; align-items: center; gap: 5px; padding: 2px 8px 2px 4px; font: inherit; text-align: left; cursor: pointer;
+  background: rgba(16, 30, 18, 0.92); border: 1px solid rgba(111, 191, 115, 0.85); border-radius: 8px; color: var(--bone, #e6dccb);
+  box-shadow: 0 0 8px rgba(111, 191, 115, 0.35);
+}
+#isle .is-army.hidden, #isle.is-carded .is-army { display: none; }
+#isle .is-army-face { width: 28px; height: 28px; flex: none; margin: 0; border-radius: 50%; object-fit: cover; border: 1px solid #6fbf73; }
+#isle .is-army .is-rec-m b { white-space: normal; }
+#isle:not(:has(.is-rec:not(.hidden))) .is-army { bottom: var(--is-pad-b); }
 #isle .is-rec-d.ok { background: #8fd06a; box-shadow: 0 0 5px rgba(143, 208, 106, 0.8); }
 #isle .is-g.rec, #isle .is-pl.t.rec { stroke: #f4d27a; stroke-width: 3.5; stroke-dasharray: none; fill: rgba(244, 210, 122, 0.16); animation: is-recp 1.6s ease-in-out infinite; }
 @keyframes is-recp { 50% { stroke-opacity: 0.35; fill-opacity: 0.35; } }

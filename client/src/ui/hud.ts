@@ -327,6 +327,11 @@ export class Hud {
   onShop: () => void = () => {};
   /** The simple HUD's captain on a desk: a click opens her sheet (main.ts). */
   onCaptain: () => void = () => {};
+  /** Owner, 2026-10-28 (armyadvice.ts): the weak army's hint — the island, or the hire window here (main.ts). */
+  onAdvice: (to: 'isle' | 'hire') => void = () => {};
+  private adviceKey = '';
+  private adviceOpen = false;
+  private adviceAt = 0;
   /** seaux: her frame drawn afresh (the captain's menu seen: its bead out). */
   redrawCaptain(): void {
     this.lastCaptainKey = '';
@@ -797,6 +802,7 @@ export class Hud {
     this.drawOrder(state);
     this.drawDescent(state);
     this.drawHoliday(state);
+    this.drawAdvice(state);
     const cap = CAPTAINS[self.captain];
 
     // Unit frame: portrait in its ring, name, silver, and the ship's hull, sails and crew (re-rendered on change).
@@ -959,6 +965,58 @@ export class Hud {
    *  «слева сверху аватарка и очень удобные красивые уровни жизней, людей»): her face in a round frame, her level on
    *  its rim, three slim bars — hull, men, sails — with their numbers, and the silver as a chip. Nothing else: the law,
    *  the experience, the streak and the rest are in her sheet (a click on a desk; the menu's «Капитан» on a phone). */
+  /** The weak army's hint (owner, 2026-10-28): a small badge under her frame; a tap opens one line and one button. */
+  private drawAdvice(state: ClientState): void {
+    const a = state.self?.advice;
+    let el = document.getElementById('hud-advice');
+    const show = !!a && a.weak && !!a.step && !document.body.classList.contains('in-battle');
+    if (!show) {
+      if (el && !el.classList.contains('hidden')) el.classList.add('hidden');
+      this.adviceKey = '';
+      return;
+    }
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'hud-advice';
+      el.className = 'hud-advice hidden';
+      $('hud').appendChild(el);
+      el.addEventListener('click', (e) => {
+        const t = e.target as HTMLElement;
+        e.stopPropagation();
+        const go = t.closest<HTMLElement>('[data-advgo]');
+        if (go) {
+          this.adviceOpen = false;
+          this.adviceKey = '';
+          return this.onAdvice(go.dataset.advgo as 'isle' | 'hire');
+        }
+        if (t.closest('[data-advx]')) this.adviceOpen = false;
+        else if (t.closest('[data-adv]')) this.adviceOpen = !this.adviceOpen;
+        this.adviceKey = '';
+      });
+    }
+    const step = a!.step!;
+    const ru = lang() === 'ru';
+    const to: 'isle' | 'hire' = step.kind === 'hire' || step.kind === 'fill' ? 'hire' : 'isle';
+    const key = `${lang()}|${this.adviceOpen ? 1 : 0}|${step.kind}|${step.unit ?? ''}|${step.building ?? ''}|${step.level ?? ''}|${Math.round(a!.ratio * 100)}|${state.self!.level}`;
+    // under her frame: measured now and then (the frame's height moves with the HUD's layout)
+    const now = performance.now();
+    if (key !== this.adviceKey || now - this.adviceAt > 1000) {
+      this.adviceAt = now;
+      const r = $('hud-captain').getBoundingClientRect();
+      if (r.height > 0) {
+        el.style.left = `${Math.round(r.left)}px`;
+        el.style.top = `${Math.round(r.bottom + 4)}px`;
+      }
+    }
+    if (key === this.adviceKey) return;
+    this.adviceKey = key;
+    el.classList.remove('hidden');
+    const badge = `<button type="button" class="adv-badge" data-adv aria-expanded="${this.adviceOpen}">${icon('stat_crew', '', 'ico-sm')}<span>${esc(L('adv.badge'))}</span><b>${Math.round(a!.ratio * 100)}%</b></button>`;
+    el.innerHTML = this.adviceOpen
+      ? `${badge}<div class="adv-card" role="status"><p class="adv-t">${esc(L('adv.title', { lv: state.self!.level, pct: Math.round(a!.ratio * 100) }))}</p><p class="adv-s">${esc(ru ? step.textRu : step.textEn)}</p><div class="adv-row"><button type="button" class="btn btn-small btn-primary" data-advgo="${to}">${esc(L(to === 'hire' ? 'adv.hire' : 'adv.isle'))}</button><button type="button" class="btn btn-small" data-advx>${esc(L('adv.close'))}</button></div></div>`
+      : badge;
+  }
+
   private drawStatus(state: ClientState): void {
     const self = state.self!, you = state.you!;
     const cap = CAPTAINS[self.captain];

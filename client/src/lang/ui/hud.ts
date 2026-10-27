@@ -206,6 +206,11 @@ export const EN = {
   "obj.raid": "Pirates off {name}!",
   "obj.waypoint": "Your mark to the {dir}, {d}",
   "wpArrived": "You are at your mark: it comes off the chart.",
+  "adv.badge": "Weak army",
+  "adv.title": "Your army is weak for level {lv}: {pct}% of the norm",
+  "adv.hire": "Hire",
+  "adv.isle": "Island",
+  "adv.close": "Close",
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -413,4 +418,9 @@ export const RU: Record<keyof typeof EN, string> = {
   "obj.raid": "Пираты у острова {name}!",
   "obj.waypoint": "Ваша отметка на {dir}, {d}",
   "wpArrived": "Вы у своей отметки — она снята с карты.",
+  "adv.badge": "Слабая армия",
+  "adv.title": "Армия слаба для уровня {lv}: {pct}% нормы",
+  "adv.hire": "Нанять",
+  "adv.isle": "Остров",
+  "adv.close": "Закрыть",
 };

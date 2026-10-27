@@ -4,6 +4,7 @@
 // for the planned binary encoding.
 
 import type { OutcomeNums } from './data/outcome.ts';
+import type { ArmyAdvice } from './data/armyadvice.ts';
 import type { BuyFail, BuySeller } from './data/buyfail.ts';
 import type { CeasefireView } from './data/ceasefire.ts';
 import type { HireOffer, HireView } from './data/seahire.ts';
@@ -711,6 +712,8 @@ export interface CampaignView {
 }
 
 export interface PrivateState {
+  /** Owner, 2026-10-28 (armyadvice.ts): her army against her level and the next step (the HUD's hint); from level 5. */
+  advice?: ArmyAdvice | null;
   /** The captain as a hero (docs/17 H2). */
   hero?: HeroView;
   /** Her glory past the cap, mastery and trials (docs/19 E1–E3): from five levels short of the cap. */
