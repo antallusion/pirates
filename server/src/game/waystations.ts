@@ -35,7 +35,7 @@ import type { ResRow, ResView, WayClientMsg, WayData, WayView } from '../../../s
 import { Rng } from '../../../shared/src/rng.ts';
 import { landFightOn } from './beastlairs.ts';
 import { reconcile } from './crew.ts';
-import { pickedMax, pickedRoom } from './dwell.ts';
+import { dwellView, pickedMax, pickedRoom, recruit as dwellRecruit } from './dwell.ts';
 import type { Game } from './Game.ts';
 import { trackEvent } from './liveops.ts';
 import type { PlayerSession } from './player.ts';
@@ -545,8 +545,16 @@ export function wayDwellView(game: Game, s: PlayerSession): DwellView | null {
       why: d.deep && !deep ? 'Only a captain of the Choir or of a cursed ship keeps the drowned.' : ship.shipLevel < TIER_SHIP_LEVEL[d.tier] ? `Men of tier ${d.tier} serve a ship of level ${TIER_SHIP_LEVEL[d.tier]} and up.` : null,
     };
   });
+  // Owner, 2026-10-28: her island's dwellings open their tiers at every waystation too (dwell.ts, src 'way').
+  const own = dwellView(game, s, 'way');
+  // (a kind the waystation has of its own today stays its own row: one row a kind)
+  const here = new Set(rows.flatMap((r) => r.units.map((x) => x.u)));
+  if (own) for (const r of own.rows) {
+    const units = r.units.filter((x) => !here.has(x.u));
+    if (units.length) rows.push({ ...r, units });
+  }
   return {
-    src: 'way', place: w.kind, rows, ups: [], army: ship.army.map((x) => ({ ...x })), slots: ship.armySlots, crew: ship.crew, crewMax: ship.stats.crewMax,
+    src: 'way', place: w.kind, rows, ups: [], best: own?.best ?? null, army: ship.army.map((x) => ({ ...x })), slots: ship.armySlots, crew: ship.crew, crewMax: ship.stats.crewMax,
     gold: Math.floor(s.profile!.gold), have: {}, why: resBusy(game, s), week: weekView(game), picked: pickedRoom(s), pickedMax: pickedMax(s),
     might: Math.round(armyWeight(ship.army)), mightMax: Math.round(mightCap(ship.shipLevel, ship.stats.crewMax, ship.armySlots)),
   };
@@ -566,7 +574,16 @@ export function wayRecruit(game: Game, s: PlayerSession, u: UnitId, want: number
   if (!w || !ship) return 'Moor at a floating waystation first.';
   const busy = resBusy(game, s);
   if (busy) return busy;
-  if (!hireKinds(game, w).includes(u)) return 'Nobody of that kind waits here today.';
+  if (!hireKinds(game, w).includes(u)) {
+    // her island's men (dwell.ts): the island's pool, the port's price
+    const e = dwellRecruit(game, s, 'way', u, want);
+    if (e === 'No dwelling of theirs here.' || e === 'You have no island of your own.') return 'Nobody of that kind waits here today.';
+    if (!e) {
+      game.sendTo(s, { t: 'way', view: wayView(game, s, w) });
+      pushFallen(game, s);
+    }
+    return e;
+  }
   const d = UNITS[u];
   if (d.deep && !keepsDeep(s)) return 'Only a captain of the Choir or of a cursed ship keeps the drowned.';
   if (ship.shipLevel < TIER_SHIP_LEVEL[d.tier]) return `Men of tier ${d.tier} serve a ship of level ${TIER_SHIP_LEVEL[d.tier]} and up.`;

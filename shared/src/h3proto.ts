@@ -44,6 +44,10 @@ export interface DwellRow {
   units: DwellUnit[];
   /** Why none may be had here (the drowned for the living, a dwelling not built…). */
   why: string | null;
+  /** Owner, 2026-10-28: opened by her island's dwelling (hired here, in any port or at a waystation, from its men). */
+  isle?: boolean;
+  /** Tier-1 men aboard who go ashore to make room for these when the hammocks are full. */
+  swap?: number;
 }
 
 /** A stack of the ship's army that may be trained up here, at silver and resources a man. */
@@ -78,6 +82,8 @@ export interface DwellView {
   /** Her army's weight in a boarding against the most a ship of her level carries (docs/17 H5), as whole numbers. */
   might?: number;
   mightMax?: number;
+  /** Owner, 2026-10-28 (armyadvice.ts): the best kind to hire here for a weak army (highlighted). */
+  best?: UnitId | null;
 }
 
 export interface MineView {

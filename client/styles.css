@@ -3379,6 +3379,12 @@ body:has(#trek:not(.hidden)) #hud-goals, body:has(#trek:not(.hidden)) #hud-stack
 .rc-unit.up { border-color: #8f7640; }
 .rc-unit.sel { border-color: var(--gold); box-shadow: 0 0 8px rgba(224, 184, 98, 0.4); }
 .rc-unit.off { opacity: 0.55; }
+.rc-unit.best { border-color: #6fbf73; box-shadow: 0 0 10px rgba(111, 191, 115, 0.45); }
+.rc-best, .rc-isle { display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: 3px; font: 600 10px/16px var(--sans, sans-serif); vertical-align: 1px; white-space: nowrap; }
+.rc-best { background: rgba(70, 140, 75, 0.85); color: #f2ecd9; }
+.rc-isle { background: rgba(140, 107, 58, 0.55); color: #f2ecd9; }
+.rc-swap { margin: 0; font-size: 11.5px; }
+.rc-swap:empty { display: none; }
 .rc-unit .rc-face { grid-row: span 2; width: 38px; height: 38px; margin: 0; border-radius: 50%; object-fit: cover; border: 1px solid #5c4a33; }
 .rc-unit b { font-size: 12.5px; line-height: 1.15; overflow-wrap: anywhere; }
 .rc-per .bcosts { font-size: 11px; gap: 0 5px; }

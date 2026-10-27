@@ -81,8 +81,11 @@ export function treeNeeds(id: TreeId, level: number): Need[] {
     case 'dw2': hall(1); add('dw1', L); add('keep', L - 1); break;
     case 'shipyard': hall(2); add('warehouse', L); break;
     case 'guild': hall(2); add('market', L); break;
-    case 'dw3': hall(2); add('dw2', L); add('market', L - 1); break;
-    case 'dw4': hall(3); add('dw3', L); add('shipyard', L); break;
+    // Owner, 2026-10-28 («ключ — это остров»): the musketeers and the gunners open from the first hall — the top
+    // captains of level 11–14 sailed with deckhands alone: the shooting range asked hall 2 (~6 000 silver) and the gun
+    // foundry hall 3 and the shipyard (~25 000). Now a stack of tier 3 is ~3 000 silver of the island away, tier 4 ~5 000.
+    case 'dw3': hall(1); add('dw2', L); add('market', L - 1); break;
+    case 'dw4': hall(1); add('dw3', L); add('keep', L); break;
     case 'dw5': hall(3); add('dw4', L); add('keep', L + 1); break;
     case 'dw6': hall(4); add('dw5', L); add('keep', L + 1); break;
     case 'dw7': hall(4); add('dw6', L); add('guild', L); break;
@@ -134,8 +137,8 @@ const BASE: Record<Exclude<TreeId, 'hall'>, Base> = {
   dw2: { silver: 750, mins: 25, goods: { timber: 40, coal: 25 } },
   shipyard: { silver: 2_000, mins: 45, goods: { timber: 60, coal: 30, tar: 20, iron: 20 } },
   guild: { silver: 1_600, mins: 45, goods: { timber: 40, coal: 30, tar: 20, pearls: 2 } },
-  dw3: { silver: 1_100, mins: 35, goods: { timber: 45, coal: 30, iron: 10, gunpowder: 8 } },
-  dw4: { silver: 1_500, mins: 40, goods: { timber: 50, coal: 40, iron: 20, gunpowder: 12 } },
+  dw3: { silver: 800, mins: 25, goods: { timber: 45, coal: 30, iron: 10, gunpowder: 8 } },
+  dw4: { silver: 1_100, mins: 30, goods: { timber: 50, coal: 40, iron: 20, gunpowder: 12 } },
   dw5: { silver: 2_100, mins: 50, goods: { timber: 60, coal: 50, iron: 25, rum: 20 } },
   dw6: { silver: 3_000, mins: 60, goods: { timber: 70, coal: 60, iron: 30, pearls: 4 } },
   dw7: { silver: 3_750, mins: 70, goods: { timber: 80, coal: 70, tar: 30, pearls: 6 } },

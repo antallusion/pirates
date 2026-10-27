@@ -12,7 +12,7 @@
 
 import { UNITS, armyForLevel, armyPower } from './army.ts';
 import type { ArmyStack, UnitId } from './army.ts';
-import { TIER_SHIP_LEVEL, TIER_UNIT, TOWN, PORT_MARKUP, dwellingOf } from './town.ts';
+import { TIER_SHIP_LEVEL, TIER_UNIT, TOWN, PORT_MARKUP, dwellingOf, mightRoom } from './town.ts';
 import type { TownId } from './town.ts';
 import { DWELL_UP_LEVEL, isTree, treeNeeds } from './isletree.ts';
 import type { TreeId } from './isletree.ts';
@@ -156,7 +156,10 @@ export function armyAdvice(c: AdviceCaptain): ArmyAdvice | null {
   const men = c.army.reduce((a, x) => a + x.n, 0);
 
   // 1. A tier the island opened and her ship carries, few of them aboard: hire them in any port.
-  if (best && aboard(best) < ADVICE_STACK) {
+  // (room under the might cap, the hands going ashore for them as the dwellings do: dwell.ts sendAshore)
+  const hands = (u: UnitId) => UNITS[u]?.tier === 1 && !UNITS[u].beast;
+  const room = best ? mightRoom(c.army.filter((x) => !hands(x.u)), best, c.shipLevel, c.crewMax, c.slots) : 0;
+  if (best && (aboard(best) < ADVICE_STACK || room >= 3)) {
     const t = UNITS[best].tier;
     const cost = per(best) * ADVICE_STACK;
     if (c.gold < per(best) * 3) {

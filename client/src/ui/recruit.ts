@@ -103,7 +103,8 @@ export class RecruitWindow {
   private most(v: DwellView, r: DwellRow, u: UnitId): number {
     const unit = r.units.find((x) => x.u === u);
     if (!unit || r.why || v.why) return 0;
-    const room = Math.max(0, v.crewMax - v.crew);
+    // (owner, 2026-10-28: the hands go ashore to make room for better men — the row's `swap`)
+    const room = Math.max(0, v.crewMax - v.crew) + (UNITS[u].tier >= 2 ? r.swap ?? 0 : 0);
     if (!v.army.some((x) => x.u === u) && v.army.length >= v.slots) return 0;
     const picked = UNITS[u].tier >= PICKED_TIER && !UNITS[u].titan ? v.picked : Infinity; // (docs/19 E10: a titan stands out of it)
     const might = unit.room === undefined || unit.room < 0 ? Infinity : unit.room;
@@ -120,7 +121,8 @@ export class RecruitWindow {
     if (this.sel && !rowOf(this.sel)) this.sel = null;
     if (!this.sel) {
       const first = v.rows.find((r) => r.pool > 0 && !r.why) ?? v.rows[0];
-      this.sel = first?.units[0]?.u ?? null;
+      // the advice's best kind first (shared/src/data/armyadvice.ts)
+      this.sel = v.best && rowOf(v.best) ? v.best : first?.units[0]?.u ?? null;
       this.n = 0;
     }
     const men = v.army.reduce((a, s) => a + s.n, 0);
@@ -130,9 +132,10 @@ export class RecruitWindow {
       const units = r.units.map((x) => {
         const d = UNITS[x.u];
         const most = this.most(v, r, x.u);
-        return `<button class="rc-unit${this.sel === x.u ? ' sel' : ''}${d.up ? ' up' : ''}${most <= 0 ? ' off' : ''}" data-rcu="${x.u}" title="${esc(unitNote(x.u))}">${unitIcon(x.u, 'rc-face')}<b>${esc(unitName(x.u))}</b><span class="rc-per">${perLine(x.per, x.goods)}</span></button>`;
+        const best = v.best === x.u;
+        return `<button class="rc-unit${this.sel === x.u ? ' sel' : ''}${d.up ? ' up' : ''}${best ? ' best' : ''}${most <= 0 ? ' off' : ''}" data-rcu="${x.u}" title="${esc(unitNote(x.u))}">${unitIcon(x.u, 'rc-face')}<b>${esc(unitName(x.u))}${best ? `<span class="rc-best">${esc(L('best'))}</span>` : ''}</b><span class="rc-per">${perLine(x.per, x.goods)}</span></button>`;
       }).join('');
-      return `<div class="rc-dwell${r.why ? ' off' : ''}"><div class="rc-dh">${icon(dwellArt(r), '', 'rc-art')}<div class="rc-dt"><b>${esc(dwellName(r))}</b><span class="muted">${esc(L('avail', { n: r.pool }))}${r.growth ? ` · ${esc(L('growth', { n: dec1(r.growth).replace(/[.,]0$/, '') }))}` : ''}</span>${r.why ? `<span class="bad">${esc(serverText(r.why))}</span>` : ''}</div></div><div class="rc-units">${units}</div></div>`;
+      return `<div class="rc-dwell${r.why ? ' off' : ''}"><div class="rc-dh">${icon(dwellArt(r), '', 'rc-art')}<div class="rc-dt"><b>${esc(dwellName(r))}${r.isle ? `<span class="rc-isle">${esc(L('isle.tag'))}</span>` : ''}</b><span class="muted">${esc(L('avail', { n: r.pool }))}${r.growth ? ` · ${esc(L('growth', { n: dec1(r.growth).replace(/[.,]0$/, '') }))}` : ''}</span>${r.why ? `<span class="bad">${esc(serverText(r.why))}</span>` : ''}</div></div><div class="rc-units">${units}</div></div>`;
     }).join('') || `<p class="muted">${esc(L('none'))}</p>`;
     const r = this.sel ? rowOf(this.sel) : undefined;
     let pick = `<p class="muted">${esc(L('pick'))}</p>`;
@@ -143,12 +146,12 @@ export class RecruitWindow {
       const most = this.most(v, r, u);
       this.n = Math.max(0, Math.min(most, this.n || (most > 0 ? 1 : 0)));
       const price = priceOf(unit.per, unit.goods, this.n);
-      const why = v.why ? serverText(v.why) : r.why ? serverText(r.why) : r.pool <= 0 ? L('nobody') : v.crew >= v.crewMax ? L('nohammock') : !v.army.some((x) => x.u === u) && v.army.length >= v.slots ? L('noslot') : d.tier >= PICKED_TIER && !UNITS[u].titan && v.picked <= 0 ? L('picked.full', { max: v.pickedMax }) : unit.room === 0 ? L('might.full') : most <= 0 ? L('lack') : '';
+      const why = v.why ? serverText(v.why) : r.why ? serverText(r.why) : r.pool <= 0 ? L('nobody') : v.crew >= v.crewMax && !(d.tier >= 2 && r.swap) ? L('nohammock') : !v.army.some((x) => x.u === u) && v.army.length >= v.slots ? L('noslot') : d.tier >= PICKED_TIER && !UNITS[u].titan && v.picked <= 0 ? L('picked.full', { max: v.pickedMax }) : unit.room === 0 ? L('might.full') : most <= 0 ? L('lack') : '';
       // (the cost and «Нанять» share a row on a phone held sideways, the men waiting said by the dwelling's card: the
       // button stood 6–15 px under the fold at 640×360 — docs/19 E19)
       pick = `<div class="rc-pick"><div class="rc-ph">${unitIcon(u, 'rc-big')}<div><b>${esc(unitName(u))}</b><span class="muted">${esc(L('stats', { atk: d.atk, def: d.def, dmin: d.dmin, dmax: d.dmax, hp: d.hp, spd: d.speed }))}</span><span class="muted rc-avail">${esc(L('avail', { n: r.pool }))}</span></div></div>
         <div class="rc-slide"><input type="range" min="0" max="${most}" value="${this.n}" data-rcn aria-label="${esc(unitName(u))}"${most <= 0 ? ' disabled' : ''}><b class="rc-count" data-rccount>${this.n}</b><button class="btn btn-small" data-rcmax${most <= 0 ? ' disabled' : ''}>${esc(L('max'))} ${most}</button></div>
-        ${why ? `<p class="bad rc-why">${esc(why)}</p>` : ''}
+        ${why ? `<p class="bad rc-why">${esc(why)}</p>` : ''}<p class="muted rc-swap" data-rcswap>${esc(this.ashoreLine(v, u))}</p>
         <div class="rc-buy"><div class="rc-cost"><span class="muted">${esc(L('cost'))}</span><span data-rccost>${costLine(price, v.gold, v.have)}</span></div>
         <button class="btn btn-primary rc-go" data-rcgo${this.n > 0 && !why ? '' : ' disabled'}>${esc(L('recruit'))}</button></div></div>`;
     }
@@ -168,6 +171,12 @@ export class RecruitWindow {
     this.bind(root, state);
   }
 
+  /** «N юнг сойдут на берег»: the hands who make room for the men picked (none: empty). */
+  private ashoreLine(v: DwellView, u: UnitId): string {
+    const k = UNITS[u].tier >= 2 ? Math.max(0, this.n - Math.max(0, v.crewMax - v.crew)) : 0;
+    return k > 0 ? L('swap', { n: k }) : '';
+  }
+
   private bind(root: HTMLElement, state: ClientState): void {
     const v = state.dwell!;
     root.querySelectorAll<HTMLElement>('[data-rcu]').forEach((el) => (el.onclick = () => {
@@ -184,6 +193,8 @@ export class RecruitWindow {
       if (c) c.textContent = String(this.n);
       const cost = root.querySelector<HTMLElement>('[data-rccost]');
       if (cost) cost.innerHTML = costLine(priceOf(unit.per, unit.goods, this.n), v.gold, v.have);
+      const sw = root.querySelector<HTMLElement>('[data-rcswap]');
+      if (sw && this.sel) sw.textContent = this.ashoreLine(v, this.sel);
       const go = root.querySelector<HTMLButtonElement>('[data-rcgo]');
       if (go && !root.querySelector('.rc-why')) go.disabled = this.n <= 0;
     };

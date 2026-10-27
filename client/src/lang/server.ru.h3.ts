@@ -56,6 +56,8 @@ export const SERVER_RU_H3: Record<string, string> = {
   'They cannot be trained further.': 'Дальше их не выучить.',
   'None of them aboard.': 'Таких на борту нет.',
   '{0} {1} sign on for {2} silver.': 'В армию вступают {1}: {0} за {2} серебра.',
+  '{0} {1} sign on for {2} silver; {3} hands go ashore to make room.': 'В армию вступают {1}: {0} за {2} серебра; юнги сходят на берег, освобождая места: {3}.',
+  'You have no island of your own.': 'У вас нет своего острова.',
   '{0} {1} trained up into {2} for {3} silver.': 'Обучены: {1} → {2}, {0} за {3} серебра.',
   // 13. the town and its market
   'Build the keep first.': 'Сначала постройте крепость.',

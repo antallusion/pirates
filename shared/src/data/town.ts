@@ -38,7 +38,7 @@ export const PORT_GROWTH = [0, 1, 1.5, 2];
 /** The ship's level each tier serves from — the ladder's own spread of an army (shared/src/data/army.ts tierShares:
  *  gunners from ⚓3, boarders from ⚓4, the drowned from ⚓5, the officers' guard from ⚓6). Canon D12: a green hull
  *  is not crewed with a veteran army bought outright. */
-export const TIER_SHIP_LEVEL = [0, 1, 1, 1, 3, 4, 6, 5];
+export const TIER_SHIP_LEVEL = [0, 1, 1, 1, 2, 4, 6, 5]; // (owner, 2026-10-28: the gunners from ⚓2, the island's key)
 
 /** Picked men — tier 4 and up — a ship of ⚓L berths, as a share of her hammocks: 15% at ⚓1, a third at ⚓7, 42% at
  *  ⚓10 (the ladder's own armies carry 5–25%: a town-bred crew is better than the sea's usual, not a different game). */
