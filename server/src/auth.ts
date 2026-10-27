@@ -3,6 +3,7 @@
 //  - e-mail and password (scrypt), with verification and password-reset letters;
 //  - OAuth (GitHub, Google, Discord — see oauth.ts), linked by the provider's user id.
 
+import { adviceUnsubscribe } from '../../shared/src/data/advice.ts';
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import type { Mailer } from './mail.ts';
 import { MailRejected, OutboxMailer } from './mail.ts';
@@ -170,6 +171,11 @@ export class AuthService {
     if (id === undefined) return false;
     this.db.setEmailVerified(id);
     return true;
+  }
+
+  /** The advice mailer's one-click unsubscribe (shared/src/data/advice.ts): her hints by e-mail stop. */
+  unsubscribeAdvice(acc: number, token: string): boolean {
+    return Number.isSafeInteger(acc) && acc > 0 && adviceUnsubscribe(this.db, acc, token);
   }
 
   /** Always answers the same, so nobody can probe which addresses have accounts. */

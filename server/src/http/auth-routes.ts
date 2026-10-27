@@ -3,6 +3,7 @@
 //   POST /auth/register {email, password, name}   POST /auth/login {email, password}
 //   POST /auth/claim {token, email, password}      POST /auth/forgot {email}      POST /auth/reset {token, password}
 //   GET  /auth/verify?token=…                       GET  /auth/providers
+//   GET  /auth/unsub?a=<account>&t=<token>          the advice mailer's one-click unsubscribe
 //   GET  /auth/oauth/:id  → provider               GET  /auth/oauth/:id/callback → /#token=…
 //   POST /auth/support {email, message, token?}  → a letter to the support desk, replies to her address
 // Every form that sends a letter carries the honeypot (`website`, empty) and `t` (ms since it was shown), and is held
@@ -69,6 +70,13 @@ export async function handleAuth(req: IncomingMessage, res: ServerResponse, auth
   try {
     if (req.method === 'GET' && path === '/auth/providers') {
       json(res, 200, { providers: oauth.list() });
+      return true;
+    }
+    if (req.method === 'GET' && path === '/auth/unsub') {
+      // the advice mailer's one-click unsubscribe (owner, 2026-10-28): a page in both languages, no sign-in asked
+      const ok = auth.unsubscribeAdvice(Number(url.searchParams.get('a')), url.searchParams.get('t') ?? '');
+      res.writeHead(ok ? 200 : 400, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>GRAVETIDE</title><body style="background:#0b1620;color:#e8dcc0;font-family:Georgia,serif;text-align:center;padding:60px 20px"><h2 style="color:#c9a45c">GRAVETIDE</h2><p>${ok ? 'Готово: подсказки больше не будут приходить на почту.<br>Done: no more hints by e-mail.' : 'Ссылка не подошла.<br>That link is not valid.'}</p><p><a href="/play" style="color:#c9a45c">Играть / Play</a></p></body>`);
       return true;
     }
     if (req.method === 'GET' && path === '/auth/verify') {

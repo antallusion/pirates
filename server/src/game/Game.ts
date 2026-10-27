@@ -302,6 +302,7 @@ import { sendPromo, stepPromo } from './promo.ts'; // the shop's goods (owner, 2
 import { opsSilverMul, opsXpMul, stepLiveOps, trackEvent } from './liveops.ts'; // the live ops' panel and funnel (docs/34)
 import { sendGift, stepGift } from './dailygift.ts'; // the daily login gift (owner, 2026-10-16)
 import { noticesAboard, noticesAway, stepNotices } from './tgnotify.ts'; // the Telegram notices (owner, 2026-10-16)
+import { adviceOnLogin, stepAdvice } from './advice.ts'; // the advice mailer (owner, 2026-10-28: «подсказки рассылать по почте»)
 import { creaturesAboard, feedCreatures, stepTame } from './tame.ts'; // docs/18 IV
 import { musterInPort, stepGifts } from './shipgifts.ts'; // the premium hulls' gifts (docs/02 §1.A.9)
 import { silverKin } from '../../../shared/src/data/fleet.ts';
@@ -1060,6 +1061,7 @@ export class Game {
       stepGift(this, s); // a new day: her daily gift ready (owner, 2026-10-16)
     }
     stepNotices(this); // the Telegram notices to captains away (owner, 2026-10-16): once a minute, only with a bot
+    stepAdvice(this); // the advice mailer: aboard every ten minutes (letters), away once a day (letters, e-mail, VK, Telegram)
     stepScoutNotices(this); // a scout home while her captain is away: the bot's word (owner, 2026-10-17)
     stepDirector(this); // the sea director: signs on the horizon, things aboard (docs/12 P2)
     stepMinigames(this); // island scenes and mini-games left open lapse
@@ -4880,6 +4882,7 @@ export class Game {
     dressShip(this, s);
     sendCos(this, s);
     noticesAboard(this, s); // her Telegram notices' switches; «давно не заходили» may come again
+    adviceOnLogin(this, s); // the advice mailer's letter, if a hint is due (owner, 2026-10-28)
     if (away) this.sendTo(s, { t: 'away', view: away });
     // Back at the helm in the middle of a fight (a reload, a dropped line): the fight as it stands, or it went on unseen.
     // (one battle at a time, inbattle.ts: a live boarding's view is never laid over by a fight ashore's reckoning)

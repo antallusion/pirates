@@ -166,7 +166,8 @@ export class VkService {
       return 'error';
     }
     if (r?.error) {
-      this.log(`[vk] notice ${cat}: VK API error ${Number(r.error.error_code ?? 0)}`);
+      // (15: she has not allowed the app's notices — her switch, not a fault: not logged)
+      if (Number(r.error.error_code) !== 15) this.log(`[vk] notice ${cat}: VK API error ${Number(r.error.error_code ?? 0)}`);
       // (the app may not write to her: 15 access denied, 901 / 903 messages or notices not allowed)
       return [15, 901, 903].includes(Number(r.error.error_code)) ? 'blocked' : 'error';
     }

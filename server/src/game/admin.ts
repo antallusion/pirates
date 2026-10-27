@@ -2,6 +2,7 @@ import { adminWay } from './waystations.ts'; // docs/35
 import { adminGift } from './dailygift.ts';
 import { fogAdmin } from './fog.ts';
 import { adminTgn } from './tgnotify.ts';
+import { adminAdvice } from './advice.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { funnelLine, telemetry } from '../http/telemetry.ts'; // docs/33
 import { opsSummary } from '../http/ops.ts'; // docs/34
@@ -277,6 +278,9 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
     // The Telegram notices (owner, 2026-10-16): a test chat linked to her (QA: the settings' switches), the figures.
     case 'tgn':
       return adminTgn(game, s, args);
+    // The advice mailer (owner, 2026-10-28): who would get what (dry), one captain's hints, sent now, the figures.
+    case 'advice':
+      return adminAdvice(game, s, args);
     // Telegram Stars (owner, 2026-10-11): a payment paid back by its charge id, its doubloons taken back.
     case 'refund':
       return adminRefund(game, s, args);

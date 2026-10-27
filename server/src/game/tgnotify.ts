@@ -272,6 +272,50 @@ export async function notify(game: Game, acc: number, cat: TgnCat, vars: Record<
   return 'send';
 }
 
+/** Whether a free-worded notice (the advice mailer, advice.ts) may go to her now by VK or Telegram: her yes, a channel
+ *  not blocked, not aboard, not in the quiet hours, under the day's cap. */
+export function pushable(game: Game, acc: number, now = game.wallNow()): { ok: boolean; vk: boolean; tg: boolean; why: string } {
+  const st = tgnState(game, acc);
+  const vk = !!(st?.vk && !st.vkOff && vkDesks.has(game));
+  const tg = !!(st?.chat && !st.blocked && desks.has(game));
+  const why = !st ? 'nolink' : st.on !== true ? 'unasked' : !vk && !tg ? 'nochannel' : aboard(game, acc) ? 'aboard' : quietHours(now) ? 'quiet' : sentToday(st, now) >= TGN_CAP ? 'cap' : '';
+  return { ok: !why, vk, tg, why };
+}
+
+/** A free-worded notice by VK and Telegram (the advice mailer): counted in the day's cap as one notice, under the kind
+ *  `cat` for VK's fragment and the bot's button. VK's «not allowed» (15, 901, 903) turns her VK notices off silently;
+ *  the bot blocked turns Telegram's off. Which channels took it. */
+export async function pushText(game: Game, acc: number, text: string, cat: TgnCat = 'idle'): Promise<{ vk: boolean; tg: boolean }> {
+  const out = { vk: false, tg: false };
+  const now = game.wallNow();
+  const p = pushable(game, acc, now);
+  const st = tgnState(game, acc);
+  if (!p.ok || !st) return out;
+  const day = moscowDay(now);
+  st.n = st.day === day ? st.n + 1 : 1;
+  st.day = day;
+  save(game, acc, st);
+  const vkDesk = vkDesks.get(game), desk = desks.get(game);
+  if (p.vk && vkDesk && st.vk) {
+    const r = await vkDesk.send(st.vk, cat, text, st.lang).catch(() => 'error' as const);
+    if (r === 'blocked') {
+      const st2 = tgnState(game, acc) ?? st;
+      st2.vkOff = true;
+      save(game, acc, st2);
+    } else if (r === 'ok') out.vk = true;
+  }
+  if (p.tg && desk && st.chat) {
+    const r = await desk.send(st.chat, cat, text, st.lang).catch(() => 'error' as const);
+    if (r === 'blocked') {
+      const st2 = tgnState(game, acc) ?? st;
+      st2.blocked = true;
+      st2.pending = [];
+      save(game, acc, st2);
+    } else if (r === 'ok') out.tg = true;
+  }
+  return out;
+}
+
 /** A notice for the island's owner when she is away (base.ts, baseclaim.ts call it; a no-op without the bot). */
 export function notifyAway(game: Game, acc: number, cat: TgnCat, vars: Record<string, string | number> = {}, key?: TgTextKey): void {
   if (!anyDesk(game) || aboard(game, acc)) return;
