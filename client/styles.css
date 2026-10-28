@@ -5740,3 +5740,8 @@ html.app-paused *, html.app-paused *::before, html.app-paused *::after { animati
 /* (the bar's buttons at 30 px on a phone on its side: the brass band a little thinner, so an 18 px icon keeps inside
    it — frames.mjs: the icons stood 3 px over the band's top) */
 @media (max-height: 520px) { .skinned .act-btn { border-width: 4px 9px; border-image: var(--ui-button) 40 fill / 4px 9px stretch; } .act-btn .act-ico { width: 16px; height: 16px; } }
+
+/* Pulling a building down (owner, 2026-10-28): the refund's chips inline in the question, the blocked line under «Снести». */
+.braze-ask .braze-back .bcosts { display: inline-flex; vertical-align: middle; justify-content: center; gap: 2px 10px; font-size: 14px; margin: 0 4px; }
+.braze-ask .braze-lost { color: #e0a080; }
+.braze-why { margin-top: 4px; }

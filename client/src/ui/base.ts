@@ -454,12 +454,12 @@ export class BaseWindow {
     const lines = [
       `<p id="confirm-text"><b>${esc(L('raze_q', { name }))}</b></p>`,
       `<p>${esc(town ? L('raze_gone_town') : L('raze_gone'))}</p>`,
-      r.tier ? `<p class="bad">${esc(L('raze_dw', { t: r.tier, n: town?.pool ?? 0 }))}</p>` : '',
+      r.tier ? `<p class="braze-lost">${esc(L('raze_dw', { t: r.tier, n: town?.pool ?? 0 }))}</p>` : '',
       cell?.what && producerOf(cell.what) ? `<p>${esc(L('raze_prod'))}</p>` : '',
       r.cancel ? `<p>${esc(L('raze_job'))}</p>` : '',
-      `<p class="braze-back">${esc(L('raze_back', { what: ' ', job: r.cancel ? L('raze_back_job') : '' })).replace(' ', what)}</p>`,
+      `<p class="braze-back">${esc(L('raze_back', { what: '\u0000', job: r.cancel ? L('raze_back_job') : '' })).replace('\u0000', what)}</p>`,
     ];
-    void askHtml(lines.join(''), L('raze_yes')).then((ok) => {
+    void askHtml(lines.join(''), L('raze_yes'), undefined, 'braze-ask').then((ok) => {
       if (!ok) return;
       this.send(town ? { t: 'base', action: 'raze', town: town.id } : { t: 'base', action: 'raze', plot: Number(id) });
       if (kind === 'plot') this.sel = null;
