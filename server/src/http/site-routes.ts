@@ -4,6 +4,7 @@
 //   GET  /api/site/shop                                                     the shop's mode and its catalogue now
 //   GET  /api/site/shop/item?id=…                                           a thing's whole card (the site's window)
 //   GET  /api/site/captain?name=…                                           the shop's step 1: her captain, what she has
+//   GET  /api/site/captain/<name>                                           a rated captain's public card (no coin, nothing private)
 //   POST /api/site/order {name,item,lang,email?}                            an order → { orderId, url } (go pay there)
 //   GET  /api/site/order?id=…                                               an order's state (the return page polls it)
 //   POST /api/site/pay/yookassa                                             YooKassa's webhook (re-fetched, never trusted)
@@ -18,6 +19,7 @@ import { Limiter } from '../forum/service.ts';
 import type { SiteRating } from '../game/siterating.ts';
 import { BOARDS } from '../game/siterating.ts';
 import type { Board } from '../game/siterating.ts';
+import type { SiteProfile } from '../game/siteprofile.ts';
 import type { WebShop } from '../game/webshop.ts';
 import { noticePid, yooAddress } from '../pay/yookassa.ts';
 import type { YooKassa } from '../pay/yookassa.ts';
@@ -36,6 +38,7 @@ export const SITE_LIMITS = {
   all: [240, MIN],
   captain: [[12, MIN], [120, HOUR]],
   find: [[30, MIN]],
+  profile: [[40, MIN], [400, HOUR]],
   order: [[8, MIN], [40, HOUR]],
   status: [[90, MIN]],
 } as const;
@@ -87,6 +90,8 @@ export function sameOrigin(req: IncomingMessage, publicUrl: string): boolean {
 
 export interface SiteDeps {
   rating: SiteRating;
+  /** The captains' public cards (absent: the door is shut). */
+  profile?: SiteProfile;
   shop: WebShop;
   publicUrl: string;
   now?: () => number;
@@ -154,6 +159,19 @@ export function siteRoutes(d: SiteDeps) {
           if (name.length < 2) throw new HttpError('bad_name');
           const f = d.rating.find(name);
           return f ? json(res, 200, f) : json(res, 404, { error: 'not_found' });
+        }
+        // a rated captain's card (owner, 2026-10-28): her army, ship, hero, island and feats — never a coin of hers
+        if (path.startsWith('captain/') && d.profile) {
+          take('profile', ip, SITE_LIMITS.profile);
+          let name = '';
+          try {
+            name = decodeURIComponent(path.slice('captain/'.length)).trim();
+          } catch {
+            throw new HttpError('bad_name');
+          }
+          if (name.length < 2 || name.length > 40) throw new HttpError('bad_name');
+          const v = d.profile.get(name);
+          return v ? json(res, 200, v, 'public, max-age=30') : json(res, 404, { error: 'not_found' });
         }
         if (path === 'shop') return json(res, 200, { ...d.shop.status(), items: d.shop.catalog() });
         if (path === 'shop/item') {

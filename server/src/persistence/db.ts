@@ -104,6 +104,9 @@ export interface Db {
   silverHoldings(): { account_id: number; gold: number; bank: number }[];
   /** Every saved captain with her account's name (the website's captains' rating reads them, at most once a minute). */
   allCaptains(): { account_id: number; name: string; data: string }[];
+  /** When the account was made and its captain last seen (her last sign-in or save, whichever is later): the website's
+   *  captain card (siteprofile.ts). Optional: a store without it shows neither. */
+  seenOf?(accountId: number): { created: number; seen: number } | undefined;
   transaction(fn: () => void): void;
   // e-mail and OAuth sign-in
   accountById(id: number): AccountRow | undefined;
@@ -276,6 +279,11 @@ export class Database implements Db {
 
   allCaptains(): { account_id: number; name: string; data: string }[] {
     return this.db.prepare('SELECT c.account_id AS account_id, a.name AS name, c.data AS data FROM captains c JOIN accounts a ON a.id = c.account_id').all() as { account_id: number; name: string; data: string }[];
+  }
+
+  seenOf(accountId: number): { created: number; seen: number } | undefined {
+    const r = this.db.prepare('SELECT a.created_at AS created, MAX(a.last_seen, COALESCE(c.updated_at, 0)) AS seen FROM accounts a LEFT JOIN captains c ON c.account_id = a.id WHERE a.id = ?').get(accountId) as { created: number; seen: number } | undefined;
+    return r ? { created: Number(r.created) || 0, seen: Number(r.seen) || 0 } : undefined;
   }
 
   /** Silver held by every saved captain: purse and League bank balance. */

@@ -46,7 +46,7 @@
     if (b !== 'level') return `<i>${esc(t.lvl)} ${r.level}</i>`;
     return '';
   };
-  const rowHtml = (b, r) => `<li class="rt-row${r.rank <= 3 ? ` top top${r.rank}` : ''}"><span class="rt-rank">${r.rank}</span>${face(r.captain, r.frame, 60)}
+  const rowHtml = (b, r) => `<li class="rt-row cp-go${r.rank <= 3 ? ` top top${r.rank}` : ''}" data-cap="${esc(r.name)}" tabindex="0" role="button" aria-haspopup="dialog" aria-label="${esc(`${r.name} — ${data.cp.t.open}`)}"><span class="rt-rank">${r.rank}</span>${face(r.captain, r.frame, 60)}
 <span class="rt-who"><b class="rt-name">${esc(r.name)}${r.guild ? ` <span class="rt-tag">[${esc(r.guild)}]</span>` : ''}</b>${plate(r.title, r.plate)}<span class="rt-cap">${esc(cos.names[r.captain] || '')}</span></span>
 <span class="rt-val">${value(b, r)}${sub(b, r)}</span></li>`;
   const guildHtml = (r) => `<li class="rt-row guild${r.rank <= 3 ? ` top top${r.rank}` : ''}"><span class="rt-rank">${r.rank}</span><span class="rt-gtag">${esc(r.tag)}</span>
@@ -112,7 +112,7 @@
         return `<li><button type="button" data-go="${b.id}"><span>${esc(b.name)}</span><b>${n ? `#${nf.format(n)}` : esc(t.out)}</b></button></li>`;
       }).join('');
       found.innerHTML = `<div class="rt-card panel">${face(c.captain, c.frame, 108)}<div class="rt-card-txt"><p class="kicker">${esc(t.you)}</p><h3>${esc(c.name)}${c.guild ? ` <span class="rt-tag">[${esc(c.guild)}]</span>` : ''}</h3>${plate(c.title, c.plate)}
-<p class="muted">${esc(cos.names[c.captain] || '')} · ${esc(t.lvl)} ${c.level}</p></div><button type="button" class="rt-x" aria-label="${esc(t.close)}">×</button>
+<p class="muted">${esc(cos.names[c.captain] || '')} · ${esc(t.lvl)} ${c.level}</p><button type="button" class="btn-gold sm rt-open" data-cap="${esc(c.name)}" aria-haspopup="dialog">${esc(data.cp.t.open)}</button></div><button type="button" class="rt-x" aria-label="${esc(t.close)}">×</button>
 <div class="rt-places"><p class="kicker">${esc(t.ranks)}</p><ul>${places}</ul></div></div>`;
       found.querySelector('.rt-x').addEventListener('click', () => { found.hidden = true; found.innerHTML = ''; });
       found.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => pick(b.dataset.go)));
@@ -125,4 +125,293 @@
   const first = data.boards.some((b) => b.id === q.get('board')) ? q.get('board') : 'level';
   pick(first);
   if (q.get('name')) { form.querySelector('input').value = q.get('name'); form.requestSubmit(); }
+  // ================================================================================================ the captain's card
+  // Owner, 2026-10-28: «нажимая на капитана я хочу видеть его армию, корабль и все что вообще только есть, кроме
+  // количества валюты … модалкой … с разными переключателями». A row (or the found card's button) opens it; the address
+  // keeps ?captain=<name> (a link opens it, Back closes it); Esc, the cross and the shade close it; a phone gets a
+  // full-screen sheet. The card is GET /api/site/captain/<name> (server/src/game/siteprofile.ts): no coin in it.
+  const cp = data.cp, ct = cp.t, CI = cp.ico, LI = data.lang === 'ru' ? 1 : 0;
+  const tr = (x) => (Array.isArray(x) ? x[LI] || x[0] : x || '');
+  const fmt = (n) => nf.format(Math.round(n));
+  const nf1 = new Intl.NumberFormat(data.lang === 'ru' ? 'ru-RU' : 'en-GB', { maximumFractionDigits: 1 });
+  const short = (n) => (n < 10000 ? fmt(n) : `${nf1.format(n / 1000)}k`);
+  const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+  const im = (src, alt = '', cls = '', w = 0) => (src ? `<img src="${esc(src)}" alt="${esc(alt)}"${cls ? ` class="${cls}"` : ''}${w ? ` width="${w}" height="${w}"` : ''} loading="lazy" decoding="async">` : '');
+  const cards = new Map();
+  let cur = null, tab = 'overview', lastFocus = null, pushed = false, seq = 0;
+
+  const box = d.createElement('div');
+  box.className = 'cp';
+  box.hidden = true;
+  box.innerHTML = `<div class="cp-back" data-x></div><div class="cp-box" role="dialog" aria-modal="true" aria-labelledby="cp-name" tabindex="-1"><span class="cp-grab" aria-hidden="true"></span>
+<button type="button" class="cp-x" data-x aria-label="${esc(ct.close)}"><span aria-hidden="true">×</span></button><div class="cp-scroll"></div></div>`;
+  d.body.appendChild(box);
+  const dlg = box.querySelector('.cp-box'), scroll = box.querySelector('.cp-scroll');
+
+  // ---- the parts
+  const tile = (icon, name, val, sub = '') => `<div class="cp-tile">${icon ? `<span class="cp-tico">${im(icon, '', '', 28)}</span>` : ''}<span class="cp-tx"><b${/^[\d\s.,/k+−-]+$/.test(String(val).replace(/&nbsp;| /g, ' ')) ? '' : ' class="w"'}>${val}</b><i>${esc(name)}</i>${sub ? `<em>${sub}</em>` : ''}</span></div>`;
+  const h3 = (s, extra = '') => `<h3 class="cp-h">${esc(s)}${extra ? ` <span class="cp-h-x">${extra}</span>` : ''}</h3>`;
+  const chip = (x, extra = '', cls = '', sub = '') => `<li class="cp-chip${cls ? ` ${cls}` : ''}" title="${esc(tr(x.name))}">${x.icon ? im(x.icon, '', '', 32) : ''}<span>${esc(tr(x.name))}${extra ? ` <b>${extra}</b>` : ''}${sub ? `<i>${esc(sub)}</i>` : ''}</span></li>`;
+  const chips = (title, xs, f = (x) => chip(x)) => (xs && xs.length ? `${h3(title, String(xs.length))}<ul class="cp-chips">${xs.map(f).join('')}</ul>` : '');
+  const tierCls = (s) => `t${Math.min(7, Math.max(1, s.tier))}${s.up ? ' up' : ''}`;
+  const unitCard = (s) => {
+    const tip = `${tr(s.name)} ×${fmt(s.n)} — ${ct.tier} ${ROMAN[s.tier] || s.tier}${s.up ? `, ${ct.up}` : ''}. ${ct.atk} ${s.atk}, ${ct.def} ${s.def}, ${ct.dmg} ${s.dmin}–${s.dmax}, ${ct.hp} ${s.hp}. ${ct.power}: ${fmt(s.power)}`;
+    return `<li class="cp-unit ${tierCls(s)}${s.rank ? ` r-${s.rank}` : ''}" title="${esc(tip)}"><span class="cp-uart">${im(s.art, tr(s.name))}</span>
+<i class="cp-utier">${ROMAN[s.tier] || s.tier}${s.up ? '<s aria-hidden="true"></s>' : ''}</i><b class="cp-upow">${im(CI.power, '', '', 12)}${short(s.power)}</b><b class="cp-un">${fmt(s.n)}</b><span class="cp-uname">${esc(tr(s.name))}</span></li>`;
+  };
+  const itemTile = (it) => `<li class="cp-item${it.art ? ' art' : ''}" style="--rc:${esc(it.color)}" title="${esc(`${tr(it.name)} — ${tr(it.slotName)}, ${tr(it.rarityName)}${it.set ? ` · ${tr(it.set)}` : ''}`)}"><span class="cp-isq">${im(it.icon, '', '', 44)}</span><span class="cp-itx"><b>${esc(tr(it.name))}</b><i>${esc(tr(it.slotName))} · ${esc(tr(it.rarityName))}</i></span></li>`;
+  const slotSq = (it) => (it ? `<span class="cp-slot" style="--rc:${esc(it.color)}" title="${esc(`${tr(it.name)} — ${tr(it.slotName)}, ${tr(it.rarityName)}`)}">${im(it.icon, tr(it.name))}</span>` : '<span class="cp-slot void" aria-hidden="true"></span>');
+  const shipPic = (art, name, cls = '') => `<span class="cp-hull${cls ? ` ${cls}` : ''}">${im(art, name)}</span>`;
+  const ago = (ms) => {
+    const s = Math.max(1, (Date.now() - ms) / 1000);
+    const rtf = new Intl.RelativeTimeFormat(data.lang === 'ru' ? 'ru' : 'en', { numeric: 'auto' });
+    if (s < 3600) return rtf.format(-Math.max(1, Math.round(s / 60)), 'minute');
+    if (s < 86400) return rtf.format(-Math.round(s / 3600), 'hour');
+    if (s < 86400 * 45) return rtf.format(-Math.round(s / 86400), 'day');
+    return rtf.format(-Math.round(s / (86400 * 30)), 'month');
+  };
+  const date = (ms) => new Date(ms).toLocaleDateString(data.lang === 'ru' ? 'ru-RU' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  // ---- the tabs (a tab with nothing in it is not shown)
+  const TABS = [
+    ['overview', ct.tOverview, () => true],
+    ['army', ct.tArmy, (v) => v.army.stacks.length > 0],
+    ['ship', ct.tShip, (v) => !!v.ship],
+    ['hero', ct.tHero, (v) => v.hero.prim.length > 0 || v.hero.gear.length > 0 || v.hero.skills.length > 0 || v.hero.talents.length > 0],
+    ['island', ct.tIsland, (v) => !!v.island],
+    ['feats', ct.tFeats, (v) => { const f = v.feats; return !!(f.campaign || f.deeds.length || f.feats.length || f.trophies.length || f.bosses.length || f.wonders.length || f.regions.length || f.tattoos.length || f.pets.length || f.companion || f.beasts.length || f.saga.length); }],
+  ];
+
+  const overview = (v) => {
+    const st = v.stats, p = v.pvp;
+    const tiles = [
+      tile(CI.level, ct.lvl, fmt(v.level), v.glory ? `${esc(ct.glory)} ${fmt(v.glory)}` : ''),
+      v.army.stacks.length ? tile(CI.power, ct.power, short(v.army.power), `${fmt(v.army.men)} ${esc(ct.men)}`) : '',
+      v.ship ? tile(CI.ship, ct.tShip, esc(tr(v.ship.clsName)), `⚓${v.ship.level}`) : '',
+      tile(CI.pvp, ct.pvp, fmt(p.rating), p.duels ? `${fmt(p.wins)}/${fmt(p.duels)}` : ''),
+      p.arena !== null ? tile(CI.arena, ct.arena, fmt(p.arena), `${fmt(p.arenaWins)} ${esc(ct.wins)}`) : '',
+      p.wanted > 0 ? tile(CI.wanted, ct.wanted, esc(tr(p.wantedName))) : '',
+      ...['boarded', 'sunk', 'distance', 'recruited', 'quests', 'roamWins', 'mentored', 'season', 'fish'].filter((k) => st[k] > 0).map((k) => tile(CI[k], ct[k], fmt(st[k]))),
+    ].join('');
+    const places = data.boards.filter((b) => b.id !== 'guilds' && v.ranks[b.id]).map((b) => `<li><button type="button" data-go="${b.id}">${im(b.icon, '', '', 18)}<span>${esc(b.name)}</span><b>#${fmt(v.ranks[b.id])}</b></button></li>`).join('');
+    const rep = v.rep.map((r) => {
+      const w = Math.min(100, Math.abs(r.v));
+      return `<li class="cp-rep${r.v < 0 ? ' neg' : ''}">${im(r.icon, '', '', 26)}<span class="cp-rep-n">${esc(tr(r.name))}</span><span class="cp-bar"><i style="${r.v < 0 ? 'right:50%' : 'left:50%'};width:${w / 2}%"></i></span><b>${r.v > 0 ? '+' : ''}${fmt(r.v)}</b></li>`;
+    }).join('');
+    const careers = v.careers.length ? `${h3(ct.careers)}<ul class="cp-chips">${v.careers.map((c) => `<li class="cp-chip gold"><span>${esc(tr(c.name))}: <b>${esc(tr(c.rankName))}</b></span></li>`).join('')}</ul>` : '';
+    const titles = v.titles.length ? `${h3(ct.titles, String(v.titles.length))}<ul class="cp-chips">${v.titles.map((x) => `<li class="cp-chip${v.title && tr(v.title) === tr(x) ? ' gold' : ''}"><span>${esc(tr(x))}</span></li>`).join('')}</ul>` : '';
+    return `<div class="cp-tiles">${tiles}</div>${places ? `${h3(ct.places)}<ul class="cp-places">${places}</ul>` : ''}${careers}${titles}${h3(ct.rep)}<ul class="cp-reps">${rep}</ul>`;
+  };
+
+  const army = (v) => {
+    const a = v.army, slots = Math.max(a.slots, a.stacks.length);
+    const row = a.stacks.map(unitCard).join('') + '<li class="cp-unit void" aria-hidden="true"></li>'.repeat(Math.max(0, slots - a.stacks.length));
+    const list = a.stacks.map((s) => `<li class="cp-uline"><span class="cp-uthumb ${tierCls(s)}">${im(s.art, '')}</span><span class="cp-ul-tx"><b>${esc(tr(s.name))} <i>×${fmt(s.n)}</i></b>
+<span>${esc(ct.tier)} ${ROMAN[s.tier] || s.tier}${s.up ? ` · ${esc(ct.up)}` : ''} · ${esc(ct.atk)} ${s.atk} · ${esc(ct.def)} ${s.def} · ${esc(ct.dmg)} ${s.dmin}–${s.dmax} · ${esc(ct.hp)} ${s.hp}</span></span><b class="cp-ul-pow">${im(CI.power, '', '', 14)}${short(s.power)}</b></li>`).join('');
+    return `<div class="cp-tiles three">${tile(CI.power, ct.power, short(a.power))}${tile(CI.men, ct.count, fmt(a.men))}${tile(CI.anchor, ct.stacks, `${a.stacks.length}/${a.slots}`)}</div>
+<ul class="cp-army" style="--n:${Math.min(7, slots)};--m:${Math.min(5, slots)}">${row}</ul><ul class="cp-ulist">${list}</ul>`;
+  };
+
+  const fleetList = (title, xs, nm) => (xs.length ? `${h3(title, String(xs.length))}<ul class="cp-fleet">${xs.map((e) => `<li>${shipPic(e.art, tr(e.clsName), 'sm')}<span><b>${esc(nm(e))}</b><i>${esc(tr(e.clsName))} · ⚓${e.level}</i></span></li>`).join('')}</ul>` : '');
+  const ship = (v) => {
+    const s = v.ship;
+    const stats = [tile(CI.hull, ct.hull, fmt(s.hullMax)), tile(CI.sails, ct.sails, fmt(s.sails)), tile(CI.speed, ct.speed, nf1.format(s.speed)), tile(CI.guns, ct.gunsSide, fmt(s.gunsPerSide)), tile(CI.crew, ct.crew, fmt(s.crewMax)), s.armor ? tile(CI.armor, ct.armor, fmt(s.armor)) : ''].join('');
+    const flags = `${s.legendary ? `<li class="cp-chip gold"><span>${esc(ct.legendary)}</span></li>` : ''}${s.keel ? `<li class="cp-chip gold"><span>${esc(ct.keel)}</span></li>` : ''}`;
+    const fit = [...s.guns.map((g) => chip(g, '', '', ct.guns)), s.figurehead ? chip(s.figurehead, '', 'ice', ct.figurehead) : '', s.mount ? chip(s.mount, '', 'ice', ct.mount) : ''].join('');
+    const mods = s.modules.length ? `${h3(ct.modules, String(s.modules.length))}<ul class="cp-chips">${s.modules.map((m) => chip(m, m.lv > 1 ? `${m.lv}` : '')).join('')}</ul>` : '';
+    return `<div class="cp-ship">${shipPic(s.art, tr(s.clsName))}<div class="cp-ship-tx"><p class="kicker">${esc(tr(s.clsName))} · ${esc(ct.shipLv)} ⚓${s.level}</p><h3 class="cp-big">«${esc(s.name || tr(s.clsName))}»</h3>
+${flags ? `<ul class="cp-chips">${flags}</ul>` : ''}${fit ? `<ul class="cp-chips">${fit}</ul>` : ''}</div></div>
+<div class="cp-tiles">${stats}</div>${mods}${s.gear.length ? `${h3(ct.shipGear, String(s.gear.length))}<ul class="cp-items">${s.gear.map(itemTile).join('')}</ul>` : ''}${fleetList(ct.escorts, v.escorts, (e) => e.name || tr(e.clsName))}${fleetList(ct.berths, v.berths, (e) => e.name || tr(e.clsName))}`;
+  };
+
+  const LEFT = ['hat', 'coat', 'sash', 'boots', 'blade'], RIGHT = ['pistols', 'spyglass', 'compass', 'charm', 'ring'];
+  const hero = (v) => {
+    const h = v.hero;
+    const by = Object.fromEntries(h.gear.map((it) => [it.slot, it]));
+    const prim = h.prim.length ? `${h3(ct.prim)}<div class="cp-tiles four">${h.prim.map((x) => tile(x.icon, tr(x.name), fmt(x.base + x.art), x.art ? `+${fmt(x.art)}` : '')).join('')}</div>` : '';
+    const skills = h.skills.length ? `${h3(ct.skills, String(h.skills.length))}<ul class="cp-chips big">${h.skills.map((x) => chip(x, '', `rk${x.rank}`, tr(x.rankName))).join('')}</ul>` : '';
+    const doll = h.gear.length ? `${h3(ct.gear, `${h.gear.length}/10`)}<div class="cp-doll"><div class="cp-dcol">${LEFT.map((sl) => slotSq(by[sl])).join('')}</div>
+<div class="cp-dmid">${v.figure ? im(v.figure, '', 'cp-dfig') : face(v.captain, v.frame, 150)}</div><div class="cp-dcol">${RIGHT.map((sl) => slotSq(by[sl])).join('')}</div></div><ul class="cp-items">${h.gear.map(itemTile).join('')}</ul>` : '';
+    const relics = h.relics.length ? `${h3(ct.relics)}<ul class="cp-chips">${h.relics.map((r) => chip(r, r.on ? esc(ct.made) : `${r.worn}/${r.of}`, r.on ? 'gold' : '')).join('')}</ul>` : '';
+    const sets = h.sets.length ? `${h3(ct.sets)}<ul class="cp-chips">${h.sets.map((x) => `<li class="cp-chip gold"><span>${esc(tr(x.name))}</span></li>`).join('')}</ul>` : '';
+    const orders = h.orders.length ? `${h3(ct.orders, h.willMax ? `${esc(ct.will)} ${fmt(h.willMax)}` : String(h.orders.length))}<ul class="cp-chips">${h.orders.map((o) => chip(o, ROMAN[o.level] || '', '', tr(o.school))).join('')}</ul>` : '';
+    const talents = h.talents.length ? `${h3(ct.talents, String(h.talents.reduce((n, x) => n + x.rank, 0)))}<ul class="cp-chips">${h.talents.map((x) => chip(x, `${x.rank}/${x.max}`, x.rank >= x.max ? 'gold' : '', tr(x.tree))).join('')}</ul>` : '';
+    return `${prim}${skills}${doll}${relics}${sets}${orders}${talents}`;
+  };
+
+  const island = (v) => {
+    const i = v.island;
+    const grid = (title, xs) => (xs.length ? `${h3(title, String(xs.length))}<ul class="cp-builds">${xs.map((b) => `<li title="${esc(tr(b.name))}"><span class="cp-bimg">${im(b.icon, tr(b.name))}</span><b>${esc(tr(b.name))}</b><i>${esc(ct.lvl)} ${b.level}</i></li>`).join('')}</ul>` : '');
+    return `<div class="cp-isle"><span class="cp-isle-ico">${im(CI.island, '', '', 56)}</span><div><p class="kicker">${i.sea ? esc(tr(i.sea)) : ''}</p><h3 class="cp-big">${esc(tr(i.name))}</h3><p class="muted">${esc(ct.isleLv)}: <b>${i.level}</b></p></div></div>
+${grid(ct.town, i.town)}${grid(ct.producers, i.producers)}${grid(ct.buildings, i.buildings)}${fleetList(ct.isleShips, i.ships, (e) => tr(e.name))}`;
+  };
+
+  const feats = (v) => {
+    const f = v.feats;
+    const c = f.campaign;
+    const camp = c ? `<div class="cp-camp">${c.card ? `<span class="cp-camp-art">${im(c.card, '')}</span>` : ''}<div class="cp-camp-tx"><p class="kicker">${esc(ct.campaign)}</p><h3 class="cp-big">${esc(ct.chapter.replace('{n}', c.ch))}: ${esc(tr(c.title))}</h3>
+<span class="cp-xp"><i style="width:${Math.max(1, Math.round((c.at / c.of) * 100))}%"></i></span><p class="muted">${c.done ? esc(ct.done) : `${fmt(c.at)} / ${fmt(c.of)}`}</p></div></div>` : '';
+    const comp = f.companion ? `${h3(ct.companion)}<ul class="cp-chips">${chip({ name: f.companion.name, icon: f.companion.icon }, `${esc(ct.lvl)} ${f.companion.level}`, '', f.companion.harness ? tr(f.companion.harness) : '')}</ul>` : '';
+    const saga = f.saga.length ? `${h3(ct.saga, String(f.sagaN))}<ol class="cp-saga">${f.saga.map((e) => `<li>${im(e.icon, '', '', 28)}<span>${esc(tr(e.text))}</span></li>`).join('')}</ol>${f.sagaN > f.saga.length ? `<p class="muted cp-note">${esc(ct.sagaMore.replace('{n}', fmt(f.sagaN)))}</p>` : ''}` : '';
+    const regions = f.regions.length ? `${h3(ct.regions, String(f.regions.length))}<ul class="cp-chips">${f.regions.map((r) => `<li class="cp-chip ice"><span>${esc(tr(r))}</span></li>`).join('')}</ul>` : '';
+    return `${camp}${chips(ct.deeds, f.deeds)}${chips(ct.feats, f.feats, (x) => chip(x, '', 'gold'))}${chips(ct.trophies, f.trophies, (x) => chip(x, '', 'gold'))}${chips(ct.bosses, f.bosses, (x) => chip(x, x.n > 1 ? `×${x.n}` : '', 'red'))}`
+      + `${chips(ct.wonders, f.wonders)}${regions}${chips(ct.tattoos, f.tattoos, (x) => chip(x, '', x.on ? 'gold' : '', x.on ? ct.worn : ''))}${chips(ct.pets, f.pets, (x) => chip(x, '', x.deck ? 'gold' : '', x.deck ? ct.onDeck : ''))}${comp}${chips(ct.beasts, f.beasts, (x) => chip(x, `×${fmt(x.n)}`))}${saga}`;
+  };
+  const PANEL = { overview, army, ship, hero, island, feats };
+
+  const head = (v) => {
+    const xpPct = v.xpNext ? Math.max(0, Math.min(100, (v.xp / v.xpNext) * 100)) : 100;
+    const state = v.online ? `<span class="cp-on"><i></i>${esc(ct.online)}${v.sea ? ` · ${esc(tr(v.sea))}` : ''}</span>` : v.seen ? `<span class="cp-off">${esc(ct.seen.replace('{t}', ago(v.seen)))}</span>` : '';
+    return `<header class="cp-head">${face(v.captain, v.frame, 132)}<div class="cp-who"><p class="kicker">${esc(tr(v.capName))} · ${esc(tr(v.archetype))}</p>
+<h2 id="cp-name">${esc(v.name)}${v.guild ? ` <span class="rt-tag" title="${esc(v.guild.name)}">[${esc(v.guild.tag)}]</span>` : ''}</h2>${plate(v.cosTitle, v.plate)}${!v.cosTitle && v.title ? `<p class="cp-title">${esc(tr(v.title))}</p>` : ''}
+<div class="cp-lv"><b>${esc(ct.lvl)} ${v.level}</b>${v.glory ? `<span class="cp-glory">${im(CI.glory, '', '', 16)}${esc(ct.glory)} ${fmt(v.glory)}</span>` : ''}${state}</div>
+<div class="cp-xpw" title="${esc(ct.xp)}"><span class="cp-xp"><i style="width:${xpPct.toFixed(1)}%"></i></span><em>${v.xpNext ? `${fmt(v.xp)} / ${fmt(v.xpNext)}` : esc(ct.maxed)}</em></div>
+${v.created ? `<p class="cp-since">${esc(ct.since.replace('{d}', date(v.created)))}</p>` : ''}</div></header>`;
+  };
+
+  const drawCard = (v) => {
+    const tabs = TABS.filter(([, , ok]) => ok(v));
+    if (!tabs.some(([id]) => id === tab)) tab = 'overview';
+    scroll.innerHTML = `${head(v)}<div class="cp-tabs" role="tablist">${tabs.map(([id, name]) => `<button type="button" role="tab" id="cpt-${id}" aria-controls="cpp-${id}" aria-selected="${id === tab}" tabindex="${id === tab ? 0 : -1}" data-tab="${id}">${esc(name)}</button>`).join('')}</div>
+${tabs.map(([id]) => `<section class="cp-panel" role="tabpanel" id="cpp-${id}" aria-labelledby="cpt-${id}"${id === tab ? '' : ' hidden'}>${id === tab ? PANEL[id](v) : ''}</section>`).join('')}`;
+  };
+  const showTab = (id) => {
+    if (!cur) return;
+    tab = id;
+    scroll.querySelectorAll('[data-tab]').forEach((b) => { const on = b.dataset.tab === id; b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; });
+    scroll.querySelectorAll('.cp-panel').forEach((p) => { const on = p.id === `cpp-${id}`; p.hidden = !on; if (on && !p.innerHTML) p.innerHTML = PANEL[id](cur); });
+    const bar = scroll.querySelector('.cp-tabs'), b = bar && bar.querySelector(`[data-tab="${id}"]`);
+    if (bar && b && bar.scrollWidth > bar.clientWidth) bar.scrollLeft = Math.max(0, b.offsetLeft - (bar.clientWidth - b.offsetWidth) / 2);
+    // (the tabs kept in sight: the panel's top brought under them when the reader had scrolled past)
+    if (bar && scroll.scrollTop > bar.offsetTop) scroll.scrollTop = bar.offsetTop;
+  };
+  const skeleton = () => `<div class="cp-skel" aria-busy="true" aria-label="${esc(ct.loading)}"><div class="cp-head"><span class="sk sk-av"></span><div class="cp-who"><span class="sk sk-l1"></span><span class="sk sk-l2"></span><span class="sk sk-l3"></span></div></div>
+<span class="sk sk-tabs"></span><div class="cp-tiles">${'<span class="sk sk-tile"></span>'.repeat(6)}</div></div>`;
+  const fail = (msg, name) => { scroll.innerHTML = `<div class="cp-fail"><p>${esc(msg)}</p>${name ? `<button type="button" class="btn-gold sm" data-retry="${esc(name)}">${esc(ct.retry)}</button>` : ''}</div>`; };
+
+  const loadCard = async (name) => {
+    const my = ++seq;
+    const key = name.toLowerCase(), hit = cards.get(key);
+    if (hit && Date.now() - hit.got < 30_000) { cur = hit.v; drawCard(hit.v); return; }
+    cur = null;
+    scroll.innerHTML = skeleton();
+    try {
+      const r = await fetch(`${cp.api}${encodeURIComponent(name)}`, { headers: { Accept: 'application/json' } });
+      if (my !== seq) return;
+      if (r.status === 404 || r.status === 400) return fail(ct.gone);
+      if (r.status === 429) return fail(ct.rate, name);
+      if (!r.ok) throw new Error(String(r.status));
+      const v = await r.json();
+      if (my !== seq) return;
+      cards.set(key, { v, got: Date.now() });
+      cur = v;
+      drawCard(v);
+    } catch {
+      if (my === seq) fail(ct.err, name);
+    }
+  };
+
+  const focusables = () => [...dlg.querySelectorAll('button:not([disabled]), a[href], [tabindex="0"]')].filter((x) => x.offsetParent !== null);
+  const isOpen = () => !box.hidden;
+  const showCard = (name) => {
+    if (!isOpen()) {
+      lastFocus = d.activeElement;
+      box.hidden = false;
+      d.documentElement.classList.add('cp-lock');
+      void box.offsetWidth; // (mounted first, so its rise runs)
+      box.classList.add('on');
+      dlg.focus({ preventScroll: true });
+    }
+    tab = 'overview';
+    scroll.scrollTop = 0;
+    void loadCard(name);
+  };
+  const hide = () => {
+    if (!isOpen()) return;
+    seq++;
+    box.classList.remove('on');
+    d.documentElement.classList.remove('cp-lock');
+    box.hidden = true;
+    scroll.innerHTML = '';
+    cur = null;
+    if (lastFocus && lastFocus.focus && d.contains(lastFocus)) lastFocus.focus({ preventScroll: true });
+  };
+  /** Opens a captain's card and writes ?captain= into the address (Back closes it). */
+  const openCard = (name) => {
+    const u = new URL(location.href);
+    if (u.searchParams.get('captain') !== name) {
+      u.searchParams.set('captain', name);
+      history.pushState({ cp: name }, '', u);
+      pushed = true;
+    }
+    showCard(name);
+  };
+  const close = () => {
+    if (pushed && history.state && history.state.cp) { pushed = false; history.back(); return; }
+    const u = new URL(location.href);
+    u.searchParams.delete('captain');
+    history.replaceState(null, '', u);
+    hide();
+  };
+  addEventListener('popstate', () => {
+    const name = new URLSearchParams(location.search).get('captain');
+    if (name) showCard(name.slice(0, 40));
+    else { pushed = false; hide(); }
+  });
+
+  // ---- what opens and closes it
+  d.addEventListener('click', (e) => {
+    const go = e.target.closest('[data-cap]');
+    if (go && !box.contains(go)) { e.preventDefault(); openCard(go.dataset.cap); }
+  });
+  list.addEventListener('keydown', (e) => {
+    const go = e.target.closest('[data-cap]');
+    if (go && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openCard(go.dataset.cap); }
+  });
+  box.addEventListener('click', (e) => {
+    if (e.target.closest('[data-x]')) { close(); return; }
+    const tb = e.target.closest('[data-tab]');
+    if (tb) { showTab(tb.dataset.tab); return; }
+    const r = e.target.closest('[data-retry]');
+    if (r) { cards.delete(r.dataset.retry.toLowerCase()); void loadCard(r.dataset.retry); return; }
+    const b = e.target.closest('[data-go]');
+    if (b) { const board = b.dataset.go; close(); pick(board); }
+  });
+  box.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+    const tb = e.target.closest('[data-tab]');
+    if (tb && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
+      const all = [...scroll.querySelectorAll('[data-tab]')], i = all.indexOf(tb), n = all[(i + (e.key === 'ArrowRight' ? 1 : all.length - 1)) % all.length];
+      e.preventDefault();
+      showTab(n.dataset.tab);
+      n.focus();
+      return;
+    }
+    if (e.key !== 'Tab') return;
+    const f = focusables();
+    if (!f.length) return;
+    const a = f[0], z = f[f.length - 1];
+    if (e.shiftKey && (d.activeElement === a || d.activeElement === dlg)) { e.preventDefault(); z.focus(); }
+    else if (!e.shiftKey && d.activeElement === z) { e.preventDefault(); a.focus(); }
+  });
+  // a phone's sheet: pulled down by its handle (or from the top of its scroll) it closes
+  const sheet = () => matchMedia('(max-width: 700px)').matches;
+  let sy = null, dy = 0;
+  dlg.addEventListener('touchstart', (e) => { sy = sheet() && (scroll.scrollTop <= 0 || e.target.closest('.cp-grab')) ? e.touches[0].clientY : null; dy = 0; }, { passive: true });
+  dlg.addEventListener('touchmove', (e) => {
+    if (sy === null) return;
+    dy = Math.max(0, e.touches[0].clientY - sy);
+    if (dy > 4) { dlg.style.transition = 'none'; dlg.style.transform = `translateY(${dy}px)`; }
+  }, { passive: true });
+  dlg.addEventListener('touchend', () => {
+    if (sy === null) return;
+    dlg.style.transition = '';
+    dlg.style.transform = '';
+    if (dy > 110) close();
+    sy = null;
+  });
+
+  const deep = q.get('captain');
+  if (deep) showCard(deep.slice(0, 40));
 })();
+

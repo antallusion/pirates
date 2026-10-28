@@ -38,6 +38,7 @@ import { ForumService } from './forum/service.ts';
 import { gameLink } from './forum/gamelink.ts';
 import { forumRoutes } from './http/forum-routes.ts';
 import { SiteRating } from './game/siterating.ts';
+import { SiteProfile } from './game/siteprofile.ts';
 import { WebShop } from './game/webshop.ts';
 import { siteRoutes } from './http/site-routes.ts';
 import { yookassaFromEnv } from './pay/yookassa.ts';
@@ -101,7 +102,7 @@ const webShop = new WebShop(game, {
   hidden: (acc, name) => rating.hidden(acc, name),
 });
 console.log(`[${GAME_NAME}] web shop: ${webShop.mode === 'live' ? 'YooKassa' : `TEST MODE${process.env.GRAVETIDE_PAY_TEST === '1' ? ' (open to all)' : ' (admins only)'}`}`);
-const handleSite = siteRoutes({ rating, shop: webShop, publicUrl: PUBLIC_URL });
+const handleSite = siteRoutes({ rating, profile: new SiteProfile(game, rating), shop: webShop, publicUrl: PUBLIC_URL });
 
 const server = createServer(async (req, res) => {
   if (req.url === '/onboarding') {

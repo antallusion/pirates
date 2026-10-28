@@ -3,7 +3,7 @@
 // chat — its picture, her flag, the telling.
 
 import { HOLIDAYS } from '../../../shared/src/data/holidays.ts';
-import { SAGA_ICON } from '../../../shared/src/data/saga.ts';
+import { SAGA_ICON, SAGA_TELL } from '../../../shared/src/data/saga.ts';
 import type { SagaEntry, SagaKind } from '../../../shared/src/data/saga.ts';
 import type { ClientMsg, SagaCard } from '../../../shared/src/protocol.ts';
 import { dict, lang } from '../i18n.ts';
@@ -14,22 +14,7 @@ import type { ClientState } from '../state.ts';
 import { esc, icon } from './dom.ts';
 import { placeName } from './maps.ts';
 
-const TELL: Record<SagaKind, [string, string]> = {
-  storm_heart: ['{d}, Captain {c} caught the heart of the storm over {0}.', '{d} капитан {c} ловит сердце шторма над водами «{0}».'],
-  descent: ['{d}, Captain {c} went down the Maelstrom Stair to tier {n}.', '{d} капитан {c} спускается по Лестнице Мальстрёма до {n}-го яруса.'],
-  named: ['{d}, Captain {c} sank {0}, the pirate wanted in {1}.', '{d} капитан {c} топит пирата {0}, которого разыскивали в водах «{1}».'],
-  nemesis: ['{d}, Captain {c} settled the old score with {0}.', '{d} заклятый враг {0} повержен: старый счёт капитана {c} закрыт.'],
-  beast: ['{d}, Captain {c} took a {0} off {1}.', '{d} у острова {1} капитану {c} достаётся добыча — {0}.'],
-  record_fish: ['{d}, Captain {c} landed a record {0} of {n} kg.', '{d} капитан {c} вытаскивает рекордную рыбу — {0}, {n} кг.'],
-  regatta: ['{d}, Captain {c} won the Regatta of Equal Waters off {0}.', '{d} регата «Равные воды» ({0}): первым приходит корабль капитана {c}.'],
-  promotion: ['{d}, Captain {c} was made {0}.', '{d} капитан {c} получает чин: {0}.'],
-  wonder: ['{d}, Captain {c} found a wonder of the sea: {0}.', '{d} капитан {c} находит чудо моря: {0}.'],
-  dutchman: ['{d}, Captain {c} sent the Flying Dutchman to his rest.', '{d} капитан {c} упокаивает Летучего Голландца.'],
-  holiday_flag: ['{d}, Captain {c} won the flag of {0}.', '{d} капитан {c} получает флаг праздника «{0}».'],
-  sunk: ['{d}, the sea took Captain {c}’s {0} off {1}.', '{d} у острова {1} море забирает «{0}», корабль капитана {c}.'],
-  turncoat: ['{d}, {0}, once an enemy, signed on with Captain {c}.', '{d} {0}, бывший враг, подписывает договор с капитаном {c}.'],
-  island: ['{d}, the island of {0} passed to Captain {c}.', '{d} остров {0} переходит к капитану {c}.'],
-};
+const TELL = SAGA_TELL;
 
 const L = dict({
   title: 'The saga of Captain {name}',

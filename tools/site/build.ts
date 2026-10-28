@@ -453,6 +453,36 @@ const RATING_T: Record<string, Tr> = {
   close: ['Close', 'Закрыть'], you: ['Found', 'Найден'], colCap: ['Captain', 'Капитан'], colGuild: ['Guild', 'Гильдия'],
 };
 
+/** The captain's card (owner, 2026-10-28: «нажимая на капитана я хочу видеть его армию, корабль и все что вообще только
+ *  есть, кроме количества валюты … модалкой … с разными переключателями»): its words, and the game's icons it draws with.
+ *  The card itself comes from GET /api/site/captain/<name> (server/src/game/siteprofile.ts); site/js/rating.js lays it out. */
+const CP_T: Record<string, Tr> = {
+  open: ['Open the captain’s card', 'Открыть карточку капитана'], loading: ['Loading the captain…', 'Загружаем капитана…'], gone: ['This captain is not in the rating.', 'Этого капитана нет в рейтинге.'],
+  tOverview: ['Overview', 'Обзор'], tArmy: ['Army', 'Армия'], tShip: ['Ship', 'Корабль'], tHero: ['Captain', 'Капитан'], tIsland: ['Island', 'Остров'], tFeats: ['Achievements', 'Достижения'],
+  online: ['At sea now', 'В море сейчас'], seen: ['Last seen {t}', 'Был(а) {t}'], since: ['Sailing since {d}', 'В море с {d}'], lvl: ['Level', 'Уровень'], xp: ['Experience', 'Опыт'], maxed: ['The highest level', 'Высший уровень'],
+  glory: ['Glory rank', 'Ранг славы'], power: ['Army might', 'Мощь армии'], men: ['men', 'бойцов'], stacks: ['Stacks', 'Отряды'], tier: ['Tier', 'Уровень'], up: ['upgraded', 'улучшен'],
+  atk: ['Attack', 'Атака'], def: ['Defence', 'Защита'], dmg: ['Damage', 'Урон'], hp: ['Health', 'Здоровье'], count: ['Count', 'Численность'],
+  pvp: ['Duel rating', 'Рейтинг дуэлей'], arena: ['Colosseum', 'Колизей'], wins: ['wins', 'побед'], wanted: ['Wanted', 'Розыск'], places: ['Places on the boards', 'Места в рейтингах'],
+  rep: ['Reputation', 'Репутация'], careers: ['Careers', 'Карьера'], titles: ['Titles', 'Титулы'], none: ['—', '—'],
+  sunk: ['Ships sunk', 'Потоплено кораблей'], boarded: ['Boardings won', 'Абордажей'], distance: ['Sailed, km', 'Пройдено, км'], recruited: ['Men signed on', 'Нанято бойцов'], quests: ['Quests done', 'Заданий выполнено'], roamWins: ['Sea stacks beaten', 'Отрядов в море побеждено'], mentored: ['Captains guided', 'Наставничество'], season: ['Season level', 'Уровень сезона'], fish: ['Fish caught', 'Поймано рыбы'],
+  hull: ['Hull', 'Корпус'], sails: ['Sails', 'Паруса'], speed: ['Speed', 'Скорость'], gunsSide: ['Guns a side', 'Пушек на борт'], crew: ['Crew', 'Экипаж'], armor: ['Armour', 'Броня'],
+  guns: ['Guns', 'Орудия'], modules: ['Fittings', 'Оснащение'], figurehead: ['Figurehead', 'Носовая фигура'], mount: ['Deck mount', 'Палубная установка'], shipGear: ['Ship’s gear', 'Снаряжение корабля'],
+  legendary: ['Legendary ship', 'Легендарный корабль'], keel: ['Legendary keel', 'Легендарный киль'], escorts: ['Fleet escorts', 'Эскорт флота'], berths: ['Ships in berths', 'Корабли у причалов'], shipLv: ['Ship level', 'Уровень корабля'],
+  prim: ['Primary skills', 'Первичные навыки'], skills: ['Secondary skills', 'Вторичные навыки'], talents: ['Talents', 'Таланты'], orders: ['Book of orders', 'Книга приказов'], will: ['Will', 'Воля'],
+  gear: ['Captain’s gear', 'Снаряжение капитана'], relics: ['Relics', 'Реликвии'], sets: ['Artifact sets', 'Комплекты артефактов'], made: ['assembled', 'собрана'], parts: ['parts', 'частей'], rank: ['rank', 'ранг'],
+  island: ['Her island', 'Остров'], isleLv: ['Island level', 'Уровень острова'], town: ['Town', 'Город'], producers: ['Workings', 'Промыслы'], buildings: ['Buildings', 'Постройки'], isleShips: ['Island’s ships', 'Корабли острова'],
+  campaign: ['Campaign', 'Кампания'], chapter: ['Chapter {n}', 'Глава {n}'], done: ['complete', 'пройдена'], deeds: ['Deeds', 'Подвиги'], feats: ['Feats', 'Достижения'], trophies: ['Trophies', 'Трофеи'],
+  bosses: ['Bosses slain', 'Побеждённые боссы'], wonders: ['Wonders found', 'Найденные чудеса'], regions: ['Seas sailed', 'Пройденные моря'], tattoos: ['Tattoos', 'Татуировки'], pets: ['Ship’s pets', 'Питомцы'],
+  companion: ['Companion', 'Спутник'], beasts: ['Beasts taken', 'Добытые звери'], saga: ['The saga', 'Сага'], sagaMore: ['{n} chapters in all', 'Всего глав: {n}'], onDeck: ['on deck', 'на палубе'], worn: ['worn', 'нанесена'],
+  close: ['Close', 'Закрыть'], err: ['The card could not be loaded. Try again later.', 'Не удалось загрузить карточку. Попробуйте позже.'], rate: ['Too many requests: wait a minute.', 'Слишком часто: подождите минуту.'], retry: ['Try again', 'Повторить'],
+};
+const CP_ICO = {
+  power: asset('icon.act_attack'), men: asset('icon.stat_crew'), hull: asset('icon.stat_hull'), sails: asset('icon.sail_up'), speed: asset('icon.wind'), guns: asset('icon.gun_long_9'), crew: asset('icon.stat_crew'),
+  armor: asset('icon.mod_hull_plating'), xp: asset('icon.xp'), glory: K('ico/achievements'), pvp: K('ico/cutlasses'), arena: K('ico/cutlasses'), wanted: asset('icon.wanted'), sunk: asset('icon.map_wreck'),
+  boarded: K('ico/boarding'), distance: K('ico/compass'), recruited: asset('icon.prof_marine'), quests: K('ico/quest'), roamWins: asset('icon.map_monster'), mentored: K('ico/captains'), season: K('ico/star'),
+  fish: asset('icon.build_fishing_village'), island: K('ico/island'), ship: K('ico/ships'), anchor: K('ico/anchor'), will: asset('icon.ab_brine_mend'), clock: K('ico/clock'), level: K('ico/star'),
+};
+
 function rating(lang: Lang): string {
   const tr = (t: Record<string, Tr>) => Object.fromEntries(Object.entries(t).map(([k, v]) => [k, L(lang, v)]));
   const body = `<section class="wrap sec rt" id="rating">
@@ -461,7 +491,7 @@ function rating(lang: Lang): string {
 <div class="rt-found" hidden aria-live="polite"></div>
 <div class="rt-board panel"><div class="rt-head"><span>#</span><span class="rt-col">${L(lang, RATING_T.colCap)}</span><span class="rt-unit"></span></div><ol class="rt-list" aria-live="polite"></ol><p class="rt-empty muted" hidden></p></div>
 <p class="rt-at muted"></p></section>
-${dataTag('rt-data', { lang, api: '/api/site/rating', t: tr(RATING_T), boards: BOARD_UI.map((b) => ({ id: b.id, name: L(lang, b.name), unit: L(lang, b.unit) })), cos: cosData(lang) })}`;
+${dataTag('rt-data', { lang, api: '/api/site/rating', t: tr(RATING_T), boards: BOARD_UI.map((b) => ({ id: b.id, name: L(lang, b.name), unit: L(lang, b.unit), icon: K(b.icon) })), cos: cosData(lang), cp: { api: '/api/site/captain/', t: tr(CP_T), ico: CP_ICO } })}`;
   return page(lang, {
     path: 'rating/', active: 'rating', title: lang === 'ru' ? 'Рейтинг капитанов GRAVETIDE' : 'GRAVETIDE Captains’ rating',
     desc: lang === 'ru' ? 'Лучшие капитаны моря: уровень, слава, абордажи, Колизей, кампания и гильдии.' : 'The best captains of the sea: level, glory, boardings, the Colosseum, the campaign and the guilds.',

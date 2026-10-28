@@ -222,4 +222,11 @@ export class SiteRating {
     }
     return { captain: this.row('level', c, ranks.level ?? 0), ranks };
   }
+
+  /** A public captain's account by her name (case aside), for the site's profile (siteprofile.ts): never a hidden one. */
+  account(name: string): { acc: number; name: string; found: FoundView } | null {
+    const c = this.read().byName.get(name.trim().toLowerCase());
+    const found = c ? this.find(c.name) : null;
+    return c && found ? { acc: c.acc, name: c.name, found } : null;
+  }
 }
