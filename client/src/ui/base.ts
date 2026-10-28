@@ -338,7 +338,8 @@ export class BaseWindow {
   /** The card of what is picked; `bare` (the island screen, islescene.ts): the card alone, without the way back, the
    *  tiles and the foot. */
   sheet(v: BaseView, state: ClientState, bare = false): string {
-    const gold = state.self?.gold ?? 0;
+    // (owner, 2026-10-28: the island's works are paid from its treasury first, then from the purse — from anywhere)
+    const gold = (state.self?.gold ?? 0) + Math.max(0, v.claim?.treasury ?? 0);
     const nextPlot = v.locked.find((l) => l.level > 0);
     const foot = bare ? '' : `<p class="muted bfoot">${esc(L('plots', { used: v.cells.filter((c) => c.what).length, total: v.plots }))}${nextPlot ? ` · ${esc(T29('opensAt', { n: hallFor(nextPlot.level) }))}` : ''} · ${esc(L('slots', { used: v.slots.used, total: v.slots.total }))}<br>${esc(v.near ? L('hold_pays') : L('store_pays'))}</p>`;
     if (this.moving !== null) {
@@ -395,6 +396,17 @@ export class BaseWindow {
   /** docs/29: a town building's card — its level i/5, what it gives, what the next level gives, its cost and time,
    *  what it asks (✓ / ✗), «Улучшить»; a dwelling's men and the recruiting, the market's and the guild's way to the
    *  town's own tab. */
+  /** Owner, 2026-10-28: what the yard lacks for a building, far from the island — the hold pays only lying off it,
+   *  so the one journey that is truly needed says so, with «Плыть к острову» (islescene.ts: the route `own`). */
+  private farLack(v: BaseView, goods: Partial<Record<GoodId, number>>): string {
+    if (v.near || !v.town) return '';
+    const have = Object.fromEntries(v.town.res.map((r) => [r.good, r.n])) as Partial<Record<GoodId, number>>;
+    const lack = (Object.entries(goods) as [GoodId, number][]).filter(([g, n]) => (have[g] ?? 0) < n);
+    if (!lack.length) return '';
+    const what = lack.map(([g, n]) => `${GOODS[g].name.toLowerCase()} ${fmt(n - (have[g] ?? 0))}`).join(', ');
+    return `<p class="muted tw-why">${esc(L('lack_far', { what }))}</p><button type="button" class="btn btn-small" data-bsailisle>${icon('menu_ship', '', 'ico-sm')}${esc(L('sail_isle'))}</button>`;
+  }
+
   townSheet(v: BaseView, t: TownThingView, gold: number): string {
     const d = TOWN[t.id];
     const ru = lang() === 'ru' ? 1 : 0;
@@ -408,7 +420,7 @@ export class BaseWindow {
     const n = t.next;
     const land = n?.land ? (Object.entries(n.land) as [LandRes, number][]).filter(([, k]) => (k ?? 0) > 0).map(([r, k]) => `<span class="bcost" title="${esc(LAND_RES_DEF[r].name[ru])}">${icon(LAND_RES_DEF[r].icon, '', 'ico-sm')}${fmt(k)}</span>`).join('') : '';
     const next = !t.job && n ? `<div class="bupcard tr-card"><div class="row"><b>${esc(T29('gives'))} ${esc(treeLabel(t.id, n.level))}${t.max > 1 ? ` · ${esc(T29('lvOf', { n: n.level, max: t.max }))}` : ''}</b></div>${givesText(t.id, n.level, ctx) ? `<p class="tr-gives">${esc(givesText(t.id, n.level, ctx))}</p>` : ''}
-      ${this.costHtml(v, n, gold)}${land ? `<span class="bcosts">${land}</span>` : ''}${n.needs ? needsHtml(n.needs) : ''}${whyOf(n)}
+      ${this.costHtml(v, n, gold)}${land ? `<span class="bcosts">${land}</span>` : ''}${n.needs ? needsHtml(n.needs) : ''}${whyOf(n)}${this.farLack(v, n.goods)}
       <button class="btn btn-small btn-primary" data-tbuild="${t.id}"${n.why ? ' disabled' : ''}>${esc(t.level ? T29('upgrade') : T29('build'))}</button></div>`
       : !t.job ? `<p class="muted">${esc(T29('max'))}</p>` : '';
     const more = t.id === 'market' || t.id === 'guild' || t.id === 'pen' ? `<div class="row bactions"><button class="btn btn-small" data-btab="town">${esc(H('tab'))}</button></div>` : '';

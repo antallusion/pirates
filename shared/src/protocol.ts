@@ -711,9 +711,29 @@ export interface CampaignView {
   passage?: { to: string };
 }
 
+/** Owner, 2026-10-28 (server/src/game/islefirst.ts): the island's first build, a step at a time. */
+export interface IsleFirstView {
+  step: number;
+  of: number;
+  id: 'dw2' | 'hire' | 'dw3';
+  /** The building whose card the step's button opens (the bunkhouse before the barracks). */
+  open: 'dw1' | 'dw2' | 'dw3';
+  /** Its reward: silver to the purse, goods to the yard. */
+  silver: number;
+  goods: Partial<Record<GoodId, number>>;
+  /** Its button may be pressed now (a building: affordable and allowed). */
+  ready: boolean;
+  /** Seconds the work the step waits on has left (the bunkhouse's for the barracks, the barracks' for the rest). */
+  wait: number;
+  /** Why the building may not be ordered yet (the server's English). */
+  why?: string;
+}
+
 export interface PrivateState {
   /** Owner, 2026-10-28 (armyadvice.ts): her army against her level and the next step (the HUD's hint); from level 5. */
   advice?: ArmyAdvice | null;
+  /** Owner, 2026-10-28 (islefirst.ts): the island's first build's step. */
+  isleFirst?: IsleFirstView | null;
   /** The captain as a hero (docs/17 H2). */
   hero?: HeroView;
   /** Her glory past the cap, mastery and trials (docs/19 E1–E3): from five levels short of the cap. */

@@ -542,6 +542,14 @@ export class IsleScene {
   }
 
   /** The ships' sheet open (a scout sent from the chart comes back to it: the fog of war, owner 2026-10-17). */
+  /** A town building's card, the building brought into sight (the island's first steps, hud.ts drawIsleFirst). */
+  showTown(id: TownId): void {
+    this.select({ town: id }, true);
+  }
+
+  /** «Плыть к острову»: the scene's way out to sail her home (main.ts: leave the island, the route `own`). */
+  onSailHome: () => void = () => {};
+
   openYard(): void {
     if (!(this.pick && 'panel' in this.pick && this.pick.panel === 'yard')) this.select({ panel: 'yard' });
   }
@@ -569,7 +577,7 @@ export class IsleScene {
       const full = r.n >= r.cap;
       return `<span class="is-res${full ? ' full' : ''}" title="${esc(`${GOODS[r.good].name}: ${fmt(r.n)}/${fmt(r.cap)}${r.rate > 0 ? ` · +${Math.round(r.rate * 10) / 10}/${ru ? 'ч' : 'h'}` : ''}`)}">${icon(`good_${r.good}`, '', 'ico-sm')}<b>${fmt(r.n)}</b><i>/${fmt(r.cap)}</i></span>`;
     }).join('') : '';
-    return `${name}<div class="is-store">${res}<span class="is-res is-silver" title="${esc(L('silver'))}">${money(state.self?.gold ?? 0)}</span></div>
+    return `${name}<div class="is-store">${res}${v ? `<span class="is-res is-tre" title="${esc(L('treasury'))}">${icon('coin', '', 'ico-sm')}<b>${fmt(Math.max(0, v.claim?.treasury ?? 0))}</b></span>` : ''}<span class="is-res is-silver" title="${esc(L('silver'))}">${money(state.self?.gold ?? 0)}</span></div>
       <button type="button" class="btn btn-primary is-sea" data-isea title="${esc(L('seaTip'))}">${icon('menu_ship', '', 'ico-sm')}<span>${esc(L('sea'))}</span></button>`;
   }
 
@@ -658,6 +666,7 @@ export class IsleScene {
     // the window's tabs and its «sail to defend» go out of the scene
     this.cardEl.querySelectorAll<HTMLElement>('[data-btab]').forEach((el) => (el.onclick = () => this.openPanel(el.dataset.btab === 'yard' ? 'yard' : el.dataset.btab === 'supply' ? 'supply' : 'town')));
     this.cardEl.querySelector<HTMLElement>('[data-bsail]')?.addEventListener('click', () => this.onSail());
+    this.cardEl.querySelector<HTMLElement>('[data-bsailisle]')?.addEventListener('click', () => this.onSailHome());
     this.cardEl.querySelector<HTMLElement>('[data-ix]')!.onclick = () => {
       this.base.moving = null;
       this.select(null);
@@ -734,7 +743,7 @@ export class IsleScene {
   private planHtml(v: BaseView, state: ClientState): string {
     const plan = v.plan;
     if (!plan || !plan.steps.length) return '';
-    const gold = state.self?.gold ?? 0;
+    const gold = (state.self?.gold ?? 0) + Math.max(0, v.claim?.treasury ?? 0); // (the treasury pays first)
     const cost = (st: IslePlanStepView) => `<span class="bcosts"><span class="bcost${gold < st.silver ? ' lack' : ''}">${money(st.silver)}</span>${(Object.entries(st.goods) as [GoodId, number][]).map(([g, n]) =>
       `<span class="bcost${st.lack.some((x) => x.good === g) ? ' lack' : ''}" title="${esc(GOODS[g].name)}">${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}</span>`).join('')}<span class="bcost btimec">⏱ ${esc(spanText(st.secs))}</span></span>`;
     const rows = plan.steps.map((st, i) => {

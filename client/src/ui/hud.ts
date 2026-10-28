@@ -329,6 +329,9 @@ export class Hud {
   onCaptain: () => void = () => {};
   /** Owner, 2026-10-28 (armyadvice.ts): the weak army's hint — the island, or the hire window here (main.ts). */
   onAdvice: (to: 'isle' | 'hire') => void = () => {};
+  /** Owner, 2026-10-28 (islefirst.ts): the island's first steps — the building's card on the island, the hire window. */
+  onIsleFirst: (id: 'dw1' | 'dw2' | 'hire' | 'dw3') => void = () => {};
+  private i1Key = '';
   private adviceKey = '';
   private adviceOpen = false;
   private adviceAt = 0;
@@ -803,6 +806,7 @@ export class Hud {
     this.drawDescent(state);
     this.drawHoliday(state);
     this.drawAdvice(state);
+    this.drawIsleFirst(state);
     const cap = CAPTAINS[self.captain];
 
     // Unit frame: portrait in its ring, name, silver, and the ship's hull, sails and crew (re-rendered on change).
@@ -1018,6 +1022,57 @@ export class Hud {
       ? `${badge}<div class="adv-card" role="status"><p class="adv-t">${esc(L('adv.title', { lv: state.self!.level, pct: Math.round(a!.ratio * 100) }))}</p><p class="adv-s">${esc(ru ? step.textRu : step.textEn)}</p><div class="adv-row"><button type="button" class="btn btn-small btn-primary" data-advgo="${to}">${esc(L(to === 'hire' ? 'adv.hire' : 'adv.isle'))}</button><button type="button" class="btn btn-small" data-advx>${esc(L('adv.close'))}</button></div></div>`
       : badge;
   }
+
+  /** The island's first steps (owner, 2026-10-28): one line under her frame (under the weak army's badge when it is up)
+   *  — the step, its reward, its one button (the finger points at it: pointer.ts `i:`). */
+  private drawIsleFirst(state: ClientState): void {
+    const v = state.self?.isleFirst;
+    let el = document.getElementById('hud-isle1');
+    // (never over a window, the island or a boarding — as the weak army's badge)
+    const covered = !document.getElementById('modal')?.classList.contains('hidden') || !!document.querySelector('#isle:not(.hidden), #board-tac:not(.hidden), .k-sheet-root.k-open');
+    const show = !!v && !covered;
+    if (!show) {
+      if (el && !el.classList.contains('hidden')) el.classList.add('hidden');
+      this.i1Key = '';
+      return;
+    }
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'hud-isle1';
+      el.className = 'hud-isle1 hidden';
+      el.setAttribute('role', 'status');
+      $('hud').appendChild(el);
+      el.addEventListener('click', (e) => {
+        const go = (e.target as HTMLElement).closest<HTMLElement>('[data-i1go]');
+        if (!go) return;
+        e.stopPropagation();
+        this.onIsleFirst(go.dataset.i1go as 'dw1' | 'dw2' | 'hire' | 'dw3');
+      });
+    }
+    const docked = !!state.self!.dockedAt;
+    const btn = v!.id === 'hire' ? L(docked || state.wayView ? 'i1.hireBtn' : 'i1.toPort') : L('i1.build');
+    const wait = v!.wait > 0 ? Math.ceil(v!.wait / 60) : 0;
+    const key = `${lang()}|${v!.id}|${v!.open}|${v!.step}|${v!.ready ? 1 : 0}|${wait}|${docked ? 1 : 0}|${state.wayView ? 1 : 0}`;
+    // under her frame, or under the weak army's badge (measured now and then: the HUD's layout moves)
+    const now = performance.now();
+    if (key !== this.i1Key || now - this.i1At > 1000) {
+      this.i1At = now;
+      const adv = document.getElementById('hud-advice');
+      const ar = adv && !adv.classList.contains('hidden') ? adv.getBoundingClientRect() : null;
+      const at = ar && ar.height > 0 ? { x: Math.round(ar.left), y: Math.round(ar.bottom + 4) } : advicePlace(el);
+      if (at) {
+        el.style.left = `${Math.max(4, at.x)}px`;
+        el.style.top = `${at.y}px`;
+      }
+    }
+    if (key === this.i1Key) return;
+    this.i1Key = key;
+    el.classList.remove('hidden');
+    const mins = `${wait} ${lang() === 'ru' ? 'мин' : 'min'}`;
+    const sub = v!.open === 'dw1' ? L('i1.first') : wait > 0 ? L(v!.id === 'dw2' ? 'i1.waitDw1' : 'i1.wait', { t: mins }) : L('i1.reward', { n: fmt(v!.silver) });
+    el.innerHTML = `${icon('tab_isles', '', 'ico-sm')}<span class="i1-m"><b>${esc(L(`i1.${v!.id}` as 'i1.dw2', { n: v!.step + 1, of: v!.of }))}</b><i>${esc(sub)}</i></span><button type="button" class="btn btn-small${v!.ready ? ' btn-primary' : ''}" data-i1go="${v!.id === 'hire' ? 'hire' : v!.open}">${esc(btn)}</button>`;
+  }
+  private i1At = 0;
 
   private drawStatus(state: ClientState): void {
     const self = state.self!, you = state.you!;

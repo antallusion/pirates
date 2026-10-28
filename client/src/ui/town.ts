@@ -208,7 +208,7 @@ export function townTab(v: BaseView, state: ClientState, mk: { give: string; get
       <button class="btn btn-small btn-primary" data-trecruit${dwellings.length ? '' : ' disabled'} title="${esc(t.near ? L('town.recruit') : L('town.far'))}">${icon('prof_marine', '', 'ico-sm')}${esc(L('town.recruit'))}</button></div>
       <div class="tw-res"><span class="muted">${esc(L('town.res'))}:</span> ${res}</div></div>`;
   // The Grail's card once it is dug up (docs/17 H4).
-  const cards = t.things.filter((x) => x.id !== 'dw7' || t.deep || x.level > 0).filter((x) => x.id !== 'grail' || x.level > 0 || !!x.job || state.adv?.grail === 'held').map((x) => card(v, x, gold, have, t.land?.res)).join('');
+  const cards = t.things.filter((x) => x.id !== 'dw7' || t.deep || x.level > 0).filter((x) => x.id !== 'grail' || x.level > 0 || !!x.job || state.adv?.grail === 'held').map((x) => card(v, x, gold + Math.max(0, t.treasury), have, t.land?.res)).join(''); // (owner, 2026-10-28: the treasury pays first, then the purse)
   // The captain's mines and what they pay a day.
   const mines = t.mines.length
     ? t.mines.map((m) => `<div class="tw-mine">${icon(MINES[m.kind].art, '', 'ico-md')}<span><b>${esc(L('town.mine', { kind: MINES[m.kind].name[ru()], island: placeName(m.island) }))}</b><br><span class="muted">${esc(L('town.day', { n: dec1(m.daily).replace(/[.,]0$/, '') }))} ${m.kind === 'silver' ? icon('coin', '', 'ico-sm') : icon(`good_${m.kind}`, '', 'ico-sm')}</span></span></div>`).join('')

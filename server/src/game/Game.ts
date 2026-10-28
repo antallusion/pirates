@@ -297,6 +297,7 @@ import { roamMessage, stepRoamers } from './roamers.ts'; // docs/19 D7: the crea
 import { premiumMessage, sendBalance } from './premium.ts'; // the premium shop (owner, 2026-10-03)
 import { gameCheckout } from './webshop.ts'; // the web game's YooKassa top-up (owner, 2026-10-21)
 import { captainAdvice } from './armyadvice.ts'; // the weak army's next step (owner, 2026-10-28)
+import { initIsleFirst, isleFirstCheck, isleFirstView } from './islefirst.ts'; // the island's first build, guided (owner, 2026-10-28)
 import { captainShopMessage, ownsCaptain } from './captainshop.ts'; // premium captains cost money (owner, 2026-10-19)
 import { levelGifts, stepShop, xpBoost } from './shop.ts';
 import { sendPromo, stepPromo } from './promo.ts'; // the shop's goods (owner, 2026-10-15)
@@ -532,6 +533,7 @@ export class Game {
     installLandHooks(); // the land's resources in the town (docs/18 #43)
     registerArcs(generateArcs(this.world, seed)); // five written arcs a region, three chapters each
     initCampaign(this, seed); // docs/36: the main campaign, 720 quests laid on the world
+    initIsleFirst(); // owner, 2026-10-28: a town level ordered counts for the island's first steps at once
     registerIslandJobs(generateIslandJobs(this.world, seed)); // the islands' people
     registerElitePorts(this.world.ports); // the ports' group contracts, one a day each
     registerAdmiralty(this.world); // docs/19 E15: the Admiralty's contracts of the week
@@ -1251,6 +1253,7 @@ export class Game {
       heroSecond(this, s); // the hero's will by the day and in port (docs/17 H2)
       coloursSecond(this, s); // the colours ordered in port go up (docs/24 D2)
       onboardingSecond(this, s);
+      if (this.tick % 100 < 20) isleFirstCheck(this, s); // the island's first build (owner, 2026-10-28)
       firstFightsSecond(this, s); // docs/23 item 81
       abyssSecond(this, s);
       legendarySecond(this, s);
@@ -5119,6 +5122,7 @@ export class Game {
     if (!s.profile) return;
     const state = toPrivateState(s, this.now, this.worldView(s));
     state.advice = captainAdvice(this, s);
+    state.isleFirst = isleFirstView(this, s);
     const prev = this.lastSelf.get(s);
     const fields = new Map<string, string>();
     for (const [k, v] of Object.entries(state)) fields.set(k, JSON.stringify(k === 'stats' ? { ...(v as PrivateState['stats']), distance: Math.floor((v as PrivateState['stats']).distance / 1000) } : v, selfKey) ?? 'null');

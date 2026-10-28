@@ -17,7 +17,7 @@ import type { Game } from './Game.ts';
 import type { Holding } from './holdings.ts';
 import type { PlayerSession } from './player.ts';
 import type { Yard } from './base.ts';
-import { buildersBusy, crewsOf, freePlot, lyingOff, stock } from './base.ts';
+import { buildersBusy, crewsOf, freePlot, lyingOff, purseOf, stock } from './base.ts';
 import { townHooks, treeLevels } from './town.ts';
 import { shopState } from './shop.ts';
 
@@ -63,7 +63,7 @@ function stepView(game: Game, s: PlayerSession, h: Holding, y: Yard, st: PlanSte
     const have = Math.floor(stock(h, y, s, near, g));
     if (have < n) lack.push({ good: g, n: n - have });
   }
-  const silverLack = Math.max(0, st.silver - p.gold);
+  const silverLack = Math.max(0, st.silver - purseOf(s, h)); // (the treasury first, then the purse: base.ts paySilver)
   let state: IslePlanStepView['state'] = 'ready';
   let job: number | null = null;
   // what the tree asks, standing now (the planner counted the work under way as done)

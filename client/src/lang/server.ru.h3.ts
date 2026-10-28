@@ -105,4 +105,9 @@ export const SERVER_RU_H3: Record<string, string> = {
   'Town raised: {0} buildings, {1} levels in all; the dwellings full: {2} creatures.': 'Город построен — построек: {0}, уровней всего: {1}; жилища полны — существ: {2}.',
   '{0} of each resource in the hold{1}.': 'По {0} каждого ресурса в трюме{1}.',
   ' and in the island’s yard': ' и во дворе острова',
+  // owner, 2026-10-28: building from anywhere, the island's first steps (server/src/game/islefirst.ts)
+  'Needs {0} silver (treasury and purse)': 'Нужно {0} серебра (казна и кошелёк)',
+  'The governor’s help: your island’s yard and treasury now pay for the bunkhouse and the marine barracks.': 'Помощь губернатора: двора и казны острова теперь хватит на Кубрик и Казарму морпехов.',
+  'Island step done: {0} silver to your purse; timber, iron and powder for the shooting range to the yard.': 'Шаг острова пройден: {0} серебра в кошелёк, брёвна, железо и порох для Стрельбища — во двор.',
+  'Island step done: {0} silver to your purse.': 'Шаг острова пройден: {0} серебра в кошелёк.',
 };

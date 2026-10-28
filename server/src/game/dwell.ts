@@ -6,6 +6,7 @@
 // ship's stacks: a kind already aboard joins its stack, a new kind takes a free slot, and the hammocks (crewMax) are
 // the limit. An upgraded dwelling trains a stack of its tier's plain kind up for the difference in price.
 
+import { isleFirstHire } from './islefirst.ts';
 import { lackHammocks, lackMore, lackSlot } from '../../../shared/src/data/buyfail.ts';
 import { BOSS_UNIT_IDS, BOSS_UNIT_NAMES } from '../../../shared/src/data/bossunits.ts';
 import { TITAN_IDS, TITAN_NAMES } from '../../../shared/src/data/titans.ts';
@@ -324,6 +325,7 @@ export function recruit(game: Game, s: PlayerSession, src: Src, u: UnitId, want:
   signOn(game, s, u, n);
   game.toastShip(ship, ashore > 0 ? `${n} ${plural(u, n)} sign on for ${price.silver} silver; ${ashore} hands go ashore to make room.` : `${n} ${plural(u, n)} sign on for ${price.silver} silver.`, 'good');
   questEvent(game, s, { k: 'recruit', n }); // docs/36: men signed on (the campaign's step)
+  isleFirstHire(game, s, d.tier); // owner, 2026-10-28: «Наймите морпехов в любом порту»
   return null;
 }
 

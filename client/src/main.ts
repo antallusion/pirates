@@ -668,6 +668,23 @@ hud.onAdvice = (to) => {
   if (to === 'hire' && state.wayView) return openRecruit('way');
   openBase();
 };
+// Owner, 2026-10-28 (islefirst.ts): the island's first steps — the building's card on the island (from anywhere: the
+// treasury and the yard pay), the hire window where she is, else «В порт» to the nearest harbour.
+hud.onIsleFirst = (id) => {
+  if (id !== 'hire') {
+    openBase();
+    isleScene.showTown(id);
+    return;
+  }
+  if (state.self?.dockedAt) return openRecruit('port');
+  if (state.wayView) return openRecruit('way');
+  if (homeport) return runAct({ id: 'homeport', icon: '', label: '', title: '' });
+  hud.toast(L('i1noPort'), 'info');
+};
+isleScene.onSailHome = () => {
+  leaveIsle(false);
+  startGoal('own');
+};
 // The premium shop (owner, 2026-10-03): from the micro menu and the cabin; `topup` opens it at the packs.
 const premiumWindow = new PremiumWindow((m) => net.send(m));
 premiumWindow.toast = (msg, kind) => hud.toast(msg, kind);
@@ -765,6 +782,19 @@ function haltForIsle(): void {
   setMark(null);
   state.input.sail = 0;
   net.send({ t: 'halt' });
+}
+/** The island's first steps' finger (owner, 2026-10-28): on the island at its building's «Построить», in a harbour's
+ *  hire window at the marines; the HUD's line itself only for a while after the step comes (then the story's finger). */
+let i1Seen = { key: '', at: 0 };
+function isleFirstStage(): string | null {
+  const v = state.self?.isleFirst;
+  if (!v) return null;
+  const key = `${v.id}:${v.step}`;
+  const now = performance.now();
+  if (key !== i1Seen.key) i1Seen = { key, at: now };
+  const fresh = now - i1Seen.at < 90_000;
+  if (v.id === 'hire') return state.self?.dockedAt || modal === 'recruit' || fresh ? 'i:hire' : null;
+  return isleScene.isOpen || (fresh && v.ready) ? `i:${v.open}` : null;
 }
 /** Back to the sea from the island screen (into the harbour when she lies in one). */
 function leaveIsle(harbour = true): void {
@@ -5087,6 +5117,9 @@ function step(t: number): void {
       if (state.boardTac || state.boardFight || state.self?.company.mutiny) leaveIsle(false);
       else {
         if (own) audio.listener = { x: own.x, y: own.y };
+        // the island's first steps (owner, 2026-10-28): the finger on the building's «Построить» over the island too
+        tutorPointer.set({ stage: isleFirstStage(), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: false });
+        tutorPointer.frame();
         return;
       }
     }
@@ -5156,7 +5189,7 @@ function step(t: number): void {
     const here = op ? null : hereFrame() ?? storyFrame();
     // (the guns empty on a ship's step: the finger to «Припасы» first — a newcomer's run of 2026-10-24)
     const shot = shotStage(op ?? storyQuest()?.does, state.self?.ammo);
-    tutorPointer.set({ stage: state.onboarding?.stage ?? shot ?? (op ? `c:${op}` : here), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null, tradeGood: op === 'buy:trade' ? tradeGoodHere() : null, crewFull: !!state.you && state.you.crew >= state.you.crewMax, markBeast: attackMark !== null && state.ships.get(attackMark)?.info?.npcRole === 'beast', crewShort: !!state.you && state.you.crew < 3 });
+    tutorPointer.set({ stage: state.onboarding?.stage ?? shot ?? isleFirstStage() ?? (op ? `c:${op}` : here), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null, tradeGood: op === 'buy:trade' ? tradeGoodHere() : null, crewFull: !!state.you && state.you.crew >= state.you.crewMax, markBeast: attackMark !== null && state.ships.get(attackMark)?.info?.npcRole === 'beast', crewShort: !!state.you && state.you.crew < 3 });
     tutorPointer.frame();
     encounterCard.frame();
     surrenderCard.frame(state);

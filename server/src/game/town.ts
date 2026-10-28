@@ -21,7 +21,7 @@ import type { LandCost } from '../../../shared/src/data/landecon.ts';
 import { ORDERS, isOrder, isleGuildOrders, orderLevelCap, rankOf } from '../../../shared/src/data/hero.ts';
 import { heroOf, learnOrder } from './hero.ts';
 import type { Island } from '../../../shared/src/world/worldgen.ts';
-import { crewFree, lacking, lyingOff, mine as ownBase, reckonBase, takeGoods } from './base.ts';
+import { crewFree, lacking, lyingOff, mine as ownBase, paySilver, reckonBase, silverLack, takeGoods } from './base.ts';
 import type { BaseJob, Yard } from './base.ts';
 import { kindOfWeek, thisWeek, weekNow, weekView } from './calendar.ts';
 import type { Game } from './Game.ts';
@@ -152,23 +152,25 @@ export function buildTown(game: Game, s: PlayerSession, id: TownId): string | nu
   if (why) return why;
   const level = townLevel(y, id) + 1;
   const cost = townCost(id, level);
-  const p = s.profile!;
   const near = lyingOff(game, s, h);
   const lack = lacking(h, y, s, near, cost.goods);
   if (lack) return lack;
-  if (p.gold < cost.silver) return lackMore(`Needs ${cost.silver} silver`, cost.silver, p.gold);
+  // (owner, 2026-10-28: ordered from anywhere — the island's treasury pays first, then her purse)
+  const short = silverLack(s, h, cost.silver);
+  if (short) return short;
   // docs/18 #43: the land's resources some levels ask besides.
   const land = townHooks.land?.(id, level) ?? {};
   const lackLand = townHooks.landLack?.(s, land) ?? null;
   if (lackLand) return lackLand;
-  p.gold -= cost.silver;
+  const purse = paySilver(s, h, cost.silver);
   takeGoods(h, y, s, near, cost.goods);
   townHooks.landTake?.(s, land);
-  game.db.ledger(s.accountId, 'isle_town', -cost.silver, `${h.island}:${id}:${level}`);
+  game.db.ledger(s.accountId, 'isle_town', -purse, `${h.island}:${id}:${level}`);
   const now = game.wallNow();
   y.jobs.push({ id: y.seq++, plot: -1, what: `t:${id}`, level, start: now, end: now + cost.secs * 1000 });
   if (id === 'grail') grailRaised(s); // the Grail is the town's now (docs/17 H4)
   game.holdings.touch();
+  townHooks.built?.(game, s, id, level);
   return null;
 }
 
@@ -322,6 +324,8 @@ export const townHooks: {
   landLack?: (s: PlayerSession, c: LandCost) => string | null;
   landTake?: (s: PlayerSession, c: LandCost) => void;
   landView?: (game: Game, s: PlayerSession, h: Holding, y: Yard) => LandTownView;
+  /** A level ordered (islefirst.ts: the first build's steps). */
+  built?: (game: Game, s: PlayerSession, id: TownId, level: number) => void;
 } = { pen: null };
 
 export function townView(game: Game, s: PlayerSession, h: Holding, y: Yard): TownView {

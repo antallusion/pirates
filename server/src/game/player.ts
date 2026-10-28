@@ -121,6 +121,8 @@ export interface Profile {
   company: Company;
   fleet: Fleet;
   quests: QuestLog;
+  /** Owner, 2026-10-28 (islefirst.ts): the island's first build — its step and the governor's help. */
+  isleFirst?: import('./islefirst.ts').IsleFirst;
   /** docs/36: her place in the main campaign (sanitizeProfile fills it: a save of before it is migrated by her level). */
   campaign?: CampaignState;
   /** Her guards hired at sea, kept across a restart or a relog (seahire.ts). */

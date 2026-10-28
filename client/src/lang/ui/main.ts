@@ -67,6 +67,7 @@ export const EN = {
   inviteWaits: '{from} asks you to sail with them — tap to answer',
   passageTitle: 'A ship takes you on',
   passageLine: 'To {to}, free: chapter {ch} goes on there.',
+  i1noPort: 'Sail into any port: marines sign on in its Army tab.',
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -136,4 +137,5 @@ export const RU: Record<keyof typeof EN, string> = {
   inviteWaits: '{from} зовёт вас идти вместе — нажмите, чтобы ответить',
   passageTitle: 'Попутный корабль',
   passageLine: 'Бесплатно до {to}: там продолжается глава {ch}.',
+  i1noPort: 'Плывите в любой порт: морпехов нанимают в его «Армии».',
 };

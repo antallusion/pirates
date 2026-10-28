@@ -211,6 +211,16 @@ export const EN = {
   "adv.hire": "Hire",
   "adv.isle": "Island",
   "adv.close": "Close",
+  "i1.dw2": "Island {n}/{of}: build the Marine Barracks",
+  "i1.hire": "Island {n}/{of}: hire marines in any port",
+  "i1.dw3": "Island {n}/{of}: build the Shooting Range",
+  "i1.build": "Build",
+  "i1.hireBtn": "Hire",
+  "i1.toPort": "To port",
+  "i1.reward": "+{n} silver",
+  "i1.wait": "the barracks rise in {t}",
+  "i1.waitDw1": "the bunkhouse rises in {t}",
+  "i1.first": "the Bunkhouse first — next to free",
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -423,4 +433,14 @@ export const RU: Record<keyof typeof EN, string> = {
   "adv.hire": "Нанять",
   "adv.isle": "Остров",
   "adv.close": "Закрыть",
+  "i1.dw2": "Остров {n}/{of}: постройте Казарму морпехов",
+  "i1.hire": "Остров {n}/{of}: наймите морпехов в любом порту",
+  "i1.dw3": "Остров {n}/{of}: постройте Стрельбище",
+  "i1.build": "Строить",
+  "i1.hireBtn": "Нанять",
+  "i1.toPort": "В порт",
+  "i1.reward": "+{n} серебра",
+  "i1.wait": "казарма будет через {t}",
+  "i1.waitDw1": "кубрик будет через {t}",
+  "i1.first": "сначала Кубрик — почти даром",
 };

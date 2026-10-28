@@ -127,6 +127,14 @@ function targetsOf(f: PointerFacts): string[] {
   if (f.battle && (f.stage === 'board' || f.stage === 'attack' || f.stage === 'fire')) return WATCH_BATTLE;
   if (!f.stage || f.battle) return [];
   if (f.stage.startsWith('c:')) return openingTargets(f, f.stage.slice(2));
+  // owner, 2026-10-28 (islefirst.ts): the island's first steps — the building's «Построить» on its card (the island
+  // screen), else the HUD line's button; the marines in a harbour's hire window, else its «Армия», else the line.
+  if (f.stage.startsWith('i:')) {
+    const id = f.stage.slice(2).replace(/[^a-z0-9]/g, '');
+    const marines = ['.rc-unit[data-rcu="marine"]:not(.off):not(.sel)', '.rc-unit[data-rcu="sea_guard"]:not(.off):not(.sel)', ...TAB_INSIDE.army];
+    if (id === 'hire') return [...marines, ...(f.docked ? ['#modal-panel [data-ptab="army"]', '#tc-act[data-act="harbour"]', '.act-btn.act-harbour'] : ['#hud-isle1 [data-i1go]'])];
+    return [`#isle .is-card [data-tbuild="${id}"]:not([disabled])`, `#isle .is-card [data-bsailisle]`, '#hud-isle1 [data-i1go]'];
+  }
   if (f.stage.startsWith('h:')) {
     const [, id, tab, good] = f.stage.split(':');
     return hereTargets(f, id ?? '', tab ?? '', good ?? '');

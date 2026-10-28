@@ -7,6 +7,7 @@ export const SERVER_RU_ADMIN: Record<string, string> = {
   ' (by night)': ' (ночью)',
   'Usage: /mates name [name]': 'Так: /mates имя [имя]',
   'No captain named {0} is at sea.': 'Капитана по имени {0} нет в море.',
+  'No captain named {0}.': 'Капитана по имени {0} нет.',
   '{0} sails in another group.': '{0} ходит в другой группе.',
   'No invitation': 'Нет приглашения',
   'No campaign.': 'Кампании нет.',

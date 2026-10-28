@@ -294,6 +294,27 @@ export function takeGoods(h: Holding, y: Yard, s: PlayerSession, near: boolean, 
   }
 }
 
+/** Owner, 2026-10-28 («как будто никто не доплывает»: 23 of 28 islands had only the hall, their treasuries full): the
+ *  island's works are paid from its treasury first, then from her purse — wherever she is. */
+export function purseOf(s: PlayerSession, h: Holding): number {
+  return Math.max(0, Math.floor(h.treasury ?? 0)) + Math.max(0, s.profile?.gold ?? 0);
+}
+
+/** Why the treasury and the purse together do not pay `n` (null: they do). */
+export function silverLack(s: PlayerSession, h: Holding, n: number): string | null {
+  const have = purseOf(s, h);
+  return have < n ? lackMore(`Needs ${n} silver (treasury and purse)`, n, have) : null;
+}
+
+/** Take `n` silver: the treasury first, the rest from her purse (call after silverLack). Returns the purse's part. */
+export function paySilver(s: PlayerSession, h: Holding, n: number): number {
+  const fromTre = Math.min(Math.max(0, Math.floor(h.treasury ?? 0)), Math.max(0, n));
+  h.treasury -= fromTre;
+  const rest = Math.max(0, n - fromTre);
+  s.profile!.gold -= rest;
+  return rest;
+}
+
 export function lyingOff(game: Game, s: PlayerSession, h: Holding): boolean {
   return !!s.ship && islandNear(game, s.ship)?.id === h.island;
 }
@@ -396,15 +417,15 @@ export function startBuild(game: Game, s: PlayerSession, plot: number | null, wh
 }
 
 function pay(game: Game, s: PlayerSession, h: Holding, y: Yard, plot: number, what: string, level: number): string | null {
-  const p = s.profile!;
   const cost = baseCost(what, level);
   const near = lyingOff(game, s, h);
   const lack = lacking(h, y, s, near, cost.goods);
   if (lack) return lack;
-  if (p.gold < cost.silver) return lackMore(`Needs ${cost.silver} silver`, cost.silver, p.gold);
-  p.gold -= cost.silver;
+  const short = silverLack(s, h, cost.silver);
+  if (short) return short;
+  const purse = paySilver(s, h, cost.silver);
   takeGoods(h, y, s, near, cost.goods);
-  game.db.ledger(s.accountId, 'isle_base', -cost.silver, `${h.island}:${what}:${level}`);
+  game.db.ledger(s.accountId, 'isle_base', -purse, `${h.island}:${what}:${level}`);
   const now = game.wallNow();
   y.jobs.push({ id: y.seq++, plot, what, level, start: now, end: now + cost.secs * 1000 });
   game.holdings.touch();
@@ -412,16 +433,16 @@ function pay(game: Game, s: PlayerSession, h: Holding, y: Yard, plot: number, wh
   return null;
 }
 
-/** Pay a cost from the purse and the yard (null: paid), as the builders' work does. */
+/** Pay a cost from the treasury, the purse and the yard (null: paid), as the builders' work does. */
 export function payCost(game: Game, s: PlayerSession, h: Holding, y: Yard, cost: { silver: number; goods: Partial<Record<GoodId, number>> }, tag: string): string | null {
-  const p = s.profile!;
   const near = lyingOff(game, s, h);
   const lack = lacking(h, y, s, near, cost.goods);
   if (lack) return lack;
-  if (p.gold < cost.silver) return lackMore(`Needs ${cost.silver} silver`, cost.silver, p.gold);
-  p.gold -= cost.silver;
+  const short = silverLack(s, h, cost.silver);
+  if (short) return short;
+  const purse = paySilver(s, h, cost.silver);
   takeGoods(h, y, s, near, cost.goods);
-  game.db.ledger(s.accountId, 'isle_ship', -cost.silver, `${h.island}:${tag}`);
+  game.db.ledger(s.accountId, 'isle_ship', -purse, `${h.island}:${tag}`);
   game.holdings.touch();
   return null;
 }
