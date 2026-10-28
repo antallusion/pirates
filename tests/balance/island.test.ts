@@ -18,9 +18,11 @@ const BIOMES: IslandBiome[] = ['temperate', 'mossy', 'volcanic', 'ice', 'ruins',
 test('the hall comes at the pace of the plan: hall 2 in a few days, hall 3 in about a week, hall 5 in three to four weeks', () => {
   const r = simulateTree(STEADY);
   const d = (l: number) => daysToHall(r, l);
-  assert.ok(d(2) >= 1 && d(2) <= 4, `hall 2 on day ${d(2).toFixed(1)}`);
-  assert.ok(d(3) >= 5 && d(3) <= 10, `hall 3 on day ${d(3).toFixed(1)}`);
-  assert.ok(d(5) >= 21 && d(5) <= 30, `hall 5 on day ${d(5).toFixed(1)}`);
+  // (owner, 2026-10-28: the first two levels of everything next to free, the third smoothed — startcost.ts: hall 2 on
+  // the first day, hall 3 in a few, hall 5 in under three weeks of steady play)
+  assert.ok(d(2) >= 0.5 && d(2) <= 4, `hall 2 on day ${d(2).toFixed(1)}`);
+  assert.ok(d(3) >= 2 && d(3) <= 10, `hall 3 on day ${d(3).toFixed(1)}`);
+  assert.ok(d(5) >= 15 && d(5) <= 30, `hall 5 on day ${d(5).toFixed(1)}`);
   for (let l = 3; l <= 5; l++) assert.ok(d(l) > d(l - 1), `hall ${l} after ${l - 1}`);
   // Light play is slower, heavy play faster, but even unlimited silver waits on the builders: no hall 5 in a week.
   const light = simulateTree({ ...STEADY, hours: 1.5, days: 90 }), heavy = simulateTree({ ...STEADY, hours: 5 });
@@ -34,7 +36,7 @@ test('the hall comes at the pace of the plan: hall 2 in a few days, hall 3 in ab
 test('speed-ups save hours, not weeks: the tree is paced by silver, goods and the builders', () => {
   const rushed = simulateTree({ ...STEADY, rush: true }), plain = simulateTree(STEADY);
   for (let l = 2; l <= 5; l++) assert.ok(Math.abs(daysToHall(rushed, l) - daysToHall(plain, l)) <= 2, `hall ${l}: ${daysToHall(rushed, l).toFixed(1)} rushed, ${daysToHall(plain, l).toFixed(1)} not`);
-  assert.ok(rushed.spent.speedup > 0 && rushed.spent.speedup < rushed.earned * 0.06, `speed-ups ${Math.round(rushed.spent.speedup)} of ${Math.round(rushed.earned)}`);
+  assert.ok(rushed.spent.speedup > 0 && rushed.spent.speedup < rushed.earned * 0.08, `speed-ups ${Math.round(rushed.spent.speedup)} of ${Math.round(rushed.earned)}`);
 });
 
 test('the island is a long-term base, not the best money: its best yield by the hour never beats an hour at sea', () => {
@@ -89,7 +91,8 @@ test('a warship of her own is worth about one hired escort of her level, never m
 
 test('docs/17 H3 on the tree (docs/29): the town hall\'s daily silver is a real but small part of the island\'s money', () => {
   const r = simulateTree(STEADY);
-  assert.ok(r.hallIncome > 0 && r.hallIncome < (r.earned * STEADY.share) * 0.5, `the hall brought ${Math.round(r.hallIncome)} of ${Math.round(r.earned * STEADY.share)}`);
+  // (the cheap start, owner 2026-10-28: the sea's share asked of her is smaller, the hall's part of it larger)
+  assert.ok(r.hallIncome > 0 && r.hallIncome < (r.earned * STEADY.share) * 0.75, `the hall brought ${Math.round(r.hallIncome)} of ${Math.round(r.earned * STEADY.share)}`);
   const heavy = simulateTree({ ...STEADY, hours: 5 });
-  assert.ok(daysToHall(heavy, 5) >= 18, `heavy play: hall 5 on day ${daysToHall(heavy, 5).toFixed(1)}`);
+  assert.ok(daysToHall(heavy, 5) >= 14, `heavy play: hall 5 on day ${daysToHall(heavy, 5).toFixed(1)}`);
 });

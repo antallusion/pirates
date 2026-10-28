@@ -8,6 +8,7 @@
 // The five resources of the yard are goods of the sea: timber, tar, iron, provisions — and "stone", which is the
 // rock of the quarry and sold as coal (there is no stone good, and the quarry's pit gives what the rock holds).
 
+import { cheapStart } from './startcost.ts';
 import type { GoodId } from './goods.ts';
 import type { IslandBiome } from '../world/regions.ts';
 import { BUILDINGS } from './holdings.ts';
@@ -145,9 +146,17 @@ export const PRODUCER_SILVER_EXP = 1.3;
 /** Founding the island's shipyard (a leased island's pays half its 60 000). */
 export const SHIPYARD_FOUND = 20_000;
 
-/** What raising a thing to a level costs (level 1: founding it). */
+/** What raising a thing to a level costs (level 1: founding it) — the cheap start over the first three levels
+ *  (owner, 2026-10-28: startcost.ts). */
 export function baseCost(what: string, level: number): BaseCost {
   // docs/29: the tree's own buildings of the base (the warehouse, the shipyard, the guns) by the tree's costs.
+  if (isTreeBase(what)) return treeCost(what as TreeId, level);
+  if (!producerOf(what) && !BUILDINGS[what as BuildingId]) return { silver: 0, goods: {}, secs: 0 };
+  return cheapStart((l) => baseCostOld(what, l), level) as BaseCost;
+}
+
+/** The costs as they stood before the cheap start. */
+export function baseCostOld(what: string, level: number): BaseCost {
   if (isTreeBase(what)) return treeCost(what as TreeId, level);
   const kind = producerOf(what);
   const k = levelMul(level);
@@ -189,7 +198,7 @@ export function baseCost(what: string, level: number): BaseCost {
     };
   }
   // docs/29: a single-level building's later levels (baselevels.ts) from its founding's cost.
-  if (level >= 2) return singleCost(baseCost(what, 1), level, BROUGHT) as BaseCost;
+  if (level >= 2) return singleCost(baseCostOld(what, 1), level, BROUGHT) as BaseCost;
   // Half the silver of a leased island's building: the rest is paid in the island's own timber, stone and tar.
   const w = d.cost / 10_000;
   const goods: Partial<Record<GoodId, number>> = {

@@ -214,7 +214,7 @@ test('the yard pays for the work: resources spent, and wanting them the work is 
   const h = ownIsland(game, s.accountId)!;
   const y = yardOf(game, h);
   const cost = baseCost('warehouse', 1);
-  assert.ok(Object.keys(cost.goods).length >= 2, 'timber and stone at the least');
+  assert.ok(Object.keys(cost.goods).length >= 1, 'timber at the least (owner, 2026-10-28: the cheap start, startcost.ts)');
   assert.match(startBuild(game, s, 3, 'warehouse')!, /The yard lacks/);
   for (const [g, n] of Object.entries(cost.goods)) y.res[g as 'timber'] = (n ?? 0) + 5;
   assert.equal(startBuild(game, s, 3, 'warehouse'), null);
@@ -222,8 +222,8 @@ test('the yard pays for the work: resources spent, and wanting them the work is 
   // The island's store makes up what the yard lacks; the island's level-up takes from the yard too.
   y.jobs = [];
   h.buildings = [];
-  y.res = { timber: 10 };
-  h.store.timber = cost.goods.timber! - 10;
+  y.res = { timber: 2 };
+  h.store.timber = cost.goods.timber! - 2;
   for (const [g, n] of Object.entries(cost.goods)) if (g !== 'timber') h.store[g as 'coal'] = n;
   assert.equal(startBuild(game, s, 3, 'warehouse'), null);
   assert.equal(y.res.timber ?? 0, 0);

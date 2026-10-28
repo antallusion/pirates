@@ -14,6 +14,7 @@
 // an hour at sea at ⚓6 (seaHour, tests/balance/island.ts), and a castle doubles it; a pool keeps two weeks' growth at
 // most, so a captain who looks in once a day finds two weeks and not four.
 
+import { cheapStart } from './startcost.ts';
 import { UNITS, armyForLevel, armyWeight } from './army.ts';
 import type { ArmyStack, UnitId } from './army.ts';
 import type { BaseCost } from './base.ts';
@@ -270,7 +271,9 @@ export function townCost(id: TownId, level: number): BaseCost {
   // docs/29: the tree's own buildings by its costs (isletree.ts); the Grail and the pen keep theirs.
   if (isTree(id)) return treeCost(id, L);
   if (id === 'grail') return { silver: 5_000, goods: { timber: 40, coal: 40, pearls: 6 }, secs: 1800 };
-  return L <= 1 ? { silver: 3_000, goods: { timber: 40, coal: 20 }, secs: secs(900) } : { silver: round50(9_000), goods: { timber: 70, coal: 40, iron: 20, tar: 10 }, secs: secs(1800) };
+  // the pen (owner, 2026-10-28: its two levels by the cheap start, startcost.ts)
+  const old = (n: number): BaseCost => (n <= 1 ? { silver: 3_000, goods: { timber: 40, coal: 20 }, secs: secs(900) } : { silver: round50(9_000 * (n - 1)), goods: { timber: 70 * (n - 1), coal: 40 * (n - 1), iron: 20 * (n - 1), tar: 10 * (n - 1) }, secs: secs(1800) });
+  return cheapStart(old, L) as BaseCost;
 }
 
 /** What a level of a town building asks first: the island's level and the town's other buildings. */

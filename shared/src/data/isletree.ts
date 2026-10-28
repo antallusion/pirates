@@ -16,6 +16,7 @@
 // Costs and times grow with every level (TREE_SILVER, TREE_TIME, TREE_GOODS) — a steady captain reaches hall 5 in about
 // three and a half weeks (tests/balance/isletree.ts, `node tools/balance-isles.ts`).
 
+import { cheapStart } from './startcost.ts';
 import type { GoodId } from './goods.ts';
 import type { BuildingId } from './holdings.ts';
 import type { Tr } from './estate.ts';
@@ -162,8 +163,14 @@ const HALL_COST: TreeCost[] = [
 
 const round50 = (n: number) => Math.max(50, Math.round(n / 50) * 50);
 
-/** What raising a building of the tree to level L costs (level 1: founding it). */
+/** What raising a building of the tree to level L costs (level 1: founding it) — the cheap start over its first
+ *  three levels (owner, 2026-10-28: startcost.ts). */
 export function treeCost(id: TreeId, level: number): TreeCost {
+  return cheapStart((l) => treeCostOld(id, l), Math.max(1, Math.min(TREE_MAX, Math.round(level))));
+}
+
+/** The tree's costs as they stood before the cheap start (its levels 4 and 5 still). */
+export function treeCostOld(id: TreeId, level: number): TreeCost {
   const L = Math.max(1, Math.min(TREE_MAX, Math.round(level)));
   if (id === 'hall') return { silver: HALL_COST[L].silver, goods: { ...HALL_COST[L].goods }, secs: HALL_COST[L].secs };
   const b = BASE[id];
