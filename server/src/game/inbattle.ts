@@ -13,6 +13,7 @@ import { landFighting } from './beastlairs.ts';
 import type { Game } from './Game.ts';
 import { allStopShip } from './allstop.ts';
 import type { ShipEntity } from './ship.ts';
+import { VOYAGE_BUSY, VOYAGE_WHY, voyaging } from './passage.ts';
 
 /** Seconds she stays out of reach after a battle ends (owner: «~10–15 s»). */
 export const BATTLE_GRACE = 12;
@@ -36,6 +37,7 @@ export function inBattle(game: Game, ship: ShipEntity): boolean {
 
 /** Out of the sea's reach: in a battle, or in its grace (or its reckoning still on her screen). */
 export function untouchable(game: Game, ship: ShipEntity): boolean {
+  if (voyaging(ship)) return true; // a long passage under ×5: out of everyone's reach (owner, 2026-10-28, passage.ts)
   if (inBattle(game, ship)) return true;
   if (ship.accountId === null) return false;
   const now = game.now;
@@ -50,6 +52,8 @@ export function battlePartner(a: ShipEntity, b: ShipEntity): boolean {
 /** Why `a` may not touch `b` for the battles (null: the battles let her). */
 export function battleBlocked(game: Game, a: ShipEntity | null, b: ShipEntity): string | null {
   if (a && battlePartner(a, b)) return null;
+  if (a && a.id !== b.id && voyaging(a)) return VOYAGE_BUSY;
+  if (voyaging(b)) return VOYAGE_WHY;
   if (untouchable(game, b)) return IN_BATTLE_WHY;
   if (a && a.id !== b.id && inBattle(game, a)) return SELF_IN_BATTLE_WHY;
   return null;

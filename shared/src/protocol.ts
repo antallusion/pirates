@@ -15,6 +15,7 @@ import type { CareerId, SetId, WeeklyKind } from './data/renown.ts';
 import type { GuildProject, LfgGoal, SignalKind, WorldGoalKind } from './data/social.ts';
 import type { WonderKind } from './data/wonders.ts';
 import type { AutosailStop } from './data/autosail.ts';
+import type { VoyageEnd } from './data/passage.ts';
 import type { HarnessId, PetId } from './data/companions.ts';
 import type { NemesisCause } from './data/nemesis.ts';
 import type { CaravanTask, OnAttack } from './data/caravans.ts';
@@ -1141,6 +1142,7 @@ export const SF = {
   GREEN_PENNANT: 1 << 26, // a young captain under the Green Pennant: neutral to captains in contested water (docs/24)
   TRUCE: 1 << 27, // a ship of the sea under a white flag: a ceasefire bought from her holds (owner, 2026-10-18)
   IN_BATTLE: 1 << 28, // a captain in a battle (or just out of one): nobody may touch her (owner, 2026-10-22, inbattle.ts)
+  VOYAGE: 1 << 29, // on a long passage under ×10 (owner, 2026-10-28, passage.ts): out of everyone's reach, drawn as a ghost
 } as const;
 
 /**
@@ -2089,6 +2091,10 @@ export type ServerMsg =
   /** Owner, 2026-10-22 (server allstop.ts): an action of hers, a battle or a card stopped her — the phone brings its sail
    *  control down to nothing and lets go of the helm stick; she sails on only by her own hand. */
   | { t: 'allstop'; why: string }
+  /** Owner, 2026-10-28 (server passage.ts): a long passage under ×10 begins (`on`) — her way `v` (m/s), the run's end
+   *  (`x`, `y`), the way left along the route at its start (`left`, m) and the stretch she sails as ever at its end
+   *  (`tail`, m) — or ends, and why. */
+  | { t: 'voyage'; on: boolean; v?: number; x?: number; y?: number; left?: number; tail?: number; why?: VoyageEnd }
   | { t: 'autosail'; on: boolean; x?: number; y?: number; sail?: number; why?: AutosailStop;
       /** The planned way round the land (owner, 2026-10-18: «всегда должно быть показано направление линией и путь»): her
        *  place when it was planned, its turns, the end; whole metres. Sent again on every new plan. */ path?: [number, number][] }

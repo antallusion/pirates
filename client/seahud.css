@@ -890,3 +890,28 @@ body.tac-ph .tb-top.tb-band .tb-tline { min-height: 28px; box-sizing: border-box
 .tb-rps-vs small { color: var(--fog); font-size: 12px; }
 .tb-rps-row .ico-sm { flex: none; width: 22px; height: 22px; margin: 0; }
 body.simple #tc-sail .tc-sail-g .g-svg { width: 20px; height: 20px; stroke-width: 2.8; } /* (the «+» «−» drawn, dom.ts glyphSvg) */
+
+/* «Дальний переход» (owner, 2026-10-28: «таймер прям малюсенький и расстояние до точки … небольшое оч маленькое
+   оповещение … все в стиле игры»; ui/passage.ts): the tiny brass pill hung on the chart's ring, under its middle — the
+   time to the mark and the way left; the small gold toast; the helm, the guns and the actions dimmed while she is
+   carried (a tap on them says why). */
+#hud-voyage { position: absolute; z-index: 4; top: calc(var(--sa-t) + 8px + var(--mm) - 10px); right: calc(var(--sa-r) + 8px + var(--mm) / 2);
+  transform: translateX(50%); display: flex; align-items: center; gap: 4px; height: 18px; padding: 0 8px 0 6px; border-radius: 9px;
+  background: linear-gradient(180deg, rgba(30, 24, 17, 0.94), rgba(10, 9, 7, 0.94));
+  box-shadow: inset 0 0 0 1px rgba(176, 141, 87, 0.75), 0 2px 5px rgba(0, 0, 0, 0.75);
+  font: 600 10.5px/1 var(--sans); color: var(--bone, #e6dccb); white-space: nowrap; pointer-events: none; font-variant-numeric: tabular-nums;
+  animation: vy-in var(--k-dur-3, 320ms) var(--k-ease-out, ease-out); }
+#hud-voyage.hidden { display: none; }
+#hud-voyage .vy-ico::before { content: '\26F5\FE0E'; font-style: normal; color: var(--gold, #e0b862); font-size: 11px; }
+#hud-voyage .vy-t { color: var(--gold, #e0b862); font-weight: 700; }
+#hud-voyage .vy-sep { color: rgba(176, 141, 87, 0.9); }
+#hud-voyage .vy-d { color: var(--fog, #b9b2a4); }
+body:not(.voyage) #hud-voyage { display: none; }
+@keyframes vy-in { from { opacity: 0; transform: translateX(50%) translateY(-4px); } to { opacity: 1; transform: translateX(50%); } }
+body.reduce-motion #hud-voyage { animation: none; }
+.toast.voyage { border-color: var(--gold, #e0b862); color: #f0d9a0; font-size: 10.5px; padding: 3px 8px; }
+body.voyage #hud :is(#tc-stick, #tc-sail, #tc-fire, #tc-ammo, #tc-lock, #tc-special, #tc-abil, #tc-act, #tc-actrow, #tc-deck, #tc-cast, #tc-target, #hud-combat) {
+  opacity: 0.38; filter: grayscale(0.7); transition: opacity var(--k-dur-3, 320ms); }
+body.voyage #hud-autosail .as-stop { display: none; }
+/* (the chart tucked up behind its tab in a fight on a touch screen: the pill hangs under the tab) */
+body.touch.mm-peek #hud-voyage { top: calc(var(--sa-t) + 46px); }

@@ -26,6 +26,7 @@ import { cancelRoute } from './goalroute.ts';
 import type { PlayerSession } from './player.ts';
 import { pursuitOf, stopPursuit } from './pursuit.ts';
 import type { ShipEntity } from './ship.ts';
+import { voyaging } from './passage.ts';
 
 /** Why she was stopped (tests; the client is told, it says nothing of it). */
 export type StopWhy = 'battle' | 'battle_end' | 'boarding' | 'sunk' | 'order' | 'card';
@@ -49,6 +50,7 @@ export function holdSail(s: PlayerSession): void {
 export function allStop(game: Game, s: PlayerSession | null | undefined, why: StopWhy, what = '', about?: number): void {
   const ship = s?.ship;
   if (!s || !ship || !ship.alive || ship.docked) return;
+  if (voyaging(ship)) return; // a long passage is not stopped (owner, 2026-10-28, passage.ts)
   if (about !== undefined) {
     const run = pursuitOf(ship);
     if (run && run.roam === undefined && run.target !== about && game.ships.get(run.target)?.alive) return;

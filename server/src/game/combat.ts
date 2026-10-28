@@ -52,6 +52,7 @@ import { kitCrit, passiveNums, skillNumber, volleyKit } from './seaskill.ts';
 import type { VolleyKit } from './seaskill.ts';
 import { truceHit } from './ceasefire.ts'; // owner, 2026-10-18
 import { battleBlocked, dropGrace, inBattle, SELF_IN_BATTLE_WHY } from './inbattle.ts'; // owner, 2026-10-22
+import { VOYAGE_BUSY, voyaging } from './passage.ts'; // owner, 2026-10-28
 
 /** A broadside laid on a mark by her gun captains (auto-aim, the sea's own gunners): the balls converge on `aimAt`. */
 export interface Lay {
@@ -197,6 +198,7 @@ export function shotDrift(game: Game, ship: ShipEntity, heading: number, dist: n
  *  gunners aim off for (0 for a captain, who sees the drift on her mark and leads it herself). */
 export function fireBroadside(game: Game, ship: ShipEntity, side: Side, aimDist: number, aimAt?: { x: number; y: number }, windAllow = 0, lay?: Lay): string | null {
   if (!ship.alive || ship.docked || ship.grappled || ship.surrendered) return 'Cannot fire now';
+  if (voyaging(ship)) return VOYAGE_BUSY; // a long passage: the guns are housed (owner, 2026-10-28)
   if (inBattle(game, ship)) return SELF_IN_BATTLE_WHY; // her party fights ashore: the guns wait (owner, 2026-10-22)
   if (ship.hasEffect('submerged') || ship.hasEffect('ghost_return')) return 'The guns are under black water';
   if (ship.reload[side] > 0) return 'Guns are still loading';
@@ -359,6 +361,7 @@ export function dash(game: Game, ship: ShipEntity): string | null {
 /** Bow/stern chasers: long guns aimed at a point within a cone along the keel. Great for chases. */
 export function fireChaser(game: Game, ship: ShipEntity, end: ChaserEnd, tx: number, ty: number, windAllow = 0): string | null {
   if (!ship.alive || ship.docked || ship.grappled || ship.surrendered) return 'Cannot fire now';
+  if (voyaging(ship)) return VOYAGE_BUSY;
   if (inBattle(game, ship)) return SELF_IN_BATTLE_WHY;
   const count = end === 'bow' ? ship.stats.bowChasers : ship.cls.sternChasers;
   if (count <= 0) return `No ${end} chasers on a ${ship.cls.name}`;

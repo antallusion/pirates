@@ -289,6 +289,9 @@ export class ClientState {
   input = { rudder: 0, sail: 2, seq: 0 };
   /** docs/16 #36: the helmsman has the wheel for this mark (the server steers; the prediction follows its rudder). */
   autosail: { x: number; y: number; path?: [number, number][] } | null = null;
+  /** Owner, 2026-10-28 (server passage.ts): a long passage under ×10 — her way (m/s), the run's end, the way left at its
+   *  start, its last stretch sailed as ever. She is carried, not sailed: her own ship is reckoned on straight (updateOwn). */
+  voyage: { v: number; x: number; y: number; left: number; tail: number; at: number } | null = null;
   /** A course broken off by a fight or a storm, kept to be taken up again (autosail.ts stepResume): its line stays on
    *  the sea, dimmed (owner, 2026-10-18: «всегда должно быть показано направление линией и путь»). */
   pausedCourse: { x: number; y: number; path?: [number, number][] } | null = null;
@@ -463,6 +466,9 @@ export class ClientState {
         break;
       case 'signal':
         this.signals = [...this.signals.filter((x) => now - x.at < SIGNAL_TTL && x.from !== m.from), { from: m.from, kind: m.kind, x: m.x, y: m.y, at: now }];
+        break;
+      case 'voyage':
+        this.voyage = m.on ? { v: m.v ?? 0, x: m.x ?? 0, y: m.y ?? 0, left: m.left ?? 0, tail: m.tail ?? 0, at: now } : null;
         break;
       case 'autosail':
         // The helmsman has the wheel for a mark, or has given it back (docs/16 #36).
@@ -865,6 +871,13 @@ export class ClientState {
     const len = st.length, beam = st.beam;
     const near = clientBlockers(this, s.x, s.y, len * 0.5 + beam + 20 + Math.abs(s.speed) * SPEED_SCALE * elapsed, NEAR, this.estServerTime());
     let t = elapsed;
+    // On a long passage she is carried along the sounded way at her passage's pace (server passage.ts): reckoned on
+    // straight at her way — the sailing step would take her ten times her top speed down to it.
+    if (this.voyage) {
+      const v = s.speed * SPEED_SCALE * elapsed;
+      s = { ...s, x: s.x + Math.sin(s.heading) * v, y: s.y - Math.cos(s.heading) * v };
+      t = 0;
+    }
     while (t > 0) {
       const dt = Math.min(0.05, t);
       s = stepSailing(s, input, sail, wind, cur, dt);
@@ -878,11 +891,12 @@ export class ClientState {
     const nowS = performance.now() / 1000;
     const dt = Math.min(0.25, Math.max(0, nowS - this.ownAt));
     this.ownAt = nowS;
-    if (!d || Math.hypot(d.x - s.x, d.y - s.y) > 40 * SPEED_SCALE / 2) this.ownDisplay = s;
+    if (!d || Math.hypot(d.x - s.x, d.y - s.y) > (this.voyage ? 400 : 40 * SPEED_SCALE / 2)) this.ownDisplay = s;
     else {
       const k = this.timeScale * dt;
-      const ax = d.x + (Math.sin(s.heading) * s.speed * SPEED_SCALE + cur.x * (1 + sail.currentMul)) * k;
-      const ay = d.y + (-Math.cos(s.heading) * s.speed * SPEED_SCALE + cur.y * (1 + sail.currentMul)) * k;
+      const drift = this.voyage ? 0 : 1 + sail.currentMul; // (no current carries a passage)
+      const ax = d.x + (Math.sin(s.heading) * s.speed * SPEED_SCALE + cur.x * drift) * k;
+      const ay = d.y + (-Math.cos(s.heading) * s.speed * SPEED_SCALE + cur.y * drift) * k;
       const ease = 1 - Math.exp(-dt / 0.2);
       this.ownDisplay = { ...s, x: lerp(ax, s.x, ease), y: lerp(ay, s.y, ease), heading: lerpAngle(d.heading, s.heading, 1 - Math.exp(-dt / 0.1)) };
       // The eased picture of her keeps off the shore too (its reckoning runs a hair ahead of her).

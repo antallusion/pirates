@@ -316,6 +316,8 @@ export class Renderer {
   camY = 0;
   zoom = 2.6; // px per meter
   targetZoom = 2.6;
+  /** The long passage's step back of the view (1: none). */
+  private passageZoom = 1;
   /** Once the captain zooms, the screen size no longer picks the zoom. */
   userZoomed = false;
   /** The sea fight's view (camfight.ts): on a desk it steps back while she fights; the share of her zoom it wants. */
@@ -520,7 +522,9 @@ export class Renderer {
     } else this.zoomHeld = { z: this.targetZoom, at: this.time };
     this.fight.step(dt, sign, !globalThis.document?.body.classList.contains('touch'));
     this.fightShare = fightShare(this.targetZoom, this.w, this.h);
-    this.zoom += (this.fight.zoom(this.targetZoom, this.fightShare) - this.zoom) * Math.min(1, dt * 8);
+    // A long passage (owner, 2026-10-28, passage.ts): the view eases back a little — the sea rushing under her.
+    this.passageZoom += ((state.voyage && own ? 0.86 : 1) - this.passageZoom) * Math.min(1, dt * 1.2);
+    this.zoom += (this.fight.zoom(this.targetZoom, this.fightShare) * this.passageZoom - this.zoom) * Math.min(1, dt * 8);
     const g = this.g;
     const cam = this.camBase;
     if (own) {
@@ -533,7 +537,10 @@ export class Renderer {
       // home from the free look it flies (quicker the farther out the view is).
       const gone = Math.hypot(own.x - cam.x, own.y - cam.y);
       const far = gone > (this.homing ? 30_000 : 1500);
-      const kl = far ? 1 : Math.min(1, dt * 0.8);
+      // (a long passage under ×10, passage.ts: the view held on her, a little ahead — trailing her by a tenth of a second
+      // was a hundred metres behind, she ran off the top of the screen)
+      const fast = !!state.voyage;
+      const kl = far ? 1 : Math.min(1, dt * (fast ? 2 : 0.8));
       this.lead.x += (v.x * reach - this.lead.x) * kl;
       this.lead.y += (v.y * reach - this.lead.y) * kl;
       if (this.free) {
@@ -542,7 +549,7 @@ export class Renderer {
         cam.x = f.x;
         cam.y = f.y;
       } else {
-        const k = far ? 1 : Math.min(1, dt * (this.homing ? 5 : 6));
+        const k = far || fast ? 1 : Math.min(1, dt * (this.homing ? 5 : 6));
         cam.x += (own.x + this.lead.x + this.look.x - cam.x) * k;
         cam.y += (own.y + this.lead.y + this.look.y - cam.y) * k;
         if (this.homing && Math.hypot(own.x + this.lead.x - cam.x, own.y + this.lead.y - cam.y) < 40) this.homing = false;
@@ -2282,6 +2289,10 @@ export class Renderer {
     const sinkF = sinking ? clamp(s.sinkT / 6, 0, 1) : 0;
     // Owner, 2026-10-22: another captain in a battle (or just out of one) is out of everyone's reach — drawn dimmed.
     const battleDim = !s.own && (s.flags & SF.IN_BATTLE) !== 0;
+    // Owner, 2026-10-28 (passage.ts): a captain on a long passage under ×10 is out of everyone's reach — to the others a
+    // ghost on a long white wake; her own ship keeps her colours, with the wake.
+    const passage = (s.flags & SF.VOYAGE) !== 0;
+    const ghost = passage && !s.own;
     // Heel: she leans to leeward with the wind on her beam and her canvas set; water in the hold adds a list.
     const heel = shipHeel(s.h, state.wind[0], state.wind[1], s.sail, cls.tier, s.own ? state.you?.water ?? 0 : 0, settings().reduceMotion ? 0 : Math.sin(this.time * 0.9 + s.id));
     g.save();
@@ -2299,6 +2310,7 @@ export class Renderer {
       g.save();
       g.rotate(s.h);
       shipWater(g, len, beam, s.spd / Math.max(1, cls.maxSpeed), settings().reduceMotion ? 0 : this.time, s.id, this.fx.lod);
+      if (passage) passageWake(g, len, beam, settings().reduceMotion ? 0 : this.time);
       g.restore();
     }
 
@@ -2314,7 +2326,7 @@ export class Renderer {
       g.translate(heel * beam * 0.18, 0);
       g.transform(1 - Math.abs(heel) * 0.14, 0, heel * 0.06, 1, 0, 0);
     }
-    g.globalAlpha = (hidden ? 0.45 : battleDim ? 0.6 : 1) * (1 - sinkF * 0.85);
+    g.globalAlpha = (hidden ? 0.45 : ghost ? 0.5 : battleDim ? 0.6 : 1) * (1 - sinkF * 0.85);
     const stage = curseStageFromFlags(s.flags);
     const art = bossArt(s.id, state) ?? cls.sprite;
     const hullImg = this.shipImage(cls.id, stage, art);
@@ -2334,7 +2346,7 @@ export class Renderer {
         g.drawImage(t, -imgW * hullImg.cx, -imgH * hullImg.cy, imgW, imgH);
       }
     }
-    g.globalAlpha = (hidden ? 0.45 : battleDim ? 0.6 : 1) * (1 - sinkF * 0.85);
+    g.globalAlpha = (hidden ? 0.45 : ghost ? 0.5 : battleDim ? 0.6 : 1) * (1 - sinkF * 0.85);
     this.drawPennant(s, len, beam, state);
     g.restore();
 
@@ -4776,5 +4788,33 @@ function crossedSwords(g: CanvasRenderingContext2D, x: number, y: number): void 
     g.lineTo(-2.2 * k, 5.5);
     g.stroke();
   }
+  g.restore();
+}
+
+/** A long passage's wake (owner, 2026-10-28: passage.ts): in her own frame (bow up), long streaks of foam rushing aft
+ *  from her sides and her stern, three times her length — a few strokes, cheap on a phone. `t` 0: still (less motion). */
+function passageWake(g: CanvasRenderingContext2D, len: number, beam: number, t: number): void {
+  g.save();
+  g.lineCap = 'round';
+  const lines: [number, number, number, number][] = [
+    // x off her keel, from (× length aft of her middle), length (× her length), alpha
+    [-beam * 0.55, 0.05, 2.6, 0.5], [beam * 0.55, 0.05, 2.6, 0.5], [-beam * 1.05, 0.25, 1.9, 0.3], [beam * 1.05, 0.25, 1.9, 0.3], [0, 0.5, 3.2, 0.42],
+  ];
+  const dash = len * 0.42;
+  g.setLineDash([dash, dash * 0.55]);
+  for (const [x, from, l, a] of lines) {
+    const y0 = len * from, y1 = y0 + len * l;
+    const grad = g.createLinearGradient(0, y0, 0, y1);
+    grad.addColorStop(0, `rgba(226,236,240,${a})`);
+    grad.addColorStop(1, 'rgba(226,236,240,0)');
+    g.strokeStyle = grad;
+    g.lineWidth = Math.max(1, beam * (x === 0 ? 0.32 : 0.18));
+    g.lineDashOffset = -((t * len * 3.2) % (dash * 1.55));
+    g.beginPath();
+    g.moveTo(x, y0);
+    g.lineTo(x * (1 + l * 0.35), y1);
+    g.stroke();
+  }
+  g.setLineDash([]);
   g.restore();
 }

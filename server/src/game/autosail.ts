@@ -29,6 +29,7 @@ import { beatAngle } from './npc.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { pursuitOf } from './pursuit.ts';
+import { VOYAGE_BUSY, voyaging } from './passage.ts';
 
 const DEG = Math.PI / 180;
 /** Never 100 m nearer her mark in this many seconds: she is going round something, not to her mark (a beat to
@@ -339,6 +340,22 @@ function send(game: Game, s: PlayerSession, run: AutoSail | null, why?: Autosail
   game.sendTo(s, run ? { t: 'autosail', on: true, x: Math.round(run.x), y: Math.round(run.y), sail: run.sail, path: pathView(own ? [own, ...run.path.slice(run.i)] : run.path) } : { t: 'autosail', on: false, why: why ?? 'off' });
 }
 
+/** A new plan for her run, sent to her screen (passage.ts: the way of a long passage, sounded afresh). */
+export function adoptPlan(game: Game, s: PlayerSession, ship: ShipEntity, path: Path): void {
+  const run = runs.get(ship);
+  if (!run) return;
+  run.path = path;
+  run.i = 1;
+  run.plannedAt = game.now;
+  send(game, s, run);
+}
+
+/** Her run's line sent again (back aboard mid-passage, passage.ts). */
+export function resendAutosail(game: Game, s: PlayerSession): void {
+  const run = autosailOf(s.ship);
+  if (run) send(game, s, run);
+}
+
 /** What she is told when a course is kept for later (translated on the client, server.ru.h.ts). */
 export const QUEUED_PORT = 'Course set: the helmsman takes her there as soon as she casts off.';
 
@@ -356,6 +373,7 @@ export function queuedCourse(ship: ShipEntity | null | undefined): { x: number; 
 export function startAutosail(game: Game, s: PlayerSession, x: number, y: number, sail?: number, arrive?: number): string | null {
   const ship = s.ship;
   if (!ship || !s.profile) return 'No ship';
+  if (voyaging(ship)) return VOYAGE_BUSY; // a long passage is not turned (owner, 2026-10-28, passage.ts)
   if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || y < 0 || x > WORLD_SIZE || y > WORLD_SIZE) return 'That mark is off the chart';
   const idx = autosailSail(sail ?? SAIL_STEPS.indexOf(ship.input.sailTarget as never));
   const keep: Paused = { x, y, sail: idx, ...(arrive !== undefined ? { arrive } : {}), at: game.now, calm: null };
@@ -411,6 +429,7 @@ function stepQueued(game: Game, s: PlayerSession, ship: ShipEntity): void {
 export function stopAutosail(game: Game, s: PlayerSession, why: AutosailStop): void {
   const ship = s.ship;
   if (!ship) return;
+  if (why !== 'lost' && voyaging(ship)) return; // a long passage is not stopped (owner, 2026-10-28, passage.ts)
   const run = runs.get(ship);
   // broken off by a fight: kept to be taken up again (stepResume); any other end drops a course kept so
   if (run && RESUMABLE.has(why)) paused.set(ship, { x: run.x, y: run.y, sail: run.sail, ...(run.arrive !== undefined ? { arrive: run.arrive } : {}), at: game.now, calm: null });
@@ -500,6 +519,7 @@ export function autosailInput(game: Game, s: PlayerSession, rudder: number, sail
     if (ship && rudder !== 0) helmAt.set(ship, game.now);
     return false;
   }
+  if (voyaging(ship)) return true; // her helm on a long passage: swallowed (passage.ts)
   if (rudder === 0 && (step === run.sail || step === before || (step === run.was && game.now - run.since < AUTOSAIL_BEAT))) return true;
   stopAutosail(game, s, 'manual');
   return false;
@@ -629,6 +649,7 @@ export function stepAutosail(game: Game): void {
     const ship = s.ship;
     const run = autosailOf(ship);
     if (!ship) continue;
+    if (voyaging(ship)) continue; // carried along her passage (passage.ts)
     if (!run) {
       stepQueued(game, s, ship);
       if (!autosailOf(ship)) stepResume(game, s, ship);

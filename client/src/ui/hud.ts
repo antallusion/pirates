@@ -168,6 +168,11 @@ export function fightOnScreen(): boolean {
   const b = globalThis.document?.body?.classList;
   return !!b && (b.contains('tac') || b.contains('boarding'));
 }
+/** The sea's news waits: a fight on the screen, or a long passage under ×10 (owner, 2026-10-28, passage.ts — at that
+ *  pace the lookout's sightings and the islands charted came by the dozen, and her own small word was lost among them). */
+export function newsHeld(): boolean {
+  return fightOnScreen() || !!globalThis.document?.body?.classList.contains('voyage');
+}
 /** At most this many of the sea's toasts wait out a fight (the newest kept). */
 export const HELD_MAX = 4;
 /** How long the lawless waters' notice stays in the top band (ms): a few seconds to be read whole. */
@@ -2100,13 +2105,13 @@ export class Hud {
    *  battle itself says (a refusal, a win) is told at once, in the battle's top band. */
   private held: { key: string; show: () => void }[] = [];
   private hold(key: string, show: () => void): boolean {
-    if (!fightOnScreen()) return false;
+    if (!newsHeld()) return false;
     this.held = [...this.held.filter((x) => x.key !== key), { key, show }].slice(-HELD_MAX);
     return true;
   }
   /** The fight over: the held news, oldest first (the queue shows two and keeps the rest waiting). */
   releaseHeld(): void {
-    if (!this.held.length || fightOnScreen()) return;
+    if (!this.held.length || newsHeld()) return;
     const h = this.held;
     this.held = [];
     for (const x of h) x.show();
@@ -2126,7 +2131,7 @@ export class Hud {
   }
 
   toast(msg: string, kind: string): void {
-    if (kind !== 'bad' && kind !== 'good' && this.hold(`${kind}|${msg}`, () => this.toast(msg, kind))) return;
+    if (kind !== 'bad' && kind !== 'good' && kind !== 'voyage' && this.hold(`${kind}|${msg}`, () => this.toast(msg, kind))) return;
     this.toastQ.push(msg, kind, () => {
       const el = document.createElement('div');
       el.dataset.msg = msg;

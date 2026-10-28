@@ -58,6 +58,8 @@ import { tacArtSplit } from './ui/tactical.ts';
 import { CURSOR_ART } from './ui/cursor.ts';
 import { tideVeil } from './ui/invasion.ts'; // docs/19 E16
 import { AudioEngine, turnCreakLoad } from './audio.ts';
+import { LP, PassagePill } from './ui/passage.ts';
+import { VOYAGE_MUL } from '../../shared/src/data/passage.ts';
 import { AutosailPill, FirstTips, autosailRequest, autosailStopText, routeLabel, tipForMsg, tipForState } from './ui/ease.ts';
 import { claimNear, claimSpot, tapTarget } from './ui/sailto.ts'; // seaux: sail-to on tap
 import { toggleCaptainMenu } from './ui/capmenu.ts'; // seaux: the captain's menu on her portrait
@@ -292,6 +294,8 @@ worldMap.onScoutSend = (id, x, y) => {
 const EL = dict(EASE_EN, EASE_RU);
 const LSF = dict(SEAF_EN, SEAF_RU); // the quick sea fight (docs/23 phases 3–4)
 const autosailPill = new AutosailPill();
+const passagePill = new PassagePill(); // owner, 2026-10-28: «дальний переход» — the tiny timer by the chart
+passagePill.onHint = (msg) => hud.toast(msg, 'voyage');
 autosailPill.onStop = () => {
   goalRun = null; // the pill's stop ends the run to a quest's place too
   resumeKey = resumeAfterEnd(resumeKey, 'own');
@@ -844,6 +848,8 @@ function stepClaimRun(): void {
 }
 /** When the server last stopped her for an action, a battle or a card (the page's clock). */
 let allStopAt = -1e9;
+/** The long passage's word said already (a reconnect mid-passage does not say it twice). */
+let voyageSaid = false;
 /** Owner, 2026-10-22 (server allstop.ts): «любое действие … должно останавливать корабль». Her sail control comes down to
  *  nothing and the helm stick lets go — the old sail step is never sent again, and she sails on only when she sets sail
  *  or gives a course herself; the runs the page was keeping (home, a claim, a goal, a dock) let go too. */
@@ -1869,6 +1875,12 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'allstop':
       allStopHere();
+      break;
+    case 'voyage':
+      // Owner, 2026-10-28: the small word on entering a long passage, and on coming out of it at the mark.
+      if (m.on && !voyageSaid) hud.toast(LP('on', { n: VOYAGE_MUL }), 'voyage');
+      else if (!m.on && m.why === 'arrived') hud.toast(LP('done'), 'voyage');
+      voyageSaid = m.on;
       break;
     case 'autosail': {
       // docs/16 #36: the helmsman has the wheel, or has given it back and why (a run to a goal says its own course).
@@ -3581,7 +3593,7 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   for (const s of state.ships.values()) {
     if (!s.info) continue;
     const c = s.cur;
-    if (c.flags & (SF.SINKING | SF.DOCKED | SF.PROTECTED | SF.IN_BATTLE)) continue;
+    if (c.flags & (SF.SINKING | SF.DOCKED | SF.PROTECTED | SF.IN_BATTLE | SF.VOYAGE)) continue;
     const cls = SHIP_CLASSES[s.info.classId];
     if (beastOfClass(s.info.classId)) continue; // no decks on a beast of the sea
     if (isZoneBossClass(s.info.classId)) continue; // nor on a zone boss: guns only (docs/21)
@@ -3955,7 +3967,7 @@ let helmAt = -1e9;
 function attackable(id: number | null): boolean {
   const s = id !== null ? state.ships.get(id) : undefined;
   const own = state.ownDisplay;
-  if (!s?.info || !own || state.self?.dockedAt || s.cur.flags & (SF.SINKING | SF.DOCKED | SF.PROTECTED | SF.IN_BATTLE)) return false;
+  if (!s?.info || !own || state.self?.dockedAt || s.cur.flags & (SF.SINKING | SF.DOCKED | SF.PROTECTED | SF.IN_BATTLE | SF.VOYAGE)) return false;
   if (dist(own.x, own.y, s.cur.x, s.cur.y) > 2500) return false;
   if ((s.info.isPlayer || s.info.npcRole === 'escort') && !(s.cur.flags & SF.HOSTILE) && !fairCaptain(s.cur.flags, s.info)) return false;
   return true;
@@ -4346,7 +4358,7 @@ function canBoardNow(id: number): boolean {
   const s = state.ships.get(id), own = state.ownDisplay, st = state.ownStats, you = state.you;
   if (!s?.info || !own || !st || !you || grabbed() || you.flags & SF.BOARDING) return false;
   const c = s.cur;
-  if (c.flags & (SF.SINKING | SF.DOCKED | SF.PROTECTED | SF.IN_BATTLE | SF.SURRENDERED) || unboardableMark(id)) return false;
+  if (c.flags & (SF.SINKING | SF.DOCKED | SF.PROTECTED | SF.IN_BATTLE | SF.VOYAGE | SF.SURRENDERED) || unboardableMark(id)) return false;
   if ((s.info.isPlayer || s.info.npcRole === 'escort') && !(c.flags & SF.HOSTILE) && !fairCaptain(c.flags, s.info)) return false;
   return boardWhy(id) === null; // alongside only (owner, 2026-10-22: reach.ts)
 }
@@ -4362,6 +4374,16 @@ function targetChoices(about: string): { choices: TmChoice[]; name: string; x: n
     // Owner, 2026-10-22: a captain in a battle (or just out of one) is out of everyone's reach — said, not silently refused.
     if (s?.info && id !== state.entityId && s.cur.flags & SF.IN_BATTLE) {
       inBattleSaid(id);
+      return null;
+    }
+    // Owner, 2026-10-28 (passage.ts): a captain on a long passage is out of everyone's reach too.
+    if (s?.info && id !== state.entityId && s.cur.flags & SF.VOYAGE) {
+      hud.toast(LP('other'), 'info');
+      return null;
+    }
+    // …and her own passage leaves her nothing to do with another ship until she arrives
+    if (state.voyage && id !== state.entityId) {
+      hud.toast(LP('hint'), 'info');
       return null;
     }
     if (!s?.info || !f?.attackable) return null;
@@ -5164,6 +5186,7 @@ function step(t: number): void {
     hud.hauling = netHaul.active;
     hud.update(state, prompt);
     autosailPill.draw(state);
+    passagePill.draw(state);
     drawSeaOrders($('hud-orders'), state, (m) => net.send(m), () => openHero('book'));
     easeSecond(t, own);
     firstTips.frame(t);
