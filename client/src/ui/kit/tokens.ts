@@ -22,7 +22,7 @@ export const TOAST = {
   waiting: 3,
   /** A toast is up at least this long before a newer one may push it out. */
   minShow: 900,
-  life: { default: 2500, bad: 3000, talk: 4000, herald: 3500, advice: 6000 } as Record<string, number>,
+  life: { default: 2500, bad: 3000, talk: 4000, herald: 3500, advice: 6000, voyage: 4500 } as Record<string, number>,
 } as const;
 
 export function toastLife(kind: string): number {

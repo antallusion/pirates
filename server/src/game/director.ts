@@ -6,6 +6,7 @@
 //
 // Sailing faster brings things sooner; a harbour's waters and a fight keep the director still.
 
+import { voyaging } from './passage.ts'; // owner, 2026-10-28: no encounter on a long passage
 import { OBJ_R, REACH_OBJ, REACH_SLACK, hullOf, inReach } from '../../../shared/src/data/reach.ts';
 import { catAboard, givePet, sanitizePets } from './pets.ts';
 import { tattooCount } from './tattoos.ts';
@@ -135,7 +136,7 @@ function nearPort(game: Game, x: number, y: number): boolean {
  *  and down the Descent's stair (a bosun's quiz came up over its first tier's fight). */
 function busyElsewhere(game: Game, s: PlayerSession): boolean {
   const ship = s.ship!;
-  if (onboardingProtected(s) || ship.landing || ship.hasEffect('submerged') || openMinigame(game, s) || inDescent(game, s.accountId)) return true;
+  if (voyaging(ship) || onboardingProtected(s) || ship.landing || ship.hasEffect('submerged') || openMinigame(game, s) || inDescent(game, s.accountId)) return true;
   let deep = false;
   game.forShipsNear(ship.state.x, ship.state.y, 6000, (o) => {
     if ((o.cls.monster && !isBeast(o)) || o.bossOf || o.npcRole === 'boss') deep = true; // whales passing are no boss

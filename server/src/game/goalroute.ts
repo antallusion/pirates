@@ -54,6 +54,7 @@ import { activeTasks } from './worldtasks.ts';
 import { ensureDailyQuarry, ensureQuarry, localHomeOf, nearHome } from './questlocal.ts'; // owner, 2026-10-18
 import type { Home } from './questlocal.ts';
 import { openSea } from './wrecks.ts';
+import { voyaging } from './passage.ts';
 
 /** The live ships of a goal looked for within this of her (her lookout's reach on a clear day, about). */
 export const ROUTE_VIEW = 6000;
@@ -984,6 +985,7 @@ export function stepRoutes(game: Game): void {
       endRoute(game, s, 'off');
       continue;
     }
+    if (voyaging(ship)) continue; // carried along a long passage: the goal looked at again when she is through (passage.ts)
     const run = autosailOf(ship);
     // another course (her mark on the chart, «Атаковать», an order sailed to): the run lets go
     if (run && f.sent && Math.hypot(run.x - f.sent.x, run.y - f.sent.y) > 60 && !(f.view.ship !== undefined && Math.hypot(run.x - f.view.x, run.y - f.view.y) < 60)) {

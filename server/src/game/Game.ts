@@ -212,6 +212,7 @@ import { awayMark, awayReturn, awayTake, renownDistance, renownKill, sendRenown,
 import { sendWorldGoals, stepWorldGoals, worldGoalKill, worldGoalsCollect } from './worldgoals.ts';
 import { sendSignal } from './signals.ts';
 import { autosailInput, autosailOf, dropPaused, startAutosail, stepAutosail, stopAutosail } from './autosail.ts';
+import { VOYAGE_BUSY, finishVoyage, stepVoyage, voyageBlocks, voyageResend, voyaging } from './passage.ts'; // owner, 2026-10-28: «дальний переход»
 import { approach, approachInput, approachOf, cancelApproach, stepApproach } from './approach.ts'; // seaux: sail-to on tap
 import { cancelRoute, gotoGoal, stepRoutes } from './goalroute.ts'; // route: tap a goal, sail to its nearest place
 import { LootMap, stepWrecks } from './wrecks.ts'; // seaux: wreckage per captain
@@ -733,6 +734,7 @@ export class Game {
     stepApproach(this); // seaux: an order at a thing out of reach, given again on arrival (approach.ts)
     stepRoutes(this); // route: the runs to the goals' nearest places, re-targeted (goalroute.ts)
     stepAutosail(this); // the helmsmen at their captains' wheels (docs/16 #36)
+    stepVoyage(this, dt); // and the long passages under ×5 (owner, 2026-10-28, passage.ts)
     stepPursuit(this); // and under «Атаковать» (docs/23 item 33)
     stepAutoFire(this); // the captains' gun crews laying on the mark (docs/23 items 34–35)
     prof.lap('npcAi');
@@ -741,6 +743,7 @@ export class Game {
     const night = isNight(now);
     for (const ship of this.ships.values()) {
       if (ship.docked || ship.ghost || ship.cls.monster || ship.zoneBoss) continue; // (a zone boss sails by her own hand)
+      if (voyaging(ship)) continue; // carried along her passage, not sailed (passage.ts)
       const brain = this.npcs.get(ship.id);
       if (brain && !brain.active) continue;
       const k = brain ? lod.get(ship.id) ?? 1 : 1;
@@ -912,14 +915,14 @@ export class Game {
 
   private collideShips(): void {
     for (const a of this.ships.values()) {
-      if (a.docked || !a.alive || a.ghost || a.npcRole === 'boss' || a.npcRole === 'beast') continue; // a beast's blows are its own (beasts.ts)
+      if (a.docked || !a.alive || a.ghost || a.npcRole === 'boss' || a.npcRole === 'beast' || voyaging(a)) continue; // a beast's blows are its own (beasts.ts); a passage passes through
       const brainA = this.npcs.get(a.id);
       if (brainA && (!brainA.active || this.lodStep.get(a.id) !== 1)) continue; // (the far ones out of sight: docs/19 D6)
       const ra = a.stats.length * 0.32;
       this.grid.query(a.state.x, a.state.y, 80, (id) => {
         if (id <= a.id) return;
         const b = this.ships.get(id);
-        if (!b || b.docked || !b.alive || b.ghost || b.npcRole === 'boss' || b.npcRole === 'beast') return;
+        if (!b || b.docked || !b.alive || b.ghost || b.npcRole === 'boss' || b.npcRole === 'beast' || voyaging(b)) return;
         if (a.boarding?.with === b.id) return;
         const rb = b.stats.length * 0.32;
         const d = dist(a.state.x, a.state.y, b.state.x, b.state.y);
@@ -1367,7 +1370,7 @@ export class Game {
     ship.morale += clamp(baseline - ship.morale, -1, 1) * st.moraleRegen;
     ship.morale = clamp(ship.morale, 0, 100);
 
-    // Provisions: FOOD_PER_40 units feed 40 sailors for a minute (voyage.ts), eaten every tenth second of each ship's own. (This runs on the
+    // Provisions: FOOD_PER_40 units feed 40 sailors for a minute (passage.ts), eaten every tenth second of each ship's own. (This runs on the
     // ship's own tick of each second, so `tick % 200` alone matched only ships whose id is a multiple of 20.)
     if (ship.isPlayer && Math.floor(this.tick / 20) % 10 === 0) {
       const frontier = REGIONS[ship.region].safety === 'lawless' ? Math.max(0.5, 1 - 1.25 * tval(st, 'frontier')) : 1;
@@ -1511,7 +1514,7 @@ export class Game {
     // Storms punish full canvas.
     const w = this.weatherOf(ship);
     const canvas = ship.hasFlag('storm_rider') ? 0 : Math.max(0, 1 + tval(st, 'stormSailDamage'));
-    if ((w === 'storm' || w === 'black_storm') && ship.state.sail > 0.8 && ship.cls.passive.id !== 'dead_crew' && canvas > 0) {
+    if ((w === 'storm' || w === 'black_storm') && ship.state.sail > 0.8 && ship.cls.passive.id !== 'dead_crew' && canvas > 0 && !voyaging(ship)) {
       ship.sails = Math.max(0, ship.sails - st.sailHpMax * 0.012 * canvas);
       if (this.tick % 200 === 0) this.toastShip(ship, 'The storm is shredding your canvas — reef the sails!', 'bad');
     }
@@ -3520,6 +3523,11 @@ export class Game {
     try {
       // Her boats or her hands sent to a place end her «Атаковать» (unless shot is flying at her: then the order waits).
       const work = !!s.ship && workOrder(msg as { t: string; action?: string });
+      // A long passage (owner, 2026-10-28, passage.ts): nothing that stops, turns or fights her, nothing done at sea.
+      if (s.ship && voyaging(s.ship) && voyageBlocks(msg)) {
+        this.sendTo(s, { t: 'toast', msg: VOYAGE_BUSY, kind: 'info' });
+        return;
+      }
       if (work && pursuitOf(s.ship) && !s.ship!.underFire(this.now)) {
         stopPursuit(this, s, 'off');
         // The helmsman had the sheets: the helm's sail is not her hand (she lies to for her boats).
@@ -3599,6 +3607,10 @@ export class Game {
         if (!Number.isFinite(msg.rudder) || !Number.isFinite(msg.sail)) return;
         // (the step her phone sends, whoever has the wheel: the one held off after a stop — allstop.ts)
         s.lastSail = clamp(Math.round(msg.sail), 0, SAIL_STEPS.length - 1);
+        if (voyaging(ship)) {
+          if (Number.isInteger(msg.seq)) ship.lastInputSeq = msg.seq;
+          return; // a long passage: her helm is not hers until she arrives (passage.ts)
+        }
         if (s.profile?.company.mutiny) return; // the mutineers hold the wheel
         if (s.pendingBoarding) {
           ship.input = { rudder: 0, sailTarget: 0 }; // hove to by her prize until the spoils are settled
@@ -4898,6 +4910,7 @@ export class Game {
     // (one battle at a time, inbattle.ts: a live boarding's view is never laid over by a fight ashore's reckoning)
     if (s.ship && (s.ship.boarding || s.ship.boardAlly !== null)) resendBoarding(this, s.ship);
     else resendLandFight(this, s);
+    voyageResend(this, s); // back aboard mid-passage: its line and its pill (passage.ts)
   }
 
   private onDisconnect(s: PlayerSession): void {
@@ -4925,6 +4938,7 @@ export class Game {
     friendsPresence(this, s, false);
     if (s.profile) anchorFleet(this, s);
     hiresAway(this, s); // her hired guards go back to their courses; the profile keeps the contracts (seahire.ts)
+    finishVoyage(this, s.ship); // mid-passage: put at its end before she is saved (passage.ts)
     this.saveSession(s);
     for (const c of caravansOf(this, s.accountId)) this.removeShip(c.id);
     if (s.ship) {
@@ -5154,7 +5168,7 @@ export class Game {
       o.id, Math.round(o.state.x * 10) / 10, Math.round(o.state.y * 10) / 10, Math.round(o.state.heading * 1000) / 1000,
       Math.round(o.state.speed * 10) / 10, Math.round(o.state.sail * 100) / 100,
       Math.round((o.hull / o.stats.hullMax) * 1000) / 1000, Math.round((o.sails / o.stats.sailHpMax) * 100) / 100,
-      o.flagsFor(null, false, this.now) | (frame.tethered.has(o.id) ? SF.TETHERED : 0) | (o.isPlayer ? pvpFlags(this, o) | (untouchable(this, o) ? SF.IN_BATTLE : 0) : 0), Math.round((o.crew / Math.max(1, o.stats.crewMax)) * 100) / 100,
+      o.flagsFor(null, false, this.now) | (frame.tethered.has(o.id) ? SF.TETHERED : 0) | (o.isPlayer ? pvpFlags(this, o) | (voyaging(o) ? SF.VOYAGE : untouchable(this, o) ? SF.IN_BATTLE : 0) : 0), Math.round((o.crew / Math.max(1, o.stats.crewMax)) * 100) / 100,
     ];
     r = { row, key: `${row[1]},${row[2]},${row[3]},${row[4]},${row[5]},${row[6]},${row[7]},${row[8]},${row[9]}` };
     frame.rows.set(o.id, r);
@@ -5292,7 +5306,7 @@ export class Game {
           stern: me.cls.sternChasers ? 1 - me.chaserReload.stern / (CHASER_RELOAD * seaReload(me)) : 0,
           mount: me.loadout.mount ? 1 - me.mountReload / mountReloadTime(me) : 0,
         },
-        ammoSel: me.ammoSel, ammo: me.ammo as AmmoStock, flags: me.flagsFor(me.id, false, this.now) | (frame.tethered.has(me.id) ? SF.TETHERED : 0) | pvpFlags(this, me) | (untouchable(this, me) ? SF.IN_BATTLE : 0), combat: me.inCombat(this.now), underFire: me.underFire(this.now),
+        ammoSel: me.ammoSel, ammo: me.ammo as AmmoStock, flags: me.flagsFor(me.id, false, this.now) | (frame.tethered.has(me.id) ? SF.TETHERED : 0) | pvpFlags(this, me) | (voyaging(me) ? SF.VOYAGE : untouchable(this, me) ? SF.IN_BATTLE : 0), combat: me.inCombat(this.now), underFire: me.underFire(this.now),
         water: Math.min(1, me.water / floodCapacity(me)), leaks: me.leaks, station: me.station,
         resolve: me.resolve, dread: me.dread, sanity: me.sanity,
       };
