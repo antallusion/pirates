@@ -226,6 +226,7 @@ import { adminEnabled, mend, runAdmin } from './admin.ts';
 import { BossHub, bossBoardOrder, bossBoarded, bossPositions, bossSinking, bossWind, stepBosses } from './bosses.ts';
 import { ZoneBossHub, stepZoneBosses, zoneBossSinking } from './zonebosses.ts';
 import { wayMessage, waySecond, waysForChunk } from './waystations.ts'; // docs/35
+import { armyMessage } from './armyops.ts'; // owner, 2026-10-28: the captain's split, merge and dismiss
 import { applyDamage, cutMastWreck, damageBlocked, killMen, dash, fireBroadside, fireChaser, holdAim, reloadTime, seaReload, stepProjectiles } from './combat.ts';
 import type { DamagePacket } from './combat.ts';
 import { stepPivot, stepTalentEffects, stepTalents, useTalentActive } from './talentfx.ts';
@@ -3587,6 +3588,7 @@ export class Game {
     if (msg.t === 'cos') return cosMessage(this, s, msg); // docs/32 §12: the cosmetics
     if (msg.t === 'scout') return scoutMessage(this, s, msg); // the island's scouts (owner, 2026-10-17)
     if (msg.t === 'way') return wayMessage(this, s, msg); // docs/35: the floating waystations, the resurrection
+    if (msg.t === 'army') return armyMessage(this, s, msg); // owner, 2026-10-28: split, merge, dismiss a stack
     switch (msg.t) {
       case 'onboarding':
         if (msg.action === 'skip_stage' || msg.action === 'skip_all' || msg.action === 'hide_goals') onboardingAction(this, s, msg.action);
@@ -5320,7 +5322,7 @@ export class Game {
       p.ammo = ship.ammo;
       p.ammoSel = ship.ammoSel;
       p.crew = ship.crew;
-      p.army = ship.army.map((x) => ({ u: x.u, n: x.n }));
+      p.army = ship.army.map((x) => ({ ...x })); // (a gift's mark and a split part's tag kept: owner, 2026-10-28)
       p.morale = ship.morale;
       p.sanity = Math.round(ship.sanity * 10) / 10;
       p.pressure = Math.round(ship.pressure * 10) / 10;

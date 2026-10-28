@@ -1141,7 +1141,7 @@ export function beatenJoin(game: Game, ship: ShipEntity, beaten: readonly { u: U
     ship.addMen(u, k);
     got.set(u, (got.get(u) ?? 0) + k);
   };
-  const room = (u: UnitId) => ship.army.some((x) => x.u === u) || ship.army.length < ship.armySlots;
+  const room = (u: UnitId) => ship.army.some((x) => x.u === u && !x.g) || ship.army.length < ship.armySlots;
   for (const x of kinds) {
     let left = x.n;
     if (room(x.u)) {

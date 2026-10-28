@@ -402,7 +402,7 @@ export function heroFace(game: Game, ship: ShipEntity): string | undefined {
 }
 
 /** After a battle: the will she spent, and the fallen her First Aid patches up. */
-export function afterBattle(game: Game, ship: ShipEntity, left: number, lost: { u: string; n: number }[], raise: number, stamLeft = -1, scrolls: readonly string[] = [], won = false, pvp = false): void {
+export function afterBattle(game: Game, ship: ShipEntity, left: number, lost: { u: string; n: number; g?: 1 }[], raise: number, stamLeft = -1, scrolls: readonly string[] = [], won = false, pvp = false): void {
   const s = game.sessionOf(ship);
   const p = s?.profile;
   if (!s || !p) return;
@@ -421,6 +421,7 @@ export function afterBattle(game: Game, ship: ShipEntity, left: number, lost: { 
   }
   let room = Math.max(0, ship.stats.crewMax - ship.crew), n = 0;
   for (const x of lost) {
+    if (x.g) continue; // a gift stack's fallen never stand again (owner, 2026-10-28)
     const k = Math.min(room, Math.floor(x.n * raise));
     if (k <= 0) continue;
     ship.addMen(x.u as never, k);

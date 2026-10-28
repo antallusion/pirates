@@ -19,7 +19,7 @@
 
 import { REACH_SLACK, hullOf } from '../../../shared/src/data/reach.ts';
 import { lackHammocks, lackMore, lackSlot } from '../../../shared/src/data/buyfail.ts';
-import { UNITS, armyWeight } from '../../../shared/src/data/army.ts';
+import { UNITS, armyWeight, hasOwn, ownStack } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
 import { PICKED_TIER, TIER_SHIP_LEVEL, mightCap, mightRoom } from '../../../shared/src/data/town.ts';
 import type { DwellRow, DwellView } from '../../../shared/src/h3proto.ts';
@@ -66,11 +66,12 @@ export function fallenOf(game: Game, s: PlayerSession): FallenRec {
 
 /** A battle's dead on her record: `lost` by kind, less those that stood again (`raised` by kind). `gunfight`: the guns'
  *  dead of one engagement are one battle (a broadside a minute after the last joins it). */
-export function recordFallen(game: Game, s: PlayerSession | null, lost: readonly { u: string; n: number }[], raised: ReadonlyMap<string, number> | null = null, gunfight = false): void {
+export function recordFallen(game: Game, s: PlayerSession | null, lost: readonly { u: string; n: number; g?: 1 }[], raised: ReadonlyMap<string, number> | null = null, gunfight = false): void {
   if (!s?.authed || !s.profile) return;
   const now = game.wallNow();
   const add: { u: UnitId; n: number }[] = [];
   for (const x of lost) {
+    if (x.g) continue; // a gift stack's dead are never raised (owner, 2026-10-28): not on the record
     const u = x.u as UnitId;
     const n = Math.max(0, Math.floor(x.n) - (raised?.get(u) ?? 0));
     if (n > 0 && resKeeps(u)) add.push({ u, n });
@@ -98,7 +99,7 @@ const dirty = new WeakSet<PlayerSession>();
  *  hands — the cheapest kinds counted out first). */
 export function recordShot(game: Game, s: PlayerSession | null, lost: readonly ArmyStack[], wounded: number): void {
   if (!s?.authed || !lost.length) return;
-  const sorted = [...lost].sort((a, b) => (UNITS[a.u]?.tier ?? 0) - (UNITS[b.u]?.tier ?? 0));
+  const sorted = lost.filter((x) => !x.g).sort((a, b) => (UNITS[a.u]?.tier ?? 0) - (UNITS[b.u]?.tier ?? 0));
   const raised = new Map<string, number>();
   let w = Math.max(0, Math.floor(wounded));
   for (const x of sorted) {
@@ -171,7 +172,7 @@ function planOf(s: PlayerSession, rows: readonly { u: UnitId; n: number }[]): Pl
       room = 0;
       why = 'Only a captain of the Choir or of a cursed ship keeps the drowned.';
     }
-    const own = army.some((x) => x.u === r.u);
+    const own = hasOwn(army, r.u);
     if (room > 0 && !own && army.length >= ship.armySlots) {
       room = 0;
       why = 'No free slot in the army for a new kind of man.';
@@ -192,7 +193,7 @@ function planOf(s: PlayerSession, rows: readonly { u: UnitId; n: number }[]): Pl
     if (room > 0) {
       hammocks -= room;
       if (!d.beast && !prem && d.tier >= PICKED_TIER) picked -= room;
-      const st = army.find((x) => x.u === r.u);
+      const st = ownStack(army, r.u);
       if (st) st.n += room;
       else army.push({ u: r.u, n: room });
     }
@@ -269,7 +270,7 @@ function raiseAboard(game: Game, s: PlayerSession, u: UnitId, n: number): number
   const ship = s.ship!;
   if (n <= 0) return 0;
   if (UNITS[u].beast) return joinCreatures(game, s, u, n);
-  if (!ship.army.some((x) => x.u === u) && ship.army.length >= ship.armySlots) return 0;
+  if (!hasOwn(ship.army, u) && ship.army.length >= ship.armySlots) return 0;
   const k = Math.min(n, Math.max(0, ship.stats.crewMax - ship.crew));
   if (k <= 0) return 0;
   const c = s.profile!.company;
@@ -599,7 +600,7 @@ export function wayRecruit(game: Game, s: PlayerSession, u: UnitId, want: number
     if (might <= 0) return `Your crew is as strong as a ship of level ${ship.shipLevel} carries: raise her level for better men.`;
     return `Needs ${per} silver`;
   }
-  if (!ship.army.some((x) => x.u === u) && ship.army.length >= ship.armySlots) return lackSlot(ship.army.length, ship.armySlots);
+  if (!hasOwn(ship.army, u) && ship.army.length >= ship.armySlots) return lackSlot(ship.army.length, ship.armySlots);
   const cost = n * per;
   const got = raiseAboard(game, s, u, n);
   if (got <= 0) return lackHammocks(1, ship.crew, ship.stats.crewMax);

@@ -18,7 +18,7 @@ import { PREMIUM_BEAST_IDS, PREMIUM_PLURAL } from '../../../shared/src/data/prem
 import type { PremiumBeastId } from '../../../shared/src/data/premiumbeasts.ts';
 import { SHIP_BEAST_IDS, SHIP_BEAST_PLURAL } from '../../../shared/src/data/shipbeasts.ts';
 import type { ShipBeastId } from '../../../shared/src/data/shipbeasts.ts';
-import { UNITS, armyWeight } from '../../../shared/src/data/army.ts';
+import { UNITS, armyWeight, stackKey } from '../../../shared/src/data/army.ts';
 import { recruitLift } from './throne.ts';
 import { BEAST_PLURAL, CREATURE_IDS } from '../../../shared/src/data/bestiary.ts';
 import type { CreatureId } from '../../../shared/src/data/bestiary.ts';
@@ -288,7 +288,7 @@ export function recruit(game: Game, s: PlayerSession, src: Src, u: UnitId, want:
   }
   const ashore = Math.max(0, n - Math.max(0, free));
   const after = ashore > 0 ? sendAshore(ship.army, ashore) : ship.army;
-  if (!after.some((x) => x.u === u) && after.length >= ship.armySlots) return lackSlot(after.length, ship.armySlots);
+  if (!after.some((x) => x.u === u && !x.g) && after.length >= ship.armySlots) return lackSlot(after.length, ship.armySlots);
   const price = priceOf(game, s, at, u, n);
   const l = lack(game, s, at, price.goods);
   if (l) return l;
@@ -399,7 +399,7 @@ function signOn(game: Game, s: PlayerSession, u: UnitId, n: number): void {
 }
 
 /** Train `want` men of a stack's plain kind into its upgrade (the upgraded dwelling of its tier). */
-export function train(game: Game, s: PlayerSession, src: Src, u: UnitId, want: number): string | null {
+export function train(game: Game, s: PlayerSession, src: Src, u: UnitId, want: number, key?: string): string | null {
   const at = here(game, s, src);
   if (typeof at === 'string') return at;
   if (at.why) return at.why;
@@ -411,12 +411,15 @@ export function train(game: Game, s: PlayerSession, src: Src, u: UnitId, want: n
   const to = d.upgrade;
   if (UNITS[to].deep && !keepsDeep(s)) return 'Only a captain of the Choir or of a cursed ship keeps the drowned.';
   const ship = s.ship!;
-  const stack = ship.army.find((x) => x.u === u);
+  // The stack she chose (by its key), else the plain stack of the kind, else its gift (owner, 2026-10-28: a gift
+  // stack trains as any other and stays a gift).
+  const stack = (key ? ship.army.find((x) => x.u === u && stackKey(x) === key) : undefined) ?? ship.army.find((x) => x.u === u && !x.g) ?? ship.army.find((x) => x.u === u);
+  const sameUp = (x: ArmyStack) => x.u === to && !!x.g === !!stack?.g;
   const might = mightRoom(ship.army, to, ship.shipLevel, ship.stats.crewMax, ship.armySlots, u);
   const n = Math.min(Math.floor(Number(want)), stack?.n ?? 0, might);
   if (stack && might <= 0) return mightWhy(ship.shipLevel);
   if (!stack || !Number.isFinite(n) || n <= 0) return 'None of them aboard.';
-  if (n < stack.n && !ship.army.some((x) => x.u === to) && ship.army.length >= ship.armySlots) return lackSlot(ship.army.length, ship.armySlots);
+  if (n < stack.n && !ship.army.some(sameUp) && ship.army.length >= ship.armySlots) return lackSlot(ship.army.length, ship.armySlots);
   const price = upgradePrice(u, n, far(at))!;
   const l = lack(game, s, at, price.goods);
   if (l) return l;
@@ -426,14 +429,15 @@ export function train(game: Game, s: PlayerSession, src: Src, u: UnitId, want: n
   take(game, s, at, price.goods);
   game.db.ledger(s.accountId, 'train', -price.silver, `${src}:${u}:${n}`);
   const army: ArmyStack[] = ship.army.map((x) => ({ ...x }));
-  const own = army.find((x) => x.u === u)!;
+  const own = army[ship.army.indexOf(stack)];
   own.n -= n;
-  const up = army.find((x) => x.u === to);
+  const up = army.find(sameUp);
   if (up) up.n += n;
   else if (own.n <= 0) {
     own.u = to;
     own.n = n;
-  } else army.push({ u: to, n });
+    delete own.p;
+  } else army.push({ u: to, n, ...(own.g ? { g: 1 as const } : {}) });
   ship.setArmy(army.filter((x) => x.n > 0));
   ship.companyKey = '';
   game.toastShip(ship, `${n} ${NAMES[u]} trained up into ${NAMES[to]} for ${price.silver} silver.`, 'good');

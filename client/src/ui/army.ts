@@ -5,7 +5,9 @@
 import { BOSS_UNIT_NAMES, isBossUnit } from '../../../shared/src/data/bossunits.ts'; // the great ones ashore (2026-10-03)
 import { TITAN_NAMES, isTitan } from '../../../shared/src/data/titans.ts'; // docs/19 E10
 import { EN as DEN, RU as DRU } from '../lang/ui/drifts.ts';
-import { ARMY_WORD_MIN, UNITS, armyPower, armyWord } from '../../../shared/src/data/army.ts';
+import { ARMY_WORD_MIN, UNITS, armyPower, armyWord, stackKey } from '../../../shared/src/data/army.ts';
+import type { ClientMsg } from '../../../shared/src/protocol.ts';
+import { ask } from './confirm.ts';
 import type { ArmyStack, UnitId, UnitSpecial } from '../../../shared/src/data/army.ts';
 import { dict, lang } from '../i18n.ts';
 import { FACTION_NAMES } from '../../../shared/src/data/factionunits.ts';
@@ -84,8 +86,8 @@ export function armySlot(s: ArmyStack | null, cls = ''): string {
   const d = UNITS[s.u];
   const r = unitRank(s.u);
   const pow = armyPower([s]);
-  const tip = `${unitName(s.u)} ×${s.n} — ${L('tier', { n: d.tier })}${d.up ? `, ${L('up')}` : ''}${r ? `, ${L(`r.${r}` as K)}` : ''}. ${L('rate', { n: fmt(Math.round(pow)) })}. ${unitNote(s.u)}${d.specials.length ? ` ${L('specials')}: ${d.specials.map(specialName).join(', ')}.` : ''}`;
-  return `<div class="army-slot ${slotCls(s.u)} ${cls}" title="${esc(tip)}">${unitIcon(s.u, 'army-face')}${tierMark(d.tier, d.up)}<b class="army-rate" title="${esc(L('rate', { n: fmt(Math.round(pow)) }))}">${icon('act_attack', '', 'army-rate-ico')}${stackRating(pow)}</b><b class="army-n">${fmt(s.n)}</b></div>`;
+  const tip = `${unitName(s.u)} ×${s.n} — ${L('tier', { n: d.tier })}${d.up ? `, ${L('up')}` : ''}${r ? `, ${L(`r.${r}` as K)}` : ''}. ${L('rate', { n: fmt(Math.round(pow)) })}. ${unitNote(s.u)}${d.specials.length ? ` ${L('specials')}: ${d.specials.map(specialName).join(', ')}.` : ''}${s.g ? ` ${L('gift.note')}.` : ''}`;
+  return `<div class="army-slot ${slotCls(s.u)}${s.g ? ' gift' : ''} ${cls}" title="${esc(tip)}">${unitIcon(s.u, 'army-face')}${tierMark(d.tier, d.up)}${s.g ? giftMark() : ''}<b class="army-rate" title="${esc(L('rate', { n: fmt(Math.round(pow)) }))}">${icon('act_attack', '', 'army-rate-ico')}${stackRating(pow)}</b><b class="army-n">${fmt(s.n)}</b></div>`;
 }
 
 /** The row of her class's slots, filled from the strongest. */
@@ -95,18 +97,22 @@ export function armyRow(army: readonly ArmyStack[], slots: number, cls = ''): st
   return `<div class="army-row">${out.join('')}</div>`;
 }
 
-/** The army's card for the crew screen: the slots, the head count, what each kind is. */
-export function armyPanel(army: readonly ArmyStack[], slots: number): string {
+/** The gift's mark on a stack (owner, 2026-10-28: «подарок»): a ribbon drawn in code, its word beside it. */
+const giftMark = (): string => `<i class="army-gift" title="${esc(L('gift.note'))}"><s aria-hidden="true"></s><span>${esc(L('gift'))}</span></i>`;
+
+/** The army's card for the crew screen: the slots, the head count, what each kind is. `edit`: the captain's own hand on
+ *  them (owner, 2026-10-28) — pick a stack, split it into a free slot, drop it on its kind to merge, dismiss it. */
+export function armyPanel(army: readonly ArmyStack[], slots: number, edit = false): string {
   const men = army.reduce((n, s) => n + s.n, 0);
   const list = army.map((s) => {
     const d = UNITS[s.u];
     const r = unitRank(s.u);
-    return `<div class="army-line"><span class="army-thumb ${slotCls(s.u)}">${unitIcon(s.u, 'army-face-sm')}</span><div class="item-text"><b>${esc(unitName(s.u))} <span class="muted">×${s.n}</span> <span class="army-line-rate">${icon('act_attack', '', 'army-rate-ico')}${stackRating(armyPower([s]))}</span></b><span class="muted">${esc(L('tier', { n: d.tier }))}${d.up ? ` · ${esc(L('up'))}` : ''}${r ? ` · ${esc(L(`r.${r}` as K))}` : ''} · ${esc(L('stat', { atk: d.atk, def: d.def, dmin: d.dmin, dmax: d.dmax, hp: d.hp }))}${d.specials.length ? ` · ${esc(d.specials.map(specialName).join(', '))}` : ''}</span></div></div>`;
+    return `<div class="army-line"><span class="army-thumb ${slotCls(s.u)}">${unitIcon(s.u, 'army-face-sm')}</span><div class="item-text"><b>${esc(unitName(s.u))} <span class="muted">×${s.n}</span>${s.g ? ` <span class="chip army-gift-chip" title="${esc(L('gift.note'))}">${esc(L('gift'))}</span>` : ''} <span class="army-line-rate">${icon('act_attack', '', 'army-rate-ico')}${stackRating(armyPower([s]))}</span></b><span class="muted">${esc(L('tier', { n: d.tier }))}${d.up ? ` · ${esc(L('up'))}` : ''}${r ? ` · ${esc(L(`r.${r}` as K))}` : ''} · ${esc(L('stat', { atk: d.atk, def: d.def, dmin: d.dmin, dmax: d.dmax, hp: d.hp }))}${d.specials.length ? ` · ${esc(d.specials.map(specialName).join(', '))}` : ''}</span></div></div>`;
   }).join('');
   // docs/18 IV: the creatures aboard — their own window (food, ranks, the pen, the tamer).
   const beasts = army.some((x) => UNITS[x.u]?.beast) ? `<button class="btn btn-small army-tame" data-tame>${icon('build_kennel', '', 'ico-sm')}${esc(DL('open'))}</button>` : '';
-  return `<div class="card army-card"><h4 class="card-h">${icon('prof_marine', '', 'ico-md')}${esc(L('title'))} <span class="muted army-sum">${esc(L('men', { n: men }))} · ${esc(L('slots', { n: army.length, slots }))}${army.length ? ` · ${esc(L('rate', { n: stackRating(armyPower(army)) }))}` : ''}</span>${beasts}</h4>
-    ${armyRow(army, slots)}
+  return `<div class="card army-card"${edit ? ' data-army-edit' : ''}><h4 class="card-h">${icon('prof_marine', '', 'ico-md')}${esc(L('title'))} <span class="muted army-sum">${esc(L('men', { n: men }))} · ${esc(L('slots', { n: army.length, slots }))}${army.length ? ` · ${esc(L('rate', { n: stackRating(armyPower(army)) }))}` : ''}</span>${beasts}</h4>
+    ${edit ? editRow(army, slots) + opsBar(army, slots) : armyRow(army, slots)}
     <div class="army-list">${list}</div>
     <p class="muted army-hint">${esc(L('hint'))}</p></div>`;
 }
@@ -117,4 +123,170 @@ export function armyGlance(men: number, units: readonly UnitId[]): string {
   const w = strengthWord(men);
   const faces = units.slice(0, 7).map((u) => `<span class="army-mini${UNITS[u]?.up ? ' up' : ''}" title="${esc(unitName(u))}">${unitIcon(u, 'army-face-xs')}</span>`).join('');
   return `<div class="tg-army" title="${esc(L('strength'))}"><b class="tg-army-w">${esc(w.word)}</b> <span class="muted">${esc(w.range)}</span><span class="tg-army-faces">${faces}</span></div>`;
+}
+
+// ------------------------------------------------------------------------------------------------ the captain's hand
+// Owner, 2026-10-28 («дай возможность разделять пачку армии на маленькие пачки прям на корабле»): HoMM3's split and
+// merge on the crew screen. A tap (or a click) picks a stack; a tap on a stack of its kind merges them, on an empty
+// slot opens the split (a slider for the men that go); a drag does the same with a mouse. The server weighs it all
+// (server/src/game/armyops.ts). Held here between the window's redraws.
+
+let sel: string | null = null;
+let splitOf: string | null = null;
+let splitN = 1;
+let note = '';
+let dragKey: string | null = null;
+
+/** A pick, a split or a drag under way: the crew window waits with its redraw (main.ts). */
+export const armyEditing = (): boolean => !!(sel || splitOf || dragKey);
+
+const coarse = (): boolean => typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+
+function editRow(army: readonly ArmyStack[], slots: number): string {
+  const picked = army.find((x) => stackKey(x) === (splitOf ?? sel));
+  const out: string[] = [];
+  for (let i = 0; i < Math.max(slots, army.length); i++) {
+    const s = army[i];
+    if (!s) {
+      out.push(`<div class="army-slot empty${picked && picked.n > 1 ? ' target' : ''}" data-empty title="${esc(L('empty'))}"></div>`);
+      continue;
+    }
+    const k = stackKey(s);
+    const cls = k === (splitOf ?? sel) ? 'sel' : picked && picked !== s && picked.u === s.u && !!picked.g === !!s.g ? 'target' : '';
+    out.push(armySlot(s, cls).replace('<div class="army-slot', `<div draggable="true" data-sk="${esc(k)}" class="army-slot`));
+  }
+  return `<div class="army-row army-edit">${out.join('')}</div>`;
+}
+
+function opsBar(army: readonly ArmyStack[], slots: number): string {
+  const s = army.find((x) => stackKey(x) === (splitOf ?? sel));
+  const msg = note ? `<span class="army-ops-note bad">${esc(note)}</span>` : '';
+  if (!s) return `<div class="army-ops"><span class="muted">${esc(L('op.pick'))}</span>${msg}</div>`;
+  const name = `${esc(unitName(s.u))} ×${fmt(s.n)}`;
+  const cancel = `<button class="btn btn-small" data-op-cancel>${esc(L('op.cancel'))}</button>`;
+  if (splitOf) {
+    if (s.n < 2) return `<div class="army-ops"><b>${name}</b><span class="muted">${esc(L('split.one'))}</span><span class="army-ops-btns">${cancel}</span></div>`;
+    if (army.length >= slots) return `<div class="army-ops"><b>${name}</b><span class="bad">${esc(L('split.noslot'))}</span><span class="army-ops-btns">${cancel}</span></div>`;
+    const n = Math.max(1, Math.min(s.n - 1, splitN));
+    splitN = n;
+    return `<div class="army-ops army-split"><b>${esc(L('split.title', { name: unitName(s.u), n: fmt(s.n) }))}</b>
+      <input type="range" min="1" max="${s.n - 1}" step="1" value="${n}" data-split-n aria-label="${esc(L('op.split'))}">
+      <span class="army-split-nums"><span data-split-keep>${esc(L('split.keep', { a: fmt(s.n - n) }))}</span> · <b data-split-new>${esc(L('split.new', { b: fmt(n) }))}</b></span>
+      <span class="army-ops-btns"><button class="btn btn-small btn-primary" data-split-go>${esc(L('op.split'))}</button>${cancel}</span></div>`;
+  }
+  const noSplit = s.n < 2 || army.length >= slots;
+  return `<div class="army-ops"><b>${name}</b>${s.g ? ` <span class="chip army-gift-chip">${esc(L('gift'))}</span>` : ''}<span class="muted army-ops-hint">${esc(L(coarse() ? 'op.hintTouch' : 'op.hint'))}</span>${msg}
+    <span class="army-ops-btns"><button class="btn btn-small" data-op-split ${noSplit ? `disabled title="${esc(L(s.n < 2 ? 'split.one' : 'split.noslot'))}"` : ''}>${esc(L('op.split'))}</button><button class="btn btn-small btn-danger" data-op-dismiss ${army.length <= 1 ? 'disabled' : ''}>${esc(L('op.dismiss'))}</button>${cancel}</span></div>`;
+}
+
+/** The army card's hand wired (renderCrew): `army`, `slots` as the card was drawn. */
+export function wireArmy(root: HTMLElement, army: readonly ArmyStack[], slots: number, send: (m: ClientMsg) => void): void {
+  const card = root.querySelector<HTMLElement>('[data-army-edit]');
+  if (!card) return;
+  const find = (k: string | null) => (k ? army.find((x) => stackKey(x) === k) : undefined);
+  if (sel && !find(sel)) sel = null;
+  if (splitOf && !find(splitOf)) splitOf = null;
+  const redraw = () => {
+    const at = root.querySelector<HTMLElement>('[data-army-edit]');
+    if (!at) return;
+    at.outerHTML = armyPanel(army, slots, true);
+    wireArmy(root, army, slots, send);
+  };
+  const openSplit = (k: string) => {
+    const s = find(k);
+    if (!s) return;
+    sel = k;
+    splitOf = k;
+    splitN = Math.max(1, Math.floor(s.n / 2));
+    note = '';
+    redraw();
+  };
+  const mergeInto = (from: string, to: string): void => {
+    const a = find(from), b = find(to);
+    if (!a || !b || a === b) return;
+    if (a.u !== b.u) {
+      note = L('merge.kind');
+      return;
+    }
+    if (!!a.g !== !!b.g) {
+      note = L('merge.gift');
+      return;
+    }
+    send({ t: 'army', op: 'merge', k: from, to });
+    sel = splitOf = null;
+    note = '';
+  };
+  card.querySelectorAll<HTMLElement>('[data-sk]').forEach((el) => {
+    const k = el.dataset.sk!;
+    el.onclick = () => {
+      if (sel && sel !== k && !splitOf && find(sel)?.u === find(k)?.u) {
+        mergeInto(sel, k);
+        return redraw();
+      }
+      note = '';
+      splitOf = null;
+      sel = sel === k ? null : k;
+      redraw();
+    };
+    el.addEventListener('dragstart', (e) => {
+      dragKey = k;
+      e.dataTransfer?.setData('text/plain', k);
+      if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+    });
+    el.addEventListener('dragend', () => (dragKey = null));
+  });
+  card.querySelectorAll<HTMLElement>('[data-sk], [data-empty]').forEach((el) => {
+    el.addEventListener('dragover', (e) => {
+      if (dragKey) e.preventDefault();
+    });
+    el.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const from = dragKey ?? e.dataTransfer?.getData('text/plain') ?? '';
+      dragKey = null;
+      if (!from) return;
+      if (el.dataset.empty !== undefined) return openSplit(from); // (on an empty slot, Shift or not: HoMM3's split)
+      if (el.dataset.sk && el.dataset.sk !== from) mergeInto(from, el.dataset.sk);
+      redraw();
+    });
+  });
+  card.querySelectorAll<HTMLElement>('[data-empty]').forEach((el) => (el.onclick = () => {
+    if (sel) openSplit(sel);
+  }));
+  card.querySelector<HTMLElement>('[data-op-split]')?.addEventListener('click', () => {
+    if (sel) openSplit(sel);
+  });
+  card.querySelector<HTMLElement>('[data-op-cancel]')?.addEventListener('click', () => {
+    sel = splitOf = null;
+    note = '';
+    redraw();
+  });
+  card.querySelector<HTMLElement>('[data-op-dismiss]')?.addEventListener('click', () => {
+    const s = find(sel);
+    if (!s) return;
+    const k = stackKey(s);
+    void ask(L('dismiss.ask', { name: unitName(s.u), n: fmt(s.n) })).then((ok) => {
+      if (!ok) return;
+      send({ t: 'army', op: 'dismiss', k });
+      sel = splitOf = null;
+      note = '';
+      redraw();
+    });
+  });
+  const range = card.querySelector<HTMLInputElement>('[data-split-n]');
+  if (range) {
+    const s = find(splitOf);
+    range.oninput = () => {
+      splitN = Math.max(1, Math.floor(Number(range.value) || 1));
+      const keep = card.querySelector<HTMLElement>('[data-split-keep]'), nw = card.querySelector<HTMLElement>('[data-split-new]');
+      if (s && keep) keep.textContent = L('split.keep', { a: fmt(s.n - splitN) });
+      if (nw) nw.textContent = L('split.new', { b: fmt(splitN) });
+    };
+  }
+  card.querySelector<HTMLElement>('[data-split-go]')?.addEventListener('click', () => {
+    if (!splitOf) return;
+    send({ t: 'army', op: 'split', k: splitOf, n: splitN });
+    sel = splitOf = null;
+    note = '';
+    redraw();
+  });
 }

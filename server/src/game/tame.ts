@@ -319,7 +319,7 @@ export function fromPen(game: Game, s: PlayerSession, u: UnitId, n: number): str
   const have = st[u] ?? 0;
   if (have <= 0) return 'None of them in the pen.';
   const room = creatureRoom(ship, u);
-  if (room <= 0) return ship.army.length >= ship.armySlots && !ship.army.some((x) => x.u === u) ? 'No free slot in the army for a new kind of man.' : 'No hammocks left aboard';
+  if (room <= 0) return ship.army.length >= ship.armySlots && !ship.army.some((x) => x.u === u && !x.g) ? 'No free slot in the army for a new kind of man.' : 'No hammocks left aboard';
   const k = joinCreatures(game, s, u, Math.min(have, Math.floor(Number(n)) || have));
   if (k <= 0) return lackHammocks(1, ship.crew, ship.stats.crewMax);
   st[u] = have - k;
@@ -385,7 +385,7 @@ export function captureTake(game: Game, s: PlayerSession, o: CaptureOffer, choic
     return null;
   }
   const k = joinCreatures(game, s, o.u, o.n);
-  if (k <= 0) return creatureRoom(ship, o.u) <= 0 && !ship.army.some((x) => x.u === o.u) && ship.army.length >= ship.armySlots ? 'No free slot in the army for a new kind of man.' : 'No hammocks left aboard';
+  if (k <= 0) return creatureRoom(ship, o.u) <= 0 && !ship.army.some((x) => x.u === o.u && !x.g) && ship.army.length >= ship.armySlots ? 'No free slot in the army for a new kind of man.' : 'No hammocks left aboard';
   const rest = o.n - k;
   const home = rest > 0 ? sendToPen(game, s, o.u, rest) : 0;
   o.done = 'take';
@@ -454,7 +454,7 @@ export function tamerBuy(game: Game, s: PlayerSession, u: UnitId, n: number): st
   const row = pens.find((x) => x.u === u);
   if (!row || row.n <= 0) return 'The tamer has none of them this week.';
   const room = creatureRoom(ship, u);
-  if (room <= 0) return ship.army.length >= ship.armySlots && !ship.army.some((x) => x.u === u) ? 'No free slot in the army for a new kind of man.' : 'No hammocks left aboard';
+  if (room <= 0) return ship.army.length >= ship.armySlots && !ship.army.some((x) => x.u === u && !x.g) ? 'No free slot in the army for a new kind of man.' : 'No hammocks left aboard';
   const per = tamerAsks(u);
   const k = Math.min(row.n, room, Math.floor(Number(n)) || 1, Math.floor(s.profile!.gold / per));
   if (k <= 0) return `Needs ${per} silver`;

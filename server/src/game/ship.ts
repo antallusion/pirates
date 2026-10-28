@@ -13,7 +13,7 @@ import type { GoodId } from '../../../shared/src/data/goods.ts';
 import type { AmmoId, ChaserEnd } from '../../../shared/src/data/ships.ts';
 import { emptyAmmo } from '../../../shared/src/data/ships.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
-import { armyAdd, armyFit, armyMen, armyRemove, armyShot, armySlots, armyTidy } from '../../../shared/src/data/army.ts';
+import { armyAdd, armyFit, armyMen, armyRemove, armyShot, armySlots, armyTidy, stackKey } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
 import { rosterKind } from '../../../shared/src/data/factionunits.ts';
 import { rosterOf } from './army.ts';
@@ -458,9 +458,10 @@ export class ShipEntity {
     return r.lost;
   }
 
-  /** `n` men fall from one stack (the boarding battle knows whose); what could not come off it is not taken. */
-  loseFrom(u: UnitId, n: number): number {
-    const s = this._army.find((x) => x.u === u);
+  /** `n` men fall from one stack (the boarding battle knows whose: `key`, shared/src/data/army.ts stackKey; else the
+   *  plain stack of the kind first, then a gift's); what could not come off it is not taken. */
+  loseFrom(u: UnitId, n: number, key?: string): number {
+    const s = (key !== undefined ? this._army.find((x) => stackKey(x) === key) : undefined) ?? this._army.find((x) => x.u === u && !x.g) ?? this._army.find((x) => x.u === u);
     const k = Math.max(0, Math.min(Math.floor(n), s?.n ?? 0));
     if (!s || !k) return 0;
     s.n -= k;

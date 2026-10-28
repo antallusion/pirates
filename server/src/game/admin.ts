@@ -3,6 +3,7 @@ import { adminGift } from './dailygift.ts';
 import { fogAdmin } from './fog.ts';
 import { adminTgn } from './tgnotify.ts';
 import { adminAdvice } from './advice.ts';
+import { adminGift28 } from './gift28.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { funnelLine, telemetry } from '../http/telemetry.ts'; // docs/33
 import { opsSummary } from '../http/ops.ts'; // docs/34
@@ -281,6 +282,9 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
     // The advice mailer (owner, 2026-10-28): who would get what (dry), one captain's hints, sent now, the figures.
     case 'advice':
       return adminAdvice(game, s, args);
+    // Owner, 2026-10-28: the thank-you letter (33 333 silver and 10 gift musketeers) — counted, sent, told.
+    case 'gift28':
+      return adminGift28(game, args);
     // Telegram Stars (owner, 2026-10-11): a payment paid back by its charge id, its doubloons taken back.
     case 'refund':
       return adminRefund(game, s, args);

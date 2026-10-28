@@ -394,6 +394,10 @@ export type ClientMsg =
   | { t: 'seamark'; action: 'work'; id: number }
   | { t: 'seamark'; action: 'cancel' }
   | { t: 'mail'; action: 'list' }
+  /** Owner, 2026-10-28: her stacks by her own hand (server/src/game/armyops.ts) — `k`/`to` stack keys (army.ts stackKey). */
+  | { t: 'army'; op: 'split'; k: string; n: number }
+  | { t: 'army'; op: 'merge'; k: string; to: string }
+  | { t: 'army'; op: 'dismiss'; k: string }
   | { t: 'mail'; action: 'send'; to: string; subject: string; body: string; gold: number }
   | { t: 'mail'; action: 'read' | 'take' | 'delete'; id: number }
   | { t: 'market'; action: 'list' }
@@ -3238,6 +3242,8 @@ export interface LetterView {
   body: string;
   gold: number;
   goods: { good: GoodId; qty: number; port: string } | null;
+  /** Men enclosed and not yet taken (owner, 2026-10-28: the gift's musketeers; `gift`: a stack never refilled). */
+  units?: { u: UnitId; n: number; gift?: 1 };
   sentAt: number; // epoch ms
   read: boolean;
   taken: boolean;

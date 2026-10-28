@@ -166,7 +166,7 @@ export interface LandTownView {
 
 export type H3ClientMsg =
   | { t: 'h3'; action: 'dwell'; src: 'port' | 'isle' | 'lair' | 'way' }
-  | { t: 'h3'; action: 'recruit' | 'train'; src: 'port' | 'isle' | 'lair' | 'way'; u: UnitId; n: number }
+  | { t: 'h3'; action: 'recruit' | 'train'; src: 'port' | 'isle' | 'lair' | 'way'; u: UnitId; n: number; /** train: the stack by its key (shared/src/data/army.ts stackKey) */ k?: string }
   | { t: 'h3'; action: 'build'; id: TownId }
   | { t: 'h3'; action: 'learn'; id: OrderId }
   | { t: 'h3'; action: 'market'; give: GoodId | 'silver'; get: GoodId | 'silver'; n: number }
