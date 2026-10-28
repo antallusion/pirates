@@ -30,6 +30,7 @@ import { minesDailyOf, ownMines } from './mines.ts';
 import type { PlayerSession } from './player.ts';
 import { GRAIL_GROWTH, GRAIL_SILVER } from '../../../shared/src/data/advmap.ts';
 import { grailRaised, grailToRaise } from './grail.ts';
+import { razeView } from './raze.ts';
 
 export interface TownState {
   /** Each town building's level. */
@@ -344,6 +345,7 @@ export function townView(game: Game, s: PlayerSession, h: Holding, y: Yard): Tow
       ...(tier ? { pool: Math.floor(pools[tier] ?? 0), growth: Math.round(isleWeekGrowth(game, y, tier) * 10) / 10 } : {}),
       ...(id === 'guild' && level > 0 ? { orders: guildRows(game, s, h, y) } : {}),
       ...(id === 'pen' && level > 0 && townHooks.pen ? { pen: townHooks.pen(game, s, y) } : {}),
+      raze: level > 0 || j ? razeView(h, y, { town: id }) : null, // pulling it down (owner, 2026-10-28)
     };
   });
   const have = townHave(game, s, h, y);

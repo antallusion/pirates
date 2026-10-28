@@ -42,6 +42,7 @@ import type { TownState } from './town.ts';
 import { townOf } from '../../../shared/src/data/town.ts';
 import { freeCargo, questEvent } from './quests.ts'; // playthrough C: her jobs' cargo is not hers to spend
 import { HARVEST, extraCrews, harvestUntil } from './shop.ts';
+import { razeView } from './raze.ts';
 import { planView } from './isleplan.ts'; // docs/29 §8: what to build next (owner, 2026-10-17) // the premium shop's brigades and harvest (owner, 2026-10-15)
 
 const HOUR = 3_600_000;
@@ -619,6 +620,7 @@ export function baseView(game: Game, s: PlayerSession): BaseView | null {
       job: job ? jobView(job) : null, up,
       fresh: kind && o && 'p' in o ? Math.floor(y.fresh[PRODUCERS[kind].good] ?? 0) : 0,
       idle: !!(kind && o && 'p' in o && (y.res[PRODUCERS[kind].good] ?? 0) >= cap),
+      raze: what ? razeView(h, y, { plot: k }) : null, // pulling it down (owner, 2026-10-28)
     });
   }
   const locked: { plot: number; level: number }[] = [];

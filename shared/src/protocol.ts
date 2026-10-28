@@ -55,7 +55,7 @@ import type { Cargo, AmmoStock, ShipLoadout, TrophyHistory } from './sim/shipsta
 import type { IslandFeature } from './world/worldgen.ts';
 import type { IslandBiome, RegionId } from './world/regions.ts';
 import type { DailyKind } from './data/dailies.ts';
-import type { H3ClientMsg, H3ServerMsg, TownView } from './h3proto.ts';
+import type { H3ClientMsg, H3ServerMsg, RazeView, TownView } from './h3proto.ts';
 import type { H4ClientMsg, H4ServerMsg } from './h4proto.ts';
 import type { IsleClientMsg, IsleServerMsg } from './isleproto.ts';
 import type { FogClientMsg, FogServerMsg } from './fogproto.ts';
@@ -241,6 +241,8 @@ export type ClientMsg =
   | { t: 'base'; action: 'build'; plot: number; what: string }
   | { t: 'base'; action: 'upgrade'; plot: number }
   | { t: 'base'; action: 'move'; plot: number; to: number }
+  /** Pull a building down (owner, 2026-10-28): a plot's, or a town building's. */
+  | { t: 'base'; action: 'raze'; plot?: number; town?: string }
   | { t: 'base'; action: 'speedup'; job: number; pay: 'silver' | 'res' | 'token' }
   /** The island's shipyard (docs/15 item 4): her own ships built, raised, mended, taken to sea and sent home. */
   | { t: 'base'; action: 'ship_build'; role: OwnRole }
@@ -2596,6 +2598,8 @@ export interface BaseCellView {
   /** A producer's yield since the last collection; and whether it stands idle (its resource at the yard's cap). */
   fresh: number;
   idle: boolean;
+  /** Pulling it down (owner, 2026-10-28): the refund, why not. */
+  raze?: RazeView | null;
 }
 
 /** One's own island as a base (docs/15 items 1–3). */

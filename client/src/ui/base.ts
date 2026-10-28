@@ -21,7 +21,8 @@ import type { BaseCellView, BaseView, ClientMsg, OwnShipView } from '../../../sh
 import { OWN_ROLE_DEFS } from '../../../shared/src/data/baseships.ts';
 import { WATERS } from '../../../shared/src/data/baseclaim.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
-import { ask } from './confirm.ts';
+import { ask, askHtml } from './confirm.ts';
+import type { RazeView } from '../../../shared/src/h3proto.ts';
 import type { OwnRole } from '../../../shared/src/data/baseships.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
@@ -381,7 +382,7 @@ export class BaseWindow {
       : `<p class="muted">${esc(kind || c.level > 1 ? T29('max') : L('one_level'))}</p>`;
     const now = c.level && !raising && gives(c.level) ? `<p class="tr-now"><span class="muted">${esc(T29('givesNow'))}</span> ${esc(gives(c.level))}</p>` : '';
     return `${back}<div class="bsheet-h">${this.thumb(c)}<div><b>${esc(baseName(c.what))}</b> <span class="muted">${esc(L('plot', { n: c.plot + 1 }))}${c.level && !raising ? ` · ${esc(T29('lvOf', { n: c.level, max }))}` : ''}</span>${c.level && !raising && max > 1 ? pips(c.level, max) : ''}<p class="muted bdesc">${esc(baseText(c.what))}</p></div></div>
-      ${now}${state1}${job}${up}<div class="row bactions"><button class="btn btn-small" data-bmove>${esc(L('move'))}</button></div>${tiles}${foot}`;
+      ${now}${state1}${job}${up}<div class="row bactions"><button class="btn btn-small" data-bmove>${esc(L('move'))}</button>${this.razeBtn(c.raze, `plot:${c.plot}`)}</div>${this.razeWhy(c.raze)}${tiles}${foot}`;
   }
 
   /** The work under way on a building: its clock, its bar, and finishing it now (silver, provisions, a token). */
@@ -424,7 +425,46 @@ export class BaseWindow {
       <button class="btn btn-small btn-primary" data-tbuild="${t.id}"${n.why ? ' disabled' : ''}>${esc(t.level ? T29('upgrade') : T29('build'))}</button></div>`
       : !t.job ? `<p class="muted">${esc(T29('max'))}</p>` : '';
     const more = t.id === 'market' || t.id === 'guild' || t.id === 'pen' ? `<div class="row bactions"><button class="btn btn-small" data-btab="town">${esc(H('tab'))}</button></div>` : '';
-    return `${head}${now}${pool}${job}${next}${more}`;
+    const raze = t.raze && t.id !== 'hall' && t.id !== 'grail' ? `<div class="row bactions">${this.razeBtn(t.raze, `town:${t.id}`)}</div>${this.razeWhy(t.raze)}` : '';
+    return `${head}${now}${pool}${job}${next}${more}${raze}`;
+  }
+
+  /** «Снести» (owner, 2026-10-28): shut while something stands on it (the line under it names them). */
+  private razeBtn(r: RazeView | null | undefined, key: string): string {
+    if (!r) return '';
+    return `<button type="button" class="btn btn-small btn-danger" data-braze="${esc(key)}"${r.why ? ' disabled' : ''}>${esc(L('raze'))}</button>`;
+  }
+
+  private razeWhy(r: RazeView | null | undefined): string {
+    if (!r?.why) return '';
+    const list = r.need.map((n) => `${n.id === 'hall' ? TOWN.hall.names[0][lang() === 'ru' ? 1 : 0] : treeLabel(n.id, n.level)} ${n.level}`).join(', ');
+    return `<p class="muted tw-why braze-why">${esc(list ? L('raze_block', { list }) : sv(r.why))}</p>`;
+  }
+
+  /** The question before pulling it down: what is lost, what comes back. */
+  private razeAsk(v: BaseView, key: string): void {
+    const [kind, id] = key.split(':');
+    const town = kind === 'town' ? v.town?.things.find((x) => x.id === id) : undefined;
+    const cell = kind === 'plot' ? v.cells[Number(id)] : undefined;
+    const r = town?.raze ?? cell?.raze;
+    if (!r || r.why) return;
+    const name = town ? treeLabel(town.id, Math.max(1, town.level)) : baseName(cell!.what!);
+    const goods = (Object.entries(r.goods) as [GoodId, number][]).map(([g, n]) => `<span class="bcost">${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}</span>`).join('');
+    const what = r.silver || goods ? `<span class="bcosts">${r.silver ? `<span class="bcost">${money(r.silver)}</span>` : ''}${goods}</span>` : esc(L('raze_none'));
+    const lines = [
+      `<p id="confirm-text"><b>${esc(L('raze_q', { name }))}</b></p>`,
+      `<p>${esc(town ? L('raze_gone_town') : L('raze_gone'))}</p>`,
+      r.tier ? `<p class="bad">${esc(L('raze_dw', { t: r.tier, n: town?.pool ?? 0 }))}</p>` : '',
+      cell?.what && producerOf(cell.what) ? `<p>${esc(L('raze_prod'))}</p>` : '',
+      r.cancel ? `<p>${esc(L('raze_job'))}</p>` : '',
+      `<p class="braze-back">${esc(L('raze_back', { what: ' ', job: r.cancel ? L('raze_back_job') : '' })).replace(' ', what)}</p>`,
+    ];
+    void askHtml(lines.join(''), L('raze_yes')).then((ok) => {
+      if (!ok) return;
+      this.send(town ? { t: 'base', action: 'raze', town: town.id } : { t: 'base', action: 'raze', plot: Number(id) });
+      if (kind === 'plot') this.sel = null;
+      else this.selTown = null;
+    });
   }
 
   /** docs/29: the build queue — every work under way with its clock, the builders' crews. */
@@ -595,6 +635,7 @@ export class BaseWindow {
       this.moving = this.sel;
       redraw();
     });
+    root.querySelectorAll<HTMLElement>('[data-braze]').forEach((el) => (el.onclick = () => this.razeAsk(v, el.dataset.braze!)));
     root.querySelector<HTMLElement>('[data-bup]')?.addEventListener('click', () => this.sel !== null && this.send({ t: 'base', action: 'upgrade', plot: this.sel }));
     root.querySelectorAll<HTMLElement>('[data-bbuild]').forEach((el) => (el.onclick = () => this.sel !== null && this.send({ t: 'base', action: 'build', plot: this.sel, what: el.dataset.bbuild! })));
     root.querySelectorAll<HTMLElement>('[data-bspeed]').forEach((el) => (el.onclick = () => this.send({ t: 'base', action: 'speedup', job: Number(el.dataset.job), pay: el.dataset.bspeed as 'silver' })));

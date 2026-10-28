@@ -24,6 +24,8 @@ import { companionAction, stepCompanions } from './companion.ts';
 import { nemesisSankYou } from './nemesis.ts';
 import { sendTattoos, setTattoo, stepTattoos, takeChoice, tattooCount } from './tattoos.ts';
 import { caravanOrder, caravanShipLost, claimBerths, launchCaravan, sendCaravans, stepCaravans } from './caravans.ts';
+import type { TownId } from '../../../shared/src/data/town.ts';
+import { raze } from './raze.ts'; // pulling a building down (owner, 2026-10-28)
 import { baseView, collectYard, moveTo, orderBarge, speedup, startBuild, upgradeAt } from './base.ts';
 import { fogFlush, fogInit, fogReveal, fogSecond, scoutMessage, stepScoutNotices } from './fog.ts'; // the fog of war and the scouts (owner, 2026-10-17)
 import { ownShipsKill, shipBuild, shipLaunch, shipRecall, shipRepair, shipUpgrade, squadronOf, stepOwnShips } from './baseships.ts';
@@ -4109,6 +4111,8 @@ export class Game {
             return done(startBuild(this, s, Math.trunc(Number(msg.plot)), String(msg.what)));
           case 'upgrade':
             return done(upgradeAt(this, s, Math.trunc(Number(msg.plot))));
+          case 'raze':
+            return done(raze(this, s, typeof msg.town === 'string' ? { town: msg.town as TownId } : { plot: Math.trunc(Number(msg.plot)) }));
           case 'move':
             return done(moveTo(this, s, Math.trunc(Number(msg.plot)), Math.trunc(Number(msg.to))));
           case 'speedup':

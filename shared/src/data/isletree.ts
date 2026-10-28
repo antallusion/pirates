@@ -279,5 +279,12 @@ export function treePatterns(): Tr[] {
     ['The tree stands at level {0}: {1} buildings.', 'Всё дерево построек — на уровне {0}: зданий {1}.'],
     ['Bring your own ships home to the island first.', 'Сначала верните свои корабли к острову.'],
     ['{0} silver or {1} doubloons', '{0} серебра или {1} дублонов'],
+    // pulling a building down (owner, 2026-10-28: server/src/game/raze.ts)
+    ['The town hall carries the island: it cannot be pulled down.', 'Ратуша держит весь остров: её снести нельзя.'],
+    ['The Grail stays with the town for good.', 'Грааль остаётся с городом навсегда.'],
+    ['The shipwrights are at work on your ship: wait for them.', 'Корабелы работают над вашим кораблём: дождитесь их.'],
+    ['Other buildings stand on it: {0}.', 'Снести нельзя — на нём держатся: {0}.'],
+    ['{0} on {1} is pulled down: {2} silver to the treasury, the rest to the yard.', '{0} (остров {1}) снесено: {2} серебра в казну, остальное на склад.'],
+    ['Nothing stands there.', 'Здесь ничего не стоит.'],
   ];
 }

@@ -115,6 +115,17 @@ export interface TreeNeedView {
   have: number;
 }
 
+/** Pulling a building down (owner, 2026-10-28; server/src/game/raze.ts): what comes back (half of the standing levels,
+ *  the work under way whole), why not (and what stands on it), a dwelling's tier, whether work is cancelled. */
+export interface RazeView {
+  silver: number;
+  goods: Partial<Record<GoodId, number>>;
+  why: string | null;
+  need: { id: string; level: number }[];
+  cancel: boolean;
+  tier?: number;
+}
+
 export interface TownThingView {
   id: TownId;
   level: number;
@@ -128,6 +139,8 @@ export interface TownThingView {
   orders?: { id: OrderId; floor: number; known: boolean; why: string | null }[];
   /** docs/18 #20: the pen's nests (an egg, a young one, a grown kind breeding), the eggs she carries, its nests. */
   pen?: { nests: { k: BeastId; stage: 'egg' | 'young' | 'grown'; days: number; left: number; pool: number }[]; eggs: BeastId[]; max: number };
+  /** Pulling it down (null: nothing stands). */
+  raze?: RazeView | null;
 }
 
 export interface TownView {
