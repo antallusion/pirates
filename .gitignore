@@ -7,3 +7,6 @@ assets/raw/
 __pycache__/
 assets/future/**/*.png
 client/dist/
+
+# the RuStore APK build (android/rustore/build.sh)
+android/rustore/build/

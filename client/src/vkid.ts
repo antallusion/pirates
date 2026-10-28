@@ -19,8 +19,10 @@ const L = dict(EN, RU);
 const NOTE_KEY = 'gt.vkidNote';
 const TOKEN_KEY = 'gravetide.token';
 
-/** The website, not a Mini App. */
-export const vkIdPlace = (): boolean => !inVk() && !inTelegram() && !onTgHost();
+/** The RuStore app (android/rustore: a WebView that tells itself by its user agent): VK ID's redirect would leave it. */
+export const inRuStoreApp = (): boolean => typeof navigator !== 'undefined' && /GravetideRuStore\//.test(navigator.userAgent);
+/** The website, not a Mini App (nor the RuStore app). */
+export const vkIdPlace = (): boolean => !inVk() && !inTelegram() && !onTgHost() && !inRuStoreApp();
 
 let cfg: Promise<{ enabled: boolean; miniApp?: string } | null> | null = null;
 /** The server's VK ID (null: off, or not the website). */
