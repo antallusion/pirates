@@ -187,6 +187,7 @@ import { EN as FLAGS_EN, RU as FLAGS_RU } from './lang/ui/flags.ts';
 import { citiesHostile } from '../../shared/src/data/colours.ts';
 import { bootMark, settleViewport, watchViewport } from './viewport.ts'; // a start that always goes on (owner, 2026-10-16)
 import { startTelemetry, telemetryBoot } from './telemetry.ts'; // real-device telemetry (docs/33)
+import './ui/artaim.ts'; // every banner painting framed on its subject (owner, 2026-10-28)
 
 const L = dict(MAIN_EN, MAIN_RU);
 /** The captain last aboard on this device (docs/23 item 88: «Продолжить: …» on the title screen). */

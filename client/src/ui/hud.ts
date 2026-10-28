@@ -2,6 +2,7 @@
 // minimap, prompts, toasts, banners and chat.
 
 import { artBgAttr, artBgWire } from './artfall.ts';
+import { aimArt } from './artaim.ts';
 import { zoneBossCard } from '../../../shared/src/data/paintart.ts';
 import { drawFog, drawScouts } from '../render/fog.ts'; // the fog of war (owner, 2026-10-17)
 import { drawIslesMini, isleFill, wireMiniTip } from './islemap.ts'; // docs/18 III
@@ -1157,6 +1158,7 @@ export class Hud {
     // The beast's painting behind its name.
     const card = assetUrl(`card.${b.kind}`);
     el.style.setProperty('--card', card ? `url('${card}')` : 'none');
+    aimArt(el); // the beast's head in the bar, not its middle (owner, 2026-10-28)
     const pct = Math.max(0, Math.min(100, (b.hp / b.hpMax) * 100));
     // Each part a cell of one grid: its name, what is left of it, and a thread of its strength under both.
     const parts = b.parts.length ? `<div class="bparts">${b.parts.map((p) => {

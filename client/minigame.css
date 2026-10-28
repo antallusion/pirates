@@ -8,7 +8,7 @@ body:has(#minigame:not(.hidden)) #hud-goals, body:has(#minigame:not(.hidden)) #h
 @media (max-width: 699px) { body:has(#minigame:not(.hidden)) #tc-menu, body:has(#minigame:not(.hidden)) #hud-menu { visibility: hidden; } }
 
 #minigame .mg-card { background: rgba(10, 12, 16, 0.95); border: 1px solid rgba(232, 196, 106, 0.55); border-radius: 6px; padding: 10px 12px 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); }
-#minigame .mg-art { position: relative; margin: -4px -6px 8px; aspect-ratio: 2.6 / 1; background: #0b0d10 center / cover no-repeat; border: 1px solid rgba(232, 196, 106, 0.35); border-radius: 4px; box-shadow: inset 0 0 22px rgba(0, 0, 0, 0.8); overflow: hidden; }
+#minigame .mg-art { position: relative; margin: -4px -6px 8px; aspect-ratio: 2.6 / 1; background: #0b0d10 var(--art-pos, center 25%) / cover no-repeat; border: 1px solid rgba(232, 196, 106, 0.35); border-radius: 4px; box-shadow: inset 0 0 22px rgba(0, 0, 0, 0.8); overflow: hidden; }
 #minigame .mg-art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10, 12, 16, 0) 40%, rgba(10, 12, 16, 0.75)); pointer-events: none; }
 #minigame .mg-face { position: absolute; right: 10px; bottom: 8px; width: 64px; height: 64px; object-fit: cover; border-radius: 50%; border: 2px solid rgba(232, 196, 106, 0.7); background: rgba(10, 12, 16, 0.85); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7); z-index: 1; }
 #minigame .mg-h { font-family: var(--serif); font-size: 19px; font-weight: 700; color: #e8c46a; margin-bottom: 4px; line-height: 1.15; }
@@ -92,7 +92,7 @@ body:has(#minigame:not(.hidden)) #hud-goals, body:has(#minigame:not(.hidden)) #h
 }
 @media (max-height: 520px) {
   #minigame { top: calc(var(--sa-t, 0px) + 8px); max-height: calc(100vh - 16px); }
-  #minigame .mg-art { aspect-ratio: 5 / 1; }
+  #minigame .mg-art { aspect-ratio: 4.5 / 1; } /* a little taller lying down: the faces not a sliver (owner, 2026-10-28) */
   #minigame .mg-face { width: 40px; height: 40px; bottom: 4px; }
   #minigame .mg-text { display: none; }
 }

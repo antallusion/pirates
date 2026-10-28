@@ -4,6 +4,7 @@
 
 import { assetUrl } from '../assets.ts';
 import { DEAD_ART, esc } from './dom.ts';
+import { aimArt } from './artaim.ts';
 
 /** The addresses of a list's paintings that exist, best first (each once). */
 export function artUrls(ids: readonly (string | null | undefined)[]): string[] {
@@ -67,6 +68,7 @@ export function artBgWire(root: ParentNode): void {
         dead.add(urls[k]);
         if (k + 1 < urls.length) {
           el.style.backgroundImage = `url('${urls[k + 1]}')`;
+          aimArt(el); // the fallback framed on its own subject
           probe(k + 1);
         }
       };
