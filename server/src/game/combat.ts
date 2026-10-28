@@ -1043,7 +1043,9 @@ export function killMen(game: Game, target: ShipEntity, killed: number, source: 
   const fell = target.shotMen(killed, cap);
   killed = before - target.crew;
   if (!killed) return 0;
-  const wounded = woundedOf(game, target, killed);
+  // (a gift stack's dead are not carried below: they never come back to duty — owner, 2026-10-28)
+  const giftDead = fell.reduce((a, x) => a + (x.g ? x.n : 0), 0);
+  const wounded = woundedOf(game, target, Math.max(0, killed - giftDead));
   target.wounded += wounded;
   // docs/35: a captain's dead to the guns go on her record of the fallen (the wounded below come back by themselves;
   // the Drowned's crew rises by itself).

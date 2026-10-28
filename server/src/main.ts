@@ -12,6 +12,7 @@ import { Game } from './game/Game.ts';
 import { createStaticHandler } from './net/static.ts';
 import { LinkServer } from './net/link.ts';
 import { ZoneRuntime } from './zones/zone.ts';
+import { giftBoot } from './game/gift28.ts';
 import { parseLayout } from '../../shared/src/world/zones.ts';
 import { acceptUpgrade } from './net/websocket.ts';
 import { Database } from './persistence/db.ts';
@@ -177,6 +178,8 @@ if (process.env.ZONE) {
   console.log(`[${GAME_NAME}] zone ${process.env.ZONE} (${[...zone.regions].join(', ')}), mesh on ${zp}`);
 }
 game.start();
+// The thank-you letter of 2026-10-28 (server/src/game/gift28.ts): once, on the boot after the deploy (one process only).
+if (!process.env.ZONE) giftBoot(game);
 // Dedicated gateways relay their players here over the internal link.
 const link = process.env.LINK_PORT
   ? new LinkServer({ secret: process.env.LINK_SECRET ?? '', zone: process.env.ZONE_NAME ?? 'main', attach: (c) => game.attach(c) })

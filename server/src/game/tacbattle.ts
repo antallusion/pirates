@@ -38,6 +38,10 @@ export interface TacArmyEntry {
   u: UnitId;
   n: number;
   src?: UnitId;
+  /** The ship's own stack by its key (shared/src/data/army.ts stackKey): a split part's or a gift's losses come off it. */
+  sk?: string;
+  /** A gift stack (owner, 2026-10-28): its fallen never stand again — no First Aid, no rally, no resurrection. */
+  gift?: 1;
   /** docs/18 #39: a creature kind's rank (1–3): a tenth more attack, defence and hit points a rank. */
   rank?: number;
   /** docs/18 #44: a favourite kind of her path — attack and defence FAV_BONUS more. */
@@ -137,6 +141,9 @@ export interface TacStack {
   unit: UnitId;
   sp: UnitSpecial[];
   src: UnitId;
+  /** The ship's stack it is drawn from, by key, and a gift's mark (TacArmyEntry). */
+  sk?: string;
+  gift?: 1;
   count: number;
   start: number;
   hpTop: number;
@@ -553,7 +560,7 @@ export function buildStacks(input: TacSideInput, side: 0 | 1, cells: TacCell[], 
       if (blast && gunsOut > 0) shots = Math.max(1, Math.round(shots * (1 - gunsOut)));
       const hpM = Math.max(1, Math.round(d.hp * rk));
       out.push({
-        id: id++, side, kind: kindOfUnit(e.u), unit: e.u, sp: [...d.specials], src: e.src ?? e.u, count: Math.floor(e.n), start: Math.floor(e.n), hpTop: hpM, hpMax: hpM, hex: -1,
+        id: id++, side, kind: kindOfUnit(e.u), unit: e.u, sp: [...d.specials], src: e.src ?? e.u, ...(e.sk ? { sk: e.sk } : {}), ...(e.gift ? { gift: 1 as const } : {}), count: Math.floor(e.n), start: Math.floor(e.n), hpTop: hpM, hpMax: hpM, hex: -1,
         atk: r1(d.atk * rk * fk), def: r1(d.def * rk * fk), dmin: d.dmin, dmax: d.dmax, speed: d.speed, init: d.init, shots, shotsMax: shots, dmgMul: blast ? 1 - 0.5 * gunsOut : 1,
         ret: true, defending: false, waited: false, surged: false, again: 0, face: side ? 3 : 0,
         ...(skillOf(e.u) ? { skill: skillOf(e.u) } : {}),
@@ -3531,11 +3538,18 @@ export function quickFinish(bt: TacBattle, now: number, rng: Rng): void {
 // ------------------------------------------------------------------ the reckoning
 
 /** Men of each kind a side lost (the start less the living, the risen counted back). */
-export function lossesOf(bt: TacBattle, side: 0 | 1, slot?: number): { u: UnitId; n: number }[] {
-  const by = new Map<UnitId, number>();
-  // docs/25 item 67: one captain's own (`slot`; 0 the side's own captain), or the whole side's.
-  for (const s of bt.stacks) if (s.side === side && !s.summoned && s.start > s.count && (slot === undefined || (s.own ?? 0) === slot)) by.set(s.unit, (by.get(s.unit) ?? 0) + s.start - s.count);
-  return [...by].map(([u, n]) => ({ u, n }));
+export function lossesOf(bt: TacBattle, side: 0 | 1, slot?: number): { u: UnitId; n: number; g?: 1 }[] {
+  const by = new Map<string, { u: UnitId; n: number; g?: 1 }>();
+  // docs/25 item 67: one captain's own (`slot`; 0 the side's own captain), or the whole side's. A gift stack's dead
+  // apart (owner, 2026-10-28: they are never raised).
+  for (const s of bt.stacks) {
+    if (s.side !== side || s.summoned || s.start <= s.count || (slot !== undefined && (s.own ?? 0) !== slot)) continue;
+    const k = `${s.unit}${s.gift ? '!' : ''}`;
+    const e = by.get(k);
+    if (e) e.n += s.start - s.count;
+    else by.set(k, { u: s.unit, n: s.start - s.count, ...(s.gift ? { g: 1 as const } : {}) });
+  }
+  return [...by.values()];
 }
 
 /** Hit points of the other side's men cut down: what the victor's captain learns from the fight (HoMM3 reckons a

@@ -42,7 +42,7 @@ export function h3Message(game: Game, s: PlayerSession, msg: H3ClientMsg): void 
     case 'train': {
       const where = src(msg.src);
       if (where === 'lair' || where === 'way') return refresh(where);
-      err(train(game, s, where, String(msg.u) as UnitId, Math.trunc(Number(msg.n))));
+      err(train(game, s, where, String(msg.u) as UnitId, Math.trunc(Number(msg.n)), 'k' in msg && typeof msg.k === 'string' ? msg.k : undefined));
       return refresh(where);
     }
     case 'build':

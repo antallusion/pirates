@@ -434,7 +434,7 @@ function roamEnd(game: Game, s: PlayerSession, sp: RoamSpot, won: boolean, left:
   // Most of her fallen are hauled back out of the water.
   let room = Math.max(0, ship.stats.crewMax - ship.crew), raised = 0;
   for (const st0 of bt.stacks) {
-    if (st0.side !== 0 || st0.summoned) continue;
+    if (st0.side !== 0 || st0.summoned || st0.gift) continue; // (a gift stack's fallen stay fallen: owner, 2026-10-28)
     const d = st0.start - st0.count;
     const k = Math.min(room, Math.floor(d * ROAM_RAISE));
     if (k <= 0) continue;

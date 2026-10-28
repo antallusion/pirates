@@ -38,6 +38,9 @@ import { assetUrl } from '../assets.ts';
 import { ask } from './confirm.ts';
 import { T29 } from './isletree.ts'; // docs/29
 import { buildIcon, esc, fmt, icon, money, outpostIcon } from './dom.ts';
+import { unitName } from './army.ts'; // owner, 2026-10-28: a letter's men
+import { giftRoom } from '../../../shared/src/data/gift.ts';
+import type { UnitId } from '../../../shared/src/data/army.ts';
 import { placeName } from './maps.ts';
 import { skippersCard } from './turncoats.ts';
 import { renderAlbum, renderCareer, renownTab } from './renown.ts';
@@ -714,6 +717,7 @@ export class CompanyScreen {
       ${state.letters.map((l) => `<div class="card letter ${l.read ? '' : 'unread'}"><h4>${esc(serverText(l.subject))} <span class="muted">${L('let_meta', { from: esc(serverText(l.from)), ago: ago(l.sentAt) })}</span></h4>
         ${l.body ? `<p style="white-space:pre-wrap">${esc(serverText(l.body))}</p>` : ''}
         ${!l.taken ? `<p><b>${l.gold ? L('let_silver', { n: fmt(l.gold) }) : ''}${l.goods ? L('let_goods', { qty: l.goods.qty, good: esc(GOODS[l.goods.good].name), port: esc(state.ports.find((p) => p.id === l.goods!.port)?.name ?? l.goods.port) }) : ''}</b></p>` : ''}
+        ${!l.taken && l.units ? letterUnits(state, l.units) : ''}
         <div class="row" style="gap:6px">${!l.read ? `<button class="btn btn-small" data-read="${l.id}">${L('let_mark')}</button>` : ''}
           ${!l.taken ? `<button class="btn btn-small btn-primary" data-take="${l.id}" ${docked && (!l.goods || l.goods.port === docked) ? '' : `disabled title="${L('let_collect_port')}"`}>${L('let_collect')}</button>` : `<button class="btn btn-small" data-del="${l.id}">${L('let_burn')}</button>`}</div></div>`).join('') || `<p class="muted">${L('let_none')}</p>`}
     </div><div>
@@ -741,6 +745,8 @@ export class CompanyScreen {
     body.querySelectorAll<HTMLElement>('[data-read]').forEach((el) => (el.onclick = () => this.send({ t: 'mail', action: 'read', id: Number(el.dataset.read) })));
     body.querySelectorAll<HTMLElement>('[data-take]').forEach((el) => (el.onclick = () => this.send({ t: 'mail', action: 'take', id: Number(el.dataset.take) })));
     body.querySelectorAll<HTMLElement>('[data-del]').forEach((el) => (el.onclick = () => this.send({ t: 'mail', action: 'delete', id: Number(el.dataset.del) })));
+    // Owner, 2026-10-28: no room for the letter's men — the Crew window, to dismiss someone.
+    body.querySelectorAll<HTMLElement>('[data-let-crew]').forEach((el) => (el.onclick = () => dispatchEvent(new CustomEvent('gravetide:open', { detail: 'crew' }))));
   }
 
   private renderMarket(body: HTMLElement, state: ClientState): void {
@@ -894,4 +900,15 @@ function estateHtml(state: ClientState): string {
   if (e.rob) parts.push(`<div class="card est-card"><h4 class="card-h">${icon('tab_isles', '', 'ico-md')}<span>${esc(L('est_rob_title', { name: placeName(e.rob.name), owner: e.rob.owner }))}</span></h4><p class="muted">${esc(L('est_rob_text'))}</p>${e.rob.robbing !== null ? `<p class="bad">${esc(L('est_robbing', { n: e.rob.robbing }))}</p>` : e.rob.why ? `<p class="muted">${esc(serverText(e.rob.why))}</p>` : ''}<button class="btn btn-small btn-danger" data-est="rob_isle"${e.rob.why || e.rob.robbing !== null ? ' disabled' : ''}>${esc(L('est_rob_btn'))}</button></div>`);
   if (e.hall) parts.push(`<div class="card est-card"><button class="btn btn-small" data-est="visit" data-isl="${e.hall.island}">${esc(L('est_visit', { name: e.hall.owner }))}</button></div>`);
   return parts.length ? `<div class="est-wrap">${parts.join('')}</div>` : '';
+}
+
+/** A letter's men (owner, 2026-10-28: the gift's musketeers): who, a gift's mark, and — no slot or hammocks for them now
+ *  — the word to make room and the way to the Crew window. */
+function letterUnits(state: ClientState, x: { u: UnitId; n: number; gift?: 1 }): string {
+  const self = state.self, you = state.you;
+  const stacks = self?.company.army?.length ?? 0, slots = self?.company.armySlots ?? 7;
+  const crew = you?.crew ?? 0, crewMax = you?.crewMax ?? 0;
+  const room = !!self && !!you && giftRoom(stacks, slots, crew, crewMax, x.n);
+  return `<p class="let-units"><b>${esc(L('let_units', { unit: unitName(x.u), n: fmt(x.n) }))}</b>${x.gift ? ` <span class="chip army-gift-chip" title="${esc(L('let_gift_note'))}">${esc(L('let_gift'))}</span>` : ''}</p>
+    ${room ? '' : `<div class="let-noroom"><span class="bad">${esc(L(x.u === 'musketeer' ? 'let_noroom' : 'let_noroom_any'))}</span><button class="btn btn-small" data-let-crew>${icon('menu_crew', '', 'ico-sm')}${esc(L('let_crew'))}</button></div>`}`;
 }

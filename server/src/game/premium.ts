@@ -6,7 +6,7 @@
 // do (a slot, the hammocks). The pay, the goods and her save go in one transaction.
 
 import { lackDoubloons, lackSlot } from '../../../shared/src/data/buyfail.ts';
-import { UNITS, isPremiumUnit } from '../../../shared/src/data/army.ts';
+import { UNITS, isPremiumUnit, stackKey } from '../../../shared/src/data/army.ts';
 import { isShipBeast } from '../../../shared/src/data/shipbeasts.ts';
 import type { PremiumUnit, UnitId } from '../../../shared/src/data/army.ts';
 import { peopleOf } from '../../../shared/src/data/drifts.ts';
@@ -217,7 +217,7 @@ export function unitWhy(game: Game, s: PlayerSession, u: UnitId, o: PremiumUnit,
   if (!ship.alive || ship.boarding || ship.underFire(game.now) || landFighting(game, s)) return 'fight';
   if (peopleOf(u) === 'deep' && !keepsDeep(s) && s.profile!.captain !== 'drowned') return 'deep';
   if (ship.shipLevel < premiumFrom(UNITS[u].tier)) return 'tier';
-  if (!ship.army.some((x) => x.u === u) && ship.army.length >= ship.armySlots) return 'slot';
+  if (!ship.army.some((x) => x.u === u && !x.g) && ship.army.length >= ship.armySlots) return 'slot';
   if (creatureRoom(ship, u) < o.n * k) return 'room';
   return balance < (packOf(o.price, k)?.price ?? Infinity) ? 'poor' : null;
 }
@@ -257,7 +257,7 @@ function payOff(ship: ShipEntity, beasts: readonly { u: UnitId; n: number }[]): 
   const order = ship.army.filter((x) => !isPremiumUnit(x.u)).sort((a, b) => UNITS[a.u].tier - UNITS[b.u].tier || Number(UNITS[a.u].up) - Number(UNITS[b.u].up));
   for (const x of order) {
     if (short <= 0) break;
-    const k = ship.loseFrom(x.u, Math.min(x.n, short));
+    const k = ship.loseFrom(x.u, Math.min(x.n, short), stackKey(x));
     short -= k;
     gone += k;
   }

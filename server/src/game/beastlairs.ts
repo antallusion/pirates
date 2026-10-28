@@ -836,7 +836,7 @@ function settle(game: Game, s: PlayerSession, f: LandFight): void {
   for (const st of bt.stacks) {
     if (st.side !== 0 || st.summoned) continue;
     const d = st.start - st.count;
-    if (d > 0) ship.loseFrom(st.src, d);
+    if (d > 0) ship.loseFrom(st.src, d, st.sk);
   }
   ship.morale = Math.max(0, Math.min(100, bt.heroes[0].morale));
   const h = bt.heroes[0];
@@ -1178,7 +1178,7 @@ function signBeasts(game: Game, s: PlayerSession, u: BeastId, want: number, pool
     if (might <= 0) return `Your crew is as strong as a ship of level ${ship.shipLevel} carries: raise her level for better men.`;
     return 'Nobody waiting in that dwelling this week.';
   }
-  if (!ship.army.some((x) => x.u === u) && ship.army.length >= ship.armySlots) return lackSlot(ship.army.length, ship.armySlots);
+  if (!ship.army.some((x) => x.u === u && !x.g) && ship.army.length >= ship.armySlots) return lackSlot(ship.army.length, ship.armySlots);
   const silver = n * d.cost;
   const p = s.profile!;
   if (p.gold < silver) return lackMore(`Needs ${silver} silver`, silver, p.gold);
@@ -1524,7 +1524,7 @@ export function adminBeast(game: Game, s: PlayerSession, args: string[]): string
   if (!isCreature(u)) return `Kinds: ${CREATURE_IDS.join(', ')}.`;
   const ship = s.ship!;
   const n = Math.max(1, Math.min(500, Math.round(Number(args[1] ?? 10)) || 10));
-  if (!ship.army.some((x) => x.u === u) && ship.army.length >= ship.armySlots) return lackSlot(ship.army.length, ship.armySlots);
+  if (!ship.army.some((x) => x.u === u && !x.g) && ship.army.length >= ship.armySlots) return lackSlot(ship.army.length, ship.armySlots);
   const k = Math.max(0, Math.min(n, ship.stats.crewMax - ship.crew));
   if (k <= 0) return lackHammocks(1, ship.crew, ship.stats.crewMax);
   ship.addMen(u, k);

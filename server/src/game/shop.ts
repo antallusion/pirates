@@ -371,7 +371,7 @@ function grantWhy(game: Game, s: PlayerSession, st: ShopState, g: ShopGrant, off
       const u: UnitId = g.k === 'crew' ? 'deckhand' : RECRUIT_KINDS[g.tier - 1];
       if (g.k === 'units' && ship!.shipLevel < premiumFrom(g.tier)) return 'tier';
       const room = creatureRoom(ship!, u);
-      if (room <= 0 && ship!.army.length >= ship!.armySlots && !ship!.army.some((x) => x.u === u)) return 'slot';
+      if (room <= 0 && ship!.army.length >= ship!.armySlots && !ship!.army.some((x) => x.u === u && !x.g)) return 'slot';
       // (a pack signs on as many as the free hammocks hold, up to its number: room for one at least)
       return room < 1 ? 'room' : null;
     }

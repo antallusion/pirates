@@ -199,11 +199,23 @@ export const hasSpecial = (u: UnitId, s: UnitSpecial): boolean => UNITS[u].speci
 /** A kind only the premium shop sells: every free source passes it over. */
 export const isPremiumUnit = (u: UnitId): boolean => !!UNITS[u]?.premium;
 
-/** One slot of the army: a kind of man and how many of him. */
+/** One slot of the army: a kind of man and how many of him. `g`: a gift stack (owner, 2026-10-28: the letter's
+ *  musketeers) — it fights, trains and splits as any other, but nothing ever refills its losses (no hire, no First
+ *  Aid, no resurrection, no merge with hired men). `p`: a part split off by the captain (HoMM3's split stacks) — kept
+ *  apart from the rest of its kind until she merges it back. */
 export interface ArmyStack {
   u: UnitId;
   n: number;
+  g?: 1;
+  p?: number;
 }
+
+/** A stack's identity in her army: its kind, the gift's mark, the part's tag ('musketeer', 'musketeer!', 'marine#2'). */
+export const stackKey = (s: { u: UnitId; g?: 1 | boolean; p?: number }): string => `${s.u}${s.g ? '!' : ''}${s.p ? `#${s.p}` : ''}`;
+/** The plain (not a gift) stack of a kind aboard — where hired, joined and raised men go. */
+export const ownStack = <T extends ArmyStack>(army: readonly T[], u: UnitId): T | undefined => army.find((s) => s.u === u && !s.g);
+/** A plain stack of a kind aboard (a gift stack of it takes no hired men in). */
+export const hasOwn = (army: readonly ArmyStack[], u: UnitId): boolean => army.some((s) => s.u === u && !s.g);
 
 export const ARMY_SLOTS_MAX = 7;
 
@@ -218,11 +230,22 @@ export function armyMen(army: readonly ArmyStack[]): number {
   return n;
 }
 
-/** Same kinds in one slot, empty slots gone, the strongest first (as the stacks stand in the ship's screen). */
+/** Same kinds in one slot (a gift stack and a split part apart), empty slots gone, the strongest first (as the stacks
+ *  stand in the ship's screen). A part left alone of its kind loses its tag. */
 export function armyTidy(army: readonly ArmyStack[]): ArmyStack[] {
-  const by = new Map<UnitId, number>();
-  for (const s of army) if (s && UNITS[s.u] && s.n > 0) by.set(s.u, (by.get(s.u) ?? 0) + Math.floor(s.n));
-  return [...by].map(([u, n]) => ({ u, n })).sort((a, b) => UNITS[b.u].tier - UNITS[a.u].tier || Number(UNITS[b.u].up) - Number(UNITS[a.u].up));
+  const by = new Map<string, ArmyStack>();
+  for (const s of army) {
+    if (!s || !UNITS[s.u] || !(s.n > 0)) continue;
+    const g = !!s.g;
+    const p = Number.isInteger(s.p) && (s.p as number) > 0 ? (s.p as number) : 0;
+    const k = stackKey({ u: s.u, g, p });
+    const e = by.get(k);
+    if (e) e.n += Math.floor(s.n);
+    else by.set(k, { u: s.u, n: Math.floor(s.n), ...(g ? { g: 1 as const } : {}), ...(p ? { p } : {}) });
+  }
+  const out = [...by.values()];
+  for (const s of out) if (s.p && !out.some((o) => o !== s && o.u === s.u && !!o.g === !!s.g)) delete s.p;
+  return out.sort((a, b) => UNITS[b.u].tier - UNITS[a.u].tier || Number(UNITS[b.u].up) - Number(UNITS[a.u].up));
 }
 
 /** How exposed one man of a kind is to shot and splinters beside a deckhand: the tougher and the better covered, the
@@ -243,7 +266,7 @@ export function armyKillFactor(army: readonly ArmyStack[]): number {
 
 /** Take `k` men off the army (in place), the stacks losing by their share of the exposed men; what each lost. */
 export function armyRemove(army: ArmyStack[], k: number): ArmyStack[] {
-  const out = new Map<UnitId, number>();
+  const out = new Map<string, ArmyStack>();
   let left = Math.max(0, Math.floor(k));
   for (let guard = 0; left > 0 && guard < 20; guard++) {
     const live = army.filter((s) => s.n > 0);
@@ -266,11 +289,14 @@ export function armyRemove(army: ArmyStack[], k: number): ArmyStack[] {
       if (!take[i]) return;
       s.n -= take[i];
       left -= take[i];
-      out.set(s.u, (out.get(s.u) ?? 0) + take[i]);
+      const key = `${s.u}${s.g ? '!' : ''}`;
+      const e = out.get(key);
+      if (e) e.n += take[i];
+      else out.set(key, { u: s.u, n: take[i], ...(s.g ? { g: 1 as const } : {}) });
     });
   }
   for (let i = army.length - 1; i >= 0; i--) if (army[i].n <= 0) army.splice(i, 1);
-  return [...out].map(([u, n]) => ({ u, n }));
+  return [...out.values()];
 }
 
 /** One man's hit points against shot and splinters: his health with his defence as HoMM3 reckons it, 5% a point (a
@@ -307,7 +333,7 @@ export function armyShot(army: ArmyStack[], k: number, wound = 0, cap = Infinity
       s.n -= kill;
       room -= kill;
       left -= kill * per;
-      lost.push({ u: s.u, n: kill });
+      lost.push({ u: s.u, n: kill, ...(s.g ? { g: 1 as const } : {}) });
     }
     if (room <= 0) break;
     if (s.n > 0) {
@@ -319,11 +345,12 @@ export function armyShot(army: ArmyStack[], k: number, wound = 0, cap = Infinity
   return { lost, wound: army.length ? out : 0 };
 }
 
-/** Put `n` men of a kind aboard (in place): into their own stack, a new slot, or — the slots full — the lowest stack. */
+/** Put `n` men of a kind aboard (in place): into their own stack, a new slot, or — the slots full — the lowest stack.
+ *  Never into a gift stack (its losses are never made good): a plain stack of the kind, or a slot of its own. */
 export function armyAdd(army: ArmyStack[], n: number, slots: number, u: UnitId = 'deckhand'): void {
   n = Math.floor(n);
   if (n <= 0) return;
-  const own = army.find((s) => s.u === u);
+  const own = ownStack(army, u);
   if (own) {
     own.n += n;
     return;
@@ -332,25 +359,57 @@ export function armyAdd(army: ArmyStack[], n: number, slots: number, u: UnitId =
     army.push({ u, n });
     return;
   }
-  let low = army[0];
-  for (const s of army) if (UNITS[s.u].tier < UNITS[low.u].tier || (UNITS[s.u].tier === UNITS[low.u].tier && !UNITS[s.u].up)) low = s;
+  let low: ArmyStack | undefined;
+  for (const s of army) if (!s.g && (!low || UNITS[s.u].tier < UNITS[low.u].tier || (UNITS[s.u].tier === UNITS[low.u].tier && !UNITS[s.u].up))) low = s;
   if (low) low.n += n;
   else army.push({ u, n });
 }
 
-/** Keep at most `slots` stacks (in place): the smallest folded into the lowest that stays. */
+/** Keep at most `slots` stacks (in place): the split parts first back into their kind, then the smallest folded into
+ *  the lowest that stays. A gift stack is never folded into another nor takes another in. */
 export function armyFit(army: ArmyStack[], slots: number): void {
-  const t = armyTidy(army);
+  let t = armyTidy(army);
+  if (t.length > slots && t.some((s) => s.p)) t = armyTidy(t.map(({ p: _p, ...s }) => s));
   army.length = 0;
   army.push(...t);
   while (army.length > slots) {
-    let small = 0;
-    for (let i = 1; i < army.length; i++) if (army[i].n < army[small].n) small = i;
+    const plain = army.map((_, i) => i).filter((i) => !army[i].g);
+    if (plain.length < 2) break;
+    let small = plain[0];
+    for (const i of plain) if (army[i].n < army[small].n) small = i;
     const [s] = army.splice(small, 1);
-    let low = 0;
-    for (let i = 1; i < army.length; i++) if (UNITS[army[i].u].tier < UNITS[army[low].u].tier) low = i;
+    let low = -1;
+    for (let i = 0; i < army.length; i++) if (!army[i].g && (low < 0 || UNITS[army[i].u].tier < UNITS[army[low].u].tier)) low = i;
     army[low].n += s.n;
   }
+}
+
+/** Split `n` men off the stack `key` into a new stack of their own (a copy; HoMM3's split): the same kind, the gift's
+ *  mark kept, a part's tag of its own. Why not, or the army after. */
+export function armySplit(army: readonly ArmyStack[], key: string, n: number, slots: number): ArmyStack[] | string {
+  const out = army.map((s) => ({ ...s }));
+  const s = out.find((x) => stackKey(x) === key);
+  if (!s) return 'No such stack aboard';
+  n = Math.floor(Number(n));
+  if (!Number.isFinite(n) || n < 1 || n >= s.n) return 'Split off at least one man and leave one';
+  if (out.length >= slots) return 'No free slot in the army for a new stack';
+  let p = 1;
+  while (out.some((x) => x.u === s.u && !!x.g === !!s.g && (x.p ?? 0) === p)) p++;
+  s.n -= n;
+  out.push({ u: s.u, n, ...(s.g ? { g: 1 as const } : {}), p });
+  return out;
+}
+
+/** Merge the stack `from` into the stack `to` (a copy): only the same kind, and a gift only with a gift. */
+export function armyMerge(army: readonly ArmyStack[], from: string, to: string): ArmyStack[] | string {
+  const out = army.map((s) => ({ ...s }));
+  const a = out.find((x) => stackKey(x) === from), b = out.find((x) => stackKey(x) === to);
+  if (!a || !b || a === b) return 'No such stack aboard';
+  if (a.u !== b.u) return 'Only stacks of the same kind merge';
+  if (!!a.g !== !!b.g) return 'A gift stack keeps to itself: it never merges with hired men';
+  b.n += a.n;
+  out.splice(out.indexOf(a), 1);
+  return out;
 }
 
 /** Whose men a ship carries: a merchant's hands, a pirate's boarders, a navy's marines and guards, the deep's dead, a

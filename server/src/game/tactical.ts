@@ -11,7 +11,7 @@ import { deckTheme } from '../../../shared/src/data/tacprops.ts'; // owner, 2026
 import { deckGift } from './shipgifts.ts'; // the premium hulls' gifts (docs/02 §1.A.9)
 import { FIRST_NAMES, LAST_NAMES } from '../../../shared/src/data/crew.ts';
 import type { OfficerRole } from '../../../shared/src/data/crew.ts';
-import { armyCost, hasSpecial, UNITS } from '../../../shared/src/data/army.ts';
+import { armyCost, hasSpecial, stackKey, UNITS } from '../../../shared/src/data/army.ts';
 import { TAC_END_WINDOW, TAC_LEN, TAC_RAISE_MAX, TAC_RESIST, TAC_WOUNDED, kindOfUnit, npcBoardSlots } from '../../../shared/src/data/tactical.ts';
 import { npcHeroLevel } from '../../../shared/src/data/hero.ts';
 import type { TacAction } from '../../../shared/src/protocol.ts';
@@ -162,7 +162,8 @@ export function sideOf(game: Game, ship: ShipEntity, enemy: ShipEntity, attacker
   }
   // Every stack of her army goes on deck (a ship without men still sends her last hand); a tamed kind with its rank
   // (docs/18 #39).
-  const army: TacArmyEntry[] = rankArmy(s?.profile, ship.army.map((x) => ({ u: x.u, n: x.n, src: x.u })));
+  // (each by its stack's key, a gift's marked: its losses come off it and never stand again — owner, 2026-10-28)
+  const army: TacArmyEntry[] = rankArmy(s?.profile, ship.army.map((x) => ({ u: x.u, n: x.n, src: x.u, sk: stackKey(x), ...(x.g ? { gift: 1 as const } : {}) })));
   if (!army.length) army.push({ u: 'deckhand', n: 1, src: 'deckhand' });
   // The Marines talent: a tenth of the hands a rank are drilled to fight as marines (for the fight; they stay hands).
   const men = army.reduce((n, x) => n + x.n, 0);
@@ -170,7 +171,7 @@ export function sideOf(game: Game, ship: ShipEntity, enemy: ShipEntity, attacker
   const drilled = hands ? Math.min(hands.n - 1, Math.round(men * Math.min(0.3, tx(ship.stats, 'marines')))) : 0;
   if (hands && drilled > 0) {
     hands.n -= drilled;
-    army.push({ u: 'marine', n: drilled, src: hands.u });
+    army.push({ u: 'marine', n: drilled, src: hands.u, ...(hands.sk ? { sk: hands.sk } : {}), ...(hands.gift ? { gift: 1 as const } : {}) });
   }
   const count = (f: (x: TacArmyEntry) => boolean) => army.filter(f).reduce((n, x) => n + x.n, 0);
   const deck = deckState(ship);
@@ -304,24 +305,27 @@ function sync(game: Game, a: ShipEntity, b: ShipEntity, bt: TacBattle): void {
 
 /** One captain's stacks since last seen: her dead off her ship, her risen standing again (`k`: what her side was grown
  *  by — her ship loses her own share). The men she lost (less the risen). */
-function takeLosses(game: Game, ship: ShipEntity, other: ShipEntity, stacks: TacBattle['stacks'], seen: Map<number, number>, k: number, startCrew: number): number {
+export function takeLosses(game: Game, ship: ShipEntity, other: ShipEntity, stacks: TacBattle['stacks'], seen: Map<number, number>, k: number, startCrew: number): number {
   // Each stack's change since last seen: its dead to take off, its risen to stand again.
-  const deltas: { src: TacArmyEntry['u']; d: number }[] = [];
+  const deltas: { src: TacArmyEntry['u']; d: number; sk?: string; gift?: 1 }[] = [];
   let d = 0;
   for (const s of stacks) {
     const was = seen.get(s.id) ?? s.start;
+    // A gift stack's raised in the fight never stand aboard (owner, 2026-10-28): its mark stays at its lowest, so
+    // the raised who fall again cost the ship nothing.
+    if (s.gift && s.count >= was) continue;
     if (was !== s.count) {
       const x = k > 1 ? Math.round((was - s.count) / k) : was - s.count;
-      if (x) deltas.push({ src: s.src, d: x });
+      if (x) deltas.push({ src: s.src, d: x, ...(s.sk ? { sk: s.sk } : {}), ...(s.gift ? { gift: 1 as const } : {}) });
       d += x;
     }
     seen.set(s.id, s.count);
   }
   if (!d) return 0;
   if (d < 0) {
-    // Rallied: the lightly hurt stand up again, in their own stacks.
+    // Rallied: the lightly hurt stand up again, in their own stacks (never a gift stack's: owner, 2026-10-28).
     let room = Math.max(0, ship.stats.crewMax - ship.crew);
-    for (const x of deltas) if (x.d < 0 && room > 0) {
+    for (const x of deltas) if (x.d < 0 && room > 0 && !x.gift) {
       const n = Math.min(room, -x.d);
       ship.addMen(x.src, n);
       room -= n;
@@ -334,7 +338,7 @@ function takeLosses(game: Game, ship: ShipEntity, other: ShipEntity, stacks: Tac
   const living = drownedTakeLosses(game, ship, n);
   for (const x of deltas) {
     if (x.d <= 0 || n <= 0) continue;
-    n -= ship.loseFrom(x.src, Math.min(n, x.d));
+    n -= ship.loseFrom(x.src, Math.min(n, x.d), x.sk);
   }
   if (n > 0) ship.loseMen(n); // a stack already gone ashore in the ship's books: the loss falls where it can
   onCrewKilled(game, ship, living, other);

@@ -18,6 +18,10 @@ import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
 import { WAREHOUSE_VOLUME, warehouseVolume } from './resources.ts';
+import { UNITS } from '../../../shared/src/data/army.ts';
+import type { UnitId } from '../../../shared/src/data/army.ts';
+import { GIFT28_NO_ROOM, giftRoom } from '../../../shared/src/data/gift.ts';
+import { reconcile } from './crew.ts';
 
 export const POSTAGE = 10;
 export const DRAFT_FEE = 0.02;
@@ -38,6 +42,11 @@ export interface Letter {
   body: string;
   gold: number;
   goods: { good: GoodId; qty: number; port: string } | null;
+  /** Men enclosed (owner, 2026-10-28: the gift's musketeers): a stack of their own, a gift's (`gift`) if marked. They
+   *  wait in the letter until there is a slot and the hammocks for them; the silver goes at once (`goldTaken`). */
+  units?: { u: UnitId; n: number; gift?: 1 } | null;
+  unitsTaken?: boolean;
+  goldTaken?: boolean;
   sentAt: number;
   arriveAt: number;
   read: boolean;
@@ -109,7 +118,7 @@ function mailbox(game: Game, accountId: number): Mailbox {
 function saveMailbox(game: Game, accountId: number, box: Mailbox): void {
   // Keep the newest; never drop a letter still holding silver or goods.
   if (box.letters.length > MAILBOX_MAX) {
-    const keep = box.letters.filter((l) => (!l.taken && (l.gold > 0 || l.goods)) || !l.read);
+    const keep = box.letters.filter((l) => (!l.taken && (l.gold > 0 || l.goods || l.units)) || !l.read);
     const rest = box.letters.filter((l) => !keep.includes(l)).slice(-Math.max(0, MAILBOX_MAX - keep.length));
     box.letters = [...keep, ...rest].sort((a, b) => a.id - b.id);
   }
@@ -125,7 +134,7 @@ export function lettersSince(game: Game, accountId: number, since: number): Lett
 export function deliver(game: Game, accountId: number, l: Omit<Letter, 'id' | 'sentAt' | 'arriveAt' | 'read' | 'taken'>, delayMs = 0): Letter {
   const box = mailbox(game, accountId);
   const now = game.wallNow();
-  const letter: Letter = { ...l, id: box.next++, sentAt: now, arriveAt: now + delayMs, read: false, taken: !(l.gold > 0 || l.goods) };
+  const letter: Letter = { ...l, id: box.next++, sentAt: now, arriveAt: now + delayMs, read: false, taken: !(l.gold > 0 || l.goods || l.units) };
   box.letters.push(letter);
   saveMailbox(game, accountId, box);
   const s = game.sessionByAccount(accountId);
@@ -146,7 +155,10 @@ function announce(game: Game, s: PlayerSession, l: Letter): void {
 }
 
 function view(l: Letter): LetterView {
-  return { id: l.id, from: l.from, subject: l.subject, body: l.body, gold: l.gold, goods: l.goods, sentAt: l.sentAt, read: l.read, taken: l.taken };
+  return {
+    id: l.id, from: l.from, subject: l.subject, body: l.body, gold: l.goldTaken ? 0 : l.gold, goods: l.goods, sentAt: l.sentAt, read: l.read, taken: l.taken,
+    ...(l.units && !l.unitsTaken ? { units: l.units } : {}),
+  };
 }
 
 export function sendMail(game: Game, s: PlayerSession): void {
@@ -202,6 +214,7 @@ export function mailTake(game: Game, s: PlayerSession, id: number): string | nul
   const box = mailbox(game, s.accountId);
   const l = box.letters.find((x) => x.id === id && x.arriveAt <= game.wallNow());
   if (!l || l.taken) return 'Nothing to collect';
+  if (l.units) return takeUnits(game, s, box, l);
   if (l.goods) {
     if (l.goods.port !== ship.docked) return `The goods wait in ${game.portById(l.goods.port)?.name ?? l.goods.port}`;
     const g = l.goods.good;
@@ -222,6 +235,43 @@ export function mailTake(game: Game, s: PlayerSession, id: number): string | nul
   game.sendTo(s, { t: 'toast', msg: `Collected${l.gold ? ` ${l.gold} silver` : ''}${l.goods ? ` ${l.goods.qty} ${GOODS[l.goods.good].name}` : ''}.`, kind: 'gold' });
   sendMail(game, s);
   return null;
+}
+
+/** A letter with men in it: the silver at once; the men as their own stack (a gift's marked) when a slot and the
+ *  hammocks are free — else they wait in the letter, and she is told to make room in the Crew window. */
+function takeUnits(game: Game, s: PlayerSession, box: Mailbox, l: Letter): string | null {
+  const ship = s.ship!;
+  const p = s.profile!;
+  const u = l.units!;
+  let silver = 0;
+  if (l.gold > 0 && !l.goldTaken) {
+    p.gold += l.gold;
+    silver = l.gold;
+    l.goldTaken = true;
+    game.db.ledger(s.accountId, 'letter', l.gold, `mail:${l.id}`);
+  }
+  l.read = true;
+  let why: string | null = null;
+  if (!l.unitsTaken) {
+    if (!UNITS[u.u]) l.unitsTaken = true;
+    else if (ship.boarding || ship.grappled) why = 'Not in the middle of a boarding';
+    else if (!giftRoom(ship.army.length, ship.armySlots, ship.crew, ship.stats.crewMax, u.n)) why = GIFT28_NO_ROOM;
+    else {
+      reconcile(game, p.company, ship.crew);
+      ship.setArmy([...ship.army.map((x) => ({ ...x })), { u: u.u, n: u.n, ...(u.gift ? { g: 1 as const } : {}) }]);
+      p.company.pools.gunner += u.n;
+      ship.companyKey = '';
+      l.unitsTaken = true;
+      game.db.ledger(s.accountId, 'letter_units', 0, `mail:${l.id}:${u.u}:${u.n}${u.gift ? ':gift' : ''}`);
+    }
+  }
+  l.taken = !!l.unitsTaken && (l.gold <= 0 || !!l.goldTaken);
+  saveMailbox(game, s.accountId, box);
+  game.saveSession(s);
+  if (silver > 0) game.sendTo(s, { t: 'toast', msg: `Collected ${silver} silver from the letter.`, kind: 'gold' });
+  if (l.unitsTaken && !why) game.sendTo(s, { t: 'toast', msg: `New men aboard from the letter: ${u.n}, a stack of their own.`, kind: 'good' });
+  sendMail(game, s);
+  return why;
 }
 
 export function mailDelete(game: Game, s: PlayerSession, id: number): string | null {

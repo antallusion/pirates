@@ -72,7 +72,7 @@ import type { RoamView } from '../../shared/src/roamproto.ts';
 import { UNITS as ROAM_UNITS } from '../../shared/src/data/army.ts';
 import { backClock, roamBackLeft, roamName, roamNow } from './render/roamers.ts';
 import { openRoamCard } from './ui/roamcard.ts';
-import { strengthWord as roamWord } from './ui/army.ts';
+import { armyEditing, strengthWord as roamWord } from './ui/army.ts';
 import { EN as ROAM_EN, RU as ROAM_RU } from './lang/ui/roamers.ts';
 import { EN as REACH_EN, RU as REACH_RU } from './lang/ui/reach.ts';
 import type { Act, ActFacts } from './ui/actbar.ts';
@@ -700,6 +700,11 @@ const openWardrobe = (): void => openShop(false, { tab: 'cos', wardrobe: true })
 // «Свиток автобоя» (owner, 2026-10-11): «Купить» on the battle bar and in the locker opens the shop at its scrolls;
 // the island's scene at its builders, the harbour at the sea's goods (owner, 2026-10-15: the three tabs).
 const SHOP_AT: Record<string, Parameters<PremiumWindow['open']>[1]> = { scrolls: { tab: 'board', sec: 'battle' }, isle: { tab: 'isle', sec: 'build' }, sea: { tab: 'sea', sec: 'supply' }, board: { tab: 'board', sec: 'recruit' } };
+// Owner, 2026-10-28: a window asked for from inside another (a letter's men with no room: the Crew window).
+addEventListener('gravetide:open', (e) => {
+  const m = (e as CustomEvent).detail;
+  if (m === 'crew') openModal('crew');
+});
 addEventListener('gravetide:shop', (e) => {
   const d = (e as CustomEvent).detail;
   // (a personal offer's «Подробнее» names its tab and shelf, promo.ts; the top-up: 'topup')
@@ -1995,6 +2000,8 @@ function onMessage(m: ServerMsg): void {
           lastSelfKey = key;
           refreshModal();
         }
+      } else if (modal === 'crew' && armyEditing()) {
+        // (a stack picked, a split's slider or a drag under way: the redraw waits — owner, 2026-10-28)
       } else if (modal === 'port' || modal === 'talents' || modal === 'ship' || modal === 'crew' || modal === 'mutiny' || modal === 'barter') refreshModal();
       break;
     case 'mutiny':
