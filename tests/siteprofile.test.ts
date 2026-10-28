@@ -14,6 +14,7 @@ import { newProfile } from '../server/src/game/player.ts';
 import { siteRoutes, SITE_LIMITS } from '../server/src/http/site-routes.ts';
 import type { WebShop } from '../server/src/game/webshop.ts';
 import { makeGame } from './helpers.ts';
+import { TALENTS_BY_ID } from '../shared/src/data/talents.ts';
 
 type G = ReturnType<typeof makeGame>;
 
@@ -71,6 +72,37 @@ test('a captain’s card shows her army, ship, hero and feats in both tongues �
   for (const n of ['987654', '555111', '424242', '31337', '99999', '88888', '123456', '7777', '12345.5', '67890.25']) assert.ok(!json.includes(n), `no ${n} (money or position) on the wire`);
   for (const s of ['secret.mail', 'example.com', 'pass-hash', 'h-Grace', 'Secret Friend', 'Hidden Foe']) assert.ok(!json.includes(s), `no ${s} on the wire`);
   assert.doesNotMatch(json, /doubloon|дублон|серебр|silver/i);
+});
+
+test('every hoverable thing carries the game’s own card: gear, ship fittings, creatures, skills — and no coin in it', () => {
+  const g = makeGame();
+  const id = rich(g, 'Tip Tester');
+  const row = g.db.loadCaptain(id)!;
+  const p = JSON.parse(row.data) as ReturnType<typeof newProfile>;
+  p.captainGear = { ...(p.captainGear ?? {}), hat: { uid: 9001, base: 'tricorne', ilvl: 14, rarity: 1, affixes: [], dur: 87 } as never };
+  p.loadout.gear = { ...(p.loadout.gear ?? {}), sails: { uid: 9002, base: 'canvas_sails', ilvl: 10, rarity: 2, affixes: [], dur: 100, set: 'bounty_hunter' } as never };
+  p.loadout.modules = { ...(p.loadout.modules ?? {}), rudder: 2 } as never;
+  p.talents = { ...(p.talents ?? {}), [Object.keys(TALENTS_BY_ID)[0]]: 1 };
+  g.db.saveCaptain(id, p, 1, 1, 1);
+  const v = new SiteProfile(g.game, new SiteRating(g.game)).get('Tip Tester') as CaptainProfile;
+  const hat = v.hero.gear.find((x) => x.slot === 'hat');
+  assert.ok(hat?.tip, 'the hat has its card');
+  assert.equal(hat.tip.color, hat.color, 'its name in its rarity’s colour');
+  assert.match(hat.tip.sub![1], /Добротный · Шляпа · уровень 14/);
+  assert.ok(hat.tip.rows!.some((r) => r.k[1] === 'Лидерство' && /^\+\d+$/.test(r.v[0])), 'its lines, as the game writes them');
+  assert.ok(hat.tip.notes!.some((n) => n.t[1] === 'Прочность 87%'), 'its wear');
+  const sails = v.ship!.gear.find((x) => x.slot === 'sails');
+  assert.ok(sails?.tip?.notes!.some((n) => n.tone === 'head' && /\(1\/\d\)/.test(n.t[0])), 'a set piece shows its set and how much of it is worn');
+  assert.ok(v.ship!.guns.length && v.ship!.guns.every((x) => x.tip && x.tip.rows!.length >= 5 && x.tip.notes![0].t[1]), 'a gun: its numbers and its words');
+  const rud = v.ship!.modules.find((m) => m.id === 'rudder');
+  assert.ok(rud?.tip && /2\/2/.test(rud.tip.sub![0]) && rud.tip.rows![0].v[0] === '+16%', 'a fitting at its level');
+  assert.ok(v.army.stacks.every((s) => s.tip && s.tip.rows!.some((r) => r.k[0] === 'Health') && s.tip.name[0].includes(`×${s.n}`)), 'a creature: its numbers');
+  assert.ok(v.hero.skills.every((s) => s.tip && s.tip.notes!.some((n) => n.tone === 'on')), 'a skill: her rank lit');
+  assert.ok(v.hero.orders.every((o) => o.tip && o.tip.notes![0].t[0]), 'an order: what it does');
+  assert.ok(v.hero.talents.length > 0 && v.hero.talents.every((t) => t.tip && t.tip.notes![0].t[1]), 'a talent: what it does');
+  assert.ok(v.feats.deeds[0].tip && v.feats.pets[0].tip, 'a deed and a pet');
+  const json = JSON.stringify(v);
+  assert.doesNotMatch(json, /doubloon|дублон|серебр|silver|"price"|"cost"|upkeep/i, 'no coin in any card');
 });
 
 test('the unknown and the hidden are none; the card is kept half a minute', () => {

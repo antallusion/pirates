@@ -92,6 +92,8 @@ import type { Profile } from './player.ts';
 import { manifestArt } from './webshop.ts';
 import type { Game } from './Game.ts';
 import type { Board, SiteRating } from './siterating.ts';
+import { buildingTip, deedTip, featTip, figureheadTip, gunTip, itemTip, moduleTip, mountTip, orderTip, petTip, producerTip, relicTip, setTip, skillTip, talentTip, tattooTip, townTip, unitTip } from '../../../shared/src/data/sitetips.ts';
+import type { Tip } from '../../../shared/src/data/sitetips.ts';
 
 type Tr = [string, string];
 type Img = string | null;
@@ -100,9 +102,10 @@ export const PROFILE_TTL = 30_000;
 
 // ------------------------------------------------------------------------------------------------ the shape on the wire
 
-export interface PName { id: string; name: Tr; icon: Img }
-export interface PUnit { u: string; n: number; name: Tr; tier: number; up: boolean; rank: '' | 'rare' | 'legend' | 'myth'; art: Img; power: number; atk: number; def: number; hp: number; dmin: number; dmax: number }
-export interface PItem { slot: string; slotName: Tr; name: Tr; icon: Img; rarity: number; rarityName: Tr; color: string; ilvl: number; art: boolean; set?: Tr }
+/** `tip`: its hover card, the game's own words (shared/src/data/sitetips.ts). */
+export interface PName { id: string; name: Tr; icon: Img; tip?: Tip }
+export interface PUnit { u: string; n: number; name: Tr; tier: number; up: boolean; rank: '' | 'rare' | 'legend' | 'myth'; art: Img; power: number; atk: number; def: number; hp: number; dmin: number; dmax: number; tip?: Tip }
+export interface PItem { slot: string; slotName: Tr; name: Tr; icon: Img; rarity: number; rarityName: Tr; color: string; ilvl: number; art: boolean; set?: Tr; tip?: Tip }
 export interface PShip { cls: string; clsName: Tr; art: Img; name: string; level: number; tier: number; hullMax: number; hull: number | null; sails: number; speed: number; gunsPerSide: number; crewMax: number; armor: number;
   guns: PName[]; modules: (PName & { lv: number })[]; mount: PName | null; figurehead: PName | null; legendary: boolean; keel: boolean; gear: PItem[] }
 export interface PSaga { at: number; icon: Img; text: Tr }
@@ -141,17 +144,17 @@ export interface CaptainProfile {
   berths: { cls: string; clsName: Tr; art: Img; name: string; level: number }[];
   hero: {
     prim: { id: PrimId; name: Tr; icon: Img; base: number; art: number }[];
-    skills: { id: string; name: Tr; icon: Img; rank: number; rankName: Tr }[];
-    orders: { id: string; name: Tr; icon: Img; school: Tr; level: number }[];
+    skills: { id: string; name: Tr; icon: Img; rank: number; rankName: Tr; tip?: Tip }[];
+    orders: { id: string; name: Tr; icon: Img; school: Tr; level: number; tip?: Tip }[];
     will: number;
     willMax: number;
-    talents: { id: string; name: Tr; icon: Img; rank: number; max: number; tree: Tr }[];
+    talents: { id: string; name: Tr; icon: Img; rank: number; max: number; tree: Tr; tip?: Tip }[];
     gear: PItem[];
-    sets: { id: string; name: Tr }[];
-    relics: { id: string; name: Tr; icon: Img; on: boolean; worn: number; of: number }[];
+    sets: { id: string; name: Tr; tip?: Tip }[];
+    relics: { id: string; name: Tr; icon: Img; on: boolean; worn: number; of: number; tip?: Tip }[];
   };
-  island: { name: Tr; sea: Tr | null; level: number; town: { id: string; name: Tr; icon: Img; level: number }[]; producers: { id: string; name: Tr; icon: Img; level: number }[];
-    buildings: { id: string; name: Tr; icon: Img; level: number }[]; ships: { cls: string; clsName: Tr; art: Img; name: Tr; level: number }[] } | null;
+  island: { name: Tr; sea: Tr | null; level: number; town: { id: string; name: Tr; icon: Img; level: number; tip?: Tip }[]; producers: { id: string; name: Tr; icon: Img; level: number; tip?: Tip }[];
+    buildings: { id: string; name: Tr; icon: Img; level: number; tip?: Tip }[]; ships: { cls: string; clsName: Tr; art: Img; name: Tr; level: number }[] } | null;
   feats: { deeds: PName[]; feats: PName[]; trophies: PName[]; bosses: (PName & { n: number })[]; wonders: PName[]; regions: Tr[]; tattoos: (PName & { on: boolean })[];
     pets: (PName & { deck: boolean })[]; companion: { name: Tr; level: number; harness: Tr | null; icon: Img } | null; beasts: (PName & { n: number })[];
     campaign: { ch: number; title: Tr; done: boolean; card: Img; at: number; of: number } | null; saga: PSaga[]; sagaN: number };
@@ -204,6 +207,16 @@ const ico = (...ids: (string | null | undefined)[]): Img => {
   return null;
 };
 
+/** A hover card, or nothing (a card that cannot be read never breaks the profile). */
+const tipOf = (f: () => Tip | undefined): { tip?: Tip } => {
+  try {
+    const t = f();
+    return t ? { tip: t } : {};
+  } catch {
+    return {};
+  }
+};
+
 const num = (v: unknown, lo = 0): number => (typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.floor(v)) : lo);
 
 // ------------------------------------------------------------------------------------------------ the parts
@@ -231,6 +244,7 @@ function stack(s: ArmyStack): PUnit | null {
   return {
     u: s.u, n: Math.floor(s.n), name: unitName(s.u), tier: d.tier, up: !!d.up, rank: unitRank(s.u), art: art(`unit.${s.u}`) ?? art(d.art),
     power: Math.round(armyPower([s])), atk: d.atk, def: d.def, hp: d.hp, dmin: d.dmin, dmax: d.dmax,
+    ...tipOf(() => unitTip(s.u, Math.floor(s.n), armyPower([s]), art)),
   };
 }
 
@@ -247,7 +261,7 @@ const SLOT_ICON: Record<Slot, string> = {
   spyglass: 'ab_spotters_eye', compass: 'ab_star_fix', charm: 'role_deep_pastor', ring: 'coin',
 };
 
-function item(it: Item, slotHint?: Slot): PItem | null {
+function item(it: Item, slotHint?: Slot, worn: readonly Item[] = []): PItem | null {
   try {
     const slot = slotHint ?? itemSlot(it);
     const a = it.art ? ARTIFACTS[it.art] : undefined;
@@ -256,7 +270,7 @@ function item(it: Item, slotHint?: Slot): PItem | null {
     return {
       slot, slotName: SLOT_NAMES[slot], name: [itemName(it, false), itemName(it, true)],
       icon: a ? ico(a.icon, SLOT_ICON[slot]) : ico(it.legendary ? `item_${it.legendary}` : null, `item_${it.base}`, SLOT_ICON[slot]),
-      rarity: r, rarityName: RARITY_NAMES[r], color: RARITY_COLOR[r], ilvl: num(it.ilvl), art: !!a, ...(set ? { set } : {}),
+      rarity: r, rarityName: RARITY_NAMES[r], color: RARITY_COLOR[r], ilvl: num(it.ilvl), art: !!a, ...(set ? { set } : {}), ...tipOf(() => itemTip(it, worn, slot)),
     };
   } catch {
     return null;
@@ -265,7 +279,7 @@ function item(it: Item, slotHint?: Slot): PItem | null {
 
 const gunName = (g: string): PName => {
   const d = (GUNS as Record<string, { name: string }>)[g];
-  return { id: g, name: d ? [d.name, dataRu(`ships.GUNS.${g}.name`, d.name)] : [g, g], icon: ico(`gun_${g}`) };
+  return { id: g, name: d ? [d.name, dataRu(`ships.GUNS.${g}.name`, d.name)] : [g, g], icon: ico(`gun_${g}`), ...tipOf(() => gunTip(g)) };
 };
 
 function shipOf(game: Game, p: Profile, live: { hull: number; hullMax: number; sails: number; stats: ReturnType<typeof computeShipStats> } | null): PShip | null {
@@ -284,17 +298,18 @@ function shipOf(game: Game, p: Profile, live: { hull: number; hullMax: number; s
   const guns = [...new Set([lo.guns?.port, lo.guns?.starboard].filter((g): g is GunId => !!g))].map(gunName);
   const modules = Object.entries(lo.modules ?? {}).filter(([, v]) => (v ?? 0) > 0).map(([id, lv]) => {
     const d = (MODULES as Record<string, { name: string }>)[id];
-    return { id, name: (d ? [d.name, dataRu(`ships.MODULES.${id}.name`, d.name)] : [id, id]) as Tr, icon: ico(`mod_${id}`), lv: num(lv) };
+    return { id, name: (d ? [d.name, dataRu(`ships.MODULES.${id}.name`, d.name)] : [id, id]) as Tr, icon: ico(`mod_${id}`), lv: num(lv), ...tipOf(() => moduleTip(id, num(lv))) };
   }).filter((m) => (MODULES as Record<string, unknown>)[m.id as ModuleId]);
   const mt = lo.mount ? (MOUNTS as Record<string, { name: string }>)[lo.mount] : undefined;
   const fh = lo.build?.figurehead ? (FIGUREHEADS as Record<string, { name: string }>)[lo.build.figurehead] : undefined;
-  const gear = SHIP_SLOTS.map((sl) => (lo.gear?.[sl] ? item(lo.gear[sl]!, sl) : null)).filter((x): x is PItem => !!x);
+  const worn = [...SHIP_SLOTS.map((sl) => lo.gear?.[sl]), ...Object.values(p.captainGear ?? {})].filter((x): x is Item => !!x);
+  const gear = SHIP_SLOTS.map((sl) => (lo.gear?.[sl] ? item(lo.gear[sl]!, sl, worn) : null)).filter((x): x is PItem => !!x);
   return {
     cls: lo.classId, clsName: shipClassName(lo.classId), art: shipArt(lo.classId), name: String(lo.name || p.shipName || ''), level: shipLevelOf(lo), tier: cls.tier,
     hullMax: Math.round(live?.hullMax ?? st?.hullMax ?? 0), hull: live ? Math.round(live.hull) : null, sails: Math.round(st?.sailHpMax ?? 0), speed: Math.round((st?.maxSpeed ?? 0) * 10) / 10,
     gunsPerSide: num(st?.gunsPerSide), crewMax: num(st?.crewMax), armor: Math.round(st?.armor ?? 0),
-    guns, modules, mount: mt && lo.mount ? { id: lo.mount, name: [mt.name, dataRu(`ships.MOUNTS.${lo.mount}.name`, mt.name)], icon: ico(`mount_${lo.mount}`) } : null,
-    figurehead: fh && lo.build?.figurehead ? { id: lo.build.figurehead, name: [fh.name, dataRu(`shipbuild.FIGUREHEADS.${lo.build.figurehead}.name`, fh.name)], icon: ico(lo.build.figurehead) } : null,
+    guns, modules, mount: mt && lo.mount ? { id: lo.mount, name: [mt.name, dataRu(`ships.MOUNTS.${lo.mount}.name`, mt.name)], icon: ico(`mount_${lo.mount}`), ...tipOf(() => mountTip(lo.mount!)) } : null,
+    figurehead: fh && lo.build?.figurehead ? { id: lo.build.figurehead, name: [fh.name, dataRu(`shipbuild.FIGUREHEADS.${lo.build.figurehead}.name`, fh.name)], icon: ico(lo.build.figurehead), ...tipOf(() => figureheadTip(lo.build!.figurehead!)) } : null,
     legendary: !!lo.legendary, keel: !!lo.keel, gear,
   };
 }
@@ -305,15 +320,15 @@ function heroOf(p: Profile): CaptainProfile['hero'] {
   try {
     const h = heroView(p);
     out.prim = PRIMS.map((id) => ({ id, name: PRIM_NAMES[id], icon: ico(PRIM_ICON[id]), base: num(h.prim[id]), art: num((h.artPrim as Partial<Record<PrimId, number>> | undefined)?.[id]) }));
-    out.skills = h.skills.filter((s) => SKILLS[s.id]).map((s) => ({ id: s.id, name: SKILLS[s.id].name, icon: ico(SKILLS[s.id].icon), rank: num(s.r), rankName: RANK_NAMES[Math.max(0, Math.min(RANK_NAMES.length - 1, num(s.r) - 1))] }));
+    out.skills = h.skills.filter((s) => SKILLS[s.id]).map((s) => ({ id: s.id, name: SKILLS[s.id].name, icon: ico(SKILLS[s.id].icon), rank: num(s.r), rankName: RANK_NAMES[Math.max(0, Math.min(RANK_NAMES.length - 1, num(s.r) - 1))], ...tipOf(() => skillTip(s.id, num(s.r))) }));
     out.orders = h.orders.filter((o) => ORDERS[o as OrderId]).map((o) => {
       const d = ORDERS[o as OrderId];
-      return { id: o, name: d.name, icon: ico(d.icon), school: SCHOOL_NAMES[d.school] ?? ['', ''], level: num(d.level) };
+      return { id: o, name: d.name, icon: ico(d.icon), school: SCHOOL_NAMES[d.school] ?? ['', ''], level: num(d.level), ...tipOf(() => orderTip(o)) };
     }).sort((a, b) => a.level - b.level);
     out.will = num(h.will);
     out.willMax = num(h.willMax);
-    out.sets = (h.sets ?? []).filter((id) => (ART_SETS as Record<string, unknown>)[id]).map((id) => ({ id, name: (ART_SETS as Record<string, { name: Tr }>)[id].name }));
-    out.relics = (h.relics ?? []).filter((r) => r.worn.length > 0 || (p.relics?.made ?? []).includes(r.id)).map((r) => ({ id: r.id, name: RELICS[r.id as RelicId].name, icon: ico(relicIcon(r.id as RelicId)), on: (p.relics?.on ?? []).includes(r.id as RelicId), worn: r.worn.length, of: RELICS[r.id as RelicId].parts.length }));
+    out.sets = (h.sets ?? []).filter((id) => (ART_SETS as Record<string, unknown>)[id]).map((id) => ({ id, name: (ART_SETS as Record<string, { name: Tr }>)[id].name, ...tipOf(() => setTip(id)) }));
+    out.relics = (h.relics ?? []).filter((r) => r.worn.length > 0 || (p.relics?.made ?? []).includes(r.id)).map((r) => ({ id: r.id, name: RELICS[r.id as RelicId].name, icon: ico(relicIcon(r.id as RelicId)), on: (p.relics?.on ?? []).includes(r.id as RelicId), worn: r.worn.length, of: RELICS[r.id as RelicId].parts.length, ...tipOf(() => relicTip(r.id, r.worn.length, (p.relics?.on ?? []).includes(r.id as RelicId))) }));
   } catch {
     /* an old save the hero's window cannot read: her stats left out */
   }
@@ -324,10 +339,11 @@ function heroOf(p: Profile): CaptainProfile['hero'] {
     const tn = tree ? (TREES as Record<string, { name: string }>)[tree]?.name ?? tree : '';
     return {
       id, name: [t.name, dataRu(`talents.TALENTS.${i}.name`, t.name)] as Tr, icon: ico(`talent_${id}`, tree ? `tree_${tree}` : null), rank: num(r), max: t.maxRank,
-      tree: [tn, tree ? dataRu(`talents.TREES.${tree}.name`, tn) : tn] as Tr,
+      tree: [tn, tree ? dataRu(`talents.TREES.${tree}.name`, tn) : tn] as Tr, ...tipOf(() => talentTip(id, num(r))),
     };
   });
-  out.gear = CAPTAIN_SLOTS.map((sl) => (p.captainGear?.[sl] ? item(p.captainGear[sl]!, sl) : null)).filter((x): x is PItem => !!x);
+  const worn = [...CAPTAIN_SLOTS.map((sl) => p.captainGear?.[sl]), ...SHIP_SLOTS.map((sl) => p.loadout?.gear?.[sl])].filter((x): x is Item => !!x);
+  out.gear = CAPTAIN_SLOTS.map((sl) => (p.captainGear?.[sl] ? item(p.captainGear[sl]!, sl, worn) : null)).filter((x): x is PItem => !!x);
   return out;
 }
 
@@ -340,12 +356,12 @@ function islandView(game: Game, acc: number): CaptainProfile['island'] {
     const town = Object.entries(y?.town?.b ?? {}).filter(([id, lv]) => TOWN[id as TownId] && (lv ?? 0) > 0).map(([id, lv]) => {
       const d = TOWN[id as TownId];
       const n = num(lv);
-      return { id, name: d.names[Math.max(0, Math.min(d.names.length - 1, n - 1))], icon: ico(`build_${d.art}`), level: n };
+      return { id, name: d.names[Math.max(0, Math.min(d.names.length - 1, n - 1))], icon: ico(`build_${d.art}`), level: n, ...tipOf(() => townTip(id, n)) };
     });
-    const producers = (y?.producers ?? []).filter((x) => PRODUCERS[x.kind]).map((x) => ({ id: x.kind as string, name: PRODUCERS[x.kind].name, icon: ico(PRODUCERS[x.kind].art), level: num(x.level, 1) }));
+    const producers = (y?.producers ?? []).filter((x) => PRODUCERS[x.kind]).map((x) => ({ id: x.kind as string, name: PRODUCERS[x.kind].name, icon: ico(PRODUCERS[x.kind].art), level: num(x.level, 1), ...tipOf(() => producerTip(x.kind, num(x.level, 1))) }));
     const buildings = (h.buildings ?? []).filter((b) => BUILDINGS[b.id as BuildingId]).map((b) => {
       const d = BUILDINGS[b.id as BuildingId];
-      return { id: b.id as string, name: [d.name, dataRu(`holdings.BUILDINGS.${b.id}.name`, d.name)] as Tr, icon: ico(`build_${b.id}`), level: num(b.level, 1) };
+      return { id: b.id as string, name: [d.name, dataRu(`holdings.BUILDINGS.${b.id}.name`, d.name)] as Tr, icon: ico(`build_${b.id}`), level: num(b.level, 1), ...tipOf(() => buildingTip(b.id, num(b.level, 1))) };
     });
     const ships = (y?.ships ?? []).filter((s) => s.state !== 'building' && (SHIP_CLASSES as Record<string, unknown>)[s.classId]).map((s) => ({
       cls: s.classId as string, clsName: shipClassName(s.classId), art: shipArt(s.classId), name: OWN_NAMES[s.name] ?? ['', ''] as Tr, level: num(s.level, 1),
@@ -386,8 +402,8 @@ function tell(e: SagaEntry, captain: string): Tr | null {
 
 function featsOf(game: Game, p: Profile, name: string): CaptainProfile['feats'] {
   const deeds = (p.deeds ?? []).map((id) => DEEDS.find((d) => d.id === id)).filter((d): d is (typeof DEEDS)[number] => !!d)
-    .map((d) => ({ id: d.id, name: [d.name, dataRu(`deeds.DEEDS.${DEEDS.indexOf(d)}.name`, d.name)] as Tr, icon: ico(d.id) }));
-  const feats = (p.renown?.feats ?? []).map((id) => FEATS.find((f) => f.id === id)).filter((f): f is (typeof FEATS)[number] => !!f).map((f) => ({ id: f.id, name: f.title, icon: ico(f.icon) }));
+    .map((d) => ({ id: d.id, name: [d.name, dataRu(`deeds.DEEDS.${DEEDS.indexOf(d)}.name`, d.name)] as Tr, icon: ico(d.id), ...tipOf(() => deedTip(d.id)) }));
+  const feats = (p.renown?.feats ?? []).map((id) => FEATS.find((f) => f.id === id)).filter((f): f is (typeof FEATS)[number] => !!f).map((f) => ({ id: f.id, name: f.title, icon: ico(f.icon), ...tipOf(() => featTip(f.id)) }));
   const trophies = [...new Set(p.trophies ?? [])].map((t) => ({ id: t, name: both(t), icon: ico(TROPHY_ICON[t], 'map_monster') }));
   const bosses = Object.entries(p.bossKills ?? {}).filter(([, n]) => (n ?? 0) > 0).map(([id, n]) => {
     const shore = id.startsWith('shore:') ? (SHORE_BOSSES as Record<string, { name: Tr | string; unit?: string }>)[id.slice(6)] : undefined;
@@ -411,8 +427,8 @@ function featsOf(game: Game, p: Profile, name: string): CaptainProfile['feats'] 
   void WONDER_KINDS;
   const regions = [...new Set((p.regionsSeen ?? []).filter((r) => !r.includes(':')))].map(regionName).filter((x): x is Tr => !!x);
   const t = p.tattoos;
-  const tattoos = [...new Set(t?.owned ?? [])].filter((id) => TATTOO_BY_ID[id]).map((id) => ({ id, name: TATTOO_BY_ID[id].name, icon: ico(`tattoo_${id}`, TATTOO_STAND_IN[id]), on: (t?.active ?? []).includes(id) }));
-  const pets = (p.pets?.owned ?? []).filter((id) => PETS[id as PetId]).map((id) => ({ id, name: PETS[id as PetId].name, icon: ico(`pet_${id}`, PET_STAND_IN[id]), deck: p.pets?.deck === id }));
+  const tattoos = [...new Set(t?.owned ?? [])].filter((id) => TATTOO_BY_ID[id]).map((id) => ({ id, name: TATTOO_BY_ID[id].name, icon: ico(`tattoo_${id}`, TATTOO_STAND_IN[id]), on: (t?.active ?? []).includes(id), ...tipOf(() => tattooTip(id, (t?.active ?? []).includes(id))) }));
+  const pets = (p.pets?.owned ?? []).filter((id) => PETS[id as PetId]).map((id) => ({ id, name: PETS[id as PetId].name, icon: ico(`pet_${id}`, PET_STAND_IN[id]), deck: p.pets?.deck === id, ...tipOf(() => petTip(id, p.pets?.deck === id)) }));
   const c = p.companion;
   const companion = c ? { name: (c.name ? [c.name, c.name] : CALF_NAME) as Tr, level: num(c.level, 1), harness: c.harness ? (HARNESSES as Record<string, { name: Tr }>)[c.harness]?.name ?? null : null, icon: ico(c.harness ? `harness_${c.harness}` : null, 'tab_legends') } : null;
   const beasts = Object.entries(p.beasts ?? {}).filter(([id, n]) => BEASTS[id as BeastId] && (n ?? 0) > 0).map(([id, n]) => ({ id, name: BEASTS[id as BeastId].name as Tr, icon: ico(BEAST_ICON[id]), n: num(n) }));

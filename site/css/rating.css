@@ -338,3 +338,33 @@ html.cp-lock, html.cp-lock body { overflow: hidden; }
   .cp-uline { grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; }
   .cp-uthumb { width: 44px; height: 44px; }
 }
+
+/* ---- the hover card (owner, 2026-10-28: «вся инфа выпрыгивала как в игре при наведении»): the game's own card — a dark
+   panel in a brass-gold border, the name in its rarity's colour, the numbers green or red, the gift in amber italics,
+   a set's lit bonuses green (client/styles.css .gear-tip, .gi-card). Laid by site/js/rating.js, kept on screen. */
+.cp [data-tip] { cursor: help; }
+.cp [data-tip]:focus-visible { outline: 2px solid var(--gold1); outline-offset: 2px; }
+.gt-tip { position: fixed; z-index: 120; left: 0; top: 0; width: 310px; max-width: calc(100vw - 16px); box-sizing: border-box; padding: 10px 12px 11px; pointer-events: none;
+  background: linear-gradient(180deg, rgba(20, 17, 12, 0.98), rgba(9, 10, 13, 0.98)); border: 1px solid #c9a24a; border-radius: 6px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6), inset 0 2px 0 var(--tc, #f5c451), 0 10px 28px rgba(0, 0, 0, 0.7), 0 0 14px rgba(245, 196, 81, 0.12);
+  color: #e9dfc8; font: 400 13px/1.45 var(--sans); opacity: 0; transform: translateY(3px); transition: opacity 0.12s, transform 0.12s; }
+.gt-tip.on { opacity: 1; transform: none; }
+.gt-tip[hidden] { display: none; }
+.gt-n { display: block; font: 700 17px/1.2 var(--display); font-style: normal; color: var(--gold1); text-shadow: 0 1px 2px #000; }
+.gt-s { display: block; margin-top: 2px; font-style: normal; font-size: 12px; color: #a99c80; }
+.gt-rows { margin: 7px 0 2px; padding-top: 6px; border-top: 1px solid rgba(201, 162, 74, 0.28); }
+.gt-r { display: flex; justify-content: space-between; gap: 10px; line-height: 1.5; }
+.gt-r span { color: #ddd3bd; }
+.gt-r b { color: #f3e6c8; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gt-r.up b { color: #6fd46f; }
+.gt-r.down b { color: #e0776b; }
+.gt-p { margin: 6px 0 0; font-size: 12.5px; color: #cfc4ab; }
+.gt-p.gift { color: #ff9d3c; font-style: italic; font-size: 13px; }
+.gt-p.flavor { color: #b8ab8c; font-style: italic; }
+.gt-p.head { margin-top: 8px; color: #e8c46a; font-weight: 600; }
+.gt-p.head + .gt-p { margin-top: 2px; }
+.gt-p.on { color: #6fd46f; }
+.gt-p.off { color: #8a8d99; }
+.gt-p.muted { color: #8f8672; font-size: 12px; }
+.gt-p.head ~ .gt-p.on, .gt-p.head ~ .gt-p.off { margin-top: 2px; }
+@media (max-width: 700px) { .gt-tip { width: min(330px, calc(100vw - 16px)); } }

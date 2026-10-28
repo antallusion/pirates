@@ -138,6 +138,11 @@
   const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
   const im = (src, alt = '', cls = '', w = 0) => (src ? `<img src="${esc(src)}" alt="${esc(alt)}"${cls ? ` class="${cls}"` : ''}${w ? ` width="${w}" height="${w}"` : ''} loading="lazy" decoding="async">` : '');
   const cards = new Map();
+  /** The hover cards of the card on show (owner, 2026-10-28: «при наведении на снаряжение … вся инфа выпрыгивала как в
+   *  игре»): each thing's `tip` (shared/src/data/sitetips.ts — the game's own words) kept here, its element marked
+   *  data-tip="<index>". */
+  let tips = [];
+  const tp = (x) => (x && x.tip ? ` data-tip="${tips.push(x.tip) - 1}" tabindex="0"` : '');
   let cur = null, tab = 'overview', lastFocus = null, pushed = false, seq = 0;
 
   const box = d.createElement('div');
@@ -151,16 +156,15 @@
   // ---- the parts
   const tile = (icon, name, val, sub = '') => `<div class="cp-tile">${icon ? `<span class="cp-tico">${im(icon, '', '', 28)}</span>` : ''}<span class="cp-tx"><b${/^[\d\s.,/k+−-]+$/.test(String(val).replace(/&nbsp;| /g, ' ')) ? '' : ' class="w"'}>${val}</b><i>${esc(name)}</i>${sub ? `<em>${sub}</em>` : ''}</span></div>`;
   const h3 = (s, extra = '') => `<h3 class="cp-h">${esc(s)}${extra ? ` <span class="cp-h-x">${extra}</span>` : ''}</h3>`;
-  const chip = (x, extra = '', cls = '', sub = '') => `<li class="cp-chip${cls ? ` ${cls}` : ''}" title="${esc(tr(x.name))}">${x.icon ? im(x.icon, '', '', 32) : ''}<span>${esc(tr(x.name))}${extra ? ` <b>${extra}</b>` : ''}${sub ? `<i>${esc(sub)}</i>` : ''}</span></li>`;
+  const chip = (x, extra = '', cls = '', sub = '') => `<li class="cp-chip${cls ? ` ${cls}` : ''}"${tp(x)}>${x.icon ? im(x.icon, '', '', 32) : ''}<span>${esc(tr(x.name))}${extra ? ` <b>${extra}</b>` : ''}${sub ? `<i>${esc(sub)}</i>` : ''}</span></li>`;
   const chips = (title, xs, f = (x) => chip(x)) => (xs && xs.length ? `${h3(title, String(xs.length))}<ul class="cp-chips">${xs.map(f).join('')}</ul>` : '');
   const tierCls = (s) => `t${Math.min(7, Math.max(1, s.tier))}${s.up ? ' up' : ''}`;
   const unitCard = (s) => {
-    const tip = `${tr(s.name)} ×${fmt(s.n)} — ${ct.tier} ${ROMAN[s.tier] || s.tier}${s.up ? `, ${ct.up}` : ''}. ${ct.atk} ${s.atk}, ${ct.def} ${s.def}, ${ct.dmg} ${s.dmin}–${s.dmax}, ${ct.hp} ${s.hp}. ${ct.power}: ${fmt(s.power)}`;
-    return `<li class="cp-unit ${tierCls(s)}${s.rank ? ` r-${s.rank}` : ''}" title="${esc(tip)}"><span class="cp-uart">${im(s.art, tr(s.name))}</span>
+    return `<li class="cp-unit ${tierCls(s)}${s.rank ? ` r-${s.rank}` : ''}"${tp(s)}><span class="cp-uart">${im(s.art, tr(s.name))}</span>
 <i class="cp-utier">${ROMAN[s.tier] || s.tier}${s.up ? '<s aria-hidden="true"></s>' : ''}</i><b class="cp-upow">${im(CI.power, '', '', 12)}${short(s.power)}</b><b class="cp-un">${fmt(s.n)}</b><span class="cp-uname">${esc(tr(s.name))}</span></li>`;
   };
-  const itemTile = (it) => `<li class="cp-item${it.art ? ' art' : ''}" style="--rc:${esc(it.color)}" title="${esc(`${tr(it.name)} — ${tr(it.slotName)}, ${tr(it.rarityName)}${it.set ? ` · ${tr(it.set)}` : ''}`)}"><span class="cp-isq">${im(it.icon, '', '', 44)}</span><span class="cp-itx"><b>${esc(tr(it.name))}</b><i>${esc(tr(it.slotName))} · ${esc(tr(it.rarityName))}</i></span></li>`;
-  const slotSq = (it) => (it ? `<span class="cp-slot" style="--rc:${esc(it.color)}" title="${esc(`${tr(it.name)} — ${tr(it.slotName)}, ${tr(it.rarityName)}`)}">${im(it.icon, tr(it.name))}</span>` : '<span class="cp-slot void" aria-hidden="true"></span>');
+  const itemTile = (it) => `<li class="cp-item${it.art ? ' art' : ''}" style="--rc:${esc(it.color)}"${tp(it)}><span class="cp-isq">${im(it.icon, '', '', 44)}</span><span class="cp-itx"><b>${esc(tr(it.name))}</b><i>${esc(tr(it.slotName))} · ${esc(tr(it.rarityName))}</i></span></li>`;
+  const slotSq = (it) => (it ? `<span class="cp-slot" style="--rc:${esc(it.color)}"${tp(it)}>${im(it.icon, tr(it.name))}</span>` : '<span class="cp-slot void" aria-hidden="true"></span>');
   const shipPic = (art, name, cls = '') => `<span class="cp-hull${cls ? ` ${cls}` : ''}">${im(art, name)}</span>`;
   const ago = (ms) => {
     const s = Math.max(1, (Date.now() - ms) / 1000);
@@ -171,6 +175,69 @@
     return rtf.format(-Math.round(s / (86400 * 30)), 'month');
   };
   const date = (ms) => new Date(ms).toLocaleDateString(data.lang === 'ru' ? 'ru-RU' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  // ---- the hover card: a dark panel in a gold border, the name in its rarity's colour, its numbers and words (as the
+  // game's own); a mouse on hover, a finger on tap (a tap outside closes it), the keyboard on focus; kept on screen.
+  const tipEl = d.createElement('div');
+  tipEl.className = 'gt-tip';
+  tipEl.setAttribute('role', 'tooltip');
+  tipEl.id = 'gt-tip';
+  tipEl.hidden = true;
+  d.body.appendChild(tipEl);
+  let tipFor = null;
+  const tipHtml = (x) => {
+    const rows = (x.rows || []).map((r) => `<div class="gt-r${r.tone ? ` ${r.tone}` : ''}"><span>${esc(tr(r.k))}</span><b>${esc(tr(r.v))}</b></div>`).join('');
+    const notes = (x.notes || []).map((n) => `<p class="gt-p${n.tone ? ` ${n.tone}` : ''}">${esc(tr(n.t))}</p>`).join('');
+    return `<b class="gt-n"${x.color ? ` style="color:${esc(x.color)}"` : ''}>${esc(tr(x.name))}</b>${x.sub ? `<i class="gt-s">${esc(tr(x.sub))}</i>` : ''}${rows ? `<div class="gt-rows">${rows}</div>` : ''}${notes}`;
+  };
+  function hideTip() {
+    if (tipFor) tipFor.removeAttribute('aria-describedby');
+    tipFor = null;
+    tipEl.hidden = true;
+    tipEl.classList.remove('on');
+  }
+  const showTip = (el) => {
+    const x = tips[Number(el.dataset.tip)];
+    if (!x) return;
+    if (tipFor === el && !tipEl.hidden) return;
+    hideTip();
+    tipFor = el;
+    el.setAttribute('aria-describedby', 'gt-tip');
+    tipEl.style.setProperty('--tc', x.color || '#f5c451');
+    tipEl.innerHTML = tipHtml(x);
+    tipEl.style.left = '0px';
+    tipEl.style.top = '0px';
+    tipEl.hidden = false;
+    const r = el.getBoundingClientRect(), t = tipEl.getBoundingClientRect(), W = innerWidth, H = innerHeight, m = 8;
+    // beside the thing (right, else left); where neither fits (a phone), under it, else over it
+    let left, top;
+    if (r.right + m + t.width <= W - m) { left = r.right + m; top = r.top; }
+    else if (r.left - m - t.width >= m) { left = r.left - m - t.width; top = r.top; }
+    else { left = r.left + r.width / 2 - t.width / 2; top = r.bottom + m + t.height <= H - m ? r.bottom + m : r.top - m - t.height; }
+    left = Math.max(m, Math.min(W - m - t.width, left));
+    top = Math.max(m, Math.min(H - m - t.height, top));
+    tipEl.style.left = `${Math.round(left)}px`;
+    tipEl.style.top = `${Math.round(top)}px`;
+    tipEl.classList.add('on');
+  };
+  const tipTarget = (e) => (e.target && e.target.closest ? e.target.closest('[data-tip]') : null);
+  box.addEventListener('pointerover', (e) => { if (e.pointerType !== 'mouse') return; const el = tipTarget(e); if (el && box.contains(el)) showTip(el); });
+  box.addEventListener('pointerout', (e) => {
+    if (e.pointerType !== 'mouse' || !tipFor) return;
+    const to = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest('[data-tip]') : null;
+    if (to !== tipFor) hideTip();
+  });
+  box.addEventListener('focusin', (e) => { const el = tipTarget(e); if (el && el.matches(':focus-visible')) showTip(el); else if (!el) hideTip(); });
+  box.addEventListener('focusout', (e) => { if (tipTarget(e) === tipFor && !box.contains(e.relatedTarget)) hideTip(); });
+  // a finger: a tap shows it (a second tap on the same thing, or a tap anywhere else, closes it)
+  d.addEventListener('pointerup', (e) => {
+    if (e.pointerType === 'mouse') return;
+    const el = tipTarget(e);
+    if (el && box.contains(el)) { if (tipFor === el && !tipEl.hidden) hideTip(); else showTip(el); return; }
+    if (!tipEl.contains(e.target)) hideTip();
+  });
+  scroll.addEventListener('scroll', () => { if (tipFor) hideTip(); }, { passive: true });
+  addEventListener('resize', hideTip);
 
   // ---- the tabs (a tab with nothing in it is not shown)
   const TABS = [
@@ -206,7 +273,7 @@
   const army = (v) => {
     const a = v.army, slots = Math.max(a.slots, a.stacks.length);
     const row = a.stacks.map(unitCard).join('') + '<li class="cp-unit void" aria-hidden="true"></li>'.repeat(Math.max(0, slots - a.stacks.length));
-    const list = a.stacks.map((s) => `<li class="cp-uline"><span class="cp-uthumb ${tierCls(s)}">${im(s.art, '')}</span><span class="cp-ul-tx"><b>${esc(tr(s.name))} <i>×${fmt(s.n)}</i></b>
+    const list = a.stacks.map((s) => `<li class="cp-uline"${tp(s)}><span class="cp-uthumb ${tierCls(s)}">${im(s.art, '')}</span><span class="cp-ul-tx"><b>${esc(tr(s.name))} <i>×${fmt(s.n)}</i></b>
 <span>${esc(ct.tier)} ${ROMAN[s.tier] || s.tier}${s.up ? ` · ${esc(ct.up)}` : ''} · ${esc(ct.atk)} ${s.atk} · ${esc(ct.def)} ${s.def} · ${esc(ct.dmg)} ${s.dmin}–${s.dmax} · ${esc(ct.hp)} ${s.hp}</span></span><b class="cp-ul-pow">${im(CI.power, '', '', 14)}${short(s.power)}</b></li>`).join('');
     return `<div class="cp-tiles three">${tile(CI.power, ct.power, short(a.power))}${tile(CI.men, ct.count, fmt(a.men))}${tile(CI.anchor, ct.stacks, `${a.stacks.length}/${a.slots}`)}</div>
 <ul class="cp-army" style="--n:${Math.min(7, slots)};--m:${Math.min(5, slots)}">${row}</ul><ul class="cp-ulist">${list}</ul>`;
@@ -233,7 +300,7 @@ ${flags ? `<ul class="cp-chips">${flags}</ul>` : ''}${fit ? `<ul class="cp-chips
     const doll = h.gear.length ? `${h3(ct.gear, `${h.gear.length}/10`)}<div class="cp-doll"><div class="cp-dcol">${LEFT.map((sl) => slotSq(by[sl])).join('')}</div>
 <div class="cp-dmid">${v.figure ? im(v.figure, '', 'cp-dfig') : face(v.captain, v.frame, 150)}</div><div class="cp-dcol">${RIGHT.map((sl) => slotSq(by[sl])).join('')}</div></div><ul class="cp-items">${h.gear.map(itemTile).join('')}</ul>` : '';
     const relics = h.relics.length ? `${h3(ct.relics)}<ul class="cp-chips">${h.relics.map((r) => chip(r, r.on ? esc(ct.made) : `${r.worn}/${r.of}`, r.on ? 'gold' : '')).join('')}</ul>` : '';
-    const sets = h.sets.length ? `${h3(ct.sets)}<ul class="cp-chips">${h.sets.map((x) => `<li class="cp-chip gold"><span>${esc(tr(x.name))}</span></li>`).join('')}</ul>` : '';
+    const sets = h.sets.length ? `${h3(ct.sets)}<ul class="cp-chips">${h.sets.map((x) => `<li class="cp-chip gold"${tp(x)}><span>${esc(tr(x.name))}</span></li>`).join('')}</ul>` : '';
     const orders = h.orders.length ? `${h3(ct.orders, h.willMax ? `${esc(ct.will)} ${fmt(h.willMax)}` : String(h.orders.length))}<ul class="cp-chips">${h.orders.map((o) => chip(o, ROMAN[o.level] || '', '', tr(o.school))).join('')}</ul>` : '';
     const talents = h.talents.length ? `${h3(ct.talents, String(h.talents.reduce((n, x) => n + x.rank, 0)))}<ul class="cp-chips">${h.talents.map((x) => chip(x, `${x.rank}/${x.max}`, x.rank >= x.max ? 'gold' : '', tr(x.tree))).join('')}</ul>` : '';
     return `${prim}${skills}${doll}${relics}${sets}${orders}${talents}`;
@@ -241,7 +308,7 @@ ${flags ? `<ul class="cp-chips">${flags}</ul>` : ''}${fit ? `<ul class="cp-chips
 
   const island = (v) => {
     const i = v.island;
-    const grid = (title, xs) => (xs.length ? `${h3(title, String(xs.length))}<ul class="cp-builds">${xs.map((b) => `<li title="${esc(tr(b.name))}"><span class="cp-bimg">${im(b.icon, tr(b.name))}</span><b>${esc(tr(b.name))}</b><i>${esc(ct.lvl)} ${b.level}</i></li>`).join('')}</ul>` : '');
+    const grid = (title, xs) => (xs.length ? `${h3(title, String(xs.length))}<ul class="cp-builds">${xs.map((b) => `<li${tp(b)}><span class="cp-bimg">${im(b.icon, tr(b.name))}</span><b>${esc(tr(b.name))}</b><i>${esc(ct.lvl)} ${b.level}</i></li>`).join('')}</ul>` : '');
     return `<div class="cp-isle"><span class="cp-isle-ico">${im(CI.island, '', '', 56)}</span><div><p class="kicker">${i.sea ? esc(tr(i.sea)) : ''}</p><h3 class="cp-big">${esc(tr(i.name))}</h3><p class="muted">${esc(ct.isleLv)}: <b>${i.level}</b></p></div></div>
 ${grid(ct.town, i.town)}${grid(ct.producers, i.producers)}${grid(ct.buildings, i.buildings)}${fleetList(ct.isleShips, i.ships, (e) => tr(e.name))}`;
   };
@@ -270,6 +337,8 @@ ${v.created ? `<p class="cp-since">${esc(ct.since.replace('{d}', date(v.created)
   };
 
   const drawCard = (v) => {
+    tips = [];
+    hideTip();
     const tabs = TABS.filter(([, , ok]) => ok(v));
     if (!tabs.some(([id]) => id === tab)) tab = 'overview';
     scroll.innerHTML = `${head(v)}<div class="cp-tabs" role="tablist">${tabs.map(([id, name]) => `<button type="button" role="tab" id="cpt-${id}" aria-controls="cpp-${id}" aria-selected="${id === tab}" tabindex="${id === tab ? 0 : -1}" data-tab="${id}">${esc(name)}</button>`).join('')}</div>
@@ -278,6 +347,7 @@ ${tabs.map(([id]) => `<section class="cp-panel" role="tabpanel" id="cpp-${id}" a
   const showTab = (id) => {
     if (!cur) return;
     tab = id;
+    hideTip();
     scroll.querySelectorAll('[data-tab]').forEach((b) => { const on = b.dataset.tab === id; b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; });
     scroll.querySelectorAll('.cp-panel').forEach((p) => { const on = p.id === `cpp-${id}`; p.hidden = !on; if (on && !p.innerHTML) p.innerHTML = PANEL[id](cur); });
     const bar = scroll.querySelector('.cp-tabs'), b = bar && bar.querySelector(`[data-tab="${id}"]`);
@@ -332,6 +402,7 @@ ${tabs.map(([id]) => `<section class="cp-panel" role="tabpanel" id="cpp-${id}" a
     box.classList.remove('on');
     d.documentElement.classList.remove('cp-lock');
     box.hidden = true;
+    hideTip();
     scroll.innerHTML = '';
     cur = null;
     if (lastFocus && lastFocus.focus && d.contains(lastFocus)) lastFocus.focus({ preventScroll: true });
@@ -378,7 +449,7 @@ ${tabs.map(([id]) => `<section class="cp-panel" role="tabpanel" id="cpp-${id}" a
     if (b) { const board = b.dataset.go; close(); pick(board); }
   });
   box.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+    if (e.key === 'Escape') { e.preventDefault(); if (tipFor) { const f = tipFor; hideTip(); f.blur(); return; } close(); return; }
     const tb = e.target.closest('[data-tab]');
     if (tb && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
       const all = [...scroll.querySelectorAll('[data-tab]')], i = all.indexOf(tb), n = all[(i + (e.key === 'ArrowRight' ? 1 : all.length - 1)) % all.length];

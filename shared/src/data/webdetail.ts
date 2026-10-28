@@ -269,7 +269,7 @@ function peopleOf(u: UnitId): Tr {
   }
   return ['Pirate crew', 'Пиратская команда'];
 }
-function unitCard(u: UnitId, art: ArtOf, n?: number): DUnit {
+export function unitCard(u: UnitId, art: ArtOf, n?: number): DUnit {
   const d = UNITS[u];
   const skill = skillAbil(u, art);
   return { id: u, art: unitArt(u, art), name: unitNames(u), ...(n !== undefined ? { n } : {}), tier: d.tier, stats: unitStats(d), chips: [rangedChip(d), ...specialChips(d, art)], ...(skill ? { skill } : {}) };
