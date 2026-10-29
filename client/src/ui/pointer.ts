@@ -39,8 +39,10 @@ export function shotStage(op: string | null | undefined, ammo: Record<string, nu
 export const DEPART = ['.depart-panel [data-dp="all"]', '.depart-panel [data-dp="sail"]'];
 const TO_SEA = [...DEPART, '#modal-panel [data-ptab="sea"]', '#tc-cast', '#tc-act[data-act="harbour"]', '.act-btn.act-harbour'];
 /** Into the port window from the HUD in port, or into a harbour from the sea. */
-/** The opening's «Плыть» (owner, 2026-10-22): its next place is sailed for only at her word — after the step's own button. */
-const GOAL_SAIL = ['#tc-act[data-act="goal_sail"]', '.act-btn.act-goal_sail'];
+/** The opening's «Плыть» (owner, 2026-10-22) is never pointed at any more (owner, 2026-10-29: «вот эти подсказки плыть
+ *  надо мигающие убрать, они часто ведут не туда»): the button stays on the bar, with no finger and no gold ring on it.
+ *  An empty list keeps every step's own buttons first and points at nothing where only «Плыть» was left. */
+const GOAL_SAIL: string[] = [];
 const TO_PORT = ['#tc-act[data-act="harbour"]', '.act-btn.act-harbour', '#tc-act[data-act="dock"]', '#tc-act[data-act="homeport"]', '.act-btn.act-dock', '.act-btn.act-homeport'];
 
 /** The market's «Припасы»: the food and the round shot a voyage wants, in one tap (port.ts quick). */
@@ -92,6 +94,7 @@ function openingTargets0(f: PointerFacts, op: string): string[] {
 export function pointerTargets(f: PointerFacts): string[] {
   const out: string[] = [];
   for (const sel of targetsOf(f)) {
+    if (/goal_sail/.test(sel)) continue; // (never «Плыть»: owner, 2026-10-29)
     out.push(sel);
     const m = /^#tc-act\[data-act="(\w+)"\]$/.exec(sel);
     if (m) out.push(`.tc-act2[data-act="${m[1]}"]`);

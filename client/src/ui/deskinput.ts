@@ -11,6 +11,16 @@ export function rightClickAct(f: { docked: boolean; mount: boolean }): 'mount' |
   return f.mount ? 'mount' : 'sail';
 }
 
+/** A finger's tap on the sea (touch.ts SeaGesture: short and still, never a drag or a pinch). A ship or a creature
+ *  stack under it is the target; a thing on the sea (a find, a wreck, a waystation, a quest's beacon) its own order;
+ *  a harbour or an island its selection. Anything else — the open sea — is a course there: the helmsman takes her and
+ *  the autopilot pill shows (owner, 2026-10-29: «поставить просто пальцем точку на карту и начать движение не
+ *  получается» — the open sea's tap did nothing on a phone since the sail-to came in: only things sailed her). */
+export function seaTapAct(f: { mark: boolean; thing: boolean; place: boolean; docked: boolean; modal: boolean }): 'sail' | null {
+  if (f.docked || f.modal || f.mark || f.thing || f.place) return null;
+  return 'sail';
+}
+
 /** A press that travelled this far (px) between down and up was a drag (the view panned), not a click. */
 export const CLICK_SLOP = 10;
 

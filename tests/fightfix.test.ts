@@ -342,5 +342,9 @@ test('bug 1 (the end of every battle): its screen is not laid anew under the fin
   assert.doesNotMatch(of, /startGoal\(/);
   assert.match(of, /state\.self\?\.dockedAt \|\|/);
   // (a run broken off by a prize shares the button since 4c22d55b: the opening's first, then the resumed run)
-  assert.match(main, /case 'goal_sail': \{\s*const o = openingSail\(\) \?\? resumeSail\(\);\s*if \(o\) startGoal\(o\.key\);/);
+  // (2026-10-29: goalSailPick — the opening's first, then the quest she picked, the story, the resumed run)
+  assert.match(main, /case 'goal_sail': \{\s*const o = goalSailPick\(\);\s*if \(o\) startGoal\(o\.key\);/);
+  const gp = main.slice(main.indexOf('function goalSailPick('), main.indexOf('function pickedSail('));
+  assert.ok(gp.indexOf('openingSail()') < gp.indexOf('pickedSail()') && gp.indexOf('pickedSail()') < gp.indexOf('storySail()') && gp.indexOf('storySail()') < gp.indexOf('resumeSail()'));
+  assert.match(main, /facts\.goalSail = goalSailPick\(\);/);
 });

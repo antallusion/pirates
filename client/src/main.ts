@@ -139,7 +139,7 @@ import { renderChoice, renderTattoos } from './ui/tattoos.ts';
 import { renderDice, tickDice } from './ui/dice.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
 import { TutorPointer, shotStage } from './ui/pointer.ts';
-import { keyActsInWindow, leftClickSea, rightClickAct, soloModifier, wheelZoom, windowTab } from './ui/deskinput.ts';
+import { keyActsInWindow, leftClickSea, rightClickAct, seaTapAct, soloModifier, wheelZoom, windowTab } from './ui/deskinput.ts';
 import { resumeAfterEnd, resumeOn } from './ui/resumesail.ts';
 import { hereAct } from './ui/questact.ts'; // owner, 2026-10-23: a quest step done in this port
 import { buzz, guardVibrate } from './haptics.ts';
@@ -270,13 +270,15 @@ journal.onTab = (t) => {
   openModal('company');
 };
 worldMap.send = (m) => net.send(m);
-worldMap.onAutosail = (wp) => {
+worldMap.onAutosail = (wp) => autosailTo(wp);
+/** A course of her own to a point (the chart's, a tap's or a click's): `near`, how near the helmsman brings her. */
+function autosailTo(wp: { x: number; y: number }, near?: number): void {
   touch.course = null; // the helm stick lets go, or it would take the wheel straight back
   goalRun = null; // a course of her own: the run to a quest's place lets go
   resumeKey = resumeAfterEnd(resumeKey, 'own');
-  net.send(autosailRequest(state, wp));
+  net.send({ ...autosailRequest(state, wp), ...(near !== undefined ? { near } : {}) });
   closeModal();
-};
+}
 // ux2: «Плыть» on a quest of the journal or the chart — the course to its place and on through its steps.
 journal.onSail = (key) => startGoal(key);
 journal.onPortTab = (tab) => { if (!state.portView) return; portScreen.showTab(tab, null, state); openModal('port'); }; // owner, 2026-10-23: a quest step's shop or table
@@ -1070,7 +1072,9 @@ const touch = new TouchControls({
     if (k) markTapAt = performance.now();
     openTargetMenu(k === 'ship' && targetId !== null ? `ship:${targetId}` : k === 'roam' && state.roamMark !== null ? `roam:${state.roamMark}` : '');
     selPlace = k === 'ship' && targetId !== null ? { kind: 'ship', id: targetId } : k ? null : placeAtScreen(px, py); // (owner, 2026-10-26)
-    if (!k) sailToTap(px, py); // seaux: a tap on a thing on the sea sails her to it
+    const thing = !k && sailToTap(px, py); // seaux: a tap on a thing on the sea sails her to it
+    // …and the open sea: a course to the point tapped (seaTapAct; owner 2026-10-29)
+    if (seaTapAct({ mark: !!k, thing, place: !!selPlace, docked: !!state.self?.dockedAt, modal: !!modal }) === 'sail' && inGame) sailToScreen(px, py);
   },
   zoom: (f) => {
     renderer.userZoomed = true;
@@ -1250,6 +1254,33 @@ function storyFrame(): string | null {
   // a fight or a landing: its own button on the bar first (lit while the helmsman still closes), else «Плыть»
   if (q.does) return `go:${q.does}`;
   return storySail() ? 'go' : null;
+}
+/** The quest «Плыть» sails for (owner, 2026-10-29: «подсказки плыть … часто ведут не туда»). It was always the story's
+ *  (or the last run's), while the «Now:» line, the gold rim arrow and the journal's tick showed the quest she PICKED:
+ *  a side quest followed, «Плыть» went off to the campaign's step, or back to a run she had left. Now: the opening's own
+ *  step first (its lessons), then the quest she picked herself (a live one with a place), then the story, then the run
+ *  broken off — and a broken-off run of another quest than the one picked is not offered. */
+function goalSailPick(): { key: string; name: string; resume?: true } | null {
+  const op = state.self?.quests.some((x) => x.kind === 'campaign' && x.op);
+  if (op) return openingSail();
+  const picked = pickedSail();
+  if (picked) return picked;
+  const story = storySail();
+  if (story) return story;
+  const r = resumeSail();
+  const id = trackedId();
+  if (r && id && r.key.startsWith('q:') && r.key !== `q:${id}` && state.self?.quests.some((x) => x.id === id)) return null;
+  return r;
+}
+/** The quest she picked in the journal or on the chart (not the story's), when it has a place and nothing else is on. */
+function pickedSail(): { key: string; name: string } | null {
+  const id = trackedId();
+  const q = id ? state.self?.quests.find((x) => x.id === id && x.kind !== 'campaign') : undefined;
+  if (!q?.target || !inGame || state.self?.dockedAt || isleScene.isOpen) return null;
+  if (state.boardTac || state.boardFight || state.pursuit || state.boarding || state.roamRun !== null || (modal && ANSWER.includes(modal))) return null;
+  const key = `q:${q.id}`;
+  if (state.autosail || (goalRun?.key === key && state.route?.key === key && (state.ownDisplay?.speed ?? 0) > 0.5)) return null;
+  return { key, name: sv(q.name) };
 }
 /** Her «Плыть» for a run broken off by another order (a struck ship's terms, a boarding): gold on the bar until pressed
  *  (ui/resumesail.ts) — never sailed on by itself. */
@@ -3243,13 +3274,19 @@ canvas.addEventListener('mousedown', (e) => {
 /** The left press on the open sea, waiting for its lift (the simple HUD's click-to-sail). */
 let seaPress: { x: number; y: number } | null = null;
 /** The helmsman to a point on screen, with a small ring where the click fell. */
+/** How near the helmsman brings her to a point tapped or clicked on the sea (the server's least: 20 m). */
+const SCREEN_ARRIVE = 30;
 function sailToScreen(px: number, py: number): void {
   if (!worldMap.onAutosail) return;
   const m = renderer.toWorld(px, py);
   const wp = { x: Math.round(m.x), y: Math.round(m.y) };
   renderer.fx.add({ kind: 'ring', x: wp.x, y: wp.y, life: 0.6, size: 3, grow: 26, color: '#e8d9a8' });
   setMark(wp);
-  worldMap.onAutosail(wp);
+  // (the chart's course with the point itself as the arrival, not «near enough»: the helmsman's own is 150 m —
+  // AUTOSAIL_ARRIVE — and on a phone at the usual zoom most of the sea in sight lies nearer than that, so a tap was
+  // «You are at your mark already» and nothing moved: owner, 2026-10-29 «поставить просто пальцем точку на карту и
+  // начать движение не получается»)
+  autosailTo(wp, SCREEN_ARRIVE);
 }
 // (on the window: the lift may come over the HUD after a drag — no course then; a lift on a window is not the sea's)
 addEventListener('mouseup', (e) => {
@@ -3773,7 +3810,7 @@ function gatherActs(): { acts: Act[]; info: string[] } {
       facts.homeport = { name: sv(near.name) };
     }
   }
-  facts.goalSail = openingSail() ?? resumeSail(); // owner, 2026-10-22: the opening's next place — sailed for only at her word
+  facts.goalSail = goalSailPick(); // owner, 2026-10-22 (2026-10-29: the quest she picked, goalSailPick): the opening's next place — sailed for only at her word
   facts.sel = selFacts(port?.id ?? null, !!l && !l.blocked);
   facts.looks = advCard.closedLooks();
   // A struck ship's terms put off by «Later»: her card back with «Look…».
@@ -3937,7 +3974,7 @@ function runAct(a: Act): void {
     case 'attack_stop':
       return void net.send({ t: 'attack', stop: true });
     case 'goal_sail': {
-      const o = openingSail() ?? resumeSail();
+      const o = goalSailPick();
       if (o) startGoal(o.key);
       return;
     }
