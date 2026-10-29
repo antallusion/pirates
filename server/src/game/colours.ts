@@ -9,12 +9,13 @@
 // and the Green Pennant shield nobody; the sea's pirates come for a neutral captain as for anyone; no crime for it. A
 // group and a guild still do not fire on their own (a crew, not a rule), and a duel is still by consent.
 
-import { COLOURS_FIGHT_MS, COLOURS_HOIST_MS, NEUTRAL_MIND_SEC, NEUTRAL_PIRATE_RATE, NEUTRAL_WANTED_MAX, PENNANT_AGGRESSED_MS, PENNANT_LEVEL, PENNANT_SECONDS, citiesHostile, coloursBar } from '../../../shared/src/data/colours.ts';
+import { COLOURS_FIGHT_MS, COLOURS_HOIST_MS, NEUTRAL_HOLD_FREE, NEUTRAL_MIND_SEC, NEUTRAL_PIRATE_RATE, NEUTRAL_WANTED_MAX, PENNANT_AGGRESSED_MS, PENNANT_LEVEL, PENNANT_SECONDS, citiesHostile, coloursBar } from '../../../shared/src/data/colours.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { Colours, ColoursBar } from '../../../shared/src/data/colours.ts';
 import { wantedLevel } from '../../../shared/src/data/factions.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
 import { Rng } from '../../../shared/src/rng.ts';
+import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { Game } from './Game.ts';
 import { atWar } from './guilds.ts';
 import type { NpcBrain } from './npc.ts';
@@ -103,9 +104,20 @@ export function markPvp(game: Game, a: ShipEntity | null, b: ShipEntity | null):
 }
 
 /** Neutral colours are refused her: why, or null. */
-export function neutralRefused(p: Profile): string | null {
-  return wantedLevel(p.infamy) > NEUTRAL_WANTED_MAX ? 'The harbour master will not register neutral colours for a captain the law wants.' : null;
+export function neutralRefused(p: Profile, ship?: ShipEntity | null): string | null {
+  if (wantedLevel(p.infamy) > NEUTRAL_WANTED_MAX) return 'The harbour master will not register neutral colours for a captain the law wants.';
+  if (ship && holdTooFull(ship)) return NEUTRAL_HOLD_MSG;
+  return null;
 }
+
+/** Her hold is fuller than neutral colours allow (more than 15% of it taken). */
+export function holdTooFull(ship: ShipEntity): boolean {
+  const st = ship.stats;
+  if (!(st.holdVolume > 0)) return false;
+  const used = cargoVolume(ship.cargo, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
+  return used > st.holdVolume * (1 - NEUTRAL_HOLD_FREE) + 1e-9;
+}
+const NEUTRAL_HOLD_MSG = 'Neutral colours only with the hold at least 85% empty: sell or store the cargo first.';
 
 /** When colours ordered now would go up (wall ms): a minute, and never within ten of her last fight with a captain. */
 export function hoistAt(game: Game, p: Profile): number {
@@ -125,7 +137,7 @@ export function setColours(game: Game, s: PlayerSession, flag: Colours): string 
   if (!ship.docked) return 'Colours are changed only in port.';
   const port = game.portById(ship.docked);
   if (flag === 'neutral') {
-    const no = neutralRefused(p);
+    const no = neutralRefused(p, ship);
     if (no) return no;
   }
   // The city flag is the city's whose port she is in (or her guild's, which she flies over it).
@@ -170,8 +182,8 @@ export function coloursSecond(game: Game, s: PlayerSession): void {
     if (!ship.docked) coloursOnUndock(game, s);
     else if (game.wallNow() >= p.pvp.nextAt) {
       const flag = p.pvp.next;
-      if (flag === 'neutral' && neutralRefused(p)) {
-        game.sendTo(s, { t: 'toast', msg: neutralRefused(p)!, kind: 'bad' });
+      if (flag === 'neutral' && neutralRefused(p, ship)) {
+        game.sendTo(s, { t: 'toast', msg: neutralRefused(p, ship)!, kind: 'bad' });
       } else {
         p.pvp.flag = flag;
         if (p.pvp.nextCity) p.pvp.city = p.pvp.nextCity;
@@ -182,6 +194,12 @@ export function coloursSecond(game: Game, s: PlayerSession): void {
       p.pvp.nextAt = 0;
       game.pushSelf(s, true);
     }
+  }
+  // A neutral ship whose hold fills past 15% strikes her neutral colours at once (to her city's).
+  if (coloursOf(p) === 'neutral' && holdTooFull(ship)) {
+    p.pvp.flag = 'faction';
+    game.sendTo(s, { t: 'toast', msg: 'Your hold is more than 15% full: your neutral colours are struck, and your city’s go up.', kind: 'bad' });
+    game.pushSelf(s, true);
   }
   syncColours(game, s);
 }

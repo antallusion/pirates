@@ -6,7 +6,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { SPEED_SCALE, TICK_RATE } from '../shared/src/constants.ts';
-import { VOYAGE_MUL, VOYAGE_SPIN, VOYAGE_TAIL } from '../shared/src/data/passage.ts';
+import { VOYAGE, VOYAGE_MUL, VOYAGE_SPIN, VOYAGE_TAIL } from '../shared/src/data/passage.ts';
+
+// The passage is off in the game (owner, 2026-10-29); its rules are still kept working here.
+VOYAGE.on = true;
 import { hullClearance } from '../shared/src/sim/hull.ts';
 import { blockersNear } from '../shared/src/world/solids.ts';
 import { isLand } from '../shared/src/world/worldgen.ts';

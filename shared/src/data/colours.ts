@@ -38,6 +38,10 @@ export const PENNANT_SECONDS = 20 * 3600;
 export const PENNANT_AGGRESSED_MS = 30 * 60_000;
 /** Neutral colours are refused a captain the law wants this much (Wanted «Known Pirate»), and struck when she gets so. */
 export const NEUTRAL_WANTED_MAX = 1;
+/** Neutral colours only with the hold at least this empty (owner, 2026-10-29: «нейтральным можно быть только если трюм
+ *  свободен на 85%, по-другому в мирный режим зайти нельзя»): a trader who carries a hold's worth sails under colours
+ *  that can be fought. */
+export const NEUTRAL_HOLD_FREE = 0.85;
 
 export function isColours(v: unknown): v is Colours {
   return v === 'neutral' || v === 'faction' || v === 'pirate';

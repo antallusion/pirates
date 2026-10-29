@@ -18,6 +18,8 @@ export const SERVER_RU_FLAGS: Record<string, string> = {
   'Colours are changed only in port.': 'Флаг меняют только в порту.',
   'No such colours': 'Такого флага нет',
   'The harbour master will not register neutral colours for a captain the law wants.': 'Начальник порта не запишет нейтральный флаг капитану, которого ищет закон.',
+  'Neutral colours only with the hold at least 85% empty: sell or store the cargo first.': 'Нейтральный флаг — только если трюм свободен минимум на 85%: сначала продайте или сдайте груз на склад.',
+  'Your hold is more than 15% full: your neutral colours are struck, and your city’s go up.': 'Трюм заполнен больше чем на 15%: нейтральный флаг спущен, поднят флаг вашего города.',
   'The order for new colours is struck: yours stay.': 'Заказ на новый флаг отменён: остаётся прежний.',
   'Neutral colours go up in {0} min, if you are still in port.': 'Нейтральный флаг поднимут через {0} мин, если вы ещё будете в порту.',
   'The pirate flag goes up in {0} min, if you are still in port.': 'Пиратский флаг поднимут через {0} мин, если вы ещё будете в порту.',

@@ -3,6 +3,11 @@
 // неактивным для окружения»). The numbers both sides share; the server (server/src/game/passage.ts) decides, the client
 // shows the pill by the chart and the small toast.
 
+/** Whether far marks turn into passages at all (owner, 2026-10-29: taken out after a player's word on the forum — on a
+ *  passage nobody can be caught, and the raiding and the long hauls of trade lose their point). The code stays; the
+ *  tests turn it on for themselves. */
+export const VOYAGE = { on: false };
+
 /** Her way through the water on a passage: this many times her top speed (owner, 2026-10-28: «х5 наверное даже мало,
  *  давай х10 скорость»). */
 export const VOYAGE_MUL = 10;

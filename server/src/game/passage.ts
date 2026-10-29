@@ -24,7 +24,7 @@
 //  - her line dropped mid-passage: she is carried on to its end (and lies to there); her session retired first, she is
 //    put at its end before she is saved. Back aboard mid-passage: the pill and the line come back.
 
-import { VOYAGE_FAR_MIN, VOYAGE_FAR_SEC, VOYAGE_MUL, VOYAGE_SPIN, VOYAGE_TAIL } from '../../../shared/src/data/passage.ts';
+import { VOYAGE, VOYAGE_FAR_MIN, VOYAGE_FAR_SEC, VOYAGE_MUL, VOYAGE_SPIN, VOYAGE_TAIL } from '../../../shared/src/data/passage.ts';
 import type { VoyageEnd } from '../../../shared/src/data/passage.ts';
 import { SPEED_SCALE } from '../../../shared/src/constants.ts';
 import { angleDiff, headingOf, wrapAngle } from '../../../shared/src/math.ts';
@@ -239,6 +239,10 @@ export function stepVoyage(game: Game, dt: number): void {
   for (const s of game.sessions) {
     const ship = s.ship;
     if (!ship || voyages.has(ship) || s.disconnectedAt !== null) continue;
+    if (!VOYAGE.on) {
+      spins.delete(ship);
+      continue;
+    }
     const run = autosailOf(ship);
     if (!run) {
       spins.delete(ship);

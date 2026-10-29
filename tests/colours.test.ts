@@ -219,6 +219,13 @@ test('colours change only in port, a minute after the order and never within ten
   const port = game.world.ports.find((p) => p.faction === 'league')!;
   A.ship!.docked = port.id;
   A.profile!.docked = port.id;
+  // Neutral colours only with the hold at least 85% empty (owner, 2026-10-29).
+  const hold = A.ship!.stats.holdVolume;
+  A.ship!.cargo = { timber: Math.ceil(hold * 0.5) } as NonNullable<typeof A.ship>["cargo"];
+  a.push({ t: 'pvp', action: 'colours', flag: 'neutral' });
+  assert.match(a.last('toast')!.msg, /85% empty/);
+  assert.equal(A.profile!.pvp.next, null);
+  A.ship!.cargo = {} as NonNullable<typeof A.ship>["cargo"];
   a.push({ t: 'pvp', action: 'colours', flag: 'neutral' });
   assert.equal(A.profile!.pvp.next, 'neutral');
   assert.equal(A.profile!.pvp.nextAt, wall + COLOURS_FIGHT_MS);

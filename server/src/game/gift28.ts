@@ -90,9 +90,21 @@ export function giftSend(game: Game): number {
   return n;
 }
 
+/** Accounts that came after the send and get the letter all the same, each once (the owner's word). */
+export const GIFT28_LATE: readonly number[] = [214];
+
 /** On boot: the letter goes out once, if it has not (process.env.GIFT28=off holds it back). */
 export function giftBoot(game: Game): void {
-  if (process.env.GIFT28 === 'off' || game.db.getKv(GIFT28_DONE) !== undefined) return;
+  if (process.env.GIFT28 === 'off') return;
+  // Owner, 2026-10-29: «Нефигугум» came aboard five hours after the send and asked on the forum — his letter too.
+  for (const acc of GIFT28_LATE) {
+    try {
+      if (sendOne(game, acc, game.wallNow())) console.log(`[gift28] the thank-you letter sent late to account ${acc}`);
+    } catch (e) {
+      console.log(`[gift28] ${(e as Error).message}`);
+    }
+  }
+  if (game.db.getKv(GIFT28_DONE) !== undefined) return;
   try {
     const n = giftSend(game);
     console.log(`[gift28] the thank-you letter sent to ${n} captains`);
