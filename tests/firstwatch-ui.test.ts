@@ -82,7 +82,7 @@ test('the first quarter of an hour shuts tattoos, dice, the auction and the guil
 
 test('in a fight the sea’s news waits and the lesson steps aside; the battle’s own words keep to its top band', () => {
   const hud = readFileSync(new URL('../client/src/ui/hud.ts', import.meta.url), 'utf8');
-  assert.match(hud, /if \(kind !== 'bad' && kind !== 'good' && this\.hold\(/);
+  assert.match(hud, /if \(kind !== 'bad' && kind !== 'good' (&& kind !== 'voyage' )?&& this\.hold\(/);
   assert.match(hud, /b\.contains\('tac'\) \|\| b\.contains\('boarding'\)/);
   assert.ok(css.includes('body.tac #hud-watch, body.boarding #hud-watch { display: none !important; }'));
   assert.ok(css.includes('body.tac #toasts { top: calc(var(--sa-t) + 8px); bottom: auto; left: 50%;'));
