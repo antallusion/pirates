@@ -107,6 +107,15 @@ function unsubToken(st: AdviceState): string {
   return (st.unsub ??= randomBytes(12).toString('base64url'));
 }
 
+/** Her one-click unsubscribe link (the token made and kept once): the forum's e-mails use it too (forummail.ts). */
+export function adviceUnsubUrl(game: Game, acc: number, base: string): string {
+  const st = adviceState(game, acc);
+  const had = st.unsub;
+  const token = unsubToken(st);
+  if (!had) save(game, acc, st);
+  return `${base.replace(/\/$/, '')}/auth/unsub?a=${acc}&t=${token}`;
+}
+
 // ------------------------------------------------------------------------------------------------ sending
 
 export interface AdvicePlan {

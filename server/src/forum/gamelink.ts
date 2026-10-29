@@ -3,6 +3,7 @@
 // per account.
 
 import type { Game } from '../game/Game.ts';
+import { forumLetter } from '../game/forummail.ts';
 import type { Db } from '../persistence/db.ts';
 import type { CharInfo, GameLink } from './service.ts';
 
@@ -10,7 +11,14 @@ interface ProfileLike { captain?: string; level?: number; shipName?: string; loa
 
 const TTL = 120_000;
 
-export function gameLink(game: Game, db: Db): GameLink {
+/** Who is in the game now, the hidden left out (server/src/game/siterating.ts: SiteRating's online(), cached seconds). */
+export interface Presence {
+  isOnline(acc: number): boolean;
+  onlineAccounts(): number[];
+}
+
+/** `presence` is asked lazily (the site's rating is made after the forum); without it, any connected session counts. */
+export function gameLink(game: Game, db: Db, presence?: () => Presence): GameLink {
   const cache = new Map<number, { at: number; c: CharInfo | null }>();
   const fromProfile = (p: ProfileLike | null | undefined): CharInfo | null =>
     p && p.captain ? { captain: String(p.captain), level: Number(p.level ?? 1), ship: String(p.shipName ?? p.loadout?.name ?? ''), deeds: Array.isArray(p.deeds) ? p.deeds.map(String) : [] } : null;
@@ -43,7 +51,10 @@ export function gameLink(game: Game, db: Db): GameLink {
       const g = Object.values(game.guilds.store(game).guilds).find((x) => x.tag === tag);
       return g ? { id: g.id, name: g.name, tag: g.tag, members: g.members.map((m) => ({ account: m.account, name: m.name, rank: m.rank })) } : null;
     },
-    online: (id) => !!game.sessionByAccount(id),
-    inGame: () => game.sessions.size,
+    // «в сети» = her captain is in the game now (owner, 2026-10-29: «должны показываться люди кто играют, а не кто на форуме»)
+    online: (id) => (presence ? presence().isOnline(id) : !!game.sessionByAccount(id)),
+    inGame: () => (presence ? presence().onlineAccounts().length : game.sessions.size),
+    letter: (acc, n) => void forumLetter(game, acc, n),
+    onlineIds: () => (presence ? presence().onlineAccounts() : [...game.sessions].filter((s) => s.authed && s.disconnectedAt === null).map((s) => s.accountId)),
   };
 }

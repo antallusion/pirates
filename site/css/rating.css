@@ -2,6 +2,14 @@
 .rt { padding-top: 24px; }
 .rt [hidden] { display: none !important; }
 .rt-tabs { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px; }
+/* «В сети» (owner, 2026-10-29): the captains in the game now — its count, and the switch that keeps only them */
+.rt-onrow { display: flex; justify-content: center; margin: -6px 0 16px; }
+.rt-onl { gap: 8px; }
+.rt-onl b { font: 700 14px/1 var(--sans); color: #8fe3a0; min-width: 1ch; }
+.rt-onl.on b { color: #1d4a22; }
+.rt-live { display: inline-block; flex: none; width: 9px; height: 9px; border-radius: 50%; background: #4fd36a; box-shadow: 0 0 0 2px rgba(79, 211, 106, 0.22), 0 0 8px rgba(79, 211, 106, 0.7); }
+.rt-onl.on .rt-live { background: #1f7a33; box-shadow: 0 0 0 2px rgba(31, 122, 51, 0.25); }
+.rt-name .rt-live { margin: 0 8px 0 1px; vertical-align: 0.18em; }
 .rt-find { display: flex; gap: 12px; justify-content: center; align-items: center; margin: 0 auto 26px; max-width: 560px; }
 .rt-find .search { flex: 1; width: auto; }
 

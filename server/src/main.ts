@@ -89,13 +89,13 @@ const portraits = (() => {
 })();
 const forum = new ForumService({
   store: new ForumStore(process.env.FORUM_DB_PATH ?? (forumDir ? resolve(forumDir, 'forum.db') : ':memory:')),
-  link: gameLink(game, db), admins: ids(process.env.FORUM_ADMINS), mods: ids(process.env.FORUM_MODS),
+  link: gameLink(game, db, (): SiteRating => rating), admins: ids(process.env.FORUM_ADMINS), mods: ids(process.env.FORUM_MODS),
   uploadsDir: forumDir ? resolve(forumDir, 'forum-uploads') : null, avatars: portraits,
 });
 const handleForum = forumRoutes(forum, auth);
 // The website's captains' rating and shop (owner, 2026-10-20): YooKassa when YOOKASSA_SHOP_ID and YOOKASSA_SECRET_KEY are
 // set, else the test mode (its fake checkout opens with GRAVETIDE_PAY_TEST=1 or for SITE_ADMINS / FORUM_ADMINS).
-const rating = new SiteRating(game, { banned: (acc) => forum.store.user(acc)?.role === 'banned' });
+const rating: SiteRating = new SiteRating(game, { banned: (acc): boolean => forum.store.user(acc)?.role === 'banned' });
 const webShop = new WebShop(game, {
   provider: yookassaFromEnv(), returnUrl: process.env.YOOKASSA_RETURN_URL ?? `${PUBLIC_URL}/site/shop/`,
   admins: ids(process.env.SITE_ADMINS ?? process.env.FORUM_ADMINS), payTest: process.env.GRAVETIDE_PAY_TEST === '1',

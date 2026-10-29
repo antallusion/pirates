@@ -451,6 +451,8 @@ const RATING_T: Record<string, Tr> = {
   at: ['Updated', 'Обновлено'], err: ['The rating could not be loaded. Try again later.', 'Не удалось загрузить рейтинг. Попробуйте позже.'],
   rate: ['Too many searches: wait a minute.', 'Слишком часто: подождите минуту.'], short: ['At least two letters.', 'Хотя бы две буквы.'],
   close: ['Close', 'Закрыть'], you: ['Found', 'Найден'], colCap: ['Captain', 'Капитан'], colGuild: ['Guild', 'Гильдия'],
+  online: ['Online', 'В сети'], onTip: ['Only the captains in the game right now', 'Только капитаны, которые сейчас в игре'], live: ['In the game now', 'Сейчас в игре'],
+  onEmpty: ['Nobody from this board is in the game right now.', 'Сейчас никого из этой таблицы нет в игре.'],
 };
 
 /** The captain's card (owner, 2026-10-28: «нажимая на капитана я хочу видеть его армию, корабль и все что вообще только
@@ -487,11 +489,12 @@ function rating(lang: Lang): string {
   const tr = (t: Record<string, Tr>) => Object.fromEntries(Object.entries(t).map(([k, v]) => [k, L(lang, v)]));
   const body = `<section class="wrap sec rt" id="rating">
 <div class="rt-tabs" role="tablist" aria-label="${lang === 'ru' ? 'Таблицы' : 'Boards'}">${BOARD_UI.map((b, i) => `<button class="chip${i ? '' : ' on'}" role="tab" aria-selected="${i ? 'false' : 'true'}" data-board="${b.id}"><img src="${K(b.icon)}" alt="" width="18" height="18">${L(lang, b.name)}</button>`).join('')}</div>
+<div class="rt-onrow"><button type="button" class="chip rt-onl" role="switch" aria-checked="false" title="${esc(L(lang, RATING_T.onTip))}"><i class="rt-live" aria-hidden="true"></i><span>${L(lang, RATING_T.online)}</span><b class="rt-onn" aria-live="polite"></b></button></div>
 <form class="rt-find" role="search"><label class="search"><img src="${K('ico/search')}" alt="" width="22" height="22"><input name="name" type="search" maxlength="24" autocomplete="off" placeholder="${esc(L(lang, RATING_T.ph))}" aria-label="${esc(L(lang, RATING_T.ph))}"></label><button class="btn-gold sm" type="submit">${L(lang, RATING_T.find)}</button></form>
 <div class="rt-found" hidden aria-live="polite"></div>
 <div class="rt-board panel"><div class="rt-head"><span>#</span><span class="rt-col">${L(lang, RATING_T.colCap)}</span><span class="rt-unit"></span></div><ol class="rt-list" aria-live="polite"></ol><p class="rt-empty muted" hidden></p></div>
 <p class="rt-at muted"></p></section>
-${dataTag('rt-data', { lang, api: '/api/site/rating', t: tr(RATING_T), boards: BOARD_UI.map((b) => ({ id: b.id, name: L(lang, b.name), unit: L(lang, b.unit), icon: K(b.icon) })), cos: cosData(lang), cp: { api: '/api/site/captain/', t: tr(CP_T), ico: CP_ICO } })}`;
+${dataTag('rt-data', { lang, api: '/api/site/rating', onlineApi: '/api/site/online', t: tr(RATING_T), boards: BOARD_UI.map((b) => ({ id: b.id, name: L(lang, b.name), unit: L(lang, b.unit), icon: K(b.icon) })), cos: cosData(lang), cp: { api: '/api/site/captain/', t: tr(CP_T), ico: CP_ICO } })}`;
   return page(lang, {
     path: 'rating/', active: 'rating', title: lang === 'ru' ? 'Рейтинг капитанов GRAVETIDE' : 'GRAVETIDE Captains’ rating',
     desc: lang === 'ru' ? 'Лучшие капитаны моря: уровень, слава, абордажи, Колизей, кампания и гильдии.' : 'The best captains of the sea: level, glory, boardings, the Colosseum, the campaign and the guilds.',

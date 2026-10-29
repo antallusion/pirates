@@ -17,6 +17,17 @@ export type Board = 'level' | 'glory' | 'boarded' | 'arena' | 'campaign' | 'guil
 export const BOARDS: Board[] = ['level', 'glory', 'boarded', 'arena', 'campaign', 'guilds'];
 export const TOP = 100;
 export const RATING_TTL = 60_000;
+/** Who is in the game now is read afresh at most this often (owner, 2026-10-29: «"в сети" должны показываться люди кто
+ *  играют, а не кто на форуме»). */
+export const ONLINE_TTL = 12_000;
+
+/** The captains in the game now (connected to the game server, the hidden left out): the site's and the forum's «в сети». */
+export interface OnlineView {
+  at: number;
+  count: number;
+  /** Their names (public captains only; the rating's filter and its green dots). */
+  names: string[];
+}
 
 /** A captain on a board (public fields only). */
 export interface RatingRow {
@@ -101,6 +112,7 @@ const num = (v: unknown, lo = 0): number => (typeof v === 'number' && Number.isF
 export class SiteRating {
   private game: Game;
   private opts: RatingOptions;
+  private live: { at: number; accs: Set<number>; names: string[] } | null = null;
   private snap: { at: number; caps: Cap[]; lists: Map<Board, Map<Cap, number>>; boards: Map<Board, BoardView>; byName: Map<string, Cap> } | null = null;
 
   constructor(game: Game, opts: RatingOptions = {}) {
@@ -205,9 +217,53 @@ export class SiteRating {
     }
   }
 
-  /** A board's top (cached a minute). */
-  board(b: Board): BoardView {
-    return this.read().boards.get(b)!;
+  /** The captains in the game now: every session connected and signed in (a dropped one waiting out its grace is not),
+   *  the hidden (bots, testers, the banned, the owner's list) left out. Cached ONLINE_TTL. */
+  private present(): { at: number; accs: Set<number>; names: string[] } {
+    const at = this.now();
+    if (this.live && at - this.live.at < ONLINE_TTL) return this.live;
+    const accs = new Set<number>();
+    const names: string[] = [];
+    for (const s of this.game.sessions) {
+      if (!s.authed || s.disconnectedAt !== null || !s.name || accs.has(s.accountId)) continue;
+      if (this.hidden(s.accountId, s.name)) continue;
+      accs.add(s.accountId);
+      names.push(s.name);
+    }
+    names.sort((a, b) => a.localeCompare(b));
+    this.live = { at, accs, names };
+    return this.live;
+  }
+
+  /** «В сети»: how many captains are in the game now, and who. */
+  online(): OnlineView {
+    const p = this.present();
+    return { at: p.at, count: p.names.length, names: p.names };
+  }
+
+  /** Whether an account's captain is in the game now (the forum's online dot). */
+  isOnline(acc: number): boolean {
+    return this.present().accs.has(acc);
+  }
+
+  /** The accounts in the game now (the forum's «кто в сети»). */
+  onlineAccounts(): number[] {
+    return [...this.present().accs];
+  }
+
+  /** A board's top (cached a minute); `onlineOnly`: only the captains in the game now (a guild: with one aboard), each at
+   *  her real place on the whole board. */
+  board(b: Board, onlineOnly = false): BoardView {
+    const snap = this.read();
+    const full = snap.boards.get(b)!;
+    if (!onlineOnly) return full;
+    const on = this.present();
+    if (b === 'guilds') {
+      const tags = new Set(Object.values(this.game.guilds.store(this.game).guilds).filter((g) => g.members.some((m) => on.accs.has(m.account))).map((g) => g.tag));
+      return { board: b, at: on.at, rows: (full.rows as GuildRow[]).filter((r) => tags.has(r.tag)) };
+    }
+    const rows = [...(snap.lists.get(b) ?? new Map<Cap, number>())].filter(([c]) => on.accs.has(c.acc)).sort((x, y) => x[1] - y[1]).slice(0, TOP).map(([c, rank]) => this.row(b, c, rank));
+    return { board: b, at: on.at, rows };
   }
 
   /** A captain by her name (case aside): her card and her places; null when there is no such public captain. */

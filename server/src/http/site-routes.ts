@@ -1,5 +1,7 @@
 // The website's API (owner, 2026-10-20: «рейтинг капитанов и магазин»): JSON under /api/site/….
 //   GET  /api/site/rating?board=level|glory|boarded|arena|campaign|guilds   a board's top 100 (cached a minute)
+//   GET  /api/site/rating?board=…&online=1                                  only the captains in the game now, at their real places
+//   GET  /api/site/online                                                   «в сети»: the captains in the game now {count,names}
 //   GET  /api/site/rating/find?name=…                                       a captain's places on every board
 //   GET  /api/site/shop                                                     the shop's mode and its catalogue now
 //   GET  /api/site/shop/item?id=…                                           a thing's whole card (the site's window)
@@ -32,6 +34,8 @@ const MIN = 60_000;
 const HOUR = 3_600_000;
 /** A board may be kept a minute by the browser and any cache on the way (the board itself is a minute's snapshot). */
 const MINUTE_CACHE = ['public', 'max-age=60'].join(', ');
+/** Who is in the game now: a dozen seconds' snapshot. */
+const ONLINE_CACHE = 'public, max-age=12';
 
 /** The limits per address: [max, window]. */
 export const SITE_LIMITS = {
@@ -151,8 +155,10 @@ export function siteRoutes(d: SiteDeps) {
         if (path === 'rating') {
           const b = (url.searchParams.get('board') ?? 'level') as Board;
           if (!BOARDS.includes(b)) throw new HttpError('bad_board');
+          if (url.searchParams.get('online') === '1') return json(res, 200, d.rating.board(b, true), ONLINE_CACHE);
           return json(res, 200, d.rating.board(b), MINUTE_CACHE);
         }
+        if (path === 'online') return json(res, 200, d.rating.online(), ONLINE_CACHE);
         if (path === 'rating/find') {
           take('find', ip, SITE_LIMITS.find);
           const name = String(url.searchParams.get('name') ?? '').trim().slice(0, 40);

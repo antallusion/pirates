@@ -6,7 +6,7 @@ export const FORUM_EN: Record<string, string> = {
   home_kicker: 'The captains’ tavern',
   home_title: 'GRAVETIDE Forum',
   home_lead: 'News and patch notes, guides, trade and talk by the hearth — the captains of the dark sea gather here.',
-  st_topics: 'Topics', st_posts: 'Posts', st_members: 'Members', st_today: 'Today', st_online: 'Online',
+  st_topics: 'Topics', st_posts: 'Posts', st_members: 'Members', st_today: 'Today', st_online: 'In the game',
   fresh: 'Fresh topics', fresh_all: 'All topics',
   topics: 'Topics', posts: 'Posts', last: 'Latest', no_topics: 'No topics yet. Start the first one!', no_posts: 'No posts yet.',
   by: 'by', in_section: 'in', pinned: 'Pinned', official: 'Official', hot: 'Hot', locked: 'Closed', hidden_badge: 'Hidden', staff_only: 'Staff only',
@@ -31,7 +31,7 @@ export const FORUM_EN: Record<string, string> = {
   g_title: 'Guild', g_members: 'Members', g_on_forum: 'on the forum', g_rank: 'Guild rank',
   m_title: 'Messages', m_empty: 'No dialogs yet. Write to a captain from his profile.', m_with: 'Dialog with', m_send: 'Send', m_placeholder: 'Your message…', m_none: 'No messages yet — write the first one.', m_you: 'You',
   n_title: 'Notifications', n_empty: 'Nothing new.', n_reply: 'replied in', n_quote: 'quoted you in', n_mention: 'mentioned you in', n_reaction: 'reacted to your post in', n_rep: 'raised your reputation for a post in', n_read_all: 'Mark all as read',
-  l_topics: 'All topics', l_posts: 'All posts', l_members: 'Members', l_today: 'Today', l_online: 'Who is online', l_ingame: 'at sea in the game', l_kicker: 'Lists',
+  l_topics: 'All topics', l_posts: 'All posts', l_members: 'Members', l_today: 'Today', l_online: 'Who is in the game', l_ingame: 'in the game now', l_onforum: 'of them on the forum', l_none: 'No forum member is in the game right now.', l_kicker: 'Lists',
   s_title: 'Search', s_placeholder: 'Search topics and posts…', s_in_topics: 'In titles', s_in_posts: 'In posts', s_empty: 'Nothing found.', s_go: 'Find', s_more: 'More', s_hint: 'At least two letters.',
   mod_title: 'Reports', mod_empty: 'No open reports.', mod_resolve: 'Resolved', mod_reason_prompt: 'What is wrong with this post?', mod_move_prompt: 'Move to section:', mod_rename_prompt: 'New title:', mod_by: 'reported by',
   err_auth: 'Sign in to the game first.', err_banned: 'Your account may not post on the forum.', err_forbidden: 'Not allowed.', err_not_found: 'Not found: perhaps it was removed.',
@@ -44,7 +44,7 @@ export const FORUM_EN: Record<string, string> = {
   medal_first_post: 'First post', medal_posts_100: 'A hundred posts', medal_topics_10: 'Ten topics', medal_rep_25: 'Respected captain', medal_official: 'Official answer',
   loading: 'Loading…', back: 'Back', sections: 'Sections', search: 'Search', notifications: 'Notifications', messages: 'Messages', profile: 'Profile', moderation: 'Reports', me_menu: 'Captain’s menu', sign_out: 'Sign out', signed_out: 'Signed out',
   copied: 'Link copied', reported: 'Report sent — thank you', saved: 'Saved', rep_up: 'Raise reputation', rep_down: 'Lower reputation', more_medals: 'more',
-  posts_count: '{n} posts', topics_count: '{n} topics', online_now: 'online', at_sea: 'at sea', home: 'Forum', of_pages: 'of', play_video: 'Play the video',
+  posts_count: '{n} posts', topics_count: '{n} topics', online_now: 'in the game now', at_sea: 'at sea', home: 'Forum', of_pages: 'of', play_video: 'Play the video',
   confirm_hide: 'Hide this post?', in_reply: 'Replying to', cancel_reply: 'Cancel', quote_sel: 'Quote the selection', reactions: 'Reactions',
 };
 
@@ -78,7 +78,7 @@ export const FORUM_RU: Record<string, string> = {
   g_title: 'Гильдия', g_members: 'Состав', g_on_forum: 'на форуме', g_rank: 'Звание в гильдии',
   m_title: 'Сообщения', m_empty: 'Диалогов пока нет. Напишите капитану из его профиля.', m_with: 'Диалог с', m_send: 'Отправить', m_placeholder: 'Ваше сообщение…', m_none: 'Сообщений пока нет — напишите первое.', m_you: 'Вы',
   n_title: 'Уведомления', n_empty: 'Ничего нового.', n_reply: 'ответил в теме', n_quote: 'процитировал вас в теме', n_mention: 'упомянул вас в теме', n_reaction: 'отреагировал на ваше сообщение в теме', n_rep: 'поднял вам репутацию за сообщение в теме', n_read_all: 'Прочитать все',
-  l_topics: 'Все темы', l_posts: 'Все сообщения', l_members: 'Участники', l_today: 'За сутки', l_online: 'Кто в сети', l_ingame: 'в море, в игре', l_kicker: 'Списки',
+  l_topics: 'Все темы', l_posts: 'Все сообщения', l_members: 'Участники', l_today: 'За сутки', l_online: 'Кто в сети', l_ingame: 'в игре сейчас', l_onforum: 'из них на форуме', l_none: 'Сейчас никто из участников форума не в игре.', l_kicker: 'Списки',
   s_title: 'Поиск', s_placeholder: 'Поиск по темам и сообщениям…', s_in_topics: 'В названиях', s_in_posts: 'В сообщениях', s_empty: 'Ничего не нашлось.', s_go: 'Найти', s_more: 'Ещё', s_hint: 'Хотя бы две буквы.',
   mod_title: 'Жалобы', mod_empty: 'Открытых жалоб нет.', mod_resolve: 'Разобрано', mod_reason_prompt: 'Что не так с этим сообщением?', mod_move_prompt: 'Перенести в раздел:', mod_rename_prompt: 'Новое название:', mod_by: 'пожаловался',
   err_auth: 'Сначала войдите в игру.', err_banned: 'Вашему аккаунту запрещено писать на форуме.', err_forbidden: 'Нельзя.', err_not_found: 'Не найдено: возможно, это удалили.',
@@ -91,7 +91,7 @@ export const FORUM_RU: Record<string, string> = {
   medal_first_post: 'Первое сообщение', medal_posts_100: 'Сотня сообщений', medal_topics_10: 'Десять тем', medal_rep_25: 'Уважаемый капитан', medal_official: 'Официальный ответ',
   loading: 'Загрузка…', back: 'Назад', sections: 'Разделы', search: 'Поиск', notifications: 'Уведомления', messages: 'Сообщения', profile: 'Профиль', moderation: 'Жалобы', me_menu: 'Меню капитана', sign_out: 'Выйти', signed_out: 'Вы вышли',
   copied: 'Ссылка скопирована', reported: 'Жалоба отправлена — спасибо', saved: 'Сохранено', rep_up: 'Поднять репутацию', rep_down: 'Понизить репутацию', more_medals: 'ещё',
-  posts_count: '{n}', topics_count: '{n}', online_now: 'в сети', at_sea: 'в море', home: 'Форум', of_pages: 'из', play_video: 'Смотреть видео',
+  posts_count: '{n}', topics_count: '{n}', online_now: 'в игре сейчас', at_sea: 'в море', home: 'Форум', of_pages: 'из', play_video: 'Смотреть видео',
   confirm_hide: 'Скрыть это сообщение?', in_reply: 'Ответ на', cancel_reply: 'Отмена', quote_sel: 'Цитировать выделенное', reactions: 'Реакции',
 };
 

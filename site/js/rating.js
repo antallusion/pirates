@@ -16,6 +16,13 @@
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
   const nf = new Intl.NumberFormat(data.lang === 'ru' ? 'ru-RU' : 'en-GB');
   const cache = new Map();
+  // «В сети» (owner, 2026-10-29): who is in the game now (GET /api/site/online, a dozen seconds' snapshot) — the switch's
+  // count, the green dots by the names, and with the switch on (?online=1) each board only them, at their real places.
+  const onBtn = root.querySelector('.rt-onl');
+  const onN = root.querySelector('.rt-onn');
+  let onlineOnly = new URLSearchParams(location.search).get('online') === '1';
+  let live = new Set();
+  const ONLINE_MS = 12_000;
 
   /** A face in its frame, or in the site's brass ring when none is worn (site.js gtAvatar: the face in the hole's
    *  middle, the ring and the portrait one box that never shrinks). `size` the box's side. */
@@ -46,8 +53,9 @@
     if (b !== 'level') return `<i>${esc(t.lvl)} ${r.level}</i>`;
     return '';
   };
-  const rowHtml = (b, r) => `<li class="rt-row cp-go${r.rank <= 3 ? ` top top${r.rank}` : ''}" data-cap="${esc(r.name)}" tabindex="0" role="button" aria-haspopup="dialog" aria-label="${esc(`${r.name} — ${data.cp.t.open}`)}"><span class="rt-rank">${r.rank}</span>${face(r.captain, r.frame, 60)}
-<span class="rt-who"><b class="rt-name">${esc(r.name)}${r.guild ? ` <span class="rt-tag">[${esc(r.guild)}]</span>` : ''}</b>${plate(r.title, r.plate)}<span class="rt-cap">${esc(cos.names[r.captain] || '')}</span></span>
+  const dot = (name) => (live.has(name) ? `<i class="rt-live" title="${esc(t.live)}"></i>` : '');
+  const rowHtml = (b, r) => `<li class="rt-row cp-go${r.rank <= 3 ? ` top top${r.rank}` : ''}" data-cap="${esc(r.name)}" tabindex="0" role="button" aria-haspopup="dialog" aria-label="${esc(`${r.name}${live.has(r.name) ? ` (${t.live})` : ''} — ${data.cp.t.open}`)}"><span class="rt-rank">${r.rank}</span>${face(r.captain, r.frame, 60)}
+<span class="rt-who"><b class="rt-name">${dot(r.name)}${esc(r.name)}${r.guild ? ` <span class="rt-tag">[${esc(r.guild)}]</span>` : ''}</b>${plate(r.title, r.plate)}<span class="rt-cap">${esc(cos.names[r.captain] || '')}</span></span>
 <span class="rt-val">${value(b, r)}${sub(b, r)}</span></li>`;
   const guildHtml = (r) => `<li class="rt-row guild${r.rank <= 3 ? ` top top${r.rank}` : ''}"><span class="rt-rank">${r.rank}</span><span class="rt-gtag">${esc(r.tag)}</span>
 <span class="rt-who"><b class="rt-name">${esc(r.name)}</b><span class="rt-cap">${nf.format(r.members)} ${esc(t.members)} · ${esc(t.best)} ${esc(t.lvl)} ${r.top}</span></span>
@@ -59,19 +67,20 @@
     const rows = v.rows || [];
     list.innerHTML = rows.map((r) => (b === 'guilds' ? guildHtml(r) : rowHtml(b, r))).join('');
     empty.hidden = rows.length > 0;
-    empty.textContent = t.empty;
+    empty.textContent = onlineOnly ? t.onEmpty : t.empty;
     atEl.textContent = v.at ? `${t.at}: ${new Date(v.at).toLocaleTimeString(data.lang === 'ru' ? 'ru-RU' : 'en-GB', { hour: '2-digit', minute: '2-digit' })}` : '';
   };
   const load = async (b) => {
-    const hit = cache.get(b);
-    if (hit && Date.now() - hit.got < 60_000) return show(b, hit.v);
+    const on = onlineOnly, key = `${b}|${on ? 1 : 0}`;
+    const hit = cache.get(key);
+    if (hit && Date.now() - hit.got < (on ? ONLINE_MS : 60_000)) return show(b, hit.v);
     root.querySelector('.rt-board').setAttribute('aria-busy', 'true');
     try {
-      const r = await fetch(`${data.api}?board=${encodeURIComponent(b)}`, { headers: { Accept: 'application/json' } });
+      const r = await fetch(`${data.api}?board=${encodeURIComponent(b)}${on ? '&online=1' : ''}`, { headers: { Accept: 'application/json' } });
       if (!r.ok) throw new Error(String(r.status));
       const v = await r.json();
-      cache.set(b, { v, got: Date.now() });
-      if (board() === b) show(b, v);
+      cache.set(key, { v, got: Date.now() });
+      if (board() === b && onlineOnly === on) show(b, v);
     } catch {
       list.innerHTML = '';
       empty.hidden = false;
@@ -87,10 +96,41 @@
     if (on && bar && bar.scrollWidth > bar.clientWidth) bar.scrollLeft = Math.max(0, on.offsetLeft - bar.offsetLeft - (bar.clientWidth - on.offsetWidth) / 2);
     const u = new URL(location.href);
     u.searchParams.set('board', b);
+    if (onlineOnly) u.searchParams.set('online', '1');
+    else u.searchParams.delete('online');
     history.replaceState(null, '', u);
     void load(b);
   };
   tabs.forEach((x) => x.addEventListener('click', () => pick(x.dataset.board)));
+
+  const setSwitch = () => {
+    onBtn.classList.toggle('on', onlineOnly);
+    onBtn.setAttribute('aria-checked', String(onlineOnly));
+  };
+  onBtn.addEventListener('click', () => {
+    onlineOnly = !onlineOnly;
+    setSwitch();
+    pick(board());
+  });
+  setSwitch();
+  /** Who is in the game now: the count on the switch, the dots in the list (redrawn when the set has changed). */
+  const pollOnline = async () => {
+    try {
+      const r = await fetch(data.onlineApi, { headers: { Accept: 'application/json' } });
+      if (!r.ok) return;
+      const v = await r.json();
+      const next = new Set(v.names || []);
+      onN.textContent = nf.format(v.count || 0);
+      const changed = next.size !== live.size || [...next].some((n) => !live.has(n));
+      live = next;
+      if (changed) {
+        if (onlineOnly) cache.delete(`${board()}|1`);
+        void load(board());
+      }
+    } catch { /* the count waits for the next try */ }
+  };
+  void pollOnline();
+  setInterval(() => { if (!d.hidden) void pollOnline(); }, 15_000);
 
   // ---- a captain by name: her card and her places
   const form = root.querySelector('.rt-find');

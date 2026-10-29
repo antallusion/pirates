@@ -8,7 +8,7 @@ import { MAX_LEVEL } from '../shared/src/constants.ts';
 import { CAMPAIGN_SIZE } from '../shared/src/data/campaign/plan.ts';
 import { BOARDS, SiteRating, TEST_NAME } from '../server/src/game/siterating.ts';
 import type { GuildRow, RatingRow } from '../server/src/game/siterating.ts';
-import { makeGame } from './helpers.ts';
+import { join, makeGame } from './helpers.ts';
 
 type G = ReturnType<typeof makeGame>;
 
@@ -126,4 +126,23 @@ test('guilds: their members’ levels together, the hidden not counted', () => {
   assert.equal(rows.length, 1);
   assert.deepEqual({ ...rows[0] }, { rank: 1, tag: 'SW', name: 'Salt Wolves', members: 2, value: 60, top: 40 });
   assert.equal((r.board('level').rows as RatingRow[]).find((x) => x.name === 'Guild Head')?.guild, 'SW');
+});
+
+test('«в сети»: the captains in the game now, the hidden left out; the board filtered at the real places', () => {
+  const g = makeGame();
+  for (let i = 0; i < 5; i++) cap(g, `Saved ${i}`, { level: 30 - i });
+  join(g.game, 'Live Gull');
+  join(g.game, 'Bot zz9911');
+  const r = new SiteRating(g.game);
+  const on = r.online();
+  assert.deepEqual(on.names, ['Live Gull'], 'a bot in the game is not counted');
+  assert.equal(on.count, 1);
+  const acc = g.db.accountByName('Live Gull')!.id;
+  assert.ok(r.isOnline(acc));
+  assert.deepEqual(r.onlineAccounts(), [acc]);
+  const all = r.board('level').rows as RatingRow[];
+  const only = r.board('level', true).rows as RatingRow[];
+  assert.deepEqual(only.map((x) => x.name), ['Live Gull']);
+  assert.equal(only[0].rank, all.find((x) => x.name === 'Live Gull')!.rank, 'her real place on the whole board');
+  assert.ok(only[0].rank > 1);
 });

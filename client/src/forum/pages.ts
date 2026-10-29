@@ -390,13 +390,13 @@ export async function list(c: Ctx, kind: string): Promise<void> {
   const page = Number(c.q.get('p') ?? 1);
   const d = await api(`list/${kind}?p=${page}`);
   const [label, icon] = LISTS[kind] ?? ['l_topics', 'scroll'];
-  hero({ kicker: t('l_kicker'), kickerIcon: icon, title: t(label), lead: kind === 'online' ? `${fmtNum(d.total)} ${t('online_now')} · ${fmtNum(d.inGame ?? 0)} ${t('l_ingame')}` : '' });
+  hero({ kicker: t('l_kicker'), kickerIcon: icon, title: t(label), lead: kind === 'online' ? `${fmtNum(d.inGame ?? 0)} ${t('l_ingame')} · ${fmtNum(d.total)} ${t('l_onforum')}` : '' });
   const link = (p: number) => href(`l/${kind}${p > 1 ? `?p=${p}` : ''}`);
   const tabs = `<nav class="f-tabs" aria-label="${esc(t('l_kicker'))}">${Object.entries(LISTS).map(([k, [l, ic]]) => `<a href="${href(`l/${k}`)}"${k === kind ? ' class="on" aria-current="page"' : ''}>${ico(ic, 'f-ico f-ico-s')}${esc(t(l))}</a>`).join('')}</nav>`;
   let body = '';
   if (d.topics) body = d.topics.length ? `<div class="f-topics">${d.topics.map((x: any) => topicRow(x, true)).join('')}</div>` : empty(t('no_topics'), 'scroll');
   else if (d.posts) body = d.posts.length ? `<div class="f-recents">${d.posts.map(postBrief).join('')}</div>` : empty(t('no_posts'), 'quote');
-  else body = d.members.length ? `<div class="f-members">${d.members.map(memberCard).join('')}</div>` : empty(t('n_empty'), 'spyglass');
+  else body = d.members.length ? `<div class="f-members">${d.members.map(memberCard).join('')}</div>` : empty(t(kind === 'online' ? 'l_none' : 'n_empty'), 'spyglass');
   c.root.innerHTML = `${tabs}<div class="f-bar">${crumbs([[t('home'), href()], [t(label), null]])}${pager(d.page, d.pages, link)}</div>${body}<div class="f-bar end">${pager(d.page, d.pages, link)}</div>`;
 }
 

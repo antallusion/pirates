@@ -15,6 +15,8 @@ import {
 import type { ForumErrorCode, Role } from '../../../shared/src/forum/meta.ts';
 import { maskBadWords } from '../../../shared/src/chat.ts';
 import { formTrapped } from '../mailguard.ts';
+import { forumExcerpt } from '../../../shared/src/data/forumletter.ts';
+import type { ForumLetterKind, ForumNote } from '../../../shared/src/data/forumletter.ts';
 import { seed, SYSTEM_ID } from './seed.ts';
 import { postReplies29, postThreads28 } from './posts28.ts';
 import type { ForumStore, PostRow, SectionRow, TopicRow, UserRow } from './store.ts';
@@ -44,8 +46,14 @@ export interface GameLink {
   character(id: number): CharInfo | null;
   guildOf(id: number): GuildInfo | null;
   guild(tag: string): { id: number; name: string; tag: string; members: { account: number; name: string; rank: string }[] } | null;
+  /** Her captain is in the game now (the forum's «в сети» is the game's, not the forum's). */
   online(id: number): boolean;
+  /** How many captains are in the game now. */
   inGame(): number;
+  /** The accounts in the game now. */
+  onlineIds?(): number[];
+  /** A member answered, quoted or mentioned: a letter to her captain's port mailbox (and an e-mail), game/forummail.ts. */
+  letter?(account: number, n: ForumNote): void;
 }
 export const NO_GAME: GameLink = { accountName: () => null, character: () => null, guildOf: () => null, guild: () => null, online: () => false, inGame: () => 0 };
 
@@ -92,7 +100,6 @@ const UPLOAD_DAY_BYTES = 120 * 1024 * 1024;
 export const FRESH_POSTS = 3;
 /** The least time a new member's topic form is open (ms), above the honeypot's 1.5 s. */
 export const FRESH_TOPIC_MS = 4000;
-const ONLINE_MS = 10 * MIN;
 const CHAR_TTL = 5 * MIN;
 
 // ------------------------------------------------------------------------------------------------ views
@@ -199,7 +206,7 @@ export class ForumService {
     const s = this.stored(u);
     return {
       id: u.id, name: u.name, role: u.role, avatar: this.avatarUrl(u, s), rank: rankOf(u.posts, u.rep), captain: s?.captain ?? null, level: s?.level ?? null,
-      online: u.id !== SYSTEM_ID && (this.now() - u.last_seen < ONLINE_MS || this.link.online(u.id)),
+      online: u.id !== SYSTEM_ID && this.link.online(u.id),
     };
   }
 
@@ -282,7 +289,7 @@ export class ForumService {
     const now = this.now();
     return {
       topics: this.store.countTopics(false), posts: this.store.countPosts(false), members: this.store.countMembers(),
-      today: this.store.countPosts(false, now - DAY), online: this.store.countOnline(now - ONLINE_MS), inGame: this.link.inGame(),
+      today: this.store.countPosts(false, now - DAY), online: this.link.inGame(), inGame: this.link.inGame(),
     };
   }
 
@@ -449,9 +456,9 @@ export class ForumService {
     this.notifyBody(me, t.id, p.id, body, told);
     if (rp && !told.has(rp.author_id)) {
       told.add(rp.author_id);
-      this.store.notify(rp.author_id, 'reply', me.id, t.id, p.id, now);
+      this.tell(rp.author_id, 'reply', me, t.id, p.id, body, now);
     }
-    if (!told.has(t.author_id) && t.author_id !== SYSTEM_ID) this.store.notify(t.author_id, 'reply', me.id, t.id, p.id, now);
+    if (!told.has(t.author_id) && t.author_id !== SYSTEM_ID) this.tell(t.author_id, 'reply', me, t.id, p.id, body, now);
     const index = this.store.postIndex(this.store.post(p.id)!);
     return { postId: p.id, topicId: t.id, page: Math.floor(index / POSTS_PER_PAGE) + 1 };
   }
@@ -463,13 +470,28 @@ export class ForumService {
     for (const q of quoted.values()) {
       if (told.has(q.author_id) || q.author_id === SYSTEM_ID) continue;
       told.add(q.author_id);
-      this.store.notify(q.author_id, 'quote', me.id, topic, post, now);
+      this.tell(q.author_id, 'quote', me, topic, post, body, now);
     }
     for (const name of mentionsOf(body)) {
       const u = this.store.userByName(name);
       if (!u || told.has(u.id) || u.id === SYSTEM_ID) continue;
       told.add(u.id);
-      this.store.notify(u.id, 'mention', me.id, topic, post, now);
+      this.tell(u.id, 'mention', me, topic, post, body, now);
+    }
+  }
+
+  /** A personal answer: the forum's bell, and a letter to her captain's mailbox (owner, 2026-10-29: «ответы личные на
+   *  форуме отсылали письма людям, что мол вам ответили») — never to the author herself, never of the system's posts,
+   *  never of a topic only the staff see. */
+  private tell(to: number, kind: ForumLetterKind, me: UserRow, topic: number, post: number, body: string, now: number): void {
+    this.store.notify(to, kind, me.id, topic, post, now);
+    if (!this.link.letter || to === me.id || to === SYSTEM_ID || me.id === SYSTEM_ID) return;
+    const t = this.store.topic(topic);
+    if (!t || t.hidden) return;
+    try {
+      this.link.letter(to, { kind, from: me.name, topic, title: maskBadWords(t.title), post, excerpt: forumExcerpt(maskBadWords(plainText(body))) });
+    } catch (e) {
+      console.log(`[forum] letter: ${(e as Error).message}`);
     }
   }
 
@@ -697,7 +719,9 @@ export class ForumService {
       return { kind, page: p, pages, total, members: this.store.members((p - 1) * per, per).map((u) => this.author(u, 4)) };
     }
     if (kind === 'online') {
-      const rows = this.store.online(now - ONLINE_MS);
+      // the forum's members whose captains are in the game now (owner, 2026-10-29), the freshest on the forum first
+      const users = this.store.users((this.link.onlineIds?.() ?? []).filter((id) => id !== SYSTEM_ID));
+      const rows = [...users.values()].sort((a, b) => b.last_seen - a.last_seen).slice(0, 200);
       return { kind, page: 1, pages: 1, total: rows.length, members: rows.map((u) => this.author(u, 4)), inGame: this.link.inGame() };
     }
     return fail('not_found', 404);
