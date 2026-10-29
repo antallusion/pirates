@@ -11,7 +11,7 @@ import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { notifyAway } from './tgnotify.ts'; // the Telegram notices (owner, 2026-10-16)
 import { singleHall } from '../../../shared/src/data/baselevels.ts';
 import {
-  BARGE, BARGE_MUL, BASE_RES, BIOME_YIELD, PLOT_CELLS, PRODUCERS, TOKEN_MAX, TOKEN_SECS, baseCost, crewsAt, isProducer, levelGate, maxLevel, nextCrewAt, plotsOf, producerFits,
+  BARGE, BARGE_MUL, BASE_RES, YARD_GOODS, BIOME_YIELD, PLOT_CELLS, PRODUCERS, TOKEN_MAX, TOKEN_SECS, baseCost, crewsAt, isProducer, levelGate, maxLevel, nextCrewAt, plotsOf, producerFits,
   producerLimit, producerOf, producerRate, speedupGoods, speedupSilver, yardCap,
 } from '../../../shared/src/data/base.ts';
 import type { BaseRes, ProducerKind } from '../../../shared/src/data/base.ts';
@@ -31,7 +31,7 @@ import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { Island } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
 import { ownIsland } from './estate.ts';
-import { has, island, islandNear, slotsOf, slotsUsed } from './holdings.ts';
+import { has, island, islandNear, slotsOf, slotsUsed, treasuryMove } from './holdings.ts';
 import type { Building, Holding } from './holdings.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { finishTown, townLevel, townView, treeNeedView, treeWhy } from './town.ts';
@@ -547,14 +547,66 @@ export function orderBarge(game: Game, s: PlayerSession): string | null {
     cost += Math.round(k * GOODS[g].basePrice * BARGE_MUL);
   }
   if (!Object.keys(take).length) return 'The yard is full: no room for a barge.';
-  const p = s.profile!;
-  if (p.gold < cost) return lackMore(`A barge costs ${cost} silver`, cost, p.gold);
-  p.gold -= cost;
+  // (owner, 2026-10-29: the island's silver first, then her purse — as its works are paid)
+  const lack = silverLack(s, h, cost);
+  if (lack) return lack;
+  const purse = paySilver(s, h, cost);
   for (const [g, k] of Object.entries(take) as [BaseRes, number][]) y.res[g] = (y.res[g] ?? 0) + k;
-  game.db.ledger(s.accountId, 'barge', -cost, Object.entries(take).map(([g, k]) => `${k} ${g}`).join(', '));
+  if (purse > 0) game.db.ledger(s.accountId, 'barge', -purse, Object.entries(take).map(([g, k]) => `${k} ${g}`).join(', '));
   game.holdings.touch();
   game.sendTo(s, { t: 'toast', msg: `A barge of timber, coal and iron puts in at your island for ${cost} silver.`, kind: 'good' });
   return null;
+}
+
+/** Unload `n` of a good (0: all that fits) from her hold into her island's yard, lying off it; the yard's cap holds. */
+export function unloadToYard(game: Game, s: PlayerSession, good: GoodId, n: number): string | null {
+  const m = mine(game, s);
+  if (typeof m === 'string') return m;
+  const { h, y, isl } = m;
+  if (!YARD_GOODS.includes(good)) return 'The yard does not take that.';
+  if (!lyingOff(game, s, h)) return `Lie off ${isl.name} to unload into its yard.`;
+  const aboard = Math.floor(freeCargo(s, good));
+  if (aboard <= 0) return `No ${GOODS[good].name.toLowerCase()} in your hold.`;
+  const room = Math.max(0, Math.floor(capOf(h) - (y.res[good] ?? 0)));
+  if (room <= 0) return `The yard is full of ${GOODS[good].name.toLowerCase()}: ${capOf(h)} at most.`;
+  const want = Number.isFinite(n) && n > 0 ? Math.floor(n) : aboard;
+  const k = Math.min(want, aboard, room);
+  const ship = s.ship!;
+  ship.cargo[good] = (ship.cargo[good] ?? 0) - k;
+  if (!ship.cargo[good]) delete ship.cargo[good];
+  y.res[good] = (y.res[good] ?? 0) + k;
+  const p = s.profile!;
+  const hot = Math.min(p.stolen[good] ?? 0, k);
+  if (hot > 0) p.stolen[good] = (p.stolen[good] ?? 0) - hot; // at rest ashore, no longer traceable (as the store)
+  game.holdings.touch();
+  game.sendTo(s, { t: 'toast', msg: `${k} ${GOODS[good].name.toLowerCase()} unloaded into the yard of ${isl.name}.`, kind: 'good' });
+  return null;
+}
+
+/** Her purse into her island's treasury — from anywhere, as the island's works are paid from anywhere (owner,
+ *  2026-10-28); the treasury pays its works first. */
+export function depositTreasury(game: Game, s: PlayerSession, n: number): string | null {
+  const m = mine(game, s);
+  if (typeof m === 'string') return m;
+  const { h, isl } = m;
+  const p = s.profile!;
+  const k = Math.floor(Number(n));
+  if (!Number.isFinite(k) || k <= 0) return 'Bad amount';
+  if (p.gold < k) return 'Not that much silver aboard';
+  p.gold -= k;
+  h.treasury = Math.max(0, h.treasury ?? 0) + k;
+  game.holdings.touch();
+  game.sendTo(s, { t: 'toast', msg: `${k} silver into the treasury of ${isl.name}.`, kind: 'good' });
+  return null;
+}
+
+/** Silver out of her island's treasury into her purse: lying off it, or in a port of its waters (holdings.ts). */
+export function withdrawTreasury(game: Game, s: PlayerSession, n: number): string | null {
+  const m = mine(game, s);
+  if (typeof m === 'string') return m;
+  const k = Math.floor(Number(n));
+  if (!Number.isFinite(k) || k <= 0) return 'Bad amount';
+  return treasuryMove(game, s, m.h.island, -k);
 }
 
 /** A barge is as big as her town hall's level (QA playthrough B, docs/30: hall 3 asks 260 timber and 200 coal — ten

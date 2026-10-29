@@ -6,7 +6,7 @@
 // island's store, then the hold of a ship lying off the island).
 
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
-import { TOWN, TOWN_IDS, HALL_INCOME, KEEP_GROWTH, MARKET_GOODS, POOL_WEEKS, TIER_UNIT, deepAllowed, dwellingOf, isleGrowth, marketBuy, marketSell, townCost, townOf } from '../../../shared/src/data/town.ts';
+import { TOWN, TOWN_IDS, HALL_INCOME, KEEP_GROWTH, MARKET_GOODS, MARKET_MIN_SPREAD, POOL_WEEKS, marketCost, TIER_UNIT, deepAllowed, dwellingOf, isleGrowth, marketBuy, marketSell, townCost, townOf } from '../../../shared/src/data/town.ts';
 import { ISLE_OF_HALL, TREE_BASE, TREE_MAX, TREE_TOWN, isTree, isTreeTown, treeNeeds } from '../../../shared/src/data/isletree.ts';
 import type { TreeId } from '../../../shared/src/data/isletree.ts';
 import { BUILDINGS } from '../../../shared/src/data/holdings.ts';
@@ -21,7 +21,7 @@ import type { LandCost } from '../../../shared/src/data/landecon.ts';
 import { ORDERS, isOrder, isleGuildOrders, orderLevelCap, rankOf } from '../../../shared/src/data/hero.ts';
 import { heroOf, learnOrder } from './hero.ts';
 import type { Island } from '../../../shared/src/world/worldgen.ts';
-import { crewFree, lacking, lyingOff, mine as ownBase, paySilver, reckonBase, silverLack, takeGoods } from './base.ts';
+import { capOf, crewFree, lacking, lyingOff, mine as ownBase, paySilver, reckonBase, silverLack, takeGoods } from './base.ts';
 import type { BaseJob, Yard } from './base.ts';
 import { kindOfWeek, thisWeek, weekNow, weekView } from './calendar.ts';
 import type { Game } from './Game.ts';
@@ -227,12 +227,16 @@ export function marketRates(game: Game, y: Yard): { level: number; sell: Partial
   const sell: Partial<Record<GoodId, number>> = {}, buy: Partial<Record<GoodId, number>> = {};
   for (const g of MARKET_GOODS) {
     sell[g] = Math.round(marketSell(g, level, weekSell(k)) * 100) / 100;
-    buy[g] = Math.round(marketBuy(g, level, weekBuy(k)) * 100) / 100;
+    // (the fair pays more and asks less: its ask never under MARKET_MIN_SPREAD of its pay, or silver → iron → silver
+    // would pay — what it sells goes into the yard, and what it buys may come from there)
+    buy[g] = Math.round(Math.max(marketBuy(g, level, weekBuy(k)), sell[g]! * MARKET_MIN_SPREAD) * 100) / 100;
   }
   return { level, sell, buy };
 }
 
-/** Trade at the island's market: `n` of what is given (silver or a resource) for what it buys of the other. */
+/** Trade at the island's market. Silver given: `n` is the units of the good bought (Elordaert, forum 2026-10-29: «100»
+ *  silver for iron at 115.6 a unit said «Получите 0», then «Нужно 116») — paid from the island's treasury first, then
+ *  her purse, as its works are. A resource given: `n` is the units given, for silver (to her purse) or another. */
 export function marketTrade(game: Game, s: PlayerSession, give: Side, get: Side, n: number): string | null {
   const m = ownBase(game, s);
   if (typeof m === 'string') return m;
@@ -244,16 +248,19 @@ export function marketTrade(game: Game, s: PlayerSession, give: Side, get: Side,
   if (!ok(give) || !ok(get) || give === get || !Number.isFinite(n) || n <= 0 || n > 1_000_000) return 'Bad order';
   const p = s.profile!;
   const near = lyingOff(game, s, h);
+  const room = (g: GoodId) => Math.max(0, Math.floor(capOf(h) - (y.res[g] ?? 0)));
+  const full = (g: GoodId) => `The yard holds at most ${capOf(h)} ${GOODS[g].name.toLowerCase()}: room for ${room(g)}.`;
   if (give === 'silver') {
-    const price = rates.buy[get as GoodId]!;
-    const k = Math.floor(Math.min(n, p.gold) / price);
-    if (k <= 0) return `Needs ${Math.ceil(price)} silver`;
-    const cost = Math.ceil(k * price);
-    p.gold -= cost;
-    y.res[get as GoodId] = (y.res[get as GoodId] ?? 0) + k;
-    game.db.ledger(s.accountId, 'isle_market', -cost, `${get}:${k}`);
+    const g = get as GoodId;
+    if (n > room(g)) return full(g);
+    const cost = marketCost(rates.buy[g]!, n);
+    const lack = silverLack(s, h, cost);
+    if (lack) return lack;
+    const purse = paySilver(s, h, cost);
+    y.res[g] = (y.res[g] ?? 0) + n;
+    if (purse > 0) game.db.ledger(s.accountId, 'isle_market', -purse, `${g}:${n}`);
     game.holdings.touch();
-    game.sendTo(s, { t: 'toast', msg: `The market sells you ${k} ${GOODS[get as GoodId].name.toLowerCase()} for ${cost} silver.`, kind: 'good' });
+    game.sendTo(s, { t: 'toast', msg: `The market sells you ${n} ${GOODS[g].name.toLowerCase()} for ${cost} silver.`, kind: 'good' });
     return null;
   }
   const lack = lacking(h, y, s, near, { [give]: n });
@@ -271,6 +278,7 @@ export function marketTrade(game: Game, s: PlayerSession, give: Side, get: Side,
   }
   const k = Math.floor(value / rates.buy[get]!);
   if (k <= 0) return 'The market will not trade so little.';
+  if (k > room(get)) return full(get);
   takeGoods(h, y, s, near, { [give]: n });
   y.res[get] = (y.res[get] ?? 0) + k;
   game.holdings.touch();

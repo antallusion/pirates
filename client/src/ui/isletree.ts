@@ -70,7 +70,7 @@ export function givesText(id: string, level: number, c: GiveCtx): string {
       return T29('gHall', { silver: HALL_DAY[L], isle, plots: plotsOf(isle, c.size), outposts: ISLE_LEVELS[isle].outposts, crews: crewsAt(isle) });
     }
     case 'keep': return T29('gKeep', { g: dec1(KEEP_GROWTH[L]).replace(/[.,]0$/, '') });
-    case 'market': return T29('gMarket', { s: Math.round(MARKET_SELL[L] * 1000) / 10, b: dec1(MARKET_BUY[L]) });
+    case 'market': return T29('gMarket', { s: Math.round(MARKET_SELL[L] * 1000) / 10, b: Math.round(MARKET_BUY[L] * 1000) / 10 });
     case 'guild': return T29('gGuild', { n: L, k: [3, 3, 2, 1, 1][L - 1] });
     case 'warehouse': return T29('gWarehouse', { n: fmt(yardCap(Math.max(c.isle, 1), L)) });
     case 'shipyard': return T29('gShipyard', { lv: YARD_SHIP_LEVEL[L], p: Math.round(SHIPYARD_REPAIR[L] * 100) });

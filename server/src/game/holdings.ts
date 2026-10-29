@@ -480,9 +480,10 @@ export function treasuryMove(game: Game, s: PlayerSession, islandId: number, amo
   const h = game.holdings.get(game, islandId, s.accountId);
   const isl = island(game, islandId);
   if (!h || !isl || !mayUse(game, h, s.accountId)) return 'Not your island';
-  if (!atHand(game, s, isl)) return `At ${isl.name}, or a harbour office in its region`;
   const p = s.profile!;
   const n = Math.trunc(Number(amount));
+  // (forum 2026-10-29: silver goes in from anywhere, as the island's works are paid; it comes out at hand only)
+  if (n < 0 && !atHand(game, s, isl)) return `At ${isl.name}, or a harbour office in its region`;
   if (!Number.isFinite(n) || n === 0) return 'Bad amount';
   if (n > 0) {
     if (p.gold < n) return 'Not that much silver aboard';

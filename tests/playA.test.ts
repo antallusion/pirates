@@ -232,8 +232,9 @@ test('a barge of timber, coal and iron to her island\'s yard for silver (a small
   assert.equal(buyIsland(game, s, is.id), null);
   const h = ownIsland(game, s.accountId)!;
   const cost = Object.entries(BARGE).reduce((a, [g, n]) => a + Math.round((n ?? 0) * GOODS[g as 'timber'].basePrice * BARGE_MUL), 0);
+  h.treasury = 0; // (forum 2026-10-29: the treasury pays first, then the purse)
   s.profile!.gold = cost - 1;
-  assert.match(orderBarge(game, s) ?? '', /A barge costs/);
+  assert.match(orderBarge(game, s) ?? '', /treasury and purse/);
   s.profile!.gold = cost;
   assert.equal(orderBarge(game, s), null);
   assert.equal(s.profile!.gold, 0);

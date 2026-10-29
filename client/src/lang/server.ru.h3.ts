@@ -110,4 +110,12 @@ export const SERVER_RU_H3: Record<string, string> = {
   'The governor’s help: your island’s yard and treasury now pay for the bunkhouse and the marine barracks.': 'Помощь губернатора: двора и казны острова теперь хватит на Кубрик и Казарму морпехов.',
   'Island step done: {0} silver to your purse; timber, iron and powder for the shooting range to the yard.': 'Шаг острова пройден: {0} серебра в кошелёк, брёвна, железо и порох для Стрельбища — во двор.',
   'Island step done: {0} silver to your purse.': 'Шаг острова пройден: {0} серебра в кошелёк.',
+  // forum 2026-10-29: the market by units and from the treasury; the hold into the yard; silver into the treasury
+  'The yard holds at most {0} {1}: room for {2}.': 'Во дворе помещается не больше {0} ед. ({1}): место ещё для {2}.',
+  'The yard does not take that.': 'Двор такое не принимает.',
+  'Lie off {0} to unload into its yard.': 'Чтобы выгрузить во двор, встаньте у острова {0}.',
+  'No {0} in your hold.': 'В трюме нет: {0}.',
+  'The yard is full of {0}: {1} at most.': 'Двор полон ({0}): не больше {1}.',
+  '{0} {1} unloaded into the yard of {2}.': 'Выгружено во двор острова {2}: {1} ×{0}.',
+  '{0} silver into the treasury of {1}.': '{0} серебра положено в казну острова {1}.',
 };

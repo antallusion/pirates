@@ -89,14 +89,18 @@
 .f-ava-l { --pav: 150px; }
 .f-ava-m.f-ring-round { --pav: 72px; }
 .f-ava > .pav-ring { filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.7)); }
-.f-ava-l.f-ring-square { position: relative; display: inline-block; flex: none; width: 150px; height: 177px; }
-.f-ava-l.f-ring-square .f-sq { position: absolute; left: 15.5%; top: 12.5%; width: 69%; height: 58.5%; border-radius: 6px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4); }
+/* the square frame (ring_square.webp, 258×256) at its own shape — it was stretched to 150×177, its hole tall and the
+   portrait high in it (owner, 2026-10-29). Its transparent hole measured as tools/art/portrait_fit.py does: x 45–212,
+   y 43–209 of 258×256 (17.4%–82.6% × 16.8%–82%); the portrait laid on it 2% wider each side, under the wood's lip,
+   its face set by faceFit for a square hole (parts.ts faceSpan). */
+.f-ava-l.f-ring-square { position: relative; display: inline-block; flex: none; width: 150px; height: auto; aspect-ratio: 258 / 256; }
+.f-ava-l.f-ring-square .f-sq { position: absolute; left: 15.4%; top: 14.8%; width: 69.2%; height: 69.2%; border-radius: 2px; }
 .f-ava-l.f-ring-square::after { content: ''; position: absolute; inset: 0; background: url(/site/img/ui/ring_square.webp) center / 100% 100% no-repeat; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.7)); pointer-events: none; }
 /* a portrait in a bare circle or square (forum/parts.ts faceSpan): the face in its middle */
 .f-face { display: inline-block; flex: none; background-color: #0a0e18; background-repeat: no-repeat; }
 .f-dot { position: absolute; right: 2%; bottom: 4%; width: 11px; height: 11px; border-radius: 50%; background: #5fd38a; box-shadow: 0 0 0 2px var(--bg), 0 0 8px rgba(95, 211, 138, 0.8); z-index: 2; }
 .f-ava-l .f-dot { right: 16%; bottom: 16%; width: 14px; height: 14px; }
-.f-ava-l.f-ring-square .f-dot { right: 13%; bottom: 26%; }
+.f-ava-l.f-ring-square .f-dot { right: 19%; bottom: 19%; }
 .f-ava-m.f-ring-round .f-dot { right: 14%; bottom: 14%; }
 
 /* ---- names, ranks, the captain's line */
@@ -460,7 +464,7 @@ a.f-gm-i:hover, .f-member:hover { border-color: rgba(245, 196, 81, 0.28); transf
   .f-pg-far { display: none; }
   .f-post { grid-template-columns: minmax(0, 1fr); border-radius: var(--r); }
   .f-author { flex-direction: row; align-items: center; text-align: left; gap: 12px; padding: 12px 14px 10px 16px; border-right: 0; border-bottom: 1px solid var(--line); }
-  .f-ava-l.f-ring-square { width: 52px; height: 52px; }
+  .f-ava-l.f-ring-square { width: 52px; height: 52px; aspect-ratio: auto; }
   .f-ava-l.f-ring-square::after { display: none; }
   .f-ava-l.f-ring-square .f-sq { left: 0; top: 0; width: 100%; height: 100%; border-radius: 50%; box-shadow: 0 0 0 2px var(--role); }
   .f-ava-l.f-ring-square .f-dot { right: 0; bottom: 0; width: 11px; height: 11px; }

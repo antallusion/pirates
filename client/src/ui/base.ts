@@ -169,7 +169,7 @@ export class BaseWindow {
   onScoutPick: (id: string) => void = () => {};
   private scAsked = 0;
   /** The market's order being drawn up (docs/17 H3). */
-  mk: { give: string; get: string; n: number } = { give: 'silver', get: 'timber', n: 100 };
+  mk: { give: string; get: string; n: number } = { give: 'silver', get: 'timber', n: 10 }; // (silver given: units bought)
 
   /** The layout changed (a phone turned): the window is drawn afresh. */
   onLayout: () => void = () => {};
@@ -222,7 +222,7 @@ export class BaseWindow {
     const barge = bargeCostOf(v.store, Math.max(1, v.hall ?? 1));
     const collect = quickBar([
       { label: W('isle.collect'), sub: fresh ? `+${fmt(fresh)}` : esc(W('isle.collectNone')), icon: 'ui_chest', hint: W('isle.collectHint'), primary: fresh > 0, disabled: !fresh, data: { bcollect: 1 } },
-      { label: W('isle.barge'), sub: money(barge), icon: 'good_timber', hint: W('isle.bargeHint').replace('{n}', String(Math.max(1, v.hall ?? 1))), disabled: !barge || (state.self?.gold ?? 0) < barge, data: { bbarge: 1 } },
+      { label: W('isle.barge'), sub: money(barge), icon: 'good_timber', hint: W('isle.bargeHint').replace('{n}', String(Math.max(1, v.hall ?? 1))), disabled: !barge || (state.self?.gold ?? 0) + Math.max(0, v.claim?.treasury ?? 0) < barge, data: { bbarge: 1 } },
     ], 'b-quick');
     // A phone on its side (docs/15 item 8): the board fills the left, and the resources, the waters and the sheet
     // scroll together on the right, so the board is not squeezed under three header rows.

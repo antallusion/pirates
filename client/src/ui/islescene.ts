@@ -11,6 +11,7 @@
 // One layer of DOM moved by a transform (the map, the pictures, the plots' diamonds in one SVG, the tags): a drag
 // redraws nothing, the pictures are diffed by spot when the view changes.
 
+import { HL, bindHaul, haulCard } from './islehaul.ts';
 import { ISO_H, ISO_MAP_OF, ISO_SLOT, ISO_UNIT, ISO_W, isoFoot, isoSheet, isoSpot, isoStage } from '../../../shared/src/data/isleiso.ts';
 import type { IsoMap, Pt } from '../../../shared/src/data/isleiso.ts';
 import { PLOT_CELLS, PRODUCERS, producerOf } from '../../../shared/src/data/base.ts';
@@ -71,7 +72,7 @@ const GRAIL_ART = 'icon.good_cursed_relics';
 const DEFAULT_MAX = 1.25;
 
 /** The island's places drawn as the scene's side sheet. */
-type Panel = 'yard' | 'town' | 'supply' | 'defence' | 'plan';
+type Panel = 'yard' | 'town' | 'supply' | 'defence' | 'plan' | 'haul';
 
 /** The camera: the map's top-left corner on the screen and its scale. */
 interface Cam { x: number; y: number; s: number }
@@ -212,6 +213,7 @@ export class IsleScene {
     this.topEl.addEventListener('click', (e) => {
       const b = (e.target as HTMLElement).closest<HTMLElement>('[data-isea]');
       if (b) this.onExit();
+      else if ((e.target as HTMLElement).closest('[data-itre]')) this.openPanel('haul'); // forum 2026-10-29: the treasury takes silver here
     });
     this.sideEl.addEventListener('click', (e) => {
       const b = (e.target as HTMLElement).closest<HTMLElement>('[data-iside]');
@@ -577,7 +579,7 @@ export class IsleScene {
       const full = r.n >= r.cap;
       return `<span class="is-res${full ? ' full' : ''}" title="${esc(`${GOODS[r.good].name}: ${fmt(r.n)}/${fmt(r.cap)}${r.rate > 0 ? ` · +${Math.round(r.rate * 10) / 10}/${ru ? 'ч' : 'h'}` : ''}`)}">${icon(`good_${r.good}`, '', 'ico-sm')}<b>${fmt(r.n)}</b><i>/${fmt(r.cap)}</i></span>`;
     }).join('') : '';
-    return `${name}<div class="is-store">${res}${v ? `<span class="is-res is-tre" title="${esc(L('treasury'))}">${icon('coin', '', 'ico-sm')}<b>${fmt(Math.max(0, v.claim?.treasury ?? 0))}</b></span>` : ''}<span class="is-res is-silver" title="${esc(L('silver'))}">${money(state.self?.gold ?? 0)}</span></div>
+    return `${name}<div class="is-store">${res}${v ? `<button type="button" class="is-res is-tre" data-itre title="${esc(`${L('treasury')} · ${HL('deposit')}`)}">${icon('coin', '', 'ico-sm')}<b>${fmt(Math.max(0, v.claim?.treasury ?? 0))}</b><span class="is-tre-plus" aria-hidden="true">+</span></button>` : ''}<span class="is-res is-silver" title="${esc(L('silver'))}">${money(state.self?.gold ?? 0)}</span></div>
       <button type="button" class="btn btn-primary is-sea" data-isea title="${esc(L('seaTip'))}">${icon('menu_ship', '', 'ico-sm')}<span>${esc(L('sea'))}</span></button>`;
   }
 
@@ -587,7 +589,7 @@ export class IsleScene {
       `<button type="button" class="is-sb${o.on ? ' on' : ''}${o.cls ? ` ${o.cls}` : ''}" data-iside="${id}"${o.off ? ' disabled' : ''} title="${esc(o.title ?? label)}">${icon(ico, '', 'is-sb-ico')}<span class="is-sb-l">${esc(label)}</span>${o.badge ? `<b class="is-sb-n">${esc(o.badge)}</b>` : ''}</button>`;
     const on = (p: Panel) => !!this.pick && 'panel' in this.pick && this.pick.panel === p;
     const raid = v.claim.raid ? btn('raid', 'build_battery', L('raid'), { cls: 'raid', title: serverWord(state) }) : '';
-    return `${raid}${btn('collect', 'ui_chest', L('collect'), { badge: fresh ? `+${fmt(fresh)}` : '', off: !fresh })}${btn('yard', 'build_shipyard', L('ships'), { badge: v.shipyard.ships.length ? String(v.shipyard.ships.length) : '', on: on('yard') })}${v.town ? btn('town', 'build_fort', L('town'), { on: on('town') }) : ''}${btn('supply', 'build_caravan_office', L('supply'), { badge: String(state.supply?.isles.filter((x) => x.linked).length || ''), on: on('supply') })}${btn('defence', 'build_battery', L('defence'), { on: on('defence') })}${btn('shop', 'doubloon', PM('open'), { cls: 'shop', title: PM('openTip') })}`;
+    return `${raid}${btn('collect', 'ui_chest', L('collect'), { badge: fresh ? `+${fmt(fresh)}` : '', off: !fresh })}${btn('yard', 'build_shipyard', L('ships'), { badge: v.shipyard.ships.length ? String(v.shipyard.ships.length) : '', on: on('yard') })}${v.town ? btn('town', 'build_fort', L('town'), { on: on('town') }) : ''}${btn('supply', 'build_caravan_office', L('supply'), { badge: String(state.supply?.isles.filter((x) => x.linked).length || ''), on: on('supply') })}${btn('haul', 'coin', HL('side'), { on: on('haul'), title: HL('sideTip') })}${btn('defence', 'build_battery', L('defence'), { on: on('defence') })}${btn('shop', 'doubloon', PM('open'), { cls: 'shop', title: PM('openTip') })}`;
   }
 
   private queueHtml(v: BaseView): string {
@@ -636,6 +638,7 @@ export class IsleScene {
     else if (panel === 'town') body = v.town ? `<h3 class="is-ph">${esc(L('town'))}</h3>${townTab(v, state, this.base.mk)}` : '';
     else if (panel === 'supply') body = `<h3 class="is-ph">${esc(L('supply'))}</h3>${supplyTab(state)}`;
     else if (panel === 'plan') body = this.planHtml(v, state);
+    else if (panel === 'haul') body = `<h3 class="is-ph">${esc(HL('title'))}</h3>${haulCard(v, state)}`;
     else body = this.base.sheet(v, state, true);
     if (!body) {
       this.cardEl.classList.add('hidden');
@@ -684,6 +687,7 @@ export class IsleScene {
     // a queue row in the card opens its building here too
     this.cardEl.querySelectorAll<HTMLElement>('.bjob[data-plot], .bjob[data-town]').forEach((el) => (el.onclick = () => this.select(el.dataset.plot ? { plot: Number(el.dataset.plot) } : { town: el.dataset.town as TownId }, true)));
     if (panel === 'plan') this.bindPlan(v);
+    if (panel === 'haul') bindHaul(this.cardEl, v, state, this.send);
     this.base.tick(this.cardEl, state);
   }
 

@@ -298,3 +298,8 @@ body.reduce-motion #isle :is(.is-g.rec, .is-pl.t.rec, .is-trec) { animation: non
 }
 @media (max-width: 520px) { #isle { --is-rec-w: 112px; } }
 @media (min-height: 700px) and (min-width: 1000px) { #isle { --is-rec-w: 220px; --is-rec-h: 42px; } #isle .is-rec-s { font-size: 18px; } }
+
+/* forum 2026-10-29: the treasury chip is a button — it opens «Завезти» (silver into the treasury, the hold into the yard) */
+#isle button.is-res.is-tre { color: inherit; font: inherit; font-size: var(--is-fs); cursor: pointer; }
+#isle button.is-res.is-tre:hover, #isle button.is-res.is-tre:focus-visible { border-color: var(--gold, #d8b45c); }
+#isle .is-tre-plus { display: inline-grid; place-items: center; width: 14px; height: 14px; margin-left: 3px; border-radius: 50%; background: var(--gold, #d8b45c); color: #1a1408; font-weight: 700; font-size: 11px; line-height: 1; }

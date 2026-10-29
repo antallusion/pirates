@@ -30,7 +30,7 @@ export const EN = {
   // what a level gives
   gHall: '{silver} silver a day · island level {isle}: {plots} plots, {outposts} outposts, {crews} builders',
   gKeep: 'every dwelling grows ×{g}',
-  gMarket: 'buys at {s}% of the base price, sells at ×{b}',
+  gMarket: 'buys at {s}% of the base price, sells at {b}%',
   gGuild: 'floor {n} of orders: {k} more to learn',
   gDwell: '{unit}: {n} a week — hired in any port',
   gDwellUp: '{unit} — the upgraded kind — {n} a week, hired in any port',
@@ -106,7 +106,7 @@ export const RU: Record<keyof typeof EN, string> = {
   othersN: 'Ещё капитанов со своей базой на этом острове: {n}',
   gHall: '{silver} серебра в день · остров уровня {isle}: участков {plots}, аванпостов {outposts}, бригад {crews}',
   gKeep: 'все жилища растят ×{g}',
-  gMarket: 'покупает за {s}% базовой цены, продаёт ×{b}',
+  gMarket: 'покупает за {s}% базовой цены, продаёт за {b}%',
   gGuild: 'ярус приказов {n}: ещё {k} для изучения',
   gDwell: '{unit}: {n} в неделю — нанимать в любом порту',
   gDwellUp: '{unit} — улучшенный вид — {n} в неделю, нанимать в любом порту',
