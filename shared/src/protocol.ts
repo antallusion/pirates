@@ -734,6 +734,9 @@ export interface IsleFirstView {
   wait: number;
   /** Why the building may not be ordered yet (the server's English). */
   why?: string;
+  /** The marines' step with no marine to be had (owner, 2026-10-29): no room even with the hands ashore, the army over
+   *  the might cap, or no silver — a calm line, no finger. */
+  stuck?: 'room' | 'might' | 'silver';
 }
 
 export interface PrivateState {
@@ -741,6 +744,9 @@ export interface PrivateState {
   advice?: ArmyAdvice | null;
   /** Owner, 2026-10-28 (islefirst.ts): the island's first build's step. */
   isleFirst?: IsleFirstView | null;
+  /** Owner, 2026-10-29: nothing useful to hire anywhere (no hammock, no room under the might cap, no silver) — the
+   *  hints never point at a hire window. */
+  noHire?: boolean;
   /** The captain as a hero (docs/17 H2). */
   hero?: HeroView;
   /** Her glory past the cap, mastery and trials (docs/19 E1–E3): from five levels short of the cap. */

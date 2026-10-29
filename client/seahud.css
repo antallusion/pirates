@@ -955,6 +955,12 @@ body.simple.hud-more.more-open:not(.chat-open):not(.tac) #hud-chat > .more-fold 
   left: calc(var(--sa-l) + 8px + var(--mi, 1) * (var(--tr-b) + var(--mg))) !important; width: var(--tr-b) !important; height: var(--tr-b) !important;
   animation: more-in 200ms var(--k-ease-out, ease-out) calc(var(--mi, 1) * 18ms) backwards; }
 body.simple.hud-more.more-open #hud #touch > #tc-offer.more-fold { animation: more-in 200ms var(--k-ease-out, ease-out) calc(var(--mi, 1) * 18ms) backwards, tc-offer-glow 2.8s ease-in-out 400ms infinite; }
+/* «Армия» (owner, 2026-10-29): only in the tray; its word under it as «Остров»'s */
+#tc-crew { display: none; }
+body.simple.hud-more.more-open #hud #touch > #tc-crew.more-fold { display: block; min-width: 0; min-height: 0; padding: 0; pointer-events: auto; }
+body.simple #hud #touch > #tc-crew .tc-crew-l { position: absolute; left: 50%; top: calc(100% + 3px); transform: translateX(-50%); font-size: 9px; line-height: 1; white-space: nowrap;
+  color: var(--bone, #e6dccb); text-shadow: 0 1px 2px #000, 0 0 4px #000; pointer-events: none; }
+body.simple #hud #touch > #tc-crew .k-btn-ico { inset: 19.8% 22% 24.2%; }
 /* the weak army's pill under the tray */
 body.simple.hud-more.more-open #hud-advice.more-fold:not(.hidden) { left: calc(var(--sa-l) + 8px) !important; top: calc(var(--lr-top) + var(--tr-b) + 27px) !important;
   animation: more-pill 200ms var(--k-ease-out, ease-out) 60ms backwards; }

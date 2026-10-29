@@ -159,7 +159,8 @@ export function armyAdvice(c: AdviceCaptain): ArmyAdvice | null {
   // (room under the might cap, the hands going ashore for them as the dwellings do: dwell.ts sendAshore)
   const hands = (u: UnitId) => UNITS[u]?.tier === 1 && !UNITS[u].beast;
   const room = best ? mightRoom(c.army.filter((x) => !hands(x.u)), best, c.shipLevel, c.crewMax, c.slots) : 0;
-  if (best && (aboard(best) < ADVICE_STACK || room >= 3)) {
+  // (owner, 2026-10-29: never «наймите» with no room for one of them — a full army over the cap hired nothing)
+  if (best && room > 0 && (aboard(best) < ADVICE_STACK || room >= 3)) {
     const t = UNITS[best].tier;
     const cost = per(best) * ADVICE_STACK;
     if (c.gold < per(best) * 3) {

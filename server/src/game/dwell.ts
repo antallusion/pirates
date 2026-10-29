@@ -349,6 +349,35 @@ export function sendAshore(army: readonly ArmyStack[], n: number): ArmyStack[] {
   return out.filter((x) => x.n > 0);
 }
 
+/** Men of kind `u` her ship may take aboard now, the dwellings' pools and the purse aside (owner, 2026-10-29: «у меня
+ *  армия уже целиком, зачем меня спрашивает … кого-то нанять?»): the free hammocks and the hands who would go ashore
+ *  for a higher tier, the picked men's berths, the might cap, a slot for a new stack. The hints ask this first. */
+export function roomFor(s: PlayerSession, u: UnitId): number {
+  const ship = s.ship;
+  const d = UNITS[u];
+  if (!ship || !d) return 0;
+  if (ship.shipLevel < TIER_SHIP_LEVEL[d.tier]) return 0;
+  const free = Math.max(0, ship.stats.crewMax - ship.crew);
+  const swap = swapOf(ship.army, d.tier);
+  const picked = d.tier >= PICKED_TIER && !d.titan ? pickedRoom(s) : Infinity;
+  const might = mightRoom(swap ? sansHands(ship.army) : ship.army, u, ship.shipLevel, ship.stats.crewMax, ship.armySlots);
+  const n = Math.min(free + swap, picked, might);
+  if (!(n > 0)) return 0;
+  const after = n > free ? sendAshore(ship.army, n - free) : ship.army;
+  if (!after.some((x) => x.u === u && !x.g) && after.length >= ship.armySlots) return 0;
+  return Math.floor(n);
+}
+
+/** The army's might as the cap weighs it (shared town.ts mightRoom): the titans out, the empty hammocks as deckhands
+ *  (owner, 2026-10-29: the window's «Сила» counted the titans the cap never counts). */
+export function mightNow(s: PlayerSession): number {
+  const ship = s.ship!;
+  const own = ship.army.filter((x) => !UNITS[x.u]?.titan);
+  const men = ship.army.reduce((a, x) => a + x.n, 0);
+  const empty = Math.max(0, ship.stats.crewMax - men);
+  return armyWeight(empty > 0 ? [...own, { u: 'deckhand', n: empty }] : own);
+}
+
 /** Picked men (tier 4 and up) she may still berth, and at most. */
 export const pickedMax = (s: PlayerSession): number => Math.floor(s.ship!.stats.crewMax * pickedShare(s.ship!.shipLevel));
 export function pickedRoom(s: PlayerSession): number {
@@ -482,7 +511,7 @@ export function dwellView(game: Game, s: PlayerSession, src: Src): DwellView | n
   return {
     src, place: at.place, rows, ups, army: ship.army.map((x) => ({ ...x })), slots: ship.armySlots, crew: ship.crew, crewMax: ship.stats.crewMax,
     gold: Math.floor(s.profile!.gold), have: have(game, s, at), why: at.why ?? busy(game, s), week: weekView(game), picked: pickedRoom(s), pickedMax: pickedMax(s),
-    might: Math.round(armyWeight(ship.army)), mightMax: Math.round(mightCap(ship.shipLevel, ship.stats.crewMax, ship.armySlots)),
+    might: Math.round(mightNow(s)), mightMax: Math.round(mightCap(ship.shipLevel, ship.stats.crewMax, ship.armySlots)),
     best: captainAdvice(game, s)?.best ?? null,
   };
 }
