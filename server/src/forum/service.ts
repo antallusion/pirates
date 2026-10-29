@@ -16,6 +16,7 @@ import type { ForumErrorCode, Role } from '../../../shared/src/forum/meta.ts';
 import { maskBadWords } from '../../../shared/src/chat.ts';
 import { formTrapped } from '../mailguard.ts';
 import { seed, SYSTEM_ID } from './seed.ts';
+import { postThreads28 } from './posts28.ts';
 import type { ForumStore, PostRow, SectionRow, TopicRow, UserRow } from './store.ts';
 
 export type Lang = 'ru' | 'en';
@@ -144,6 +145,7 @@ export class ForumService {
     if (this.uploadsDir) mkdirSync(this.uploadsDir, { recursive: true });
     this.avatars = o.avatars ?? ['corsair', 'reaver', 'smuggler', 'navigator', 'drowned', 'admiral'];
     seed(this.store, this.now());
+    postThreads28(this.store, this.now());
     for (const id of this.admins) if (this.store.user(id)) this.store.setRole(id, 'admin');
     for (const id of this.mods) if (this.store.user(id) && !this.admins.has(id)) this.store.setRole(id, 'moderator');
   }

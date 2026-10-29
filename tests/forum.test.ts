@@ -8,6 +8,7 @@ import { ForumStore } from '../server/src/forum/store.ts';
 import { ForumError, ForumService, FRESH_TOPIC_MS, sniff } from '../server/src/forum/service.ts';
 import type { GameLink } from '../server/src/forum/service.ts';
 import { SEED, SYSTEM_ID, WELCOME } from '../server/src/forum/seed.ts';
+import { THREADS_28 } from '../server/src/forum/posts28.ts';
 import { forumRoutes } from '../server/src/http/forum-routes.ts';
 import { FORUM_EN, FORUM_RU, RU_PLURAL } from '../client/src/lang/forum.ts';
 import { POSTS_PER_PAGE, rankOf } from '../shared/src/forum/meta.ts';
@@ -50,13 +51,14 @@ test('the seed: every category and section in both tongues, the two pinned offic
   assert.equal(h.categories.flatMap((c) => c.sections).length, SEED.flatMap((c) => c.sections).length);
   assert.equal(svc.home(null, 'en').categories[0].title, SEED[0].title[1]);
   const news = svc.section(null, 'news', 1, 'ru');
-  assert.equal(news.topics.length, 2);
+  // the two welcomes and the gift's news (server/src/forum/posts28.ts)
+  assert.equal(news.topics.length, 2 + THREADS_28.filter((t) => t.section === 'news').length);
   assert.ok(news.topics.every((t) => t.pinned && t.official));
   assert.equal(news.topics[0].author?.id, SYSTEM_ID);
   assert.ok(news.topics.some((t) => t.title === WELCOME.title[0]));
-  // the seed runs once
+  // the seed and the threads run once
   const again = new ForumService({ store: svc.store, link, now: () => Date.now() });
-  assert.equal(again.home(null, 'ru').stats.topics, 2);
+  assert.equal(again.home(null, 'ru').stats.topics, 2 + THREADS_28.length);
 });
 
 test('a member is made from her game account, with her captain, guild, deeds and rank', () => {
