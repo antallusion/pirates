@@ -74,6 +74,7 @@ import { armyGlance } from './army.ts';
 import { holdMix, holdMixHtml } from './holdmix.ts';
 import { gloryChip } from './throne.ts'; // docs/19 E1
 import { Toasts } from './kit/toast.ts'; // docs/23 phase 1
+import { TOAST } from './kit/tokens.ts';
 import { avatar } from './kit/avatar.ts'; // her face in its ring (docs/32 §12: her frame), shared/src/data/portraitfit.ts
 import { captainDot } from './capmenu.ts'; // seaux: the bead is news not yet seen
 import { drawWrecksMini } from '../render/castaways.ts'; // seaux: her wreckage and castaways on the chart
@@ -506,14 +507,22 @@ export class Hud {
     const ro = new ResizeObserver(band);
     for (const id of ['hud-captain', 'hud-map', 'advcard', 'encounter', 'surrender', 'lairchest', 'hud-autosail']) ro.observe($(id));
     for (const id of ['encounter', 'surrender', 'lairchest', 'hud-autosail']) new MutationObserver(band).observe($(id), { attributes: true, attributeFilter: ['class'] });
+    // (a toast gone: the island's step it stood in for comes back — placeTopStrip's i1-yield)
+    new MutationObserver(() => { if (simpleHud()) band(); }).observe(this.toastsEl, { childList: true });
     $('hud-map').addEventListener('transitionend', band); // (back down from behind its tab: its top line once it is there)
+    // (the «⋯» tray's buttons fly in: measured again once each is in its place)
+    for (const ev of ['animationend', 'transitionend']) $('touch').addEventListener(ev, () => { if (document.body.classList.contains('more-open')) band(); });
     new MutationObserver((ms) => { if (ms.some((m) => m.target instanceof HTMLElement && /^(tc-news|tc-menu|tc-isle)$/.test(m.target.id))) band(); }).observe($('touch'), { attributes: true, attributeFilter: ['class'], subtree: true });
     // The chart and the menu stepping up or down (seahud.ts mm-peek): the top band takes or gives back their room.
     let peekWas = false;
+    let moreWas = false;
     new MutationObserver(() => {
       const peek = document.body.classList.contains('mm-peek');
-      if (peek === peekWas) return;
+      // (and the «⋯» tray opening or closing: the toasts and the island's step keep clear of its row)
+      const more = document.body.classList.contains('more-open');
+      if (peek === peekWas && more === moreWas) return;
       peekWas = peek;
+      moreWas = more;
       this.placeStrip();
     }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
     new MutationObserver(() => this.placeStrip()).observe($('hud-watch'), { attributes: true, attributeFilter: ['class'] });
@@ -687,6 +696,28 @@ export class Hud {
       const r = el.getBoundingClientRect();
       if (r.width > 2 && r.height > 2 && r.top < innerHeight * 0.3) top = Math.max(top, r.bottom + 6 * z);
     }
+    // The island's step is the column's last and least (owner, 2026-10-29: «чтобы никогда не накладывались»): a toast up
+    // with no room for it under the column inside the top 30 % takes the step's slot while it is up (the step out of
+    // sight, its place kept: nothing else moves); a step that would end past the 30 % waits out of sight as well.
+    // (the «⋯» tray open: its row of buttons under the captain's plate reaches toward the middle — to 369 px at 740×360)
+    const tray = body.classList.contains('more-open')
+      ? [...document.querySelectorAll('#tc-more-tray, #touch > .more-fold, #hud-chat > .more-fold')].filter((el) => getComputedStyle(el).visibility !== 'hidden').map((el) => el.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0 && r.left < W / 2)
+      : [];
+    const onTray = (l: number, t: number, r: number, b: number) => tray.filter((q) => q.left < r && q.right > l && q.top < b && q.bottom > t);
+    const i1 = document.getElementById('hud-isle1');
+    let yieldIsle = false;
+    if (i1 && i1.parentElement?.id === 'hud-stack' && !i1.classList.contains('hidden')) {
+      const r = i1.getBoundingClientRect();
+      if (r.height > 2) {
+        const limit = innerHeight * 0.3;
+        const up = [...this.toastsEl.children].filter((t) => !t.classList.contains('k-toast-out'));
+        // (as tall as the one up — two lines in a narrow band — or one line for one coming)
+        const th = Math.max(26 * z, ...up.map((t) => t.getBoundingClientRect().height));
+        yieldIsle = r.bottom > limit + 1 || ((this.toastSoon || up.length > 0) && top + th > limit) || onTray(r.left, r.top, r.right, r.bottom).length > 0;
+        if (yieldIsle) top = r.top;
+      }
+    }
+    if (i1) i1.classList.toggle('i1-yield', yieldIsle);
     // (clear of the round buttons under the chart, and of the fight's on the right when the card unfolded sends them low)
     let tr = sx + sw;
     const fight = [...document.querySelectorAll('#tc-special, #tc-abil:not(.hidden), #tc-skill:not(.hidden), #tc-ammo, #tc-lock, #tc-fire, #tc-actrow')].filter(seen)
@@ -739,10 +770,21 @@ export class Hud {
         }
       }
     }
+    // (one small line in the middle, not a strip across the screen: 46 % of the width at most)
+    if (!leftward && tr - tl > innerWidth * 0.46) {
+      const w = innerWidth * 0.46, mid = Math.min(Math.max((sx + sw / 2), tl + w / 2), tr - w / 2);
+      tl = mid - w / 2;
+      tr = mid + w / 2;
+    }
+    // (clear of the tray: beside it)
+    const hit = onTray(tl, top, tr, top + 46 * z);
+    if (hit.length) tl = Math.max(tl, ...hit.map((q) => q.right + gap));
     set('--st-top', top);
     set('--st-left', tl);
     set('--st-w', Math.max(120 * z, tr - tl));
   }
+  /** A toast about to come up (the queue's `before`): the top band makes room for it before it is drawn. */
+  private toastSoon = false;
 
   /** A taller screen: the toasts' band stands over the bottom block, under 30% of the height — unless the block is too
    *  tall to leave it room below the screen's middle (an act's hint and its buttons over the bar, at 1280×720: the band
@@ -1047,7 +1089,7 @@ export class Hud {
       el.id = 'hud-isle1';
       el.className = 'hud-isle1 hidden';
       el.setAttribute('role', 'status');
-      $('hud').appendChild(el);
+      (document.body.classList.contains('simple') ? document.getElementById('hud-stack') ?? $('hud') : $('hud')).appendChild(el);
       el.addEventListener('click', (e) => {
         const go = (e.target as HTMLElement).closest<HTMLElement>('[data-i1go]');
         if (!go) return;
@@ -1063,23 +1105,24 @@ export class Hud {
     const now = performance.now();
     if (key !== this.i1Key || now - this.i1At > 1000) {
       this.i1At = now;
-      // On a phone it stands at the top's middle, under the autopilot's pill (owner, 2026-10-29: on an iPhone 15 the
-      // notch's side covered it under her frame)
-      if (document.body.classList.contains('simple')) {
-        const as = document.getElementById('hud-autosail');
-        const r = as && !as.classList.contains('hidden') ? as.getBoundingClientRect() : null;
-        el.classList.add('i1-top');
-        el.style.left = '';
-        el.style.top = `${r && r.height > 0 ? Math.round(r.bottom + 4) : 6}px`;
+      // The simple HUD: the top-centre column's last item (owner, 2026-10-29: «одно на другое накладывается» — it stood
+      // fixed under the autopilot's pill and the toasts ran across it). In the column's flow under her mark and the
+      // autopilot it can never lie on them; the toasts keep under the column, or take its slot while there is no room
+      // (placeTopStrip: i1-yield). The detailed HUD: under her frame, or under the weak army's badge.
+      const stack = document.getElementById('hud-stack');
+      if (document.body.classList.contains('simple') && stack) {
+        if (el.parentElement !== stack) stack.appendChild(el);
+        el.style.left = el.style.top = '';
       } else {
-      el.classList.remove('i1-top');
-      const adv = document.getElementById('hud-advice');
-      const ar = adv && !adv.classList.contains('hidden') ? adv.getBoundingClientRect() : null;
-      const at = ar && ar.height > 0 ? { x: Math.round(ar.left), y: Math.round(ar.bottom + 4) } : advicePlace(el);
-      if (at) {
-        el.style.left = `${Math.max(4, at.x)}px`;
-        el.style.top = `${at.y}px`;
-      }
+        if (el.parentElement !== $('hud')) $('hud').appendChild(el);
+        el.classList.remove('i1-yield');
+        const adv = document.getElementById('hud-advice');
+        const ar = adv && !adv.classList.contains('hidden') ? adv.getBoundingClientRect() : null;
+        const at = ar && ar.height > 0 ? { x: Math.round(ar.left), y: Math.round(ar.bottom + 4) } : advicePlace(el);
+        if (at) {
+          el.style.left = `${Math.max(4, at.x)}px`;
+          el.style.top = `${at.y}px`;
+        }
       }
     }
     if (key === this.i1Key) return;
@@ -2103,7 +2146,15 @@ export class Hud {
    *  in the HUD's band (placed by placeStrip for the popup budget), or the open window's strip under it. */
   private toastQ = new Toasts({
     host: () => (modalOpen() ? $('modal-toasts') : this.toastsEl),
-    before: (host) => (host === this.toastsEl ? this.placeStrip() : placeModalStrip(host)),
+    before: (host) => {
+      if (host !== this.toastsEl) return placeModalStrip(host);
+      this.toastSoon = true;
+      this.placeStrip();
+      this.toastSoon = false;
+    },
+    // the simple HUD's top band: one toast at a time, the next waiting its turn (owner, 2026-10-29: they ran into each
+    // other and into the island's step); the detailed HUD two
+    limit: () => (simpleHud() ? 1 : TOAST.visible),
     render: (t) => (t.data as () => HTMLElement)(),
     bump: (el, t) => {
       let badge = el.querySelector<HTMLElement>('.t-count');

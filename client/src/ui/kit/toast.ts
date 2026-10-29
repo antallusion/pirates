@@ -83,6 +83,11 @@ export class ToastQueue {
     return ch;
   }
 
+  /** How many may be up at once from now (the ones up past it stay till their time is out). */
+  setMax(n: number): void {
+    this.max = Math.max(1, n);
+  }
+
   /** Take one off (the caller removed it: a window closed over it). */
   drop(id: number): void {
     for (const list of [this.visible, this.waiting]) {
@@ -113,6 +118,8 @@ export interface ToastsOpts {
   /** Called before one is put up (the HUD measures its band). */
   before?: (host: HTMLElement) => void;
   max?: number;
+  /** How many may be up now, asked as each comes and as time passes (the HUD's band: one on the simple HUD). */
+  limit?: () => number;
 }
 
 /** The queue on screen. */
@@ -128,6 +135,7 @@ export class Toasts {
 
   push(key: string, kind: string, data: unknown = null, life?: number): HTMLElement | null {
     const now = performance.now();
+    if (this.o.limit) this.queue.setMax(this.o.limit());
     this.apply(this.queue.push(key, kind, now, data, life ?? toastLife(kind)));
     this.schedule();
     const t = this.queue.visible.find((x) => x.key === key);

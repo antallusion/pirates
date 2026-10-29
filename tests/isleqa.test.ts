@@ -111,7 +111,7 @@ test('inside Telegram a link out goes by Telegram’s opener (the settings’ le
 });
 
 test('a window’s toast strip goes up when the window has its buttons along its foot', () => {
-  assert.match(src('client/src/ui/hud.ts'), /before: \(host\) => \(host === this\.toastsEl \? this\.placeStrip\(\) : placeModalStrip\(host\)\)/);
+  assert.match(src('client/src/ui/hud.ts'), /before: \(host\) => \{\s*if \(host !== this\.toastsEl\) return placeModalStrip\(host\);[\s\S]{0,80}this\.placeStrip\(\);/);
   assert.match(src('client/styles.css'), /#modal-toasts\.mt-top \{ top: calc\(var\(--sa-t, 0px\) \+ 6px\); bottom: auto; \}/);
 });
 
