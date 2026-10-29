@@ -7,7 +7,7 @@
 import { ZB_NO_BOARD, zbBoardBlocked } from './zonebosses.ts';
 import { ladderBetween } from './ladder.ts';
 import { inDuel } from './pvp.ts';
-import { NO_BOARD_HER, NO_BOARD_OWN, boardingOff, markPvp } from './colours.ts';
+import { NO_BOARD_HER, NO_BOARD_OWN, boardingOff, boardingOffVs, markPvp, noBoardHolds } from './colours.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { clamp, dist } from '../../../shared/src/math.ts';
 import { BOARD_ARC_DEG, BOARD_ARC_WIDE_DEG, BOARD_GAP, BOARD_REL_SPEED, alongsideWhy, hullOf } from '../../../shared/src/data/reach.ts';
@@ -102,8 +102,10 @@ export function canBoard(game: Game, a: ShipEntity, b: ShipEntity): string | nul
   if (a.npcRole === 'beast' || b.npcRole === 'beast') return 'There are no decks to board on a creature of the deep';
   // «Абордаж: выкл» (docs/24 C1): nobody boards her — captains and the sea's own alike; and she boards no captain. The
   // sea's own ships she may board at once whatever the switch (owner, 2026-10-18: «на нпс сразу можно было абордажить»).
-  if (boardingOff(game, a) && captainsShip(game, b)) return NO_BOARD_OWN;
-  if (boardingOff(game, b)) return NO_BOARD_HER;
+  // Between captains the switch holds only under neutral colours (owner, 2026-10-29), and the Red Hook's ultimate tears
+  // through it on any but a neutral ship; the sea's own ships it keeps off her whatever her colours.
+  if (noBoardHolds(game, a) && captainsShip(game, b)) return NO_BOARD_OWN;
+  if (captainsShip(game, a) ? boardingOffVs(game, b, captainOf(game, a)) : boardingOff(game, b)) return NO_BOARD_HER;
   const zb = zbBoardBlocked(b) ?? zbBoardBlocked(a); // a zone boss: guns only (docs/21)
   if (zb) return zb;
   // A boarding just lost (owner, 2026-10-05: «бесконечный абордаж при проигрыше»): her decks are let be a while.
@@ -126,6 +128,12 @@ export function canBoard(game: Game, a: ShipEntity, b: ShipEntity): string | nul
 export const BOARD_MIN_HANDS = 4;
 
 /** A captain's ship, or one of hers (an escort, a prize): «Абордаж: выкл» keeps her off these, not off the sea's own. */
+/** The captain's own ship behind a ship of hers (an escort, a prize), or the ship itself. */
+export function captainOf(game: Game, b: ShipEntity): ShipEntity {
+  if (b.accountId !== null || b.ownerId === null) return b;
+  return game.ships.get(b.ownerId) ?? b;
+}
+
 export function captainsShip(game: Game, b: ShipEntity): boolean {
   if (b.accountId !== null) return true;
   const owner = b.ownerId !== null ? game.ships.get(b.ownerId) : undefined;
@@ -519,7 +527,9 @@ function resolveRound(game: Game, a: ShipEntity, b: ShipEntity): boolean | null 
   if (!b.isPlayer && !b.surrendered && b.morale > 30 && now - bs.startedAt >= tx(a.stats, 'ironGrip') && pb >= pa * 0.7 && rng.chance(0.15)) {
     if (cutGrapples(game, b) === null) return 'cut';
   }
+  // Blood in the Water: the Reaver's kills lift his men, boarding or boarded (owner, 2026-10-29).
   if (a.captain === 'reaver') a.morale += killB * 0.5;
+  if (b.captain === 'reaver') b.morale += killA * 0.5;
   a.morale = clamp(a.morale, 0, 100);
   b.morale = clamp(b.morale, 0, 100);
   const bBroken = b.crew <= Math.max(floorB, bs.enemyStartCrew * 0.15) || b.morale <= 5 || b.surrendered;

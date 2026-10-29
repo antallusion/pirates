@@ -122,12 +122,15 @@ export function coloursCard(state: ClientState, opts: { head?: boolean } = {}): 
   // (In the port the option says «зелёный вымпел» already; the ship window and «Флаг и закон» say what it is.)
   const pennant = v.pennant && opts.head !== false ? ` ${L('fl.pennant', { n: v.pennantHoursLeft })}` : '';
   // (The port's own place is named «Флаг» already: no heading over it there, the room is the boarding switch's.)
+  // «Абордаж: выкл» holds against captains only under neutral colours (owner, 2026-10-29): on under another flag, it
+  // stays on but says it does nothing now.
+  const idle = v.noBoard && v.flag !== 'neutral';
   const law = lawlessHere(state) ? `<p class="fl-law" role="note">${icon('danger', '', 'ico-sm')}<span>${esc(L('fl.lawCard'))}</span></p>` : '';
   return `<div class="card fl-card${law ? ' fl-card--lawless' : ''}">${opts.head === false ? '' : `<h4 class="card-h">${icon('tab_law', '', 'ico-md')}${esc(L('fl.title'))}</h4>`}${law}
     <div class="fl-opts" role="radiogroup" aria-label="${esc(L('fl.title'))}">${COLOURS.map(opt).join('')}</div>
     <p class="fl-line muted">${esc(line)}${pennant ? `<span class="good">${esc(pennant)}</span>` : ''}</p>
-    <button type="button" class="fl-board${v.noBoard ? ' off' : ''}" role="switch" aria-checked="${!v.noBoard}" data-noboard="${v.noBoard ? '0' : '1'}"${docked ? '' : ' disabled'}>
-      <i class="fl-nb-ico" aria-hidden="true"></i><span class="fl-t"><b>${esc(v.noBoard ? L('fl.boardOff') : L('fl.boardOn'))}</b><small>${esc(L('fl.boardSub'))}</small></span><i class="fl-sw" aria-hidden="true"></i></button></div>`;
+    <button type="button" class="fl-board${v.noBoard ? ' off' : ''}${idle ? ' idle' : ''}" role="switch" aria-checked="${!v.noBoard}" data-noboard="${v.noBoard ? '0' : '1'}"${docked ? '' : ' disabled'}>
+      <i class="fl-nb-ico" aria-hidden="true"></i><span class="fl-t"><b>${esc(v.noBoard ? L('fl.boardOff') : L('fl.boardOn'))}</b>${idle ? `<em class="fl-idle">${esc(L('fl.boardIdle'))}</em>` : ''}<small>${esc(L('fl.boardSub'))}</small></span><i class="fl-sw" aria-hidden="true"></i></button></div>`;
 }
 
 /** The card's buttons: an order for colours, boarding on or off. */

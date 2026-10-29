@@ -13,6 +13,10 @@ export const SERVER_RU_FLAGS: Record<string, string> = {
   'Boarding is off on her ship: guns only, until one of you sinks.': 'На её корабле абордаж выключен: только ядра, пока кто-то не пойдёт ко дну.',
   'Boarding is turned on or off only in port.': 'Абордаж включается и выключается только в порту.',
   'Boarding is off: your ship boards nobody and nobody boards her. Guns only.': 'Абордаж выключен: вы никого не берёте на абордаж, и вас никто. Только ядра.',
+  'Boarding is off, but against captains it holds only under neutral colours.': 'Абордаж выключен, но против капитанов это действует только под нейтральным флагом.',
+  // The Reaver's ram tears the rigging (owner, 2026-10-29).
+  'Your rigging is torn by the ram: speed −35% for a few seconds.': 'Таран сорвал вам снасти: ход −35% на несколько секунд.',
+  'Her rigging is torn: she is slowed for a few seconds.': 'Ей сорвало снасти: несколько секунд она еле тянет.',
   'Boarding is on again.': 'Абордаж снова включён.',
   // The colours in port.
   'Colours are changed only in port.': 'Флаг меняют только в порту.',

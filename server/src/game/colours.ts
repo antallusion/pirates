@@ -86,9 +86,23 @@ export function coloursBlocked(game: Game, a: ShipEntity, b: ShipEntity): string
 }
 
 /** «Абордаж: выкл» (docs/24 C1): a captain's ship that boards nobody and is boarded by nobody — but in lawless water,
- *  where it shields nobody (owner, 2026-10-09). */
+ *  where it shields nobody (owner, 2026-10-09). The switch as the sea's own ships read it (npc.ts: their pirates fight
+ *  her with the guns): it holds under any colours. Between captains, `boardingOffVs`. */
 export function boardingOff(game: Game, ship: ShipEntity): boolean {
   return ship.accountId !== null && !!game.profileOf(ship)?.noBoard && !lawless(ship);
+}
+
+/** «Абордаж: выкл» between captains (owner, 2026-10-29, forum «Хаск Морроу — бесполезен в ПВП?»): it holds only under
+ *  neutral colours — under the city flag or the pirate flag the switch stays on but does nothing against a captain. */
+export function noBoardHolds(game: Game, ship: ShipEntity): boolean {
+  return boardingOff(game, ship) && coloursOf(game.profileOf(ship)) === 'neutral';
+}
+
+/** «Абордаж: выкл» on `ship` against captain `by` (or one of hers): it holds under neutral colours only, and the Red
+ *  Hook's ultimate (red_hook_boarding) tears through it on any ship but a neutral one. */
+export function boardingOffVs(game: Game, ship: ShipEntity, by: ShipEntity): boolean {
+  if (!noBoardHolds(game, ship)) return false;
+  return !(by.hasEffect('red_hook_boarding') && coloursOf(game.profileOf(ship)) !== 'neutral');
 }
 
 /** A fight between two captains (or their ships): the last of it, for the colours' wait in port. */
@@ -167,7 +181,7 @@ export function setNoBoard(game: Game, s: PlayerSession, on: boolean): string | 
   if (!!p.noBoard === on) return null;
   if (!ship.docked) return 'Boarding is turned on or off only in port.';
   p.noBoard = on;
-  game.sendTo(s, { t: 'toast', msg: on ? 'Boarding is off: your ship boards nobody and nobody boards her. Guns only.' : 'Boarding is on again.', kind: 'info' });
+  game.sendTo(s, { t: 'toast', msg: on ? (coloursOf(p) === 'neutral' ? 'Boarding is off: your ship boards nobody and nobody boards her. Guns only.' : 'Boarding is off, but against captains it holds only under neutral colours.') : 'Boarding is on again.', kind: 'info' });
   syncColours(game, s);
   game.pushSelf(s, true);
   return null;

@@ -66,6 +66,14 @@ export function volleyShare(anchor: number): number {
 /** A plain ram at her class's top speed into an equal: this share of a hull at ⚓1, the same share of a broadside of her
  *  ⚓ higher (docs/25 item 22: «10% корпуса + скорость сближения, с поправкой на ступени»; Game.ts ram). */
 export const RAM_SHARE = 0.05;
+/** «Сорванные снасти» (owner, 2026-10-29, forum «Хаск Морроу — бесполезен в ПВП?»): a ram under Ramming Speed that lands
+ *  tears her rigging — her way ×(1 − slow) for `dur` s, laid on after every buff of her speed (a navigator's ultimate
+ *  too: ShipEntity.sailParams), a second ram renewing it, never stacking. */
+export const TORN_RIGGING = { id: 'torn_rigging', slow: 0.35, dur: 3.5 } as const;
+/** Her way's multiplier under torn rigging (1: none) from her effects at `now`. */
+export function tornRiggingMul(effects: readonly { id: string; until: number }[], now: number): number {
+  return effects.some((e) => e.id === TORN_RIGGING.id && e.until > now) ? 1 - TORN_RIGGING.slow : 1;
+}
 
 /** A burst of her guns (Last Volley, Storm Chaser) as a share of a fight (item 39): the reload cut that gives `q` of the
  *  table's broadsides more in `dur` seconds at her reload `reload` — a fight at any ⚓ is shortened alike. */
@@ -208,7 +216,7 @@ export const SEA_SKILLS: Record<string, SeaSkill> = {
   // ------------------------------------------------------------------------------------------------ the Reaver
   blood_in_the_water: {
     id: 'blood_in_the_water', captain: 'reaver', key: 'P', by: { board: 0.2 }, pow: [], fmt: { board: 'pct' },
-    text: ['Against crews below 50%: +{board} boarding power. Kills during a boarding raise his morale.', 'Против команд ниже 50%: +{board} к силе абордажа. Убитые в абордаже поднимают его дух.'],
+    text: ['In any boarding and any battle on the hexes — with captains, the sea’s ships, in lairs and with bosses: against crews below 50%, +{board} boarding power; kills raise his morale.', 'В любом абордаже и бою на гексах — с игроками, НПС, в логовах и с боссами: против команд ниже 50% +{board} к силе абордажа; убитые поднимают его дух.'],
   },
   grapeshot_frenzy: {
     id: 'grapeshot_frenzy', captain: 'reaver', key: 'Z', by: { crew: [0.3, 0.38, 0.46, 0.53, 0.6], army: [0.05, 0.07, 0.08, 0.1, 0.12], dur: 10 }, pow: ['crew', 'army'], fmt: { crew: 'pct', army: 'pct', dur: 'sec' },
@@ -222,8 +230,8 @@ export const SEA_SKILLS: Record<string, SeaSkill> = {
     node: { talent: 'brd_pistol_volley', kind: 'power', per: 0.2 },
   },
   ramming_speed: {
-    id: 'ramming_speed', captain: 'reaver', key: 'X', by: { ram: [2.9, 3.8, 4.1, 4.2, 4.3], speed: 0.35, dur: 5, plain: RAM_SHARE }, pow: ['ram'], fmt: { ram: 'x', speed: 'pct', dur: 'sec', plain: 'pct' },
-    text: ['Every hand to the braces: +{speed} speed and double acceleration for {dur}; a ram strikes ×{ram} (a plain ram at full way: {plain} of a hull at ⚓1, the same share of a broadside of her ⚓ higher).', 'Все на брасы: +{speed} хода и двойной разгон на {dur}; таран бьёт ×{ram} (простой таран на полном ходу — {plain} корпуса на ⚓1, выше — та же доля залпа её ступени).'],
+    id: 'ramming_speed', captain: 'reaver', key: 'X', by: { ram: [2.9, 3.8, 4.1, 4.2, 4.3], speed: 0.35, dur: 5, plain: RAM_SHARE, snag: TORN_RIGGING.slow, snagDur: TORN_RIGGING.dur }, pow: ['ram'], fmt: { ram: 'x', speed: 'pct', dur: 'sec', plain: 'pct', snag: 'pct', snagDur: 'sec' },
+    text: ['Every hand to the braces: +{speed} speed and double acceleration for {dur}; a ram strikes ×{ram} (a plain ram at full way: {plain} of a hull at ⚓1, the same share of a broadside of her ⚓ higher) and tears her rigging: her speed −{snag} for {snagDur}, after all her speed buffs.', 'Все на брасы: +{speed} хода и двойной разгон на {dur}; таран бьёт ×{ram} (простой таран на полном ходу — {plain} корпуса на ⚓1, выше — та же доля залпа её ступени) и срывает ей снасти: её ход −{snag} на {snagDur}, поверх всех её ускорений.'],
     facets: {
       3: [F('Iron bow', 'Окованный нос', 'He takes half the ram\'s blow back.', 'Отдача тарана ему — вдвое меньше.', { add: { bow: 1 } }),
         F('Boarding ram', 'Абордажный таран', 'The ram is a grapple: the boarding begins at once.', 'Таран — это абордаж: сцепка сразу.', { add: { grapple: 1 } })],
@@ -246,7 +254,7 @@ export const SEA_SKILLS: Record<string, SeaSkill> = {
   },
   red_hook_boarding: {
     id: 'red_hook_boarding', captain: 'reaver', key: 'V', by: { power: [0.3, 0.35, 0.4, 0.45], range: [1, 1.1, 1.2, 1.3], army: [0, 0, 0.1, 0.15], dur: 10 }, pow: ['power', 'army'], fmt: { power: 'pct', range: 'pct', army: 'pct', dur: 'sec' },
-    text: ['ULTIMATE. For {dur} he may board from +{range} range whatever the speed or damage, with +{power} power; from rank 3 the hooks take {army} of her army before the fight on the hexes.', 'УЛЬТА. {dur} абордаж с дистанции +{range}, при любой скорости и повреждениях, сила +{power}; с 3-го ранга крюки снимают {army} её армии до боя на гексах.'],
+    text: ['ULTIMATE. For {dur} he may board from +{range} range whatever the speed or damage, with +{power} power, even a ship with “Boarding: off” (never a neutral one); from rank 3 the hooks take {army} of her army before the fight on the hexes.', 'УЛЬТА. {dur} абордаж с дистанции +{range}, при любой скорости и повреждениях, сила +{power}, даже корабля с «Абордаж: выкл.» (но не нейтрального); с 3-го ранга крюки снимают {army} её армии до боя на гексах.'],
     facets: {
       3: [F('Hook in the throat', 'Крюк в горло', 'The hooks take 5% more of her army.', 'Крюки снимают ещё 5% её армии.', { add: { army: 0.05 } }),
         F('Long hooks', 'Длинные крюки', 'Range +50% more.', 'Дистанция ещё +50%.', { add: { range: 0.5 } })],

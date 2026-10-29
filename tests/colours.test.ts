@@ -270,7 +270,7 @@ test('colours change only in port, a minute after the order and never within ten
   void b;
 });
 
-test('boarding off, both ways: she boards nobody and nobody boards her — captains, the sea’s pirates, the helmsman’s run', () => {
+test('boarding off: against captains only under neutral colours (owner, 2026-10-29), both ways there; the Red Hook’s ultimate; the sea’s pirates under any colours', () => {
   const { game } = makeGame();
   const { a, b, A, B } = pair(game);
   A.profile!.pvp.flag = B.profile!.pvp.flag = 'pirate';
@@ -283,7 +283,18 @@ test('boarding off, both ways: she boards nobody and nobody boards her — capta
   a.push({ t: 'pvp', action: 'no_board', on: true });
   assert.equal(A.profile!.noBoard, true);
   assert.equal(a.last('self')!.self.pvp.noBoard, true);
+  assert.match(a.last('toast')!.msg, /only under neutral colours/, 'said at once that under the pirate flag it does nothing');
   A.ship!.docked = null;
+  // Owner, 2026-10-29 (forum «Хаск Морроу — бесполезен в ПВП?»): under the pirate flag (or the city's) the switch stays
+  // on but does nothing against a captain — no badge, the grapples bite both ways.
+  assert.equal(pvpFlags(game, A.ship!) & SF.NO_BOARD, 0, 'no badge under the pirate flag');
+  assert.equal(canBoard(game, A.ship!, B.ship!), null);
+  assert.equal(canBoard(game, B.ship!, A.ship!), null);
+  A.profile!.pvp.flag = 'faction';
+  assert.equal(pvpFlags(game, A.ship!) & SF.NO_BOARD, 0, 'no badge under the city flag');
+  assert.equal(canBoard(game, B.ship!, A.ship!), null, 'the city flag: a pirate captain boards her');
+  // Under neutral colours it holds.
+  A.profile!.pvp.flag = 'neutral';
   assert.ok(pvpFlags(game, A.ship!) & SF.NO_BOARD, 'her badge');
   // Both ways, with the reason said: hers and the other's.
   assert.match(String(canBoard(game, A.ship!, B.ship!)), /off on your ship/);
@@ -291,14 +302,20 @@ test('boarding off, both ways: she boards nobody and nobody boards her — capta
   b.push({ t: 'board', target: A.ship!.id, aggression: 'standard' });
   assert.match(b.last('toast')!.msg, /off on her ship/, 'the one press, the one word');
   assert.equal(A.ship!.boarding, null);
-  // The guns still speak, to the end.
-  assert.equal(damageBlocked(game, B.ship!, A.ship!), null);
-  // «Атаковать» to board her: the guns' run, said once at the order.
-  const before = b.all('toast').length;
+  // (and under neutral colours no captain fires on her either)
+  assert.ok(damageBlocked(game, B.ship!, A.ship!));
+  // The Red Hook's ultimate (owner, 2026-10-29) tears through «Абордаж: выкл» — but never on a neutral ship.
+  B.ship!.addEffect({ id: 'red_hook_boarding', until: game.now + 10 }, game.now);
+  assert.ok(canBoard(game, B.ship!, A.ship!), 'a neutral ship stays shielded from the ultimate');
+  A.profile!.pvp.flag = 'pirate';
+  assert.equal(canBoard(game, B.ship!, A.ship!), null, 'the ultimate boards a ship with boarding off');
+  B.ship!.effects = B.ship!.effects.filter((e) => e.id !== 'red_hook_boarding');
+  B.ship!.recompute(game.now);
+  // «Атаковать» to board her under the pirate flag: a boarding run, the switch notwithstanding.
   assert.equal(startPursuit(game, B, A.ship!.id, 'board'), null);
-  assert.equal(b.last('pursuit')!.mode, 'guns');
-  assert.equal(b.all('toast').length, before + 1);
-  // The sea's pirate lies alongside: with boarding off she is fought with the guns, never grappled.
+  assert.equal(b.last('pursuit')!.mode, 'board');
+  // The sea's pirate lies alongside: with boarding off — under any colours — she is fought with the guns, never grappled
+  // (the sea's own ships keep the old rule, owner 2026-10-29).
   const pirate = game.spawnNpcShip('pirate', 'brig', 'confederacy', A.ship!.state.x - 15, A.ship!.state.y, 0);
   game.setNpcLevel(pirate, 5);
   pirate.setArmy([{ u: 'guard', n: 80 }]);
@@ -538,4 +555,22 @@ test('lawless water on her screen (owner, 2026-10-09: «при входе в н�
   assert.ok(main.includes('if (lawlessHere(state)) return !state.party?.members.some((m) => m.name === info.name)'));
   const css = readFileSync(new URL('../client/seahud.css', import.meta.url), 'utf8');
   assert.match(css, /#lawless-note\.go \{ animation: lawless-note 6\.5s/);
+});
+
+test('the boarding switch on the colours card (owner, 2026-10-29): on under a flag that is not neutral it says it does nothing now, in both tongues', () => {
+  const st = (flag: Colours, noBoard: boolean) => ({
+    region: 'gravewater', ports: [],
+    self: { dockedAt: null, pvp: { flag, blackFlag: flag === 'pirate', city: 'crown', guild: null, next: null, nextAt: 0, noNeutral: null, noBoard, pennant: false, pennantHoursLeft: 0 } },
+  }) as unknown as ClientState;
+  assert.ok(coloursCard(st('pirate', true)).includes('fl-idle'));
+  assert.ok(coloursCard(st('faction', true)).includes('fl-idle'));
+  assert.ok(!coloursCard(st('neutral', true)).includes('fl-idle'));
+  assert.ok(!coloursCard(st('pirate', false)).includes('fl-idle'));
+  setLang('ru');
+  try {
+    assert.match(coloursCard(st('pirate', true)), /Не действует: флаг не нейтральный/);
+    assert.match(coloursCard(st('neutral', false)), /Защищает от абордажа только под нейтральным флагом/);
+  } finally {
+    setLang('en');
+  }
 });

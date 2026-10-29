@@ -2,6 +2,7 @@
 
 import { regattaSail } from '../../../shared/src/data/regatta.ts';
 import { NPC_HP_MUL, NPC_VOLLEYS } from '../../../shared/src/data/seabalance.ts';
+import { TORN_RIGGING, tornRiggingMul } from '../../../shared/src/data/seaskill.ts';
 import type { NemesisCause } from '../../../shared/src/data/nemesis.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
 import type { InvaderTag } from './invasions.ts';
@@ -541,7 +542,7 @@ export class ShipEntity {
     return this.stats.flags.has(f);
   }
 
-  sailParams(night: boolean): SailParams {
+  sailParams(night: boolean, now = -Infinity): SailParams {
     const st = this.stats;
     const p: SailParams = {
       rig: st.rig,
@@ -555,7 +556,8 @@ export class ShipEntity {
       rudderHealth: this.rudderHp,
       crewFactor: crewFactor(st, this.crew),
       loadFactor: loadFactor(this.loadout, st, this.cargo, this.ammo) * (1 - 0.4 * Math.min(1, this.water / (st.holdWeight * 0.5 + st.length * 2))),
-      speedMul: (night ? 1 + st.nightSpeed : 1) * (this.hull < st.hullMax * 0.3 ? 0.85 : 1),
+      // (torn rigging, the Reaver's ram: a multiplier on top of every buff of her speed — owner, 2026-10-29)
+      speedMul: (night ? 1 + st.nightSpeed : 1) * (this.hull < st.hullMax * 0.3 ? 0.85 : 1) * tornRiggingMul(this.effects, now),
       personalWind: st.flags.has('personal_wind'),
       weatherly: this.cls.passive.id === 'weatherly',
       sweeps: this.cls.passive.id === 'sweeps',
@@ -591,7 +593,7 @@ export class ShipEntity {
     if (this.hasEffect('tangled')) f |= SF.TANGLED;
     if (this.protectedUntil > now) f |= SF.PROTECTED;
     if (this.hasFlag('dark_running')) f |= SF.LANTERNS_OUT;
-    if (this.hasEffect('undertow') || this.hasEffect('maw_slow')) f |= SF.SLOWED;
+    if (this.hasEffect('undertow') || this.hasEffect('maw_slow') || this.hasEffect(TORN_RIGGING.id)) f |= SF.SLOWED;
     if (this.hasEffect('fire')) f |= SF.FIRE;
     if (this.hasEffect('submerged')) f |= SF.SUBMERGED;
     if (this.guardedUntil > now) f |= SF.GUARDED;

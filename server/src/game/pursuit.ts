@@ -38,7 +38,7 @@ import { angleDiff, DEG, headingOf } from '../../../shared/src/math.ts';
 import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { stopAutosail, autosailOf } from './autosail.ts';
 import { boardingRangeBetween, canBoard, captainsShip, crewRefuses, startBoarding } from './boarding.ts';
-import { NO_BOARD_HER, NO_BOARD_OWN, boardingOff } from './colours.ts';
+import { NO_BOARD_HER, NO_BOARD_OWN, boardingOffVs, noBoardHolds } from './colours.ts';
 import { applyDamage, damageBlocked, effectiveRange, fireBroadside, fireChaser, sideHeading } from './combat.ts';
 import type { Game } from './Game.ts';
 import { ALONGSIDE_FROM, engageHelm, helmTo, newBrain } from './npc.ts';
@@ -172,8 +172,8 @@ export function startPursuit(game: Game, s: PlayerSession, id: number, mode: Pur
   if (mode === 'board' && unboardable(target!)) mode = 'guns';
   // «Абордаж: выкл» on either ship (docs/24 C1): the guns' fight, and why, once (at the order, not every tick).
   // (Her own switch keeps her off captains only: the sea's own she boards at once, owner 2026-10-18.)
-  const ownOff = boardingOff(game, ship) && captainsShip(game, target!);
-  if (mode === 'board' && (ownOff || boardingOff(game, target!))) {
+  const ownOff = noBoardHolds(game, ship) && captainsShip(game, target!);
+  if (mode === 'board' && (ownOff || boardingOffVs(game, target!, ship))) {
     mode = 'guns';
     game.sendTo(s, { t: 'toast', msg: ownOff ? NO_BOARD_OWN : NO_BOARD_HER, kind: 'info' });
   }

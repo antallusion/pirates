@@ -266,7 +266,9 @@ export function pvpFlags(game: Game, ship: ShipEntity): number {
     if (c === 'pirate') f |= SF.BLACK_FLAG;
     else if (c === 'neutral') f |= SF.NEUTRAL;
     else if (hasPennant(game, p) && REGIONS[ship.region].safety === 'contested') f |= SF.GREEN_PENNANT;
-    if (p.noBoard && REGIONS[ship.region].safety !== 'lawless') f |= SF.NO_BOARD; // «Абордаж: выкл» (docs/24 C1), which shields nobody in lawless water
+    // «Абордаж: выкл» (docs/24 C1), shown only where it shields her from captains: under neutral colours, out of lawless
+    // water (owner, 2026-10-29)
+    if (p.noBoard && c === 'neutral' && REGIONS[ship.region].safety !== 'lawless') f |= SF.NO_BOARD;
     if (shamed(game, p)) f |= SF.SHAME;
     if (bountyOn(game, ship.accountId) > 0 || wantedLevel(p.infamy) >= 2) f |= SF.BOUNTY;
   }

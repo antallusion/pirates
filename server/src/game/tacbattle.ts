@@ -80,6 +80,11 @@ export interface TacSideInput {
   nets: number;
   /** Blooded: damage per foe fallen (up to +20%). */
   blooded: number;
+  /** The Reaver's Blood in the Water (owner, 2026-10-29: in every boarding and battle on the hexes): her blows +20% while
+   *  the other side has lost half her men (or came aboard with less than half her crew: `bloodOpen`), and her kills
+   *  lift her morale twice as much. */
+  blood?: boolean;
+  bloodOpen?: boolean;
   /** Her hull is a castle: defenders stand a quarter firmer. */
   castle: boolean;
   /** She struck her colours before the grapples bit: a tenth of the fight in her. */
@@ -1471,10 +1476,19 @@ export const boardRules = (bt: TacBattle): boolean => bt.len !== undefined;
  *    (desperation: the side with less of her strength left on deck, up to +40%, shown on the card on its own too);
  *  - `taken`: her captain's armour on what she takes (a share of the blow; item 47's floor of a half holds).
  *  Factors (1: nothing). */
+/** Blood in the Water's +20% (the Reaver's passive, `TacSideInput.blood`): the other side came aboard below half her
+ *  crew, or has lost half her men on the hexes. */
+export const BLOOD_MUL = 1.2;
+export function bloodMul(bt: TacBattle, side: 0 | 1, inp: TacSideInput): number {
+  if (!inp.blood) return 1;
+  const o = bt.heroes[1 - side];
+  return inp.bloodOpen || bt.dead[1 - side] >= o.startMen * 0.5 ? BLOOD_MUL : 1;
+}
+
 export function stackBonus(bt: TacBattle, s: TacStack): { melee: number; shot: number; taken: number } {
   const h = capOf(bt, s), inp = h.input, hb = inp.hero;
   const other = bt.heroes[1 - s.side].input;
-  let k = inp.dealt * inp.power * s.dmgMul * (1 + Math.min(0.2, h.kills * inp.blooded)) * (inp.struck ? 0.1 : 1) * desperation(bt, s.side);
+  let k = inp.dealt * inp.power * s.dmgMul * (1 + Math.min(0.2, h.kills * inp.blooded)) * (inp.struck ? 0.1 : 1) * desperation(bt, s.side) * bloodMul(bt, s.side, inp);
   if (bt.round === 1) k *= inp.firstRush * Math.max(0.2, 1 - other.nets);
   return { melee: k * inp.melee * (1 + (hb?.melee ?? 0)), shot: k * (1 + (hb?.shot ?? 0)), taken: 1 - (hb?.taken ?? 0) };
 }
@@ -1587,7 +1601,7 @@ function hurt(bt: TacBattle, t: TacStack, dmg: number, by: 0 | 1, who = bt.casti
     heroAt(bt, by, who).kills += kills;
     const h = bt.heroes[t.side], k = bt.heroes[by];
     h.morale = Math.max(0, h.morale - (kills / Math.max(1, h.startMen)) * 70);
-    k.morale = Math.min(100, k.morale + (kills / Math.max(1, h.startMen)) * 15);
+    k.morale = Math.min(100, k.morale + (kills / Math.max(1, h.startMen)) * 15 * (heroAt(bt, by, who).input.blood ? 2 : 1));
   }
   if (t.count === 0) {
     if (!t.summoned) bt.broken[t.side]++;

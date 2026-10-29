@@ -2,6 +2,7 @@
 // streamed islands, charted islands, private captain state. Remote ships are interpolated
 // ~120 ms in the past; the player's own ship is extrapolated with the shared sailing model.
 
+import { tornRiggingMul } from '../../shared/src/data/seaskill.ts';
 import type { HireView } from '../../shared/src/data/seahire.ts';
 import type { ResView, WayData, WayView } from '../../shared/src/wayproto.ts'; // docs/35
 import type { SupplyView, TurtleView, ZoneView } from '../../shared/src/isleproto.ts';
@@ -855,7 +856,7 @@ export class ClientState {
     const params = {
       rig: st.rig, maxSpeed: st.maxSpeed, accel: st.accel, turnRate: st.turnRate, noGoDeg: st.noGoDeg, sailChangeRate: st.sailChangeRate,
       currentMul: st.currentMul, sailHealth: you.sails / Math.max(1, you.sailsMax), rudderHealth: you.rudderHp, crewFactor: crewFactor(st, you.crew),
-      loadFactor: loadFactor(this.self.loadout, st, this.self.cargo, this.self.ammo), speedMul: this.night() ? 1 + st.nightSpeed : 1,
+      loadFactor: loadFactor(this.self.loadout, st, this.self.cargo, this.self.ammo), speedMul: (this.night() ? 1 + st.nightSpeed : 1) * tornRiggingMul(this.self.effects, this.estServerTime()),
       personalWind: st.flags.has('personal_wind'), weatherly: SHIP_CLASSES[this.self.loadout.classId]?.passive.id === 'weatherly', sweeps: SHIP_CLASSES[this.self.loadout.classId]?.passive.id === 'sweeps',
       talent: sailTalents(st),
     };

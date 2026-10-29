@@ -1149,7 +1149,7 @@ export const SF = {
   GRABBED: 1 << 22, // held by a Kraken's arm
   SWALLOWED: 1 << 23, // inside the Lantern Maw
   GUARDED: 1 << 24, // a merchant under a friend's guns (docs/12 P6)
-  NO_BOARD: 1 << 25, // «Абордаж: выкл» (docs/24 C1): she boards nobody and is boarded by nobody, guns only
+  NO_BOARD: 1 << 25, // «Абордаж: выкл» (docs/24 C1) where it holds against captains: under neutral colours, out of lawless water (owner, 2026-10-29)
   GREEN_PENNANT: 1 << 26, // a young captain under the Green Pennant: neutral to captains in contested water (docs/24)
   TRUCE: 1 << 27, // a ship of the sea under a white flag: a ceasefire bought from her holds (owner, 2026-10-18)
   IN_BATTLE: 1 << 28, // a captain in a battle (or just out of one): nobody may touch her (owner, 2026-10-22, inbattle.ts)

@@ -45,7 +45,7 @@ import type { Item } from '../../../shared/src/data/items.ts';
 import { ADM_REFIT_HINT, ADM_REFIT_WORDS, orderRefit, refitHolds, stepRefit } from './refit.ts';
 import { clampLevel, ladder, levelRange, npcSkill } from '../../../shared/src/data/shiplevel.ts';
 import { ALPHA_OVER as ALPHA_OVER_RAM, alphaShare, npcSeaScale } from '../../../shared/src/data/seabalance.ts';
-import { RAM_SHARE, volleyShare } from '../../../shared/src/data/seaskill.ts';
+import { RAM_SHARE, TORN_RIGGING, volleyShare } from '../../../shared/src/data/seaskill.ts';
 import { XP_UNITS, contractPay, hourSilver, pointsXp, prizeXp, shipBandOf, xpGap } from '../../../shared/src/data/xpcurve.ts';
 import { WRECK_SHARE } from '../../../shared/src/data/silverpay.ts';
 import { RELEASE_CREW, SCUTTLE_SINK_SEC, SINK_CREW, outcomeCrew, releaseSilver, wreckTimber } from '../../../shared/src/data/outcome.ts';
@@ -389,6 +389,10 @@ const UNDOCK_OUT = [170, 130, 95];
 
 /** pushSelf's change test: fractions to 1e-4 (the patch itself still carries the exact values). */
 const selfKey = (_k: string, x: unknown) => (typeof x === 'number' && !Number.isInteger(x) ? Math.round(x * 1e4) / 1e4 : x);
+
+/** The Reaver's ram tears the rigging (owner, 2026-10-29): the lines both captains read. */
+export const TORN_YOU = 'Your rigging is torn by the ram: speed −35% for a few seconds.';
+export const TORN_HER = 'Her rigging is torn: she is slowed for a few seconds.';
 
 export class Game {
   readonly db: Db;
@@ -858,7 +862,7 @@ export class Game {
         input = { rudder: clamp(angleDiff(ship.state.heading, want) * 2, -1, 1), sailTarget: Math.max(0.5, ship.input.sailTarget) };
       }
     }
-    ship.state = stepSailing(ship.state, input, ship.sailParams(night), wind, cur, dt);
+    ship.state = stepSailing(ship.state, input, ship.sailParams(night, this.now), wind, cur, dt);
     // Tide Whisperer: in the dead wind of the Abyss the deep currents carry her.
     if (ship.region === 'the_abyss' && ship.hasFlag('tide_whisperer') && ship.state.sail > 0.1) ship.state.speed = Math.max(ship.state.speed, ship.stats.maxSpeed * 0.6 * ship.state.sail);
     stepPivot(this, ship, dt);
@@ -996,6 +1000,13 @@ export class Game {
     if (combo) {
       comboCue(this, a, 'war_cry');
       killMen(this, b, Math.round(b.stats.crewMax * 0.03), a);
+    }
+    // «Сорванные снасти» (owner, 2026-10-29): a ram under Ramming Speed that lands tears her rigging — her way ×0.65 for
+    // 3.5 s over every buff of her speed (ShipEntity.sailParams); a second ram renews it, never stacks.
+    if (ramA > 1 && b.alive && h0 > b.hull) {
+      b.addEffect({ id: TORN_RIGGING.id, until: this.now + (ka?.n.snagDur ?? TORN_RIGGING.dur), source: a.id }, this.now);
+      this.toastShip(b, TORN_YOU, 'bad');
+      this.toastShip(a, TORN_HER, 'good');
     }
     if (ka?.n.leaks) b.leaks = Math.min(8, b.leaks + ka.n.leaks);
     if (ka?.n.shock) {

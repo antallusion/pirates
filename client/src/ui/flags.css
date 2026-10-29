@@ -58,6 +58,10 @@
 .fl-card--lawless .fl-opts { opacity: 0.86; }
 .fl-line .good { color: var(--k-good, #7fb58a); }
 .fl-board .fl-t { flex: 1; display: grid; grid-template-columns: minmax(118px, 170px) 1fr; column-gap: 12px; align-items: center; }
+/* «Абордаж: выкл» under a flag that is not neutral (owner, 2026-10-29): on, but it does nothing against captains */
+.fl-board .fl-idle { grid-column: 1; font-style: normal; font-size: 11px; font-weight: 600; line-height: 1.2; color: var(--k-warn, #e6a04a); }
+.fl-board.idle .fl-t small { grid-row: 1 / span 2; grid-column: 2; }
+.fl-board.idle .fl-nb-ico::after { opacity: 0.45; }
 .fl-nb-ico { /* a grapnel's hook, crossed when boarding is off */
   position: relative; flex: none; width: 22px; height: 22px; box-sizing: border-box; border: 2px solid #8a7a5c; border-top-color: transparent; border-radius: 50%;
 }

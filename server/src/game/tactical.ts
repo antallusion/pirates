@@ -183,7 +183,10 @@ export function sideOf(game: Game, ship: ShipEntity, enemy: ShipEntity, attacker
     hands: count((x) => UNITS[x.u].tier === 1), marines: count((x) => kindOfUnit(x.u) === 'marines'), gunners: count((x) => hasSpecial(x.u, 'shooter')),
     army: fielded, officers, skill, morale: ship.morale,
     dealt: deckLadder(game, ship, enemy),
-    power: Math.max(0.3, ship.stats.boardingPower) * (ship.captain === 'reaver' && enemy.crew < enemy.stats.crewMax * 0.5 ? 1.2 : 1),
+    power: Math.max(0.3, ship.stats.boardingPower),
+    // Blood in the Water (the Reaver's passive) on the hexes: reckoned there, round by round (tacbattle.ts bloodMul) —
+    // in a lair or a fight ashore (`enemy` her own ship) only by the men the other side has lost.
+    ...(ship.captain === 'reaver' ? { blood: true, bloodOpen: enemy !== ship && enemy.crew < enemy.stats.crewMax * 0.5 } : {}),
     melee: 1 + tx(ship.stats, 'meleeDamage'),
     extraShots: (ship.cargo.weapons ?? 0) >= 5 ? 1 : 0,
     firstRush: attacker && ship.hasFlag('first_over_rail') ? 1.25 : 1,
