@@ -118,6 +118,14 @@ button { font-family: var(--sans); }
   --mm: 108px; --uf-p: 56px; --slot: 42px; --stick: 124px; --fire: 64px; --touch-h: 0px; --top-h: 150px;
 }
 #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+/* The sea HUD's own edges (owner, 2026-10-29: «в браузерной версии ты сильно сместил аватар и колесо вправо… я бы
+   поменьше это расстояние сделал»). An iPhone held sideways reports 47 px on BOTH sides (the island's side and the
+   other) and 21 px at the bottom; the plate, the wheel, the chart and the guns stand in the corners, clear of the
+   island in the middle of the edge and inside the rounded glass with far less. So the HUD takes the real inset only
+   where there is one, capped (22 px a side, 12 px below) — a desk and any phone without a notch get 0 and the HUD's
+   own 6–8 px margin (Telegram's own insets, tg.ts --tg-*, the same way). The windows (#modal, the sheets) keep the full inset: their words run down the middle of the edge. */
+#hud, #hud-chat, #hud-toasts { --sa-l: min(max(env(safe-area-inset-left, 0px), var(--tg-left, 0px)), 22px); --sa-r: min(max(env(safe-area-inset-right, 0px), var(--tg-right, 0px)), 22px);
+  --sa-b: min(max(env(safe-area-inset-bottom, 0px), var(--tg-bottom, 0px)), 12px); }
 /* Layers in the HUD's frame: the toasts over the windows (a sale, a refusal, a quest taken are seen in port too),
    the chat under the windows unless it is open (a whisper from the list of friends opens it over them). */
 .hud-layer { position: fixed; inset: 0; pointer-events: none; }

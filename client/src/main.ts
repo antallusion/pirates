@@ -111,6 +111,7 @@ import { Hud, TOUCH_FOLDED, releaseModalToasts } from './ui/hud.ts';
 import { SeaHud, bestSpecial, pettyOf, seaWord } from './ui/seahud.ts'; // docs/23 phase 2: the sea and five buttons
 import { adriftFacts, adriftInfo, askScuttle, juryTapText } from './ui/adrift.ts'; // owner 2026-10-20: torn sails, the jury rig, scuttling home
 import type { DeckSlot, SeaKeys } from './ui/seahud.ts';
+import { HudMore } from './ui/hudmore.ts'; // owner, 2026-10-29: the rest of the round buttons behind one «⋯»
 import { SeaAbil, abilWhy } from './ui/seaabil.ts'; // the captain's abilities on a phone: «Приёмы» and its row (owner, 2026-10-26)
 import type { AbilView } from './ui/seaabil.ts';
 import { goalCount, goalSheetView } from './ui/goalsheet.ts'; // «Цели и вести»: the campaign, the quests taken, the orders
@@ -617,7 +618,7 @@ setInterval(() => {
 // the round buttons and the row of actions (2026-10-16: at 480×270 it lay under the row): from its own place it steps up
 // (and aside) to the first free spot of the bottom band. Four times a second, moved by \`translate\` only.
 // (the row's own buttons, not its box: with every thing to do in sight it wraps upward, its rows of unequal length)
-const INFO_OBSTACLES = '#tc-actrow:not(.hidden) > .k-btn, #tc-fire, #tc-cast:not(.hidden), #tc-ammo, #tc-special, #tc-abil:not(.hidden), #tc-lock, #tc-stick, #tc-speed, #tc-deck, #tc-act:not(.hidden), #tc-offer:not(.hidden), #tc-sail, #hud-captain .cs, #toasts > .toast, #hud-chat > .chat-toggle, #tc-menu, #tc-news, #tc-isle, #hud-map, #advcard:not(.hidden), #encounter:not(.hidden), #surrender:not(.hidden)';
+const INFO_OBSTACLES = '#tc-actrow:not(.hidden) > .k-btn, #tc-fire, #tc-cast:not(.hidden), #tc-ammo, #tc-special, #tc-abil:not(.hidden), #tc-lock, #tc-stick, #tc-speed, #tc-deck, #tc-act:not(.hidden), #tc-offer:not(.hidden), #tc-sail, #hud-captain .cs, #toasts > .toast, #hud-chat > .chat-toggle, #tc-menu, #tc-news, #tc-isle, #tc-more, #hud-map, #advcard:not(.hidden), #encounter:not(.hidden), #surrender:not(.hidden)';
 setInterval(() => {
   const el = document.getElementById('hud-bottom');
   if (!el) return;
@@ -1154,6 +1155,8 @@ const seaHud = new SeaHud($('touch'), {
     seaHud.lend(['hud-target'], 'target');
   },
 });
+// «⋯» (owner, 2026-10-29: «все как-то прятать в подменюшки»): first in the row under her plate, the rest slides out of it.
+const hudMore = new HudMore($('touch'));
 // The captain's abilities on a phone (owner, 2026-10-26: «на мобиле не показаны иконки спецприёмов капитана»): «Приёмы»
 // in «Особое»'s place, its row of four — used as the desk's Z X C V are, at her mark.
 const seaAbil = new SeaAbil($('touch'), (id) => {
@@ -4232,6 +4235,7 @@ function seaFrame(): void {
     markId: targetId,
     mmShow: settings().mmTarget === 'show',
   });
+  hudMore.frame(simpleHud() && !state.onboarding?.stage);
   seaAbil.frame(touch.enabled && simpleHud() && !self.dockedAt ? abilView() : null);
 }
 
@@ -4467,7 +4471,7 @@ function hudKeepOut(): TmRect[] {
   if (now - hudBoxesAt < 250) return hudBoxes;
   hudBoxesAt = now;
   hudBoxes = [];
-  for (const el of document.querySelectorAll<HTMLElement>('#hud-captain .cs, #hud-map, #tc-menu, #tc-news, #tc-isle, #tc-offer, #hud-chat > .chat-toggle, #tc-target, #hud-boss, #hud-watch, #tc-stick, #tc-sail, #tc-speed, #tc-fire, #tc-cast, #tc-ammo, #tc-lock, #tc-special, #tc-abil:not(.hidden), #tc-act, #tc-deck, #hud-bottom > *, #toasts > .toast')) {
+  for (const el of document.querySelectorAll<HTMLElement>('#hud-captain .cs, #hud-map, #tc-menu, #tc-news, #tc-isle, #tc-more, #tc-offer, #hud-chat > .chat-toggle, #tc-target, #hud-boss, #hud-watch, #tc-stick, #tc-sail, #tc-speed, #tc-fire, #tc-cast, #tc-ammo, #tc-lock, #tc-special, #tc-abil:not(.hidden), #tc-act, #tc-deck, #hud-bottom > *, #toasts > .toast')) {
     const r = el.getBoundingClientRect();
     if (r.width > 2 && r.height > 2 && el.getClientRects().length) hudBoxes.push({ left: r.left - 6, top: r.top - 6, right: r.right + 6, bottom: r.bottom + 6 });
   }

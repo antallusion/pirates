@@ -915,3 +915,71 @@ body.voyage #hud :is(#tc-stick, #tc-sail, #tc-fire, #tc-ammo, #tc-lock, #tc-spec
 body.voyage #hud-autosail .as-stop { display: none; }
 /* (the chart tucked up behind its tab in a fight on a touch screen: the pill hangs under the tab) */
 body.touch.mm-peek #hud-voyage { top: calc(var(--sa-t) + 46px); }
+
+/* ---------- «⋯» (owner, 2026-10-29: «на мобиле лютый графический перегруз, надо все как-то прятать в подменюшки,
+   оставить только самое важное. и нажимая на эту подменюшку будут выезжать все остальные кнопочки»; hudmore.ts).
+   Out at all times: her plate, the helm, the chart with its map, the guns' cluster, the chat under the chart and the
+   one brass «⋯» first in the row under her plate. Behind it (.more-fold): the menu, the news, «Остров», her offer, the
+   day's gift, the parrot's emotes, the weak army's pill — a wide desk keeps the menu and the news under the chart
+   (body.more-desk). A tap slides them out of it into a brass tray in the same row; transform and opacity only. */
+#tc-more, #tc-more-tray { display: none; }
+body.simple.hud-more #hud #touch > #tc-more { display: block; position: absolute; top: var(--lr-top); left: calc(var(--sa-l) + 8px); right: auto; bottom: auto; z-index: 3;
+  width: var(--tr-b); height: var(--tr-b); min-width: 0; min-height: 0; padding: 0; pointer-events: auto; }
+body.simple.hud-more.tac #hud #touch > #tc-more { display: none; }
+#tc-more .tc-more-dots { position: absolute; inset: 0; z-index: 0; display: flex; align-items: center; justify-content: center; gap: 4px; pointer-events: none;
+  transition: transform var(--k-dur-2, 200ms) var(--k-ease-out, ease-out); }
+#tc-more .tc-more-dots > i { width: 5px; height: 5px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #f6dc96, #c79d55 55%, #6b5330); box-shadow: 0 1px 1px rgba(0, 0, 0, 0.85); }
+body.more-open #tc-more .tc-more-dots { transform: rotate(90deg); }
+body.simple.more-open #tc-more::after { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.75)) brightness(1.25) drop-shadow(0 0 6px rgba(224, 184, 98, 0.5)); }
+body.simple #hud #touch > #tc-more .tc-more-b { top: -4px; right: -6px; left: auto; }
+body.simple #hud #touch > #tc-more .tc-more-b.hidden { display: none; }
+/* folded */
+body.hud-more:not(.more-open) .more-fold { display: none !important; }
+/* the tray: from the button rightward, as long as what is out, the words under «Остров» and the offer's clock inside it */
+body.simple.hud-more.more-open #hud #touch > #tc-more-tray { display: block; position: absolute; z-index: 0; left: calc(var(--sa-l) + 1px); top: calc(var(--lr-top) - 7px);
+  width: calc((var(--mn, 0) + 1) * (var(--tr-b) + var(--tr-g)) + 6px); height: calc(var(--tr-b) + 28px); box-sizing: border-box; pointer-events: auto;
+  border-radius: calc(var(--tr-b) / 2 + 7px) 18px 18px 16px; background: linear-gradient(180deg, rgba(30, 24, 17, 0.9), rgba(10, 9, 7, 0.9));
+  box-shadow: inset 0 0 0 1px rgba(176, 141, 87, 0.6), inset 0 1px 0 rgba(255, 230, 170, 0.08), 0 4px 14px rgba(0, 0, 0, 0.6);
+  transform-origin: calc(var(--tr-b) / 2 + 7px) 50%; animation: more-tray 180ms var(--k-ease-out, ease-out) backwards; }
+/* each out of the button to its place in the row (--mi), one after another */
+body.simple.hud-more.more-open #hud #touch > .more-fold:not(.hidden),
+body.simple.hud-more.more-open:not(.chat-open):not(.tac) #hud-chat > .more-fold {
+  position: absolute; top: var(--lr-top) !important; bottom: auto !important; right: auto !important; z-index: 2;
+  left: calc(var(--sa-l) + 8px + var(--mi, 1) * (var(--tr-b) + var(--tr-g))) !important; width: var(--tr-b) !important; height: var(--tr-b) !important;
+  animation: more-in 200ms var(--k-ease-out, ease-out) calc(var(--mi, 1) * 18ms) backwards; }
+body.simple.hud-more.more-open #hud #touch > #tc-offer.more-fold { animation: more-in 200ms var(--k-ease-out, ease-out) calc(var(--mi, 1) * 18ms) backwards, tc-offer-glow 2.8s ease-in-out 400ms infinite; }
+/* the weak army's pill under the tray */
+body.simple.hud-more.more-open #hud-advice.more-fold:not(.hidden) { left: calc(var(--sa-l) + 8px) !important; top: calc(var(--lr-top) + var(--tr-b) + 27px) !important;
+  animation: more-pill 200ms var(--k-ease-out, ease-out) 60ms backwards; }
+@keyframes more-tray { from { opacity: 0; transform: scaleX(0.25); } }
+@keyframes more-in { from { opacity: 0; transform: translateX(calc(-1 * var(--mi, 1) * (var(--tr-b) + var(--tr-g)))) scale(0.55); } }
+@keyframes more-pill { from { opacity: 0; transform: translateY(-8px); } }
+body.reduce-motion.more-open :is(#tc-more-tray, .more-fold), body.reduce-motion #tc-more .tc-more-dots { animation: none !important; transition: none !important; }
+@media (prefers-reduced-motion: reduce) { body.more-open :is(#tc-more-tray, .more-fold), #tc-more .tc-more-dots { animation: none !important; transition: none !important; } }
+/* the chat out, under the chart in the menu's old place (its own badge is the chat's), unless a wide desk keeps it by
+   the helm (chat.css) */
+body.simple.hud-more:not(.more-desk):not(.chat-open):not(.tac) #hud-chat > .chat-toggle { top: var(--tr-top); left: auto; right: calc(var(--sa-r) + 8px + (var(--mm) - var(--tr-b)) / 2); bottom: auto; width: var(--tr-b); height: var(--tr-b); }
+body.simple.hud-more:not(.more-desk):not(.chat-open):not(.tac) #hud-chat > .chat-toast { top: var(--tr-top); left: auto; right: calc(var(--sa-r) + 8px + (var(--mm) + var(--tr-b)) / 2 + var(--tr-g)); bottom: auto; }
+
+/* ---------- a clean sea on top (owner, 2026-10-29: «скрывать плашки с хп (вверху у врагов) и какие-то текстовые
+   плашки вверху в центре, если бой не начат или цель не выбрана»). With no mark and no fight: no boss's bar (unless it
+   holds her: its alert), no hint line at the bottom on a touch screen (her buttons say it); the autosail a small pill
+   (its sail, where to and how far, «Стоп») in place of a strip across the top. */
+body.simple:not(.sea-target):not(.sea-fight) #hud-stack > #hud-boss:not(:has(.balert)) { display: none !important; }
+body.simple.touch:not(.sea-target):not(.sea-fight) #hud-bottom > #hud-prompt { display: none; }
+body.simple #hud-stack > #hud-autosail { align-self: center !important; width: auto !important; max-width: min(320px, 100%) !important; box-sizing: border-box;
+  border-radius: var(--k-r-round, 999px) !important; padding: 2px 3px 2px 10px !important; background: rgba(11, 13, 16, 0.78); }
+/* (as wide as its words: no inline-size container — that sized it to nothing — so the narrow column's own rule, the
+   destination's words go first) */
+body.simple #hud-stack > #hud-autosail { container-type: normal; border: 1px solid rgba(232, 196, 106, 0.55) !important; border-image: none !important; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55); gap: 6px; }
+@media (max-width: 760px) { body.simple #hud-autosail .as-to { display: none; } }
+body.simple #hud-autosail .as-lbl { display: none; }
+body.simple #hud-autosail .as-d { flex: 0 1 auto; max-width: 200px; }
+body.simple #hud-autosail .as-stop { min-height: 24px; min-width: 0; padding: 2px 9px; border-radius: var(--k-r-round, 999px); }
+/* the island's first step (owner, 2026-10-28): smaller on a phone, at the left — never over the sea's middle */
+@media (max-height: 520px) {
+  body.simple .hud-isle1 { max-width: min(280px, 29vw); gap: 4px; padding: 2px 3px 2px 5px; }
+  body.simple .hud-isle1 .i1-m b { font-size: 11px; }
+  body.simple .hud-isle1 .i1-m i { font-size: 10px; }
+  body.simple .hud-isle1 .btn { min-height: 26px !important; padding: 2px 8px; font-size: 11px; }
+}
