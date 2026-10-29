@@ -635,3 +635,38 @@ body.touch #mm-tab:focus-visible .mm-tab-pill { box-shadow: none; }
 /* The long press's hint over a window or the sea (kit/hint.ts) and the toasts over a window: readable on the smallest
    phone — 12 px at least (owner, 2026-10-18: «я не вижу»); both in the top layer, over the windows and their scrim. */
 .k-hint { font-size: max(12px, var(--k-fs-2)); }
+
+/* ================================================================== the top-centre column (owner, 2026-10-29)
+   «одно на другое накладывается, текст не видно… делай эти текстовые подсказки меньше и чтобы никогда не накладывались».
+   ONE column in the middle of the top band (#hud-stack, placed by hud.ts placeTopStrip), its items in the column's flow
+   so none can lie on another, in this order of rank: her mark's line, the autopilot's pill, (the toast's slot), the
+   island's step last. The toasts (their own layer, over the windows) stand under the column, one at a time and no wider
+   than 46 % of the screen; with no room for one in the top 30 % it takes the island step's slot while it is up
+   (.i1-yield). tools/mobile/declutter/topstack.mjs measures it. */
+body.simple #hud #hud-stack { gap: 4px; }
+body.simple #hud-stack > #hud-isle1 { order: 20; align-self: center; width: auto !important; max-width: min(400px, 46vw, 100%) !important; box-sizing: border-box; z-index: auto;
+  padding: 2px 3px 2px 6px; border-radius: var(--k-r-round, 999px); background: rgba(11, 13, 16, 0.8); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55); }
+body.simple #hud-stack > #hud-isle1.i1-yield { visibility: hidden !important; pointer-events: none; }
+/* (one line: the step, then what it waits for or brings — the rest cut with «…») */
+body.simple #hud-stack > #hud-isle1 .i1-m { display: block; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0; }
+body.simple #hud-stack > #hud-isle1 .i1-m b { display: inline; font-size: 12px; overflow-wrap: normal; }
+body.simple #hud-stack > #hud-isle1 .i1-m i { display: inline; font-size: 11px; }
+body.simple #hud-stack > #hud-isle1 .i1-m i::before { content: ' · '; }
+body.simple #hud-stack > #hud-isle1 .btn { min-height: 24px !important; padding: 1px 9px; font-size: 11px; border-radius: var(--k-r-round, 999px); }
+body.simple #hud-stack:has(> #hud-isle1:not(.hidden)) { max-height: none; overflow: visible; }
+/* the toasts: each as wide as its words, in the middle of their band, small */
+body.simple:not(.tac) #toasts { align-items: center; }
+body.simple:not(.tac) #toasts > .toast { width: auto; max-width: 100%; padding: 3px 10px; font-size: 11.5px; line-height: 1.3; }
+body.simple:not(.tac) #toasts > .toast > span { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+body.simple:not(.tac) #toasts > .toast:nth-child(n+2) { display: none; }
+/* a phone (to 620 px tall): the column's lines slimmer — her mark 30 px, the pill 26 */
+@media (max-height: 620px) {
+  body.simple #hud-stack > #tc-target .k-target { height: 30px; }
+  body.simple #hud-stack > #tc-target .k-target-name { font-size: 12px; }
+  body.simple #hud-stack > #hud-autosail { min-height: 0; font-size: 11px; }
+  body.simple #hud-stack > #hud-autosail .as-stop { min-height: 22px; padding: 1px 8px; font-size: 10.5px; }
+  body.simple #hud-stack > #hud-isle1 .i1-m b { font-size: 11px; }
+  body.simple #hud-stack > #hud-isle1 .i1-m i { font-size: 10px; }
+  body.simple #hud-stack > #hud-isle1 .btn { min-height: 22px !important; padding: 1px 8px; font-size: 10.5px; }
+  body.simple:not(.tac) #toasts > .toast { padding: 2px 8px; font-size: 11px; line-height: 1.25; }
+}
