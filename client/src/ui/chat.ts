@@ -20,7 +20,7 @@ import { emoteName } from './cosmetics.ts'; // docs/32 §12: the captains' emote
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/chat.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
-import { CHAT_HISTORY, CHAT_MAX, ChatUnread, EMOTE_GROUPS, EMOTES, LINK_RE, chatParts, chatWindow, emoteSuggest, ownLink } from '../../../shared/src/chat.ts';
+import { CHAT_HISTORY, CHAT_MAX, ChatUnread, chatFreshKey, EMOTE_GROUPS, EMOTES, LINK_RE, chatParts, chatWindow, emoteSuggest, ownLink } from '../../../shared/src/chat.ts';
 import type { EmoteGroup } from '../../../shared/src/chat.ts';
 import { inVk } from '../vk.ts';
 import type { ChatLineView, ChatThreadView, ClientMsg } from '../../../shared/src/protocol.ts';
@@ -255,7 +255,24 @@ export class ChatPanel {
     document.body.classList.add('chat-open');
     this.toggleBtn.setAttribute('aria-expanded', 'true');
     this.hideToast();
+    // the badge's lines are shown: when the tab shown holds none of them, the chat opens where the newest is (a
+    // whisper opens its conversation) — the badge never counts what opening does not show
+    const fresh = chatFreshKey(this.lines, this.fresh.seenAt, this.context().self, (l) => this.hidden(l as ChatLine));
+    const here = this.tab === 'dm' ? (this.peer ? `dm:${this.peer}` : null) : this.tab;
+    const hereFresh = here !== null && (this.lines.get(here) ?? []).some((l) => l.at !== undefined && l.at > this.fresh.seenAt && !this.isOwn(l) && l.ch !== 'sys' && !this.hidden(l));
     this.markSeen();
+    if (fresh && !hereFresh && fresh !== here) {
+      if (fresh.startsWith('dm:')) {
+        this.tab = 'dm';
+        this.root.dataset.filter = 'dm';
+        this.peer = fresh.slice(3);
+      } else {
+        this.tab = fresh as ChatTab;
+        this.root.dataset.filter = fresh;
+        this.peer = null;
+      }
+      this.placeholder();
+    }
     this.seen();
     this.render();
     if (focus) this.input.focus();

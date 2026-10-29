@@ -194,7 +194,7 @@ export interface SeaView {
   /** The readier gun deck, 0 (just fired) – 1 (loaded). */
   reload: number;
   news: number;
-  /** Chat lines and letters unread (the menu's badge). */
+  /** Letters unread (the menu's badge; the chat's count is on the chat's own button). */
   unread: number;
   /** Her mark's id (a new one puts the chart away again). */
   markId?: number | null;
@@ -738,8 +738,9 @@ export class SeaHud {
   /** The menu: eight big tiles in a sheet. */
   openMenu(): void {
     if (this.menuSheet?.open) return;
-    const unread = this.view?.unread ?? 0;
-    const tiles = SEA_TILES.map((x) => `<button type="button" class="k-btn k-btn--secondary k-tile" data-tile="${x.id}"><span class="k-tile-pic">${icon(x.art, x.glyph, 'k-tile-ico')}${x.id === 'chat' && unread > 0 ? `<b class="k-badge" aria-hidden="true">${unread > 9 ? '9+' : unread}</b>` : ''}</span><span class="k-btn-l">${esc(x.id === 'more' ? L('more') : menuLabel(x.id))}</span></button>`).join('');
+    // the chat's tile carries the chat's own count (its button's badge: lines the chat holds), never her letters'
+    const chatN = document.getElementById('chat-unread')?.classList.contains('hidden') ? '' : (document.getElementById('chat-unread')?.textContent ?? '');
+    const tiles = SEA_TILES.map((x) => `<button type="button" class="k-btn k-btn--secondary k-tile" data-tile="${x.id}"><span class="k-tile-pic">${icon(x.art, x.glyph, 'k-tile-ico')}${x.id === 'chat' && chatN ? `<b class="k-badge" aria-hidden="true">${esc(chatN)}</b>` : ''}</span><span class="k-btn-l">${esc(x.id === 'more' ? L('more') : menuLabel(x.id))}</span></button>`).join('');
     this.menuSheet = openSheet({ title: L('menu'), body: `<div class="k-tiles">${tiles}</div>`, height: 'auto', cls: 'sea-menu' });
     this.menuSheet.body.querySelectorAll<HTMLElement>('[data-tile]').forEach((b) => b.addEventListener('click', () => {
       this.menuSheet?.close('button');

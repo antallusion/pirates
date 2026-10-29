@@ -50,7 +50,23 @@ export function chatBadgeText(n: number): string {
 export function chatLineFresh(line: { from?: string; ch?: string | null; at?: number; to?: string }, seenAt: number, self: string | null, hidden = false): boolean {
   if (!line.from || line.ch === 'sys' || line.to || hidden) return false;
   if (self && line.from.replace(/^\[[^\]]*\]\s*/, '') === self) return false;
-  return (line.at ?? Number.POSITIVE_INFINITY) > seenAt;
+  // (a line with no stamp is never counted: it could never be marked seen)
+  return typeof line.at === 'number' && line.at > seenAt;
+}
+
+/** Where the fresh lines are: the key of the channel list (`world`, `local`, `group`, `guild`, `dm:<name>`) holding
+ *  the newest line counted, or null — the chat opens there, so what the badge counted is what she sees. */
+export function chatFreshKey(lists: Iterable<readonly [string, readonly { from?: string; ch?: string | null; at?: number; to?: string }[]]>, seenAt: number, self: string | null, hidden: (l: { from?: string }) => boolean = () => false): string | null {
+  let best: string | null = null, bestAt = -Infinity;
+  for (const [k, list] of lists) {
+    for (const l of list) {
+      if (chatLineFresh(l, seenAt, self, hidden(l)) && l.at! > bestAt) {
+        bestAt = l.at!;
+        best = k;
+      }
+    }
+  }
+  return best;
 }
 
 /** What the chat button counts (owner, 2026-10-29: «в чате если кто-то написал сделай в значке чата вверху справа

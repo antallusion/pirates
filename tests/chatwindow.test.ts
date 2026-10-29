@@ -6,7 +6,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CHAT_DM_KEEP, CHAT_HISTORY, CHAT_KEEP_MS, ChatUnread, chatBadgeText, chatLineFresh, chatWindow } from '../shared/src/chat.ts';
+import { readFileSync } from 'node:fs';
+import { CHAT_DM_KEEP, CHAT_HISTORY, CHAT_KEEP_MS, ChatUnread, chatBadgeText, chatFreshKey, chatLineFresh, chatWindow } from '../shared/src/chat.ts';
 import type { ChatLineView } from '../shared/src/protocol.ts';
 import { chatFromAfar, chatPrune } from '../server/src/game/chat.ts';
 import { join, makeGame, steps } from './helpers.ts';
@@ -137,4 +138,29 @@ test('the history carries the server’s clock for the client’s window', () =>
   assert.equal(b.last('chat_hist')!.now, clock);
   b.push({ t: 'chat_hist' });
   assert.equal(b.last('chat_hist')!.now, clock);
+});
+
+test('regression (2026-10-29, «чат все равно показывает 1, я захожу в чат и там ниче нету»): a count only of lines the chat shows, opening where they are', () => {
+  const seen = 1000;
+  // a line with no stamp could never be marked seen: never counted
+  assert.equal(chatLineFresh({ from: 'Ann' }, seen, 'Me'), false);
+  // the chat opens on the channel of the newest counted line (a whisper opens its conversation)
+  const lists = new Map<string, ChatLineView[]>([
+    ['world', [{ from: 'Ann', text: 'old', at: seen - 5 }]],
+    ['dm:bo', [{ from: 'Bo', text: 'psst', ch: 'whisper', at: seen + 10 }]],
+    ['local', [{ from: 'Cy', text: 'near', ch: 'local', at: seen + 5 }, { from: 'Me', text: 'mine', ch: 'local', at: seen + 20 }]],
+  ]);
+  assert.equal(chatFreshKey(lists, seen, 'Me'), 'dm:bo');
+  assert.equal(chatFreshKey(lists, seen + 10, 'Me'), null, 'nothing new: stays where it is');
+  assert.equal(chatFreshKey(lists, seen, 'Me', (l) => l.from === 'Bo'), 'local', 'a hidden captain\u2019s whisper is not where it opens');
+  // the menu's badge and its chat tile: her letters only on the menu, the chat's own count on its tile — never a letter
+  // counted as a chat line (the phantom «1»)
+  const main = readFileSync('client/src/main.ts', 'utf8');
+  assert.ok(main.includes("const unread = Number(($('unread').textContent ?? '')"), 'the menu: her letters only');
+  assert.doesNotMatch(main, /\$\('chat-unread'\)\.textContent[^;]*\$\('unread'\)/);
+  const sea = readFileSync('client/src/ui/seahud.ts', 'utf8');
+  assert.match(sea, /x\.id === 'chat' && chatN/);
+  // a phone keeps the chat out of «⋯» (its badge no longer adds to the tray's), small by the helm
+  assert.match(readFileSync('client/src/ui/hudmore.ts', 'utf8'), /if \(touch && sel === CHAT\) continue;/);
+  assert.match(readFileSync('client/chat.css', 'utf8'), /--chat-sm: calc\(var\(--sb, 44px\) \* 0\.78\)/);
 });

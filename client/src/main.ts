@@ -4204,7 +4204,9 @@ function seaFrame(): void {
     const e = document.getElementById(id);
     return !!e && !e.classList.contains('hidden');
   }).length + goalCount(goalSheetView(self));
-  const unread = (Number(($('chat-unread').textContent ?? '').replace(/\D/g, '')) || 0) + (Number(($('unread').textContent ?? '').replace(/\D/g, '')) || 0);
+  // her letters only (owner, 2026-10-29: «чат все равно показывает 1, я захожу в чат и там ниче нету» — a letter's count
+  // stood on the menu's chat tile): the chat's count is on its own button (chat.ts)
+  const unread = Number(($('unread').textContent ?? '').replace(/\D/g, '')) || 0;
   // A fight on or near: her mark (picked by her: no auto-mark, owner 2026-10-29), her guns busy, the helmsman after one.
   const fight = !self.dockedAt && (targetId !== null || !!state.pursuit || !!you.combat);
   // A world boss as her mark: its slim line steps aside for her mark's (owner, 2026-10-07: «OLD MOORINGS» twice).

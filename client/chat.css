@@ -222,3 +222,15 @@ body.tac #hud-chat { z-index: 26; }
 body.tac #hud-chat > .chat-toggle, body.tac.chat-open #hud-chat > .chat-toggle { top: calc(var(--sa-t) + 64px); right: calc(var(--sa-r) + 8px); left: auto; bottom: auto; width: 40px; height: 40px; }
 body.tac #hud-chat > .chat-toast { top: calc(var(--sa-t) + 64px); right: calc(var(--sa-r) + 56px); left: auto; bottom: auto; }
 body.tac #hud-chat > #chat { top: calc(var(--sa-t) + 4px); bottom: calc(max(var(--sa-b), var(--chat-kb)) + 4px); right: calc(var(--sa-r) + 60px); left: auto; height: auto; }
+
+/* A phone or a tablet (owner, 2026-10-29: «чат пусть отдельно будет вынесено из подменю, надо эту иконку сделать меньше
+   и рядом с иконкой штурвала разместить где-то в удачном месте»): the chat's own small round button (about three
+   quarters of the sail's «+»/«−»), out of the «⋯» tray, over the sail's «+» «−» column right of the wheel — clear of the
+   wheel, its sail ring, the dash's chip at its top right and the «+» below. Its badge stays on it. A desk is as it was. */
+body.simple.touch:not(.chat-open):not(.tac) #hud-chat > #chat-toggle {
+  --chat-sm: calc(var(--sb, 44px) * 0.78);
+  top: auto; right: auto; width: var(--chat-sm); height: var(--chat-sm);
+  left: calc(var(--sa-l) + 10px + var(--stick, 112px) + 12px + (var(--sb, 44px) - var(--chat-sm)) / 2);
+  bottom: calc(var(--sa-b) + 10px + 2 * var(--sb, 44px) + 14px + 10px);
+}
+body.simple.touch:not(.chat-open):not(.tac) #hud-chat > #chat-toggle .chat-unread { top: -6px; right: -9px; }

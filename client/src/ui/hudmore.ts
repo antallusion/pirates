@@ -25,6 +25,9 @@ export const MORE_ITEMS = ['#touch > #tc-menu', '#hud-chat > #chat-toggle', '#to
 /** A wide desk keeps these out (its keys on their rims, the room under the chart). */
 const DESK_OUT = new Set<string>(['#touch > #tc-menu', '#hud-chat > #chat-toggle']);
 const DESK_WIDE = '(min-width: 1100px) and (min-height: 600px)';
+/** A touch screen keeps the chat out too: its own small round button by the helm, its own badge (owner, 2026-10-29:
+ *  «чат пусть отдельно будет вынесено из подменю, надо эту иконку сделать меньше и рядом с иконкой штурвала»). */
+const CHAT = '#hud-chat > #chat-toggle';
 
 /** The badge the button carries for what is folded: the counts summed, else «!» for a mark with no number. */
 export function moreBadge(marks: readonly string[]): string {
@@ -86,9 +89,11 @@ export class HudMore {
   /** The folded elements as they stand now (each a button or the pill). */
   private items(): HTMLElement[] {
     const desk = document.body.classList.contains('more-desk');
+    const touch = document.body.classList.contains('touch');
     const out: HTMLElement[] = [];
     for (const sel of MORE_ITEMS) {
       if (desk && DESK_OUT.has(sel)) continue;
+      if (touch && sel === CHAT) continue;
       const el = document.querySelector<HTMLElement>(sel);
       if (el) out.push(el);
     }
