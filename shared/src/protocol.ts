@@ -2079,7 +2079,7 @@ export type ServerMsg =
   | ({ t: 'chat' } & ChatLineView)
   /** docs/28: the chat's history on coming aboard (the channels' last lines and the private conversations), or one
    *  conversation's whole (`peer`). */
-  | { t: 'chat_hist'; lines: ChatLineView[]; dms: ChatThreadView[]; peer?: string }
+  | { t: 'chat_hist'; lines: ChatLineView[]; dms: ChatThreadView[]; peer?: string; /** the server's wall clock (ms): the chat's window is counted by it, not the device's */ now?: number }
   /** The list of friends, and the names of the captains one does not hear. */
   | { t: 'friends'; list: FriendView[]; ignored?: string[] }
   | { t: 'who'; list: WhoView[]; total: number }

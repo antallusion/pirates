@@ -61,7 +61,42 @@ const sp = await pg(800, 600);
 await toSea(sp, 'Ann');
 const say = async (t) => { await sp.evaluate((t) => globalThis.gravetide.net.send({ t: 'chat', text: t, ch: 'world' }), t); await sleep(2100); };
 
-const only = process.argv[2];
+// (2026-10-29 bug) a fresh phone joins after two lines were said: the badge and what the chat shows must agree
+if (process.argv[2] === 'repro') {
+  await say('Первая строка до входа');
+  await say('Вторая строка до входа');
+  const p = await pg(844, 390);
+  await toSea(p, 'Cy');
+  const dump = () => p.evaluate(() => { const c = globalThis.gravetide.hud.chatPanel; return { badge: document.getElementById('chat-unread').textContent, lines: [...c.lines].map(([k, l]) => [k, l.length, l.map((x) => [x.ch, x.at, x.text])]), now: Date.now() }; });
+  log.push(`repro joined: ${JSON.stringify(await dump())}`);
+  await p.evaluate(() => document.getElementById('chat-toggle').click());
+  await sleep(700);
+  log.push(`repro opened: shown ${await p.evaluate(() => document.querySelectorAll('#chat-log .cl').length)} ${await p.evaluate(() => document.getElementById('chat-log').textContent.slice(0, 80))}`);
+  await p.screenshot({ path: `${OUT}/repro_opened.png` });
+  await p.evaluate(() => globalThis.gravetide.hud.chatPanel.close());
+  await p.reload({ waitUntil: 'domcontentloaded' });
+  for (let i = 0; i < 60 && !(await p.$('#hud:not(.hidden)')); i++) await sleep(1000);
+  await sleep(3000);
+  await p.evaluate(() => globalThis.gravetide.open?.(null));
+  log.push(`repro reloaded: ${JSON.stringify(await dump())}`);
+  await p.evaluate(() => document.getElementById('chat-toggle').click());
+  await sleep(700);
+  log.push(`repro reload opened: shown ${await p.evaluate(() => document.querySelectorAll('#chat-log .cl').length)}`);
+  await p.screenshot({ path: `${OUT}/844_reload_opened.png` });
+  await p.context().close();
+  // a phone whose clock runs nine hours fast: the lines must still show (the window goes by the server's clock)
+  const q = await pg(844, 390);
+  await q.context().addInitScript(() => { const d = Date.now; Date.now = () => d() + 9 * 3600_000; });
+  await toSea(q, 'Dy');
+  await q.evaluate(() => globalThis.gravetide.hud.chatPanel.close());
+  await sleep(400);
+  const qb = await q.evaluate(() => document.getElementById('chat-unread').textContent);
+  await q.evaluate(() => document.getElementById('chat-toggle').click());
+  await sleep(700);
+  log.push(`skewed clock +9h: badge ${qb}, shown ${await q.evaluate(() => document.querySelectorAll('#chat-log .cl').length)}`);
+  await q.context().close();
+}
+const only = process.argv[2] === 'repro' ? 'none' : process.argv[2];
 for (const [W, H] of [[1366, 768], [844, 390]]) {
   if (only && String(W) !== only) continue;
   const p = await pg(W, H);

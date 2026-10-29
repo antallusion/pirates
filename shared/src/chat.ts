@@ -45,26 +45,33 @@ export function chatBadgeText(n: number): string {
   return n <= 0 ? '' : n > 99 ? '99+' : String(n);
 }
 
+/** A line the chat button counts: someone else's words (never her own, never the sea's news, never one she hid), newer
+ *  than her last look. */
+export function chatLineFresh(line: { from?: string; ch?: string | null; at?: number; to?: string }, seenAt: number, self: string | null, hidden = false): boolean {
+  if (!line.from || line.ch === 'sys' || line.to || hidden) return false;
+  if (self && line.from.replace(/^\[[^\]]*\]\s*/, '') === self) return false;
+  return (line.at ?? Number.POSITIVE_INFINITY) > seenAt;
+}
+
 /** What the chat button counts (owner, 2026-10-29: «в чате если кто-то написал сделай в значке чата вверху справа
- *  циферку типа новое сообщение до 99»): the lines of other captains since the chat was last seen — never her own, never
- *  the sea's news, never a line of one she hid. The last-seen time is kept by the caller (localStorage), so a reload
- *  counts only what is new. */
+ *  циферку типа новое сообщение до 99»): the lines of other captains since the chat was last seen, counted over the
+ *  lines the chat HOLDS (so the badge never promises a line the window has already let go — the 2026-10-29 bug: «в чате
+ *  показано два сообщения, я открываю - а там пусто»). The last look is in the server's clock and kept by the caller
+ *  (localStorage), so a reload counts only what is new. */
 export class ChatUnread {
   count = 0;
   seenAt: number;
   constructor(seenAt = 0) {
     this.seenAt = seenAt;
   }
-  /** A line arrived (live or in the history): counted when it is someone else's, newer than the last look. */
-  take(line: { from?: string; ch?: string; at?: number }, self: string | null, hidden = false, now = Date.now()): boolean {
-    if (!line.from || line.ch === 'sys' || hidden) return false;
-    if (self && line.from.replace(/^\[[^\]]*\]\s*/, '') === self) return false;
-    if ((line.at ?? now) <= this.seenAt) return false;
-    this.count++;
-    return true;
+  /** Counted again over every line held (the channels' lists, each already cut to the window). */
+  recount(lists: Iterable<readonly { from?: string; ch?: string | null; at?: number; to?: string }[]>, self: string | null, hidden: (l: { from?: string }) => boolean = () => false): number {
+    let n = 0;
+    for (const list of lists) for (const l of list) if (chatLineFresh(l, this.seenAt, self, hidden(l))) n++;
+    return (this.count = n);
   }
-  /** The chat looked at: nothing new, from now on. */
-  seen(now = Date.now()): void {
+  /** The chat looked at (`now`: the server's clock as the reader knows it): nothing new, from now on. */
+  seen(now: number): void {
     this.count = 0;
     this.seenAt = Math.max(this.seenAt, now);
   }

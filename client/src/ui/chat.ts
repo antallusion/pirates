@@ -136,8 +136,11 @@ export class ChatPanel {
   private ids = new Set<string>();
   private peers = new Map<string, Peer>();
   private unread = new Map<ChatTab, number>();
-  /** the button's count: other captains' lines since she last looked (shared/src/chat.ts) */
+  /** the button's count: other captains' lines held since she last looked (shared/src/chat.ts) */
   private fresh = new ChatUnread();
+  /** the server's clock less the device's (ms), from the history's stamp: the window and the last look go by the
+   *  server's time, so a phone whose clock is off neither hides fresh lines nor counts old ones */
+  private skew = 0;
   private tab: ChatTab = 'world';
   /** the conversation open in the private tab (lowered name), or null for the list */
   private peer: string | null = null;
@@ -298,7 +301,7 @@ export class ChatPanel {
     }
     if (own || this.hidden(m)) return;
     if (this.isOpen) this.markSeen();
-    else if (this.fresh.take(m, this.context().self)) this.drawBadge();
+    else this.drawBadge();
     const tab = this.tabOf(k);
     if (!this.isOpen || !this.visible(k)) {
       this.unread.set(tab, (this.unread.get(tab) ?? 0) + 1);
@@ -315,11 +318,9 @@ export class ChatPanel {
   }
 
   /** The history: on coming aboard (the channels' last lines, the conversations), or one conversation whole. */
-  history(h: { lines: ChatLine[]; dms: ChatThreadView[]; peer?: string }): void {
-    const count = (m: ChatLine) => {
-      if (!this.isOpen && !this.isOwn(m) && !m.to && !this.hidden(m)) this.fresh.take(m, this.context().self);
-    };
-    for (const m of h.lines) if (this.take(m, false)) count(m);
+  history(h: { lines: ChatLine[]; dms: ChatThreadView[]; peer?: string; now?: number }): void {
+    if (typeof h.now === 'number' && Number.isFinite(h.now)) this.skew = h.now - Date.now();
+    for (const m of h.lines) this.take(m, false);
     for (const th of h.dms) {
       const k = low(th.peer);
       const p = this.peers.get(k) ?? { name: th.peer, unread: 0, at: 0 };
@@ -329,7 +330,7 @@ export class ChatPanel {
       if (!h.peer) p.unread = th.unread;
       p.at = Math.max(p.at, th.lines.at(-1)?.at ?? 0);
       this.peers.set(k, p);
-      for (const m of th.lines) if (this.take(m, false)) count(m);
+      for (const m of th.lines) this.take(m, false);
     }
     if (!h.peer) {
       const n = [...this.peers.values()].reduce((a, p) => a + p.unread, 0);
@@ -338,8 +339,9 @@ export class ChatPanel {
     }
     for (const [k, list] of this.lines) {
       list.sort((a, b) => (a.at ?? 0) - (b.at ?? 0));
-      this.lines.set(k, chatWindow(list, Date.now(), (x) => x.at, KEEP));
+      this.lines.set(k, chatWindow(list, this.serverNow(), (x) => x.at, KEEP));
     }
+    if (this.isOpen) this.markSeen();
     this.tabs();
     this.drawBadge();
     this.render();
@@ -382,12 +384,12 @@ export class ChatPanel {
     let list = this.lines.get(k);
     if (!list) this.lines.set(k, (list = []));
     list.push(m);
-    const kept = chatWindow(list, Date.now(), (x) => x.at, KEEP);
+    const kept = chatWindow(list, this.serverNow(), (x) => x.at, KEEP);
     if (kept !== list) this.lines.set(k, kept);
   }
 
   /** Every channel cut to the chat's window (eight hours, fifty lines); the log drawn again when the shown one lost any. */
-  prune(now = Date.now()): void {
+  prune(now = this.serverNow()): void {
     let shownCut = false;
     const shown = this.tab === 'dm' ? (this.peer ? `dm:${this.peer}` : null) : this.tab;
     for (const [k, list] of this.lines) {
@@ -398,11 +400,17 @@ export class ChatPanel {
       if (k === shown) shownCut = true;
     }
     if (shownCut && this.isOpen) this.render();
+    this.drawBadge(); // a line let go is a line no longer counted
+  }
+
+  /** The server's wall clock as the reader knows it. */
+  private serverNow(): number {
+    return Date.now() + this.skew;
   }
 
   /** She has looked: the button's count goes, the moment kept for the next visit. */
   private markSeen(): void {
-    this.fresh.seen();
+    this.fresh.seen(this.serverNow());
     try {
       localStorage.setItem(SEEN_KEY, String(this.fresh.seenAt));
     } catch {
@@ -590,6 +598,7 @@ export class ChatPanel {
 
   /** The button's badge: other captains' lines since she last looked, «99+» past 99 (none while the chat is open). */
   private drawBadge(): void {
+    if (!this.isOpen) this.fresh.recount(this.lines.values(), this.context().self, (l) => this.hidden(l as ChatLine));
     const n = this.isOpen ? 0 : this.fresh.count;
     this.badge.textContent = this.fresh.text;
     this.badge.classList.toggle('hidden', n <= 0);

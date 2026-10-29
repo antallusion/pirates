@@ -497,7 +497,7 @@ export function chatHist(game: Game, s: PlayerSession, peer?: string): void {
   if (!s.profile) return;
   if (peer) {
     const p = captainNamed(game, peer);
-    if (p) game.sendTo(s, { t: 'chat_hist', lines: [], dms: threads(game, s, CHAT_DM_KEEP, p.id), peer: p.name });
+    if (p) game.sendTo(s, { t: 'chat_hist', lines: [], dms: threads(game, s, CHAT_DM_KEEP, p.id), peer: p.name, now: game.wallNow() });
     return;
   }
   chatPrune(game);
@@ -511,7 +511,7 @@ export function chatHist(game: Game, s: PlayerSession, peer?: string): void {
   const gu = game.guilds.of(game, s.accountId);
   if (gu) lines.push(...(h.guilds.get(gu.id) ?? []).filter((l) => !deaf(l)));
   lines.sort((a, b) => (a.at ?? 0) - (b.at ?? 0));
-  game.sendTo(s, { t: 'chat_hist', lines, dms: threads(game, s, CHAT_HISTORY) });
+  game.sendTo(s, { t: 'chat_hist', lines, dms: threads(game, s, CHAT_HISTORY), now: game.wallNow() });
 }
 
 /** On coming aboard (sendInit): the history, the private words kept while she was away among it. */
