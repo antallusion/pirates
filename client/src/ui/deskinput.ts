@@ -11,14 +11,32 @@ export function rightClickAct(f: { docked: boolean; mount: boolean }): 'mount' |
   return f.mount ? 'mount' : 'sail';
 }
 
-/** A finger's tap on the sea (touch.ts SeaGesture: short and still, never a drag or a pinch). A ship or a creature
- *  stack under it is the target; a thing on the sea (a find, a wreck, a waystation, a quest's beacon) its own order;
- *  a harbour or an island its selection. Anything else — the open sea — is a course there: the helmsman takes her and
- *  the autopilot pill shows (owner, 2026-10-29: «поставить просто пальцем точку на карту и начать движение не
- *  получается» — the open sea's tap did nothing on a phone since the sail-to came in: only things sailed her). */
-export function seaTapAct(f: { mark: boolean; thing: boolean; place: boolean; docked: boolean; modal: boolean }): 'sail' | null {
-  if (f.docked || f.modal || f.mark || f.thing || f.place) return null;
-  return 'sail';
+/** What a finger's tap on the sea does (touch.ts SeaGesture: short and still, never a drag or a pinch). Owner,
+ *  2026-10-29: «мне нужно тапнуть куда мне надо и начать плыть. порт или еще куда-то, куда угодно короче» — ANY tap
+ *  sails, in port's roads too (main.ts casts her off first):
+ *  - another ship or a creature stack: the target (the one exception); tapped again while it is the target, she sails
+ *    to it (`chase`);
+ *  - a thing on the sea (a find, a wreck, a waystation, a quest's beacon): its own order, sailed to (`thing`);
+ *  - a harbour: sailed to and put in on arrival (`port`); an island or her wreckage: sailed to (`place`);
+ *  - the open sea: a course to the point (`sea`).
+ *  A window open: nothing (the tap was not the sea's). A long passage or a boarding: `blocked` — a word why, never a
+ *  silent tap. */
+export type SeaTap = 'none' | 'target' | 'chase' | 'thing' | 'port' | 'place' | 'sea' | 'blocked';
+export function seaTapPlan(f: { mark: 'ship' | 'roam' | null; again: boolean; thing: boolean; place: 'port' | 'isle' | 'wreck' | null; modal: boolean; blocked: boolean }): SeaTap {
+  if (f.modal) return 'none';
+  if (f.mark && !f.again) return 'target';
+  if (f.blocked) return 'blocked';
+  if (f.mark) return 'chase';
+  if (f.thing) return 'thing';
+  if (f.place === 'port') return 'port';
+  if (f.place) return 'place';
+  return 'sea';
+}
+
+/** The words of a tap that cannot sail (seaTapPlan `blocked`). */
+export function seaTapWhy(why: 'voyage' | 'battle', ru: boolean): string {
+  if (why === 'voyage') return ru ? 'Дальний переход: курс не сменить до прибытия' : 'A long passage: no new course until she arrives';
+  return ru ? 'Идёт бой: курс после боя' : 'A fight is on: the course after it';
 }
 
 /** A press that travelled this far (px) between down and up was a drag (the view panned), not a click. */
