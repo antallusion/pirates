@@ -5,7 +5,7 @@ import { DOCK_SLOW, LANDING_R, REACH_DOCK, REACH_SLACK, hullOf } from '../../../
 import { dockWithin } from '../../../shared/src/world/dock.ts';
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { provisionsPerMinute } from '../../../shared/src/data/voyage.ts';
-import { chatCommand, chatFromAfar, chatHist, chatIn, chatOnLogin, chatRead, chatReport, cleanChat, guildSay } from './chat.ts'; // docs/28
+import { chatCommand, chatFromAfar, chatHist, chatIn, chatOnLogin, chatPrune, chatRead, chatReport, cleanChat, guildSay } from './chat.ts'; // docs/28
 import { callOn, drink, hallView, invite, sign } from './guests.ts';
 import { lookOf, setLook, unlockDeed } from './looks.ts';
 import { cosMessage, cosWire, dressShip, forgetCos, sendCos, stepCosmetics } from './cosmetics.ts'; // docs/32 §12
@@ -1025,6 +1025,7 @@ export class Game {
     stepSeasons(this);
     stepCommon(this);
     stepTasks(this);
+    chatPrune(this, 60); // docs/28: the chat's window (eight hours, fifty lines), once a minute
     stepEmpires(this);
     // (the seldom steps each keep their period but take a second of their own in it — stacked on the same second
     // they made the tick's spikes: docs/19 E19's open item, 2026-10-09)

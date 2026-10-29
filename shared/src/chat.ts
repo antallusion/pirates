@@ -19,10 +19,59 @@ export const CHAT_WINDOW = 20;
 export const CHAT_BREACH_MUTE = 30;
 /** The same words again within this long are refused (seconds). */
 export const CHAT_DUP_WINDOW = 30;
-/** Lines the server keeps of each channel for the history on opening. */
+/** Lines kept of each channel (and of each private conversation), on the server and on the screen (owner, 2026-10-29:
+ *  «показывай только переписку, которая хранится 8 часов и потом удаляется. (или сделай ограничение в 50 сообщений и
+ *  стирай)»: both, the stricter wins). */
 export const CHAT_HISTORY = 50;
-/** Lines kept of each private conversation (in the database). */
-export const CHAT_DM_KEEP = 100;
+/** How long a line is kept (ms): eight hours. */
+export const CHAT_KEEP_MS = 8 * 3600_000;
+/** Lines kept of each private conversation (in the database): the same fifty. */
+export const CHAT_DM_KEEP = CHAT_HISTORY;
+
+/** The chat's window: the lines of the last CHAT_KEEP_MS, at most `max` of them (the newest), in their order. A line
+ *  without a time is taken as new. Returns the same array when nothing goes (so callers can tell). */
+export function chatWindow<T>(list: T[], now: number, at: (x: T) => number | undefined, max = CHAT_HISTORY): T[] {
+  const cut = now - CHAT_KEEP_MS;
+  let from = 0;
+  while (from < list.length && (at(list[from]) ?? now) < cut) from++;
+  from = Math.max(from, list.length - max);
+  if (from <= 0) return list;
+  // (a line out of order — older than one after it — still goes when it is too old)
+  return list.slice(from).filter((x) => (at(x) ?? now) >= cut);
+}
+
+/** The chat button's badge: nothing, the count, or «99+». */
+export function chatBadgeText(n: number): string {
+  return n <= 0 ? '' : n > 99 ? '99+' : String(n);
+}
+
+/** What the chat button counts (owner, 2026-10-29: «в чате если кто-то написал сделай в значке чата вверху справа
+ *  циферку типа новое сообщение до 99»): the lines of other captains since the chat was last seen — never her own, never
+ *  the sea's news, never a line of one she hid. The last-seen time is kept by the caller (localStorage), so a reload
+ *  counts only what is new. */
+export class ChatUnread {
+  count = 0;
+  seenAt: number;
+  constructor(seenAt = 0) {
+    this.seenAt = seenAt;
+  }
+  /** A line arrived (live or in the history): counted when it is someone else's, newer than the last look. */
+  take(line: { from?: string; ch?: string; at?: number }, self: string | null, hidden = false, now = Date.now()): boolean {
+    if (!line.from || line.ch === 'sys' || hidden) return false;
+    if (self && line.from.replace(/^\[[^\]]*\]\s*/, '') === self) return false;
+    if ((line.at ?? now) <= this.seenAt) return false;
+    this.count++;
+    return true;
+  }
+  /** The chat looked at: nothing new, from now on. */
+  seen(now = Date.now()): void {
+    this.count = 0;
+    this.seenAt = Math.max(this.seenAt, now);
+  }
+  get text(): string {
+    return chatBadgeText(this.count);
+  }
+}
 /** Conversations a captain keeps. */
 export const CHAT_DM_THREADS = 40;
 

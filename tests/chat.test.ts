@@ -143,7 +143,7 @@ test('private words online: to her alone, echoed to the sender, kept; "/r" answe
   assert.deepEqual(bad(c), ['No one has whispered to you yet']);
 });
 
-test('private words offline: kept, handed over on coming aboard with the unread, the last hundred of a conversation', () => {
+test('private words offline: kept, handed over on coming aboard with the unread, the last fifty of a conversation', () => {
   const { game } = makeGame();
   const b = join(game, 'Bea Away');
   const token = b.last('welcome')!.token;
@@ -167,11 +167,11 @@ test('private words offline: kept, handed over on coming aboard with the unread,
   assert.ok(h, 'the history on coming aboard');
   const th = h.dms.find((d) => d.peer === 'Ann Writer')!;
   assert.ok(th, 'the conversation with Ann');
-  assert.equal(th.unread, CHAT_DM_KEEP + 6);
+  assert.equal(th.unread, CHAT_DM_KEEP, 'the unread no more than the lines kept');
   assert.equal(th.face, 'corsair');
   b2.push({ t: 'chat_hist', peer: 'Ann Writer' });
   const whole = b2.last('chat_hist')!.dms[0].lines;
-  assert.equal(whole.length, CHAT_DM_KEEP, 'the last hundred kept');
+  assert.equal(whole.length, CHAT_DM_KEEP, 'the last fifty kept');
   assert.equal(whole.at(-1)!.text, `letter ${CHAT_DM_KEEP + 4}`);
   assert.equal(whole[0].text, 'letter 5');
   // read: the unread go

@@ -8,12 +8,13 @@
 //    the same words twice refused, the harbour master's /mute;
 //  - coarse words masked (shared/src/chat.ts), control characters out, CHAT_MAX characters at most;
 //  - the history: the channels' last CHAT_HISTORY lines kept in memory, private conversations in the database (the last
-//    CHAT_DM_KEEP of each), sent on coming aboard;
+//    CHAT_DM_KEEP of each), sent on coming aboard; nothing older than CHAT_KEEP_MS (eight hours) is kept or sent, pruned
+//    on every line and once a minute (chatPrune; owner, 2026-10-29);
 //  - other zones: lines go over the zone mesh (zones/zone.ts) and the Redis bus (persistence/redis.ts) when there is
 //    one; a line arriving twice (both ways) is taken once, by its id.
 
 import { randomBytes } from 'node:crypto';
-import { CHAT_BREACH_MUTE, CHAT_BURST, CHAT_DM_KEEP, CHAT_DM_THREADS, CHAT_DUP_WINDOW, CHAT_GAP, CHAT_HISTORY, CHAT_MAX, CHAT_WINDOW, chatKey, maskBadWords } from '../../../shared/src/chat.ts';
+import { CHAT_BREACH_MUTE, CHAT_BURST, CHAT_DM_KEEP, CHAT_DM_THREADS, CHAT_DUP_WINDOW, CHAT_GAP, CHAT_HISTORY, CHAT_MAX, CHAT_WINDOW, chatKey, chatWindow, maskBadWords } from '../../../shared/src/chat.ts';
 import { INTEREST_RADIUS } from '../../../shared/src/constants.ts';
 import type { ChatLineView, ChatThreadView, SagaCard } from '../../../shared/src/protocol.ts';
 import { ignoreAdd, ignoreCommand, ignores, whisperCommand } from './friends.ts';
@@ -83,6 +84,8 @@ interface Hub {
   groups: Map<number, ChatLineView[]>;
   guilds: Map<number, ChatLineView[]>;
   rate: Map<number, Rate>;
+  /** world time of the last timed prune */
+  prunedAt: number;
 }
 
 const hubs = new WeakMap<Game, Hub>();
@@ -90,7 +93,7 @@ const hubs = new WeakMap<Game, Hub>();
 function hub(game: Game): Hub {
   let h = hubs.get(game);
   if (!h) {
-    h = { proc: randomBytes(3).toString('hex'), seq: 0, seen: new Set(), seenQ: [], world: [], local: [], groups: new Map(), guilds: new Map(), rate: new Map() };
+    h = { proc: randomBytes(3).toString('hex'), seq: 0, seen: new Set(), seenQ: [], world: [], local: [], groups: new Map(), guilds: new Map(), rate: new Map(), prunedAt: 0 };
     hubs.set(game, h);
   }
   return h;
@@ -105,9 +108,40 @@ function seenBefore(h: Hub, id: string): boolean {
   return false;
 }
 
-function keep<T>(list: T[], item: T, max = CHAT_HISTORY): void {
+const lineAt = (l: ChatLineView) => l.at;
+const localAt = (l: LocalLine) => l.line.at;
+
+/** Into a channel's list, and the list cut to the chat's window (eight hours, fifty lines). */
+function keep<T extends ChatLineView | LocalLine>(game: Game, list: T[], item: T): void {
   list.push(item);
-  if (list.length > max) list.splice(0, list.length - max);
+  const kept = chatWindow(list, game.wallNow(), ('line' in item ? localAt : lineAt) as (x: T) => number | undefined);
+  if (kept !== list) list.splice(0, list.length, ...kept);
+}
+
+/** Every channel cut to its window; a group's or a guild's list gone when empty. With `every` (seconds of world time)
+ *  no more often than that (Game.everySecond asks once a minute). */
+export function chatPrune(game: Game, every = 0): void {
+  const h = hubs.get(game);
+  if (!h) return;
+  if (every > 0) {
+    if (game.now < h.prunedAt + every) return;
+    h.prunedAt = game.now;
+  }
+  const now = game.wallNow();
+  h.world = chatWindow(h.world, now, lineAt);
+  h.local = chatWindow(h.local, now, localAt);
+  for (const m of [h.groups, h.guilds]) {
+    for (const [k, list] of m) {
+      const kept = chatWindow(list, now, lineAt);
+      if (kept.length) m.set(k, kept);
+      else m.delete(k);
+    }
+  }
+}
+
+/** A private conversation's lines inside the chat's window. */
+function dmWindow(game: Game, recs: DmRec[]): DmRec[] {
+  return chatWindow(recs, game.wallNow(), (r) => r.at, CHAT_DM_KEEP);
 }
 
 /** A line stamped by the server: its id and its time. */
@@ -188,7 +222,7 @@ export function worldSay(game: Game, s: PlayerSession, text: string, card?: Saga
 }
 
 function deliverWorld(game: Game, line: ChatLineView, from: number): void {
-  keep(hub(game).world, line);
+  keep(game, hub(game).world, line);
   for (const o of game.sessions) if (o.profile && !ignores(o, from)) game.sendTo(o, { t: 'chat', ...line });
 }
 
@@ -210,7 +244,7 @@ export function localSay(game: Game, s: PlayerSession, text: string): string | n
   const no = gate(game, s, text);
   if (no) return no;
   const line = stamp(game, { from: s.name, text: words(text), ch: 'local', ...chatFace(s, game) });
-  keep(hub(game).local, { line, ...at });
+  keep(game, hub(game).local, { line, ...at });
   for (const o of game.sessions) {
     const p = placeOf(o);
     if (o.profile && p && inSight(at, p) && !ignores(o, s.accountId)) game.sendTo(o, { t: 'chat', ...line });
@@ -226,7 +260,7 @@ export function emoteSay(game: Game, s: PlayerSession, id: string): void {
   const wall = adminMutes(game)[String(s.accountId)] ?? 0;
   if (wall > game.wallNow() || rateOf(game, s.accountId).until > game.now) return;
   const line = stamp(game, { from: s.name, text: '', ch: 'local', emo: id, ...chatFace(s, game) });
-  keep(hub(game).local, { line, ...at });
+  keep(game, hub(game).local, { line, ...at });
   for (const o of game.sessions) {
     const p = placeOf(o);
     if (o.profile && p && inSight(at, p) && !ignores(o, s.accountId)) game.sendTo(o, { t: 'chat', ...line });
@@ -245,7 +279,7 @@ export function groupSay(game: Game, s: PlayerSession, text: string): string | n
   const h = hub(game);
   let list = h.groups.get(g.id);
   if (!list) h.groups.set(g.id, (list = []));
-  keep(list, line);
+  keep(game, list, line);
   for (const m of g.members) {
     const ms = game.sessionByAccount(m);
     if (ms && !ignores(ms, s.accountId)) game.sendTo(ms, { t: 'chat', ...line });
@@ -271,7 +305,7 @@ function deliverGuild(game: Game, gid: number, line: ChatLineView, from: number)
   const h = hub(game);
   let list = h.guilds.get(gid);
   if (!list) h.guilds.set(gid, (list = []));
-  keep(list, line);
+  keep(game, list, line);
   for (const o of game.sessions) {
     if (!o.profile || game.guilds.of(game, o.accountId)?.id !== gid) continue;
     if (!ignores(o, from)) game.sendTo(o, { t: 'chat', ...line });
@@ -360,7 +394,7 @@ export function dmSay(game: Game, s: PlayerSession, toName: string, text: string
   const key = dmKey(s.accountId, to.id);
   const recs = game.db.getKv<DmRec[]>(key) ?? [];
   recs.push({ id: line.id!, f: s.accountId, n: s.name, t: line.text, at: line.at!, ...(who.face ? { face: who.face } : {}), ...(who.lv ? { lv: who.lv } : {}) });
-  game.db.setKv(key, recs.slice(-CHAT_DM_KEEP));
+  game.db.setKv(key, dmWindow(game, recs));
   boxUpsert(game, s.accountId, { peer: to.id, name: to.name, at: line.at! }, (n) => n);
   boxUpsert(game, to.id, { peer: s.accountId, name: s.name, at: line.at!, face: who.face, lv: who.lv }, (n) => n + 1);
   // handed over: here, or in whichever zone she sails
@@ -445,10 +479,14 @@ function threads(game: Game, s: PlayerSession, per: number, only?: number): Chat
   for (const b of box) {
     if (only !== undefined && b.peer !== only) continue;
     if (deafTo(game, s.accountId, b.peer)) continue;
-    const recs = (game.db.getKv<DmRec[]>(dmKey(s.accountId, b.peer)) ?? []).slice(-per);
+    const all = game.db.getKv<DmRec[]>(dmKey(s.accountId, b.peer)) ?? [];
+    const kept = dmWindow(game, all);
+    if (kept !== all) game.db.setKv(dmKey(s.accountId, b.peer), kept); // (pruned when read: the database keeps no more)
+    if (!kept.length && only === undefined) continue; // a conversation gone quiet for eight hours: off the list
+    const recs = kept.slice(-per);
     const live = game.sessionByAccount(b.peer);
     const name = live?.name ?? b.name;
-    out.push({ peer: name, ...(b.face ? { face: b.face } : {}), ...(b.lv ? { lv: b.lv } : {}), unread: b.unread, lines: recs.map((r) => recLine(r, s.accountId, name)) });
+    out.push({ peer: name, ...(b.face ? { face: b.face } : {}), ...(b.lv ? { lv: b.lv } : {}), unread: Math.min(b.unread, kept.length), lines: recs.map((r) => recLine(r, s.accountId, name)) });
   }
   return out;
 }
@@ -462,6 +500,7 @@ export function chatHist(game: Game, s: PlayerSession, peer?: string): void {
     if (p) game.sendTo(s, { t: 'chat_hist', lines: [], dms: threads(game, s, CHAT_DM_KEEP, p.id), peer: p.name });
     return;
   }
+  chatPrune(game);
   const h = hub(game);
   const deaf = (l: ChatLineView) => (s.profile?.ignored ?? []).some((f) => f.name === l.from);
   const lines: ChatLineView[] = h.world.filter((l) => !deaf(l));
