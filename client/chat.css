@@ -23,6 +23,9 @@ body { --chat-w: 380px; }
 #hud-chat > .chat-toggle[aria-expanded="true"] { border-color: var(--brass); box-shadow: 0 0 0 2px rgba(232, 196, 106, 0.35); }
 #hud-chat .chat-unread { position: absolute; top: -4px; right: -6px; z-index: 3; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; border-radius: 9px; background: #a8322a; border: 1px solid #f0c9a0; color: #fff; font: 700 11px/16px var(--sans); font-style: normal; text-align: center; pointer-events: none; }
 #hud-chat .chat-unread.dot { min-width: 11px; width: 11px; height: 11px; padding: 0; top: 0; right: 0; background: #c8a04a; border-color: #2a2015; }
+/* (owner, 2026-10-29) the count of new lines, «99+» past 99: a wax-seal red pill, brass-rimmed, never wrapped */
+#hud-chat .chat-unread { white-space: nowrap; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45); }
+#hud-chat .chat-unread.wide { padding: 0 5px; font-size: 10px; letter-spacing: -0.02em; }
 #hud-chat .chat-unread.hidden { display: none; }
 /* (the simple sea HUD put the old button away — seahud.css; the owner wants it back, 2026-10-11) */
 body.simple #hud-chat > #chat-toggle, body.touch #hud-chat > #chat-toggle { display: block !important; }

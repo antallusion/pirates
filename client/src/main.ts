@@ -4208,7 +4208,7 @@ function seaFrame(): void {
     const e = document.getElementById(id);
     return !!e && !e.classList.contains('hidden');
   }).length + goalCount(goalSheetView(self));
-  const unread = (Number($('chat-unread').textContent) || 0) + (Number(($('unread').textContent ?? '').replace(/\D/g, '')) || 0);
+  const unread = (Number(($('chat-unread').textContent ?? '').replace(/\D/g, '')) || 0) + (Number(($('unread').textContent ?? '').replace(/\D/g, '')) || 0);
   // A fight on or near: her mark (picked, or the nearest foe within a mile), her guns busy, the helmsman after one.
   const fight = !self.dockedAt && (targetId !== null || !!state.pursuit || !!you.combat);
   // A world boss as her mark: its slim line steps aside for her mark's (owner, 2026-10-07: «OLD MOORINGS» twice).

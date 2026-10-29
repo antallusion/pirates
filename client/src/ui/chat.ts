@@ -2,8 +2,8 @@
 // pictures"; 2026-10-11: «он должен быть суперудобный даже на мобиле … у капитанов ники и иконки должны быть, можно
 // отправлять специфические "смайлики" игровые из наших ассетов … и приватные сообщения тоже … чат должен на мобилке быть
 // удобный, его надо какой-то иконкой открывать-закрывать, чтобы uix не рушился»).
-//  - A round button with the count of unread (private words, the group, the guild; a dot for the world) opens and
-//    closes a sheet: on a phone held sideways it slides over the right side (the helm and the sea stay to the left), a
+//  - A round button with the count of new lines since the chat was last seen (other captains' only, «99+» past 99; the
+//    last look kept in localStorage — owner, 2026-10-29) opens and closes a sheet: on a phone held sideways it slides over the right side (the helm and the sea stay to the left), a
 //    swipe right, the button or Esc folds it away; on a desk it is a small panel docked left or right.
 //  - Tabs for the channels (the world, the ships nearby, the group, the guild, private words) with their unread.
 //  - Each line: the captain's face in a brass ring, the name in the colour of what she is to you, her guild's tag and
@@ -11,6 +11,7 @@
 //    block, report).
 //  - Emotes from the game's own icons: a picker in four groups and `:code:` with an autocomplete after «:».
 //  - Everything escaped; links stay words, but our own domain's.
+//  - Only the chat's window is kept and shown: the last eight hours, fifty lines a channel (shared/src/chat.ts).
 
 import { esc, faceOf, icon, portraitUrl, glyphSvg } from './dom.ts';
 import { avatar } from './kit/avatar.ts'; // the portrait in its ring, as everywhere (shared/src/data/portraitfit.ts)
@@ -19,7 +20,7 @@ import { emoteName } from './cosmetics.ts'; // docs/32 §12: the captains' emote
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/chat.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
-import { CHAT_MAX, EMOTE_GROUPS, EMOTES, LINK_RE, chatParts, emoteSuggest, ownLink } from '../../../shared/src/chat.ts';
+import { CHAT_HISTORY, CHAT_MAX, ChatUnread, EMOTE_GROUPS, EMOTES, LINK_RE, chatParts, chatWindow, emoteSuggest, ownLink } from '../../../shared/src/chat.ts';
 import type { EmoteGroup } from '../../../shared/src/chat.ts';
 import { inVk } from '../vk.ts';
 import type { ChatLineView, ChatThreadView, ClientMsg } from '../../../shared/src/protocol.ts';
@@ -112,8 +113,10 @@ interface Peer {
 }
 
 const low = (s: string) => s.trim().toLowerCase();
-const KEEP = 120;
+const KEEP = CHAT_HISTORY;
 const MUTE_KEY = 'gravetide.chatMute';
+/** When she last looked at the chat (wall ms): the badge counts only what came after. */
+const SEEN_KEY = 'gravetide.chatSeen';
 const DOCK_KEY = 'gravetide.chatDock';
 
 export class ChatPanel {
@@ -133,6 +136,8 @@ export class ChatPanel {
   private ids = new Set<string>();
   private peers = new Map<string, Peer>();
   private unread = new Map<ChatTab, number>();
+  /** the button's count: other captains' lines since she last looked (shared/src/chat.ts) */
+  private fresh = new ChatUnread();
   private tab: ChatTab = 'world';
   /** the conversation open in the private tab (lowered name), or null for the list */
   private peer: string | null = null;
@@ -155,6 +160,7 @@ export class ChatPanel {
       for (const n of JSON.parse(localStorage.getItem(MUTE_KEY) ?? '[]') as string[]) this.muted.add(low(n));
       const dock = localStorage.getItem(DOCK_KEY);
       if (dock === 'right' || dock === 'left') this.root.dataset.dock = dock;
+      this.fresh.seenAt = Number(localStorage.getItem(SEEN_KEY)) || 0;
     } catch {
       // a private window keeps nothing
     }
@@ -207,6 +213,8 @@ export class ChatPanel {
     this.swipe();
     this.keyboard();
     this.art();
+    // the chat's window: lines past eight hours leave the screen too (once a minute)
+    window.setInterval(() => this.prune(), 60_000);
   }
 
   get isOpen(): boolean {
@@ -244,6 +252,7 @@ export class ChatPanel {
     document.body.classList.add('chat-open');
     this.toggleBtn.setAttribute('aria-expanded', 'true');
     this.hideToast();
+    this.markSeen();
     this.seen();
     this.render();
     if (focus) this.input.focus();
@@ -253,6 +262,7 @@ export class ChatPanel {
     this.root.classList.remove('open', 'typing');
     document.body.classList.remove('chat-open');
     this.toggleBtn.setAttribute('aria-expanded', 'false');
+    this.markSeen(); // what was on the screen has been read
     this.emotes.classList.add('hidden');
     this.card.classList.add('hidden');
     this.suggest.classList.add('hidden');
@@ -287,6 +297,8 @@ export class ChatPanel {
       if (k.startsWith('dm:') && !own && this.isOpen) this.hooks.send({ t: 'chat_read', peer: this.peers.get(k.slice(3))?.name ?? k.slice(3) });
     }
     if (own || this.hidden(m)) return;
+    if (this.isOpen) this.markSeen();
+    else if (this.fresh.take(m, this.context().self)) this.drawBadge();
     const tab = this.tabOf(k);
     if (!this.isOpen || !this.visible(k)) {
       this.unread.set(tab, (this.unread.get(tab) ?? 0) + 1);
@@ -304,7 +316,10 @@ export class ChatPanel {
 
   /** The history: on coming aboard (the channels' last lines, the conversations), or one conversation whole. */
   history(h: { lines: ChatLine[]; dms: ChatThreadView[]; peer?: string }): void {
-    for (const m of h.lines) this.take(m, false);
+    const count = (m: ChatLine) => {
+      if (!this.isOpen && !this.isOwn(m) && !m.to && !this.hidden(m)) this.fresh.take(m, this.context().self);
+    };
+    for (const m of h.lines) if (this.take(m, false)) count(m);
     for (const th of h.dms) {
       const k = low(th.peer);
       const p = this.peers.get(k) ?? { name: th.peer, unread: 0, at: 0 };
@@ -314,14 +329,17 @@ export class ChatPanel {
       if (!h.peer) p.unread = th.unread;
       p.at = Math.max(p.at, th.lines.at(-1)?.at ?? 0);
       this.peers.set(k, p);
-      for (const m of th.lines) this.take(m, false);
+      for (const m of th.lines) if (this.take(m, false)) count(m);
     }
     if (!h.peer) {
       const n = [...this.peers.values()].reduce((a, p) => a + p.unread, 0);
       if (n) this.unread.set('dm', n);
       else this.unread.delete('dm');
     }
-    for (const list of this.lines.values()) list.sort((a, b) => (a.at ?? 0) - (b.at ?? 0));
+    for (const [k, list] of this.lines) {
+      list.sort((a, b) => (a.at ?? 0) - (b.at ?? 0));
+      this.lines.set(k, chatWindow(list, Date.now(), (x) => x.at, KEEP));
+    }
     this.tabs();
     this.drawBadge();
     this.render();
@@ -364,7 +382,33 @@ export class ChatPanel {
     let list = this.lines.get(k);
     if (!list) this.lines.set(k, (list = []));
     list.push(m);
-    if (list.length > KEEP) list.splice(0, list.length - KEEP);
+    const kept = chatWindow(list, Date.now(), (x) => x.at, KEEP);
+    if (kept !== list) this.lines.set(k, kept);
+  }
+
+  /** Every channel cut to the chat's window (eight hours, fifty lines); the log drawn again when the shown one lost any. */
+  prune(now = Date.now()): void {
+    let shownCut = false;
+    const shown = this.tab === 'dm' ? (this.peer ? `dm:${this.peer}` : null) : this.tab;
+    for (const [k, list] of this.lines) {
+      const kept = chatWindow(list, now, (x) => x.at, KEEP);
+      if (kept === list) continue;
+      if (kept.length) this.lines.set(k, kept);
+      else this.lines.delete(k);
+      if (k === shown) shownCut = true;
+    }
+    if (shownCut && this.isOpen) this.render();
+  }
+
+  /** She has looked: the button's count goes, the moment kept for the next visit. */
+  private markSeen(): void {
+    this.fresh.seen();
+    try {
+      localStorage.setItem(SEEN_KEY, String(this.fresh.seenAt));
+    } catch {
+      // a private window keeps nothing
+    }
+    this.drawBadge();
   }
 
   private keyOf(m: ChatLine): string {
@@ -544,13 +588,15 @@ export class ChatPanel {
     this.peersBar.innerHTML = `<button type="button" class="chat-back g-only" data-back aria-label="${esc(L('back'))}" title="${esc(L('back'))}">${glyphSvg('prev')}</button><button type="button" class="chat-peer" data-nick="${esc(name)}">${face}<b>${esc(name)}</b>${p?.lv ? `<span class="cl-lv">${esc(L('lv', { n: p.lv }))}</span>` : ''}</button>`;
   }
 
+  /** The button's badge: other captains' lines since she last looked, «99+» past 99 (none while the chat is open). */
   private drawBadge(): void {
-    const loud = this.loudUnread;
-    const quiet = (this.unread.get('world') ?? 0) + (this.unread.get('local') ?? 0);
-    this.badge.textContent = loud ? (loud > 99 ? '99+' : String(loud)) : '';
-    this.badge.classList.toggle('hidden', !loud && !quiet);
-    this.badge.classList.toggle('dot', !loud && quiet > 0);
-    this.toggleBtn.classList.toggle('has-unread', loud > 0);
+    const n = this.isOpen ? 0 : this.fresh.count;
+    this.badge.textContent = this.fresh.text;
+    this.badge.classList.toggle('hidden', n <= 0);
+    this.badge.classList.remove('dot');
+    this.badge.classList.toggle('wide', n > 9);
+    this.toggleBtn.classList.toggle('has-unread', n > 0);
+    this.toggleBtn.setAttribute('aria-label', n > 0 ? `${L('open')}, ${L('unread', { n: this.fresh.text })}` : L('open'));
   }
 
   /** The count of unread a menu's badge adds (the private words, the group, the guild). */
