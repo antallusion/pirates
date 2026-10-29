@@ -965,6 +965,21 @@ body.reduce-motion.more-open :is(#tc-more-tray, .more-fold), body.reduce-motion 
 @media (prefers-reduced-motion: reduce) { body.more-open :is(#tc-more-tray, .more-fold), #tc-more .tc-more-dots { animation: none !important; transition: none !important; } }
 /* «Цели и вести» out, alone under the chart (in the chat's place before; a wide desk keeps the menu beside it) */
 body.simple.hud-more:not(.more-desk) #hud #touch > #tc-news { right: calc(var(--sa-r) + 8px + (var(--mm) - var(--tr-b)) / 2); }
+/* «К кораблю» in the row under the chart on a touch screen (owner, 2026-10-29: «тут иконки друг на друга накладываются
+   если сместиться от корабля»): a row lower it stood over «Приёмы» (by the screen's foot: 22×30 px over it at 844×390).
+   Now its own slot in the chart's row, the row's last on the left (clear of «Приёмы» under the row's right end), one gap
+   between, its word under it; the row still centred on the chart. With the menu out too (the First Watch, a boarding:
+   no «⋯») it is the row's third. */
+body.simple.touch:not(.more-desk):has(#touch > #tc-home:not(.hidden)) { --tr-h: 1; }
+body.simple.touch:not(.more-desk) #hud #touch > :is(#tc-menu, #tc-news, #tc-home) {
+  right: calc(var(--sa-r) + 8px + (var(--mm) - (var(--tr-n) + var(--tr-h, 0)) * var(--tr-b) - (var(--tr-n) + var(--tr-h, 0) - 1) * var(--tr-g)) / 2 + var(--tr-x, 0) * (var(--tr-b) + var(--tr-g))); }
+body.simple.touch:not(.more-desk) #hud #touch > #tc-home { top: var(--tr-top); --tr-x: var(--tr-n); }
+/* (the quests' count to their right then: on their left it stood in the gap against «К кораблю»'s ring) */
+body.simple.touch:not(.more-desk):has(#touch > #tc-home:not(.hidden)) #hud #touch > #tc-news .k-badge { left: auto; right: -8px; }
+/* (with «⋯» the menu is folded: the row is the quests and «К кораблю», or «К кораблю» alone when the quests are away) */
+body.simple.touch.hud-more:not(.more-desk) { --tr-n: 1; }
+body.simple.touch.hud-more:not(.more-desk) #hud #touch > #tc-news { --tr-x: 0; }
+body.simple.touch.hud-more:not(.more-desk):is(:has(#touch > #tc-news.hidden), :has(#hud-watch:not(.hidden):not(.tut-hidden))) { --tr-n: 0; }
 /* the chat folded: its line of private words beside «⋯» */
 body.simple.hud-more:not(.more-desk):not(.chat-open):not(.tac) #hud-chat > .chat-toast { top: var(--lr-top); left: calc(var(--sa-l) + 8px + var(--tr-b) + var(--tr-g)); right: auto; bottom: auto; }
 body.simple.hud-more.more-open #hud-chat > .chat-toast { display: none; }

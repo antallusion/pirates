@@ -16,8 +16,13 @@ test('the right button: the mount when fitted, else the helmsman to the spot; no
   const rmb = main.slice(main.indexOf('e.button !== 2'), main.indexOf('e.button !== 2') + 700);
   assert.match(rmb, /rightClickAct\(/);
   assert.match(rmb, /sailToScreen\(/);
-  const sts = main.slice(main.indexOf('function sailToScreen('), main.indexOf('function sailToScreen(') + 500);
-  assert.match(sts, /worldMap\.onAutosail\(wp\)/);
+  const sts = main.slice(main.indexOf('function sailToScreen('), main.indexOf('function sailToScreen(') + 1000);
+  // (owner, 2026-10-29) the point itself as the arrival: the helmsman's own 150 m made a near tap «already there»
+  assert.match(sts, /autosailTo\(wp, SCREEN_ARRIVE\)/);
+  assert.match(main, /const SCREEN_ARRIVE = (\d+);/);
+  assert.ok(Number(/const SCREEN_ARRIVE = (\d+);/.exec(main)![1]) < 150 && Number(/const SCREEN_ARRIVE = (\d+);/.exec(main)![1]) >= 20, 'under AUTOSAIL_ARRIVE, at or over the server’s least');
+  const at = main.slice(main.indexOf('function autosailTo('), main.indexOf('function autosailTo(') + 600);
+  assert.match(at, /net\.send\(\{ \.\.\.autosailRequest\(state, wp\), \.\.\.\(near !== undefined \? \{ near \} : \{\}\) \}\)/);
   assert.match(sts, /fx\.add\(\{ kind: 'ring'/, 'a small marker where the click fell');
 });
 
@@ -165,4 +170,24 @@ test('a window open (the settings, any other): F and every ship\'s key wait; onl
   assert.ok(at > 0, 'wired in the keymap\'s handler');
   // after the keymap's lookup and Esc's own branch, before the key is held or the switch acts
   assert.ok(at > main.indexOf("if (k === 'escape') {") && at < main.indexOf('  keys.add(k);', at) && at < main.indexOf("    case 'dock': {"));
+});
+
+test('a finger on the open sea sets the course (owner, 2026-10-29: «поставить просто пальцем точку на карту и начать движение не получается»)', async () => {
+  const { seaTapAct } = await import('../client/src/ui/deskinput.ts');
+  const base = { mark: false, thing: false, place: false, docked: false, modal: false };
+  assert.equal(seaTapAct(base), 'sail', 'the open sea: the helmsman takes her there');
+  assert.equal(seaTapAct({ ...base, mark: true }), null, 'a ship or a stack: the target, never a course');
+  assert.equal(seaTapAct({ ...base, thing: true }), null, 'a thing: its own order (sailToTap)');
+  assert.equal(seaTapAct({ ...base, place: true }), null, 'a harbour or an island: selected');
+  assert.equal(seaTapAct({ ...base, docked: true }), null);
+  assert.equal(seaTapAct({ ...base, modal: true }), null);
+  // touch.ts's tap (SeaGesture) reaches main.ts's aim, which sails to the point through sailToScreen
+  const at = main.indexOf('  aim: (px, py) => {');
+  const aim = main.slice(at, main.indexOf('  zoom: (f) => {', at));
+  assert.match(aim, /const thing = !k && sailToTap\(px, py\);/);
+  assert.match(aim, /seaTapAct\(\{ mark: !!k, thing, place: !!selPlace,[^)]*\}\) === 'sail' && inGame\) sailToScreen\(px, py\);/);
+  // the chart: a finger's tap at sea is the course at once (the mouse keeps its mark and «Плыть»)
+  const wm = readFileSync(new URL('../client/src/ui/worldmap.ts', import.meta.url), 'utf8');
+  assert.match(wm, /this\.tapAt\(state, e\.clientX, e\.clientY, showClear, e\.pointerType === 'touch'\)/);
+  assert.match(wm, /if \(finger && this\.markAt && this\.onAutosail && !state\.self\?\.dockedAt\) return this\.onAutosail\(this\.markAt\);/);
 });

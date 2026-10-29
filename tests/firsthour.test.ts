@@ -31,9 +31,9 @@ test('the First Watch\'s «Атакуйте»: «Атаковать» on its rai
   assert.match(main, /attackRelevant\(gunLeft <= 0, tgtSeen, state\.onboarding\?\.stage === 'attack' && tgt\?\.info\?\.name === WATCH_RAIDER(, targetPinned)?\)/); // (a pinned target's 4th argument since)
 });
 
-test('the story after the opening: «Плыть» on the bar and the finger on it in the first two chapters', () => {
-  // «Соль и туман»: at sea «Плыть», in port «В море» first; quiet while the helmsman has her
-  assert.deepEqual(pointerTargets({ stage: 'go', touch: true, docked: false, battle: false }), ['#tc-act[data-act="goal_sail"]', '.tc-act2[data-act="goal_sail"]', '.act-btn.act-goal_sail']);
+test('the story after the opening: «Плыть» on the bar, no finger on it (owner 2026-10-29); in port «В море» first', () => {
+  // «Соль и туман»: at sea nothing pointed at (owner, 2026-10-29: «подсказки плыть надо мигающие убрать»); in port «В море»
+  assert.deepEqual(pointerTargets({ stage: 'go', touch: true, docked: false, battle: false }), []);
   assert.equal(pointerTargets({ stage: 'go', touch: true, docked: true, battle: false })[0], DEPART[0]);
   assert.ok(pointerTargets({ stage: 'go', touch: true, docked: true, battle: false }).includes('#modal-panel [data-ptab="sea"]'));
   assert.deepEqual(pointerTargets({ stage: 'go', touch: true, docked: false, battle: false, helmsman: true }), []);
@@ -104,7 +104,7 @@ test('the story’s fights and landings: the server names the step, the finger g
   assert.equal(storyStep(c2, 0), null);
   // «Сомнения патруля»: a pirate 40 m off, «Атаковать» lit, the helmsman on — the finger on it
   const t = pointerTargets({ stage: 'go:board', touch: true, docked: false, battle: false, helmsman: true, pursuit: null });
-  assert.ok(t.indexOf('#tc-act[data-act="attack"]') >= 0 && t.indexOf('#tc-act[data-act="attack"]') < t.indexOf('#tc-act[data-act="goal_sail"]'));
+  assert.ok(t.indexOf('#tc-act[data-act="attack"]') >= 0 && !t.some((x) => x.includes('goal_sail')));
   assert.equal(pointerTargets({ stage: 'go:land', touch: true, docked: false, battle: false })[0], '#tc-act[data-act="land"]');
   assert.equal(pointerTargets({ stage: 'go:sink', touch: true, docked: true, battle: false })[0], DEPART[0], 'in port: out to sea first');
   assert.match((await import('node:fs')).readFileSync('client/src/main.ts', 'utf8'), /if \(q\.does\) return `go:\$\{q\.does\}`;/);
@@ -146,7 +146,7 @@ test('a ship\'s step and a shark at hand: no «Атаковать» finger on th
   for (const stage of ['c:sink', 'c:board', 'go:sink', 'go:board']) {
     const t = pointerTargets({ stage, touch: true, docked: false, battle: false, markBeast: true });
     assert.ok(!t.some((x) => /attack/.test(x) && !/attack_mode/.test(x)), `${stage}: ${t.join(' ')}`);
-    assert.ok(t.includes('#tc-act[data-act="goal_sail"]'), `${stage}: «Плыть» instead`);
+    assert.ok(!t.some((x) => x.includes('goal_sail')), `${stage}: never «Плыть» (owner 2026-10-29)`);
     assert.ok(pointerTargets({ stage, touch: true, docked: false, battle: false }).includes('#tc-act[data-act="attack"]'), 'a ship: «Атаковать»');
   }
   assert.ok(pointerTargets({ stage: 'c:neutral', touch: true, docked: false, battle: false, markBeast: true }).length > 0);
@@ -170,13 +170,14 @@ test('«Что говорят старики» — rum to hand over, none aboard
   assert.match((await import('node:fs')).readFileSync('client/src/main.ts', 'utf8'), /return sold \? `h:\$\{q\.id\}:market:\$\{a\.good\}` : null;/);
 });
 
-test('no men for the story’s fight: «Плыть» takes her to a harbour first (the server’s goal), the finger on it at sea', async () => {
+test('no men for the story’s fight: «Плыть» takes her to a harbour first (the server’s goal), no finger on «Плыть»', async () => {
   const { NEEDS_MEN } = await import('../server/src/game/goalroute.ts');
   for (const k of ['board', 'prize', 'neutral', 'lair']) assert.ok(NEEDS_MEN.has(k), k);
   assert.ok(!NEEDS_MEN.has('sink'), 'the guns need no landing party');
   const src = (await import('node:fs')).readFileSync('server/src/game/goalroute.ts', 'utf8');
   assert.match(src, /if \(cmp && NEEDS_MEN\.has\(st\.type\) && \(armyMen\(ship\.army\) < 3 \|\| ship\.crew < 3\)\) return \{ cands: ports\(game\) \};/);
-  assert.ok(pointerTargets({ stage: 'men', touch: true, docked: false, battle: false }).includes('#tc-act[data-act="goal_sail"]'));
+  const men = pointerTargets({ stage: 'men', touch: true, docked: false, battle: false });
+  assert.ok(!men.some((x) => x.includes('goal_sail')) && men.includes('#tc-act[data-act="harbour"]'), 'a harbour’s way in, never «Плыть»');
 });
 
 test('the story’s fork with its card closed: the finger on «Цели и вести», never on one of the two ways', async () => {
@@ -452,4 +453,12 @@ test('a newcomer’s helmsman brushing a Crown patrol in the starting sea: they 
   assert.equal(pt.hull, p0, 'nor to the patrol');
   assert.ok(!pt.attackers.has(ship.id) && !ship.attackers.has(pt.id), 'no enemy made');
   assert.equal(game.isHostile(pt, ship), false);
+});
+
+test('no finger, no gold ring on «Плыть» in any stage (owner, 2026-10-29: «подсказки плыть надо мигающие убрать»)', () => {
+  const stages = ['go', 'go:sink', 'go:board', 'go:neutral', 'go:land', 'go:dock', 'men', 'shot', 'c:sink', 'c:board', 'c:neutral', 'c:claim', 'c:buy:arms'];
+  for (const stage of stages) for (const pursuit of [null, 'guns', 'board'] as const) {
+    const t = pointerTargets({ stage, touch: true, docked: false, battle: false, pursuit });
+    assert.ok(!t.some((x) => x.includes('goal_sail')), `${stage}/${pursuit}: ${t.join(' ')}`);
+  }
 });

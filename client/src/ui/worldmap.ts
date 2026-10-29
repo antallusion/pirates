@@ -455,7 +455,7 @@ export class WorldMap {
     c.onpointerup = (e) => {
       const t = tap;
       tap = null;
-      if (t && t.id === e.pointerId && pts.size === 1 && performance.now() - t.t < 600 && Math.hypot(e.clientX - t.x, e.clientY - t.y) <= 8) this.tapAt(state, e.clientX, e.clientY, showClear);
+      if (t && t.id === e.pointerId && pts.size === 1 && performance.now() - t.t < 600 && Math.hypot(e.clientX - t.x, e.clientY - t.y) <= 8) this.tapAt(state, e.clientX, e.clientY, showClear, e.pointerType === 'touch');
       pts.delete(e.pointerId);
       if (pts.size < 2) pinch = 0;
       if (!pts.size) this.drag = null;
@@ -470,7 +470,7 @@ export class WorldMap {
   }
 
   /** A tap on the chart at a point of the screen: her mark there, or off when the tap lands on it. */
-  private tapAt(state: ClientState, clientX: number, clientY: number, after: () => void): void {
+  private tapAt(state: ClientState, clientX: number, clientY: number, after: () => void, finger = false): void {
     const c = this.canvas;
     if (!c) return;
     const r = c.getBoundingClientRect();
@@ -490,6 +490,9 @@ export class WorldMap {
     this.markName = off ? '' : port ? placeName(port.name) : '';
     this.markAt = off ? null : port ? { x: port.x, y: port.y } : { x, y };
     setWaypoint(this.markAt);
+    // A finger's mark at sea is the course at once (owner, 2026-10-29: «поставить просто пальцем точку на карту и начать
+    // движение»): the helmsman takes her and the chart shuts onto the pill. In port the mark waits for «Плыть».
+    if (finger && this.markAt && this.onAutosail && !state.self?.dockedAt) return this.onAutosail(this.markAt);
     after();
     this.draw(state);
   }
