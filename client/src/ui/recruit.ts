@@ -22,7 +22,7 @@ import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/h3.ts';
 import { serverText } from '../lang/server.ts';
 import type { ClientState } from '../state.ts';
-import { armyRow, unitIcon, unitName, unitNote } from './army.ts';
+import { armyEditReset, armyEditor, unitIcon, unitName, unitNote, wireArmy } from './army.ts';
 import { dec1, esc, fmt, icon, money } from './dom.ts';
 import { placeName } from './maps.ts';
 
@@ -99,7 +99,31 @@ export class RecruitWindow {
     this.seek = true;
     this.sel = null;
     this.n = 0;
+    armyEditReset();
     this.send({ t: 'h3', action: 'dwell', src });
+  }
+
+  /** The window's view asked anew, the pick kept (the army changed by her own hand: split, merge, dismiss). */
+  private reload(src: DwellView['src']): void {
+    this.send({ t: 'h3', action: 'dwell', src });
+  }
+
+  /** The kind picked as the window opens (owner, 2026-10-29: «Юнги» were picked with no hammock for one): the island's
+   *  marines for its step, else the advice's best, else the highest tier to be had now — a kind she may hire. */
+  private firstPick(v: DwellView, state: ClientState): UnitId | null {
+    const can = (u: UnitId) => {
+      const r = v.rows.find((x) => x.units.some((y) => y.u === u));
+      return !!r && this.most(v, r, u) > 0;
+    };
+    const step = state.self?.isleFirst;
+    const want: UnitId[] = [];
+    if (step?.id === 'hire' && !step.stuck) want.push('sea_guard', 'marine');
+    if (v.best) want.push(v.best);
+    for (const r of [...v.rows].sort((a, b) => b.tier - a.tier)) for (const x of [...r.units].reverse()) want.push(x.u);
+    const pick = want.find(can);
+    if (pick) return pick;
+    const first = v.rows.find((r) => r.pool > 0 && !r.why) ?? v.rows[0];
+    return v.best && v.rows.some((r) => r.units.some((x) => x.u === v.best)) ? v.best : first?.units[0]?.u ?? null;
   }
 
   /** The most men of a kind to be had now. */
@@ -123,9 +147,7 @@ export class RecruitWindow {
     const rowOf = (u: UnitId) => v.rows.find((r) => r.units.some((x) => x.u === u));
     if (this.sel && !rowOf(this.sel)) this.sel = null;
     if (!this.sel) {
-      const first = v.rows.find((r) => r.pool > 0 && !r.why) ?? v.rows[0];
-      // the advice's best kind first (shared/src/data/armyadvice.ts)
-      this.sel = v.best && rowOf(v.best) ? v.best : first?.units[0]?.u ?? null;
+      this.sel = this.firstPick(v, state);
       this.n = 0;
     }
     const men = v.army.reduce((a, s) => a + s.n, 0);
@@ -169,9 +191,18 @@ export class RecruitWindow {
       }).join('')
       : `<p class="muted">${esc(L('train.none'))}</p>`;
     const hasUp = v.rows.some((x) => x.up);
-    root.innerHTML = `${head}<div class="modal-body rc-body"><div class="rc-army"><span class="muted">${esc(L('army'))}</span>${armyRow(v.army, v.slots)}</div>${res}
+    // (owner, 2026-10-29: nobody to be had for want of room — the calm word and the army's own hand right under it)
+    const none = !v.why && !v.rows.some((x) => x.units.some((y) => this.most(v, x, y.u) > 0));
+    const over = (v.might ?? 0) > (v.mightMax ?? Infinity);
+    const stuck = none && (v.crew >= v.crewMax || over) ? `<p class="rc-stuck">${esc(L(over ? 'might.over' : 'room.none'))}</p>` : '';
+    root.innerHTML = `${head}<div class="modal-body rc-body"><div class="rc-army"><span class="muted">${esc(L('army'))}</span>${armyEditor(v.army, v.slots)}</div>${stuck}${res}
       <div class="rc-main"><div class="rc-list">${cards}</div><div class="rc-side">${pick}${hasUp ? `<div class="rc-train"><h4 class="card-h">${esc(L('train'))}</h4><p class="muted">${esc(L('train.text'))}</p>${ups}</div>` : ''}</div></div></div>`;
     this.bind(root, state);
+    // split, merge, dismiss right here (the crew window's own hand and messages); the view asked anew after each
+    wireArmy(root, v.army, v.slots, (m) => {
+      this.send(m);
+      this.reload(v.src);
+    }, true);
     // the advice's best kind in sight as the window opens (it may stand low in a waystation's list)
     if (this.seek && v.best && this.sel === v.best) root.querySelector('.rc-unit.sel')?.scrollIntoView({ block: 'nearest' });
     this.seek = false;

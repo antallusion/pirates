@@ -23,7 +23,13 @@ export interface PointerFacts {
   markBeast?: boolean;
   /** Fewer than three hands aboard: the boats cannot be manned (the tavern before the army). */
   crewShort?: boolean;
+  /** Nothing useful to hire anywhere (server islefirst.ts noHire; owner, 2026-10-29: «у меня армия уже целиком, … зачем
+   *  меня спрашивает зайти и кого-то нанять?»): the finger never points into a hire window or at its way in. */
+  noHire?: boolean;
 }
+
+/** The hire window's buttons and the ways into it (the port's «Армия» tab and its «Нанять армию»). */
+const HIRE_SEL = /data-rc|rc-unit|rc-pick|data-dwell|data-ptab="army"|data-act="hire_n"|hire_short|prof="sailor"/;
 
 /** No shot aboard for a ship's step of the story (its opening's or its own): the finger's stage is «shot» — the way to
  *  the market's «Припасы» — not the fight's own button. Pure: `ammo` her locker, `op` the step's kind. */
@@ -93,7 +99,10 @@ function openingTargets0(f: PointerFacts, op: string): string[] {
  *  after it (QA 2026-10-22: «Занять» second to an «Атаковать» had no finger on a phone, and the town step stood). */
 export function pointerTargets(f: PointerFacts): string[] {
   const out: string[] = [];
-  for (const sel of targetsOf(f)) {
+  const t = targetsOf(f);
+  // (nothing to hire: no finger at all for a hire step — not the way into a harbour for it either)
+  if (f.noHire && t.some((x) => HIRE_SEL.test(x))) return [];
+  for (const sel of t) {
     if (/goal_sail/.test(sel)) continue; // (never «Плыть»: owner, 2026-10-29)
     out.push(sel);
     const m = /^#tc-act\[data-act="(\w+)"\]$/.exec(sel);

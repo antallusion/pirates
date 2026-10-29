@@ -1,7 +1,7 @@
 // «⋯» — the sea HUD's one brass button for everything that is not steering, the chart, the guns and her own plate
 // (owner, 2026-10-29: «на мобиле лютый графический перегруз, надо все как-то прятать в подменюшки, оставить только
 // самое важное. и нажимая на эту подменюшку будут выезжать все остальные кнопочки»).
-//   - Folded (MORE_ITEMS): the menu, the chat, «Остров», her offer, the day's gift, the parrot's emotes and the weak
+//   - Folded (MORE_ITEMS): the menu, «Армия» (the crew window at sea in two taps: owner, 2026-10-29), the chat, «Остров», her offer, the day's gift, the parrot's emotes and the weak
 //     army's pill. A wide desk keeps the menu under the chart (it has the room; its key is a chip) and the chat by the
 //     helm (chat.css).
 //   - Out under the chart: «Цели и вести», the quests (owner, 2026-10-29: «иконка квеста должна быть вместо иконки
@@ -21,7 +21,7 @@ import { badgeText, buttonHtml } from './kit/button.ts';
 const L = dict(EN, RU);
 
 /** What folds behind «⋯», in the tray's order. */
-export const MORE_ITEMS = ['#touch > #tc-menu', '#hud-chat > #chat-toggle', '#touch > #tc-isle', '#touch > #tc-offer', '#touch > #tc-daily', '#hud-chat > #cos-qbtn', '#hud-advice'] as const;
+export const MORE_ITEMS = ['#touch > #tc-menu', '#touch > #tc-crew', '#hud-chat > #chat-toggle', '#touch > #tc-isle', '#touch > #tc-offer', '#touch > #tc-daily', '#hud-chat > #cos-qbtn', '#hud-advice'] as const;
 /** A wide desk keeps these out (its keys on their rims, the room under the chart). */
 const DESK_OUT = new Set<string>(['#touch > #tc-menu', '#hud-chat > #chat-toggle']);
 const DESK_WIDE = '(min-width: 1100px) and (min-height: 600px)';

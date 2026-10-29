@@ -7,7 +7,7 @@
 // (goods into the yard, silver into the treasury) — the live data had 0 coal on almost every new island.
 // Captains past the claim before this get it on their next login (the step check runs every few seconds).
 
-import { townCost } from '../../../shared/src/data/town.ts';
+import { mightRoom, townCost } from '../../../shared/src/data/town.ts';
 import type { TownId } from '../../../shared/src/data/town.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { XP_UNITS, lumpXp } from '../../../shared/src/data/xpcurve.ts';
@@ -20,6 +20,8 @@ import type { Holding } from './holdings.ts';
 import { addXp } from './player.ts';
 import type { PlayerSession } from './player.ts';
 import { townHooks, townLevel, townWhy } from './town.ts';
+import { UNITS } from '../../../shared/src/data/army.ts';
+import { roomFor, sansHands, swapOf } from './dwell.ts';
 
 export interface IsleFirst {
   /** The step she is on (ISLE_FIRST.length: done). */
@@ -120,7 +122,33 @@ export function isleFirstCheck(game: Game, s: PlayerSession): void {
   if (help) game.sendTo(s, { t: 'toast', msg: help, kind: 'good' });
   const st = ISLE_FIRST[p.isleFirst.step];
   if (st && st.id !== 'hire' && ordered(y, st.id)) done(game, s, h, y);
+  // no marine to be had, and her army holds marines or better already: the step is hers (never a nag)
+  else if (st?.id === 'hire' && holdsMarines(s) && hireStuck(s)) done(game, s, h, y);
 }
+
+/** The marines' step when no marine can be had (owner, 2026-10-29: «у меня армия уже целиком, я не могу никого нанять,
+ *  зачем меня спрашивает зайти и кого-то нанять?»): 'room' — no hammock even with the hands ashore, nor a slot;
+ *  'might' — her army is over the might cap of her ship's level; 'silver' — not one marine's pay. Null: she can. */
+export function hireStuck(s: PlayerSession): 'room' | 'might' | 'silver' | null {
+  const ship = s.ship;
+  if (!ship || !s.profile) return null;
+  if (roomFor(s, 'marine') <= 0) {
+    const hands = swapOf(ship.army, 2);
+    const might = mightRoom(hands ? sansHands(ship.army) : ship.army, 'marine', ship.shipLevel, ship.stats.crewMax, ship.armySlots);
+    return ship.stats.crewMax - ship.crew + hands > 0 && might <= 0 ? 'might' : 'room';
+  }
+  return s.profile.gold < UNITS.marine.cost ? 'silver' : null;
+}
+/** Nothing useful to hire anywhere (owner, 2026-10-29): no free hammock for a deckhand, and no room or no silver for
+ *  the best kind her island opens (marines if none) — the hints keep off every hire window (client pointer.ts). */
+export function noHire(s: PlayerSession, best: import('../../../shared/src/data/army.ts').UnitId | null | undefined): boolean {
+  if (!s.ship || !s.profile) return false;
+  const gold = s.profile.gold;
+  for (const u of [best ?? 'marine', 'marine', 'deckhand'] as const) if (UNITS[u] && roomFor(s, u) > 0 && gold >= UNITS[u].cost) return false;
+  return true;
+}
+/** Her army holds marines or better of her own (a gift's men and the beasts aside). */
+const holdsMarines = (s: PlayerSession): boolean => !!s.ship?.army.some((x) => !x.g && UNITS[x.u] && UNITS[x.u].tier >= 2 && !UNITS[x.u].beast);
 
 /** Men signed on (dwell.ts recruit): marines (tier 2) count for the second step. */
 export function isleFirstHire(game: Game, s: PlayerSession, tier: number): void {
@@ -143,7 +171,10 @@ export function isleFirstView(game: Game, s: PlayerSession): IsleFirstView | nul
     return j ? Math.max(0, Math.ceil((j.end - game.wallNow()) / 1000)) : 0;
   };
   const base = { step: f.step, of: ISLE_FIRST.length, id: st.id, silver: st.silver, goods: st.goods };
-  if (st.id === 'hire') return { ...base, open: 'dw2', ready: true, wait: left('dw2') };
+  if (st.id === 'hire') {
+    const stuck = hireStuck(s);
+    return { ...base, open: 'dw2', ready: !stuck, wait: left('dw2'), ...(stuck ? { stuck } : {}) };
+  }
   // the barracks ask the bunkhouse first: its card is the one to open while it is not ordered (its work: a wait)
   const id: 'dw1' | 'dw2' | 'dw3' = st.id === 'dw2' && !ordered(y, 'dw1') ? 'dw1' : st.id;
   const before: TownId = st.id === 'dw2' ? 'dw1' : 'dw2';

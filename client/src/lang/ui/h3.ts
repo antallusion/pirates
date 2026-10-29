@@ -81,7 +81,9 @@ export const EN = {
   'port.dwell.btn': 'Recruit an army',
   'best': 'best choice',
   'isle.tag': 'your island',
-  'swap': '{n} hands go ashore to make room.',
+  'swap': 'Deckhands go ashore: {n}',
+  'room.none': 'Nobody to hire: make room — dismiss or merge stacks above.',
+  'might.over': 'Your army is over the might your ship carries: no men of tier II and up — dismiss a stack or raise the ship’s level.',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -161,5 +163,7 @@ export const RU: Record<keyof typeof EN, string> = {
   'port.dwell.btn': 'Нанять армию',
   'best': 'лучший выбор',
   'isle.tag': 'ваш остров',
-  'swap': 'Юнги сойдут на берег, чтобы освободить места: {n}.',
+  'swap': 'Юнги сойдут на берег: {n}',
+  'room.none': 'Нанять некого: освободите место — уволите или объедините отряды выше.',
+  'might.over': 'Сила армии выше предела корабля: бойцов ранга II и выше не нанять — уволите отряд или поднимите уровень корабля.',
 };

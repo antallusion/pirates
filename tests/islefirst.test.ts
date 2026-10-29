@@ -144,3 +144,51 @@ test('a captain past the claim before the steps gets them at her next check, the
   isleFirstCheck(game, s);
   assert.equal(s.profile!.isleFirst!.step, 1, 'straight to «hire marines»');
 });
+
+// Owner, 2026-10-29: «у меня армия уже целиком, я не могу никого нанять, зачем меня спрашивает зайти и кого-то нанять?»
+test('the marines’ step respects room: hands step ashore for them; a full army over the cap is not nagged', async () => {
+  const { noHire, hireStuck } = await import('../server/src/game/islefirst.ts');
+  const { roomFor } = await import('../server/src/game/dwell.ts');
+  const { pointerTargets } = await import('../client/src/ui/pointer.ts');
+  const game = world();
+  const { s, y } = owner(game, 'Full Hold');
+  y.town = { b: { hall: 1, dw1: 1, dw2: 1 }, pool: [0, 0, 0, 0, 0, 0, 0, 0], w: -1 };
+  delete s.profile!.isleFirst;
+  isleFirstCheck(game, s);
+  assert.equal(s.profile!.isleFirst!.step, 1);
+  const ship = s.ship!;
+  // a hold full of deckhands: the marines may come, the hands going ashore — the step stands, not stuck
+  ship.setArmy([{ u: 'deckhand', n: ship.stats.crewMax }]);
+  assert.ok(roomFor(s, 'marine') > 0, 'room for marines by the hands ashore');
+  assert.equal(hireStuck(s), null);
+  assert.equal(isleFirstView(game, s)!.stuck, undefined);
+  assert.equal(noHire(s, 'marine'), false);
+  // the screenshot's army: tier VII ×14 and tier I ×14, the might far over the cap — nobody to hire
+  ship.setArmy([{ u: 'drowned', n: Math.floor(ship.stats.crewMax / 2) }, { u: 'deckhand', n: ship.stats.crewMax - Math.floor(ship.stats.crewMax / 2) }]);
+  assert.equal(roomFor(s, 'marine'), 0);
+  assert.equal(roomFor(s, 'deckhand'), 0);
+  assert.equal(hireStuck(s), 'might');
+  assert.equal(noHire(s, 'marine'), true);
+  // the hint keeps off the hire window and its way in
+  assert.deepEqual(pointerTargets({ stage: 'i:hire', touch: true, docked: true, battle: false, noHire: true }), []);
+  assert.deepEqual(pointerTargets({ stage: 'men', touch: true, docked: true, battle: false, noHire: true }), []);
+  assert.ok(pointerTargets({ stage: 'i:hire', touch: true, docked: true, battle: false }).length > 0);
+  // her army holds better than marines already: the step is hers at the next check
+  isleFirstCheck(game, s);
+  assert.equal(s.profile!.isleFirst!.step, 2, 'auto-completed');
+});
+
+test('stuck with only hands aboard: a calm reason, no auto-complete', async () => {
+  const { hireStuck } = await import('../server/src/game/islefirst.ts');
+  const game = world();
+  const { s, y } = owner(game, 'No Silver');
+  y.town = { b: { hall: 1, dw1: 1, dw2: 1 }, pool: [0, 0, 0, 0, 0, 0, 0, 0], w: -1 };
+  delete s.profile!.isleFirst;
+  isleFirstCheck(game, s);
+  s.ship!.setArmy([{ u: 'deckhand', n: 5 }]);
+  s.profile!.gold = 0;
+  assert.equal(hireStuck(s), 'silver');
+  assert.equal(isleFirstView(game, s)!.stuck, 'silver');
+  isleFirstCheck(game, s);
+  assert.equal(s.profile!.isleFirst!.step, 1, 'no marines aboard: the step waits');
+});

@@ -179,8 +179,20 @@ function opsBar(army: readonly ArmyStack[], slots: number): string {
     <span class="army-ops-btns"><button class="btn btn-small" data-op-split ${noSplit ? `disabled title="${esc(L(s.n < 2 ? 'split.one' : 'split.noslot'))}"` : ''}>${esc(L('op.split'))}</button><button class="btn btn-small btn-danger" data-op-dismiss ${army.length <= 1 ? 'disabled' : ''}>${esc(L('op.dismiss'))}</button>${cancel}</span></div>`;
 }
 
-/** The army card's hand wired (renderCrew): `army`, `slots` as the card was drawn. */
-export function wireArmy(root: HTMLElement, army: readonly ArmyStack[], slots: number, send: (m: ClientMsg) => void): void {
+/** The same hand without the card (owner, 2026-10-29: the hire window's «Ваша армия» — split, merge, dismiss there too):
+ *  the row of slots and the bar under it. Wire it with `wireArmy(…, true)`. */
+export function armyEditor(army: readonly ArmyStack[], slots: number): string {
+  return `<div class="army-ed" data-army-edit>${editRow(army, slots)}${opsBar(army, slots)}</div>`;
+}
+
+/** Forget the pick (a window opened anew). */
+export function armyEditReset(): void {
+  sel = splitOf = dragKey = null;
+  note = '';
+}
+
+/** The army card's hand wired (renderCrew): `army`, `slots` as the card was drawn; `bare`: drawn by armyEditor. */
+export function wireArmy(root: HTMLElement, army: readonly ArmyStack[], slots: number, send: (m: ClientMsg) => void, bare = false): void {
   const card = root.querySelector<HTMLElement>('[data-army-edit]');
   if (!card) return;
   const find = (k: string | null) => (k ? army.find((x) => stackKey(x) === k) : undefined);
@@ -189,8 +201,8 @@ export function wireArmy(root: HTMLElement, army: readonly ArmyStack[], slots: n
   const redraw = () => {
     const at = root.querySelector<HTMLElement>('[data-army-edit]');
     if (!at) return;
-    at.outerHTML = armyPanel(army, slots, true);
-    wireArmy(root, army, slots, send);
+    at.outerHTML = bare ? armyEditor(army, slots) : armyPanel(army, slots, true);
+    wireArmy(root, army, slots, send, bare);
   };
   const openSplit = (k: string) => {
     const s = find(k);

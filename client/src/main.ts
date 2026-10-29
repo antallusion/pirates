@@ -84,6 +84,7 @@ import { holdRedraw, installTapGuard, rescueTaps } from './ui/kit/taps.ts'; // u
 import { wireHints } from './ui/kit/hint.ts';
 import { DASH_COOLDOWN, LAY_ARC_DEG, closeRange, suggestAmmo } from '../../shared/src/data/gunnery.ts';
 import { EN as SEAF_EN, RU as SEAF_RU } from './lang/ui/seafight.ts';
+import { EN as SH_EN, RU as SH_RU } from './lang/ui/seahud.ts';
 import type { BoardRisk } from '../../shared/src/protocol.ts';
 import { MARK_SLOW, markInReach } from '../../shared/src/data/seamarks.ts';
 import { EN as EASE_EN, RU as EASE_RU } from './lang/ui/ease.ts';
@@ -297,6 +298,7 @@ worldMap.onScoutSend = (id, x, y) => {
 // docs/16 #36: the helmsman takes her to her mark; the pill at the top of the stack stops him.
 const EL = dict(EASE_EN, EASE_RU);
 const LSF = dict(SEAF_EN, SEAF_RU); // the quick sea fight (docs/23 phases 3–4)
+const LSH = dict(SH_EN, SH_RU); // the sea HUD's «⋯» tray: «Армия»
 const autosailPill = new AutosailPill();
 const passagePill = new PassagePill(); // owner, 2026-10-28: «дальний переход» — the tiny timer by the chart
 passagePill.onHint = (msg) => hud.toast(msg, 'voyage');
@@ -666,6 +668,7 @@ hud.onAdvice = (to) => {
 // Owner, 2026-10-28 (islefirst.ts): the island's first steps — the building's card on the island (from anywhere: the
 // treasury and the yard pay), the hire window where she is, else «В порт» to the nearest harbour.
 hud.onIsleFirst = (id) => {
+  if (id === 'army') return openModal('crew'); // (owner, 2026-10-29: no room for marines — the army's own hand)
   if (id !== 'hire') {
     openBase();
     isleScene.showTown(id);
@@ -793,7 +796,8 @@ function isleFirstStage(): string | null {
   const now = performance.now();
   if (key !== i1Seen.key) i1Seen = { key, at: now };
   const fresh = now - i1Seen.at < 90_000;
-  if (v.id === 'hire') return state.self?.dockedAt || modal === 'recruit' || fresh ? 'i:hire' : null;
+  // (owner, 2026-10-29: no marine to be had — a calm line on the HUD, no finger)
+  if (v.id === 'hire') return v.stuck ? null : state.self?.dockedAt || modal === 'recruit' || fresh ? 'i:hire' : null;
   return isleScene.isOpen || (fresh && v.ready) ? `i:${v.open}` : null;
 }
 /** Back to the sea from the island screen (into the harbour when she lies in one). */
@@ -1148,6 +1152,16 @@ const seaHud = new SeaHud($('touch'), {
 });
 // «⋯» (owner, 2026-10-29: «все как-то прятать в подменюшки»): first in the row under her plate, the rest slides out of it.
 const hudMore = new HudMore($('touch'));
+// «Армия» in the tray (owner, 2026-10-29: «и в море я тоже должен управлять армией, разделять на стопки, удалять»): the
+// crew window — its army card splits, merges and dismisses — in two taps from the sea.
+{
+  const t = document.createElement('template');
+  t.innerHTML = buttonHtml({ kind: 'icon', id: 'tc-crew', icon: 'menu_crew', glyph: '⚔', aria: LSH('crewBtnTip'), cls: 'sea-round' }).trim();
+  const b = t.content.firstElementChild as HTMLButtonElement;
+  b.insertAdjacentHTML('beforeend', `<span class="tc-crew-l">${LSH('crewBtn')}</span>`);
+  b.addEventListener('click', () => openModal('crew'));
+  $('touch').append(b);
+}
 // The captain's abilities on a phone (owner, 2026-10-26: «на мобиле не показаны иконки спецприёмов капитана»): «Приёмы»
 // in «Особое»'s place, its row of four — used as the desk's Z X C V are, at her mark.
 const seaAbil = new SeaAbil($('touch'), (id) => {
@@ -2321,7 +2335,7 @@ function onMessage(m: ServerMsg): void {
       if (modal === 'map') worldMap.draw(state);
       break;
     case 'dwell':
-      if (modal === 'recruit') refreshModal();
+      if (modal === 'recruit' && !armyEditing()) refreshModal(); // (a stack picked or a split's slider: owner, 2026-10-29)
       break;
     case 'adv_card':
       advCard.show(m.view);
@@ -5277,7 +5291,7 @@ function step(t: number): void {
     const here = op ? null : hereFrame() ?? storyFrame();
     // (the guns empty on a ship's step: the finger to «Припасы» first — a newcomer's run of 2026-10-24)
     const shot = shotStage(op ?? storyQuest()?.does, state.self?.ammo);
-    tutorPointer.set({ stage: state.onboarding?.stage ?? shot ?? isleFirstStage() ?? (op ? `c:${op}` : here), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null, tradeGood: op === 'buy:trade' ? tradeGoodHere() : null, crewFull: !!state.you && state.you.crew >= state.you.crewMax, markBeast: attackMark !== null && state.ships.get(attackMark)?.info?.npcRole === 'beast', crewShort: !!state.you && state.you.crew < 3 });
+    tutorPointer.set({ stage: state.onboarding?.stage ?? shot ?? isleFirstStage() ?? (op ? `c:${op}` : here), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null, tradeGood: op === 'buy:trade' ? tradeGoodHere() : null, crewFull: !!state.you && state.you.crew >= state.you.crewMax, markBeast: attackMark !== null && state.ships.get(attackMark)?.info?.npcRole === 'beast', crewShort: !!state.you && state.you.crew < 3, noHire: !!state.self?.noHire });
     tutorPointer.frame();
     encounterCard.frame();
     surrenderCard.frame(state);

@@ -336,7 +336,7 @@ export class Hud {
   /** Owner, 2026-10-28 (armyadvice.ts): the weak army's hint — the island, or the hire window here (main.ts). */
   onAdvice: (to: 'isle' | 'hire') => void = () => {};
   /** Owner, 2026-10-28 (islefirst.ts): the island's first steps — the building's card on the island, the hire window. */
-  onIsleFirst: (id: 'dw1' | 'dw2' | 'hire' | 'dw3') => void = () => {};
+  onIsleFirst: (id: 'dw1' | 'dw2' | 'hire' | 'dw3' | 'army') => void = () => {};
   private i1Key = '';
   private adviceKey = '';
   private adviceOpen = false;
@@ -1052,13 +1052,13 @@ export class Hud {
         const go = (e.target as HTMLElement).closest<HTMLElement>('[data-i1go]');
         if (!go) return;
         e.stopPropagation();
-        this.onIsleFirst(go.dataset.i1go as 'dw1' | 'dw2' | 'hire' | 'dw3');
+        this.onIsleFirst(go.dataset.i1go as 'dw1' | 'dw2' | 'hire' | 'dw3' | 'army');
       });
     }
     const docked = !!state.self!.dockedAt;
     const btn = v!.id === 'hire' ? L(docked || state.wayView ? 'i1.hireBtn' : 'i1.toPort') : L('i1.build');
     const wait = v!.wait > 0 ? Math.ceil(v!.wait / 60) : 0;
-    const key = `${lang()}|${v!.id}|${v!.open}|${v!.step}|${v!.ready ? 1 : 0}|${wait}|${docked ? 1 : 0}|${state.wayView ? 1 : 0}`;
+    const key = `${lang()}|${v!.id}|${v!.open}|${v!.step}|${v!.ready ? 1 : 0}|${wait}|${docked ? 1 : 0}|${state.wayView ? 1 : 0}|${v!.stuck ?? ''}`;
     // under her frame, or under the weak army's badge (measured now and then: the HUD's layout moves)
     const now = performance.now();
     if (key !== this.i1Key || now - this.i1At > 1000) {
@@ -1087,7 +1087,10 @@ export class Hud {
     el.classList.remove('hidden');
     const mins = `${wait} ${lang() === 'ru' ? 'мин' : 'min'}`;
     const sub = v!.open === 'dw1' ? L('i1.first') : wait > 0 ? L(v!.id === 'dw2' ? 'i1.waitDw1' : 'i1.wait', { t: mins }) : L('i1.reward', { n: fmt(v!.silver) });
-    el.innerHTML = `${icon('tab_isles', '', 'ico-sm')}<span class="i1-m"><b>${esc(L(`i1.${v!.id}` as 'i1.dw2', { n: v!.step + 1, of: v!.of }))}</b><i>${esc(sub)}</i></span><button type="button" class="btn btn-small${v!.ready ? ' btn-primary' : ''}" data-i1go="${v!.id === 'hire' ? 'hire' : v!.open}">${esc(btn)}</button>`;
+    // (owner, 2026-10-29: no marine to be had — a calm line and the way to the army's own hand, never «Нанять»)
+    const stuck = v!.id === 'hire' ? v!.stuck : undefined;
+    const go = stuck === 'silver' ? '' : stuck ? `<button type="button" class="btn btn-small" data-i1go="army">${esc(L('i1.armyBtn'))}</button>` : `<button type="button" class="btn btn-small${v!.ready ? ' btn-primary' : ''}" data-i1go="${v!.id === 'hire' ? 'hire' : v!.open}">${esc(btn)}</button>`;
+    el.innerHTML = `${icon('tab_isles', '', 'ico-sm')}<span class="i1-m"><b>${esc(L(`i1.${v!.id}` as 'i1.dw2', { n: v!.step + 1, of: v!.of }))}</b><i>${esc(stuck ? L(`i1.stuck.${stuck}` as 'i1.stuck.room') : sub)}</i></span>${go}`;
   }
   private i1At = 0;
 
