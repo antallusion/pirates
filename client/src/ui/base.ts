@@ -10,7 +10,8 @@ import { bindSupply, supplyTab } from './supply.ts'; // docs/18 #32
 import { bindScouts, scoutsCard, tickScouts } from './scouts.ts'; // the fog of war's scouts (owner, 2026-10-17)
 import { EN as I18_EN, RU as I18_RU } from '../lang/ui/isles18.ts';
 import { guildYardCard, wireGuildYard } from './social.ts';
-import { BARGE, BARGE_MUL, GRID, PLOT_CELLS, PRODUCERS, isProducer, producerOf, producerRate, speedupSilver } from '../../../shared/src/data/base.ts';
+import { BARGE, BARGE_MUL, GRID, PLOT_CELLS, PRODUCERS, isProducer, producerOf, producerRate } from '../../../shared/src/data/base.ts';
+import { boostHtml, tickBoost, wireBoost } from './isleboost.ts'; // finishing a work: speed-ups or doubloons (owner, 2026-10-29)
 import type { BaseRes, ProducerKind } from '../../../shared/src/data/base.ts';
 import { ISLE_LEVELS } from '../../../shared/src/data/estate.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -385,13 +386,11 @@ export class BaseWindow {
       ${now}${state1}${job}${up}<div class="row bactions"><button class="btn btn-small" data-bmove>${esc(L('move'))}</button>${this.razeBtn(c.raze, `plot:${c.plot}`)}</div>${this.razeWhy(c.raze)}${tiles}${foot}`;
   }
 
-  /** The work under way on a building: its clock, its bar, and finishing it now (silver, provisions, a token). */
-  private jobCard(v: BaseView, j: { id: number; start: number; end: number; silver: number; goods: Partial<Record<GoodId, number>> }, title: string, res: boolean): string {
+  /** The work under way on a building: its clock, its bar, and finishing it now (speed-ups or doubloons). */
+  private jobCard(v: BaseView, j: { id: number; start: number; end: number; doubloons: number }, title: string, _res: boolean): string {
     return `<div class="bjobcard"><div class="row"><b>${esc(title)}</b><span>${esc(L('left', { t: '\u0000' })).replace('\u0000', `<span class="btime" data-end="${j.end}">${esc(timeText((j.end - v.now) / 1000))}</span>`)}</span></div>
       <span class="bprog big"><i data-start="${j.start}" data-stop="${j.end}"></i></span>
-      <div class="bspeed"><button class="btn btn-small btn-primary" data-bspeed="silver" data-job="${j.id}">${esc(L('finish'))} <span data-price="${j.end}">${money(j.silver)}</span></button>
-      ${res ? `<button class="btn btn-small" data-bspeed="res" data-job="${j.id}">${esc(L('finish'))} ${(Object.entries(j.goods) as [GoodId, number][]).map(([g, n]) => `${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}`).join(' ')}</button>` : ''}
-      <button class="btn btn-small" data-bspeed="token" data-job="${j.id}"${v.speedups ? '' : ' disabled'}>${icon('ui_hourglass', '⌛', 'ico-xs')} ${esc(L('token', { m: v.tokenSecs / 60 }))} (${v.speedups})</button></div></div>`;
+      ${boostHtml(j, v)}</div>`;
   }
 
   /** docs/29: a town building's card — its level i/5, what it gives, what the next level gives, its cost and time,
@@ -548,9 +547,7 @@ export class BaseWindow {
     const j = x.job;
     const job = j ? `<div class="sy-job"><div class="row"><b>${esc(j.kind === 'upgrade' ? L('sy_job_upgrade', { n: j.level }) : j.kind === 'repair' ? L('sy_job_repair') : L('sy_job_build'))}</b><span>${esc(L('left', { t: '\u0000' })).replace('\u0000', `<span class="btime" data-end="${j.end}">${esc(timeText((j.end - v.now) / 1000))}</span>`)}</span></div>
       <span class="bprog big"><i data-start="${j.start}" data-stop="${j.end}"></i></span>
-      <div class="bspeed"><button class="btn btn-small btn-primary" data-bspeed="silver" data-job="${j.id}">${esc(L('finish'))} <span data-price="${j.end}">${money(j.silver)}</span></button>
-      <button class="btn btn-small" data-bspeed="res" data-job="${j.id}">${esc(L('finish'))} ${(Object.entries(j.goods) as [GoodId, number][]).map(([g, n]) => `${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}`).join(' ')}</button>
-      <button class="btn btn-small" data-bspeed="token" data-job="${j.id}"${v.speedups ? '' : ' disabled'}>${icon('ui_hourglass', '⌛', 'ico-xs')} ${esc(L('token', { m: v.tokenSecs / 60 }))} (${v.speedups})</button></div></div>` : '';
+      ${boostHtml(j, v)}</div>` : '';
     const acts: string[] = [];
     if (x.state === 'sea') acts.push(`<button class="btn btn-small" data-syrecall="${esc(x.id)}"${x.recallWhy ? ` disabled title="${esc(sv(x.recallWhy))}"` : ''}>${esc(L('sy_recall'))}</button>`);
     else if (x.state === 'home') acts.push(`<button class="btn btn-small btn-primary" data-sylaunch="${esc(x.id)}"${x.launchWhy ? ' disabled' : ''}>${esc(L('sy_launch'))}</button>`);
@@ -638,7 +635,7 @@ export class BaseWindow {
     root.querySelectorAll<HTMLElement>('[data-braze]').forEach((el) => (el.onclick = () => this.razeAsk(v, el.dataset.braze!)));
     root.querySelector<HTMLElement>('[data-bup]')?.addEventListener('click', () => this.sel !== null && this.send({ t: 'base', action: 'upgrade', plot: this.sel }));
     root.querySelectorAll<HTMLElement>('[data-bbuild]').forEach((el) => (el.onclick = () => this.sel !== null && this.send({ t: 'base', action: 'build', plot: this.sel, what: el.dataset.bbuild! })));
-    root.querySelectorAll<HTMLElement>('[data-bspeed]').forEach((el) => (el.onclick = () => this.send({ t: 'base', action: 'speedup', job: Number(el.dataset.job), pay: el.dataset.bspeed as 'silver' })));
+    wireBoost(root, { send: this.send, store: state.base ?? { speedups: 0, tokenSecs: 900, speedMin: 0 }, balance: () => state.doubloons, now: () => this.now(state) });
   }
 
   /** Every second: the timers, the bars and the price of finishing; a finished work asks for a fresh view. */
@@ -656,10 +653,7 @@ export class BaseWindow {
       const a = Number(el.dataset.start), b = Number(el.dataset.stop);
       el.style.width = `${Math.round(Math.max(0, Math.min(1, (now - a) / Math.max(1, b - a))) * 100)}%`;
     });
-    root.querySelectorAll<HTMLElement>('[data-price]').forEach((el) => {
-      const html = money(speedupSilver((Number(el.dataset.price) - now) / 1000));
-      if (el.innerHTML !== html) el.innerHTML = html;
-    });
+    tickBoost(root, now);
     if (due && Date.now() - this.asked > 2500) {
       this.asked = Date.now();
       this.send({ t: 'base', action: 'view' });

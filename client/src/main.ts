@@ -101,6 +101,7 @@ import type { CompanyTab } from './ui/company.ts';
 import { LOG_PAGES } from './ui/logbook.ts';
 import { InviteQueue } from './ui/invitequeue.ts';
 import { BaseWindow } from './ui/base.ts';
+import { boostReport, jobEnds } from './ui/isleboost.ts'; // «Ускорить»: what is left (owner, 2026-10-29)
 import { IsleScene } from './ui/islescene.ts'; // the island screen (owner, 2026-10-15)
 import { EN as LIS_EN, RU as LIS_RU } from './lang/ui/islescene.ts';
 import { buttonHtml } from './ui/kit/button.ts';
@@ -2365,10 +2366,14 @@ function onMessage(m: ServerMsg): void {
         else openModal('hall');
       }
       break;
-    case 'base':
+    case 'base': {
       if (modal === 'base') refreshModal();
       if (isleScene.isOpen) isleScene.update(state);
+      // «Ускорить» on a work's card: how much is left of it now (owner, 2026-10-29)
+      const said = m.view ? boostReport(jobEnds(m.view), m.view.now) : null;
+      if (said) hud.toast(said, 'good');
       break;
+    }
     case 'isleMove': // docs/29: claiming another island is a move — her leave first
       askMove(m.view, (x) => net.send(x));
       break;

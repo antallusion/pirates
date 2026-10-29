@@ -8,7 +8,7 @@ import { lairIsland } from '../server/src/game/wanted.ts';
 import assert from 'node:assert/strict';
 import {
   BASE_PLOTS, BASE_RES, BUILD_MAX_SECS, CREW_LEVELS, PLOT_CELLS, PRODUCERS, PRODUCER_KINDS, PRODUCER_MAX, TOKEN_MAX, TOKEN_SECS, TOKENS_LOGIN, baseCost, crewsAt, maxLevel,
-  plotsOf, producerRate, speedupGoods, speedupSilver, yardCap,
+  plotsOf, producerRate, yardCap,
 } from '../shared/src/data/base.ts';
 import { ISLE_LEVELS, ISLE_MAX } from '../shared/src/data/estate.ts';
 import { BUILDINGS, BUILDING_IDS } from '../shared/src/data/holdings.ts';
@@ -31,6 +31,7 @@ import { setLang } from '../client/src/i18n.ts';
 import { EN as BASE_EN, RU as BASE_RU } from '../client/src/lang/ui/base.ts';
 import { join, makeGame, onHull } from './helpers.ts';
 import { offCoast } from './helpers.ts';
+import { finishJob } from './helpers.ts';
 import { ISLE_OF_HALL, isTreeBase, treeClosure, treeCost } from '../shared/src/data/isletree.ts';
 import type { TreeId } from '../shared/src/data/isletree.ts';
 import type { FakeConn } from './helpers.ts';
@@ -124,30 +125,30 @@ test('building takes real time: the plot is held, the crew busy, the producer wo
   assert.equal(y.jobs[0].what, 'warehouse');
 });
 
-test('speed-ups: silver by the time left, provisions, and the free tokens of a quarter hour', () => {
+test('speed-ups: never silver nor provisions (owner, 2026-10-29), the free tokens of a quarter hour', () => {
   const game = world();
   const { s } = owner(game);
   const { h, y } = fill(game, s);
   assert.equal(startBuild(game, s, 1, 'warehouse'), null);
   const job = y.jobs[0];
-  const left = (job.end - clock) / 1000;
-  const price = speedupSilver(left);
-  assert.ok(price >= 25);
+  const end = job.end;
   const g0 = s.profile!.gold;
-  assert.equal(speedup(game, s, job.id, 'silver'), null);
-  assert.equal(g0 - s.profile!.gold, price);
-  assert.ok(has(h, 'warehouse'), 'finished at once');
-  assert.equal(y.jobs.length, 0);
-  // Upgrade (the warehouse grows) and pay in provisions (docs/29: no building above the town hall).
+  const p0 = y.res.provisions ?? 0;
+  // The old silver and provisions finishes are refused: nothing spent, the work goes on.
+  assert.equal(speedup(game, s, job.id, 'silver'), 'Finish it with speed-ups or doubloons.');
+  assert.equal(speedup(game, s, job.id, 'res'), 'Finish it with speed-ups or doubloons.');
+  assert.equal(s.profile!.gold, g0, 'no silver spent');
+  assert.equal(y.res.provisions ?? 0, p0, 'no provisions spent');
+  assert.equal(job.end, end);
+  // The view's price is in doubloons, none in silver.
+  const cell = baseView(game, s)!.cells.find((c) => c.job?.id === job.id)!;
+  assert.ok(cell.job!.doubloons > 0);
+  assert.equal((cell.job as unknown as { silver?: number }).silver, undefined);
+  job.end = clock;
+  reckonBase(game, h);
+  assert.ok(has(h, 'warehouse'));
   h.level = 3;
   y.town!.b.hall = 5;
-  assert.equal(upgradeAt(game, s, 1), null);
-  const up = y.jobs[0];
-  const need = speedupGoods((up.end - clock) / 1000).provisions!;
-  const p0 = y.res.provisions!;
-  assert.equal(speedup(game, s, up.id, 'res'), null);
-  assert.equal(p0 - y.res.provisions!, need, 'provisions for the extra hands');
-  assert.equal(h.buildings.find((b) => b.id === 'warehouse')!.level, 2);
   // Tokens: none at first.
   s.profile!.speedups = 0;
   assert.equal(upgradeAt(game, s, 1), null);
@@ -180,7 +181,7 @@ test('producers work while their owner is away, into a yard with a cap the wareh
   const h = ownIsland(game, s.accountId)!;
   const y = yardOf(game, h);
   assert.equal(startBuild(game, s, 0, 'p:lumber'), null);
-  assert.equal(speedup(game, s, y.jobs[0].id, 'silver'), null);
+  assert.equal(finishJob(game, s, y.jobs[0].id), null);
   assert.equal(capOf(h), yardCap(1, 0));
   // Five days away (the session gone): the yard stops at its cap, not beyond.
   game.sessions.delete(s);
@@ -204,7 +205,7 @@ test('producers work while their owner is away, into a yard with a cap the wareh
   assert.ok(wide > capOf(h));
   fill(game, s, 300);
   assert.equal(startBuild(game, s, 2, 'warehouse'), null);
-  assert.equal(speedup(game, s, y.jobs[0].id, 'silver'), null);
+  assert.equal(finishJob(game, s, y.jobs[0].id), null);
   assert.equal(capOf(h), wide);
 });
 
@@ -306,7 +307,6 @@ test('the numbers hold together: plots grow, every cost fits the yard at the lev
   assert.ok(baseCost('p:lumber', 1).silver <= 1000 && Object.keys(baseCost('p:lumber', 1).goods).length === 0, 'the first camp needs no timber');
   assert.ok(baseCost('p:lumber', PRODUCER_MAX).secs > baseCost('p:lumber', 1).secs * 10, 'a level takes longer');
   assert.equal(baseCost('fort', 1).silver, treeCost('fort', 1).silver, 'the guns by the tree (docs/29)');
-  assert.ok(speedupSilver(3600) < 2000 && speedupSilver(3600) > 300, 'an hour for a few hundred silver');
   for (const k of PRODUCER_KINDS) assert.ok(PRODUCERS[k].rate * 3 < 40, 'no producer floods the sea');
 });
 

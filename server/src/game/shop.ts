@@ -25,6 +25,7 @@ import {
 import type { ShopGrant, ShopOffer } from '../../../shared/src/data/shop.ts';
 import type { ShopJobView, ShopView, ShopWhy } from '../../../shared/src/premiumproto.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
+import { TOKEN_SECS } from '../../../shared/src/data/base.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import { baseView, buildersBusy, capOf, crewsBase, mine, reckonBase, yardOf } from './base.ts';
 import type { IsleDrop } from '../../../shared/src/data/isleloot.ts';
@@ -753,13 +754,16 @@ export function isleLootGrant(game: Game, s: PlayerSession, d: IsleDrop): boolea
   return true;
 }
 
-/** Minutes of her speed-ups spent on a job (-1: the yard's refit of her ship), as many as it needs. */
+/** Her speed-ups spent on a job (-1: the yard's refit of her ship), as many as it needs. An island work takes the free
+ *  tokens first (TOKEN_SECS each, only while a whole one fits), then the shop's minutes, then one token more for what
+ *  is left (owner, 2026-10-29: «Использовать ускорители»); the refit, the shop's minutes alone. */
 export function useSpeed(game: Game, s: PlayerSession, jobId: number): string | null {
   if (!s.authed || !s.profile) return 'Not for sale';
   const st = shopState(game, s.accountId);
-  if (st.speed <= 0) return 'No speed-ups in store: buy them in the shop.';
   const wall = game.wallNow();
   const p = s.profile;
+  if (Math.trunc(jobId) !== -1 && st.speed <= 0 && (p.speedups ?? 0) <= 0) return 'No speed-ups left: buy them in the shop.';
+  if (Math.trunc(jobId) === -1 && st.speed <= 0) return 'No speed-ups in store: buy them in the shop.';
   if (Math.trunc(jobId) === -1) {
     if (!p.refit || p.refit.until <= wall) return 'That work is done.';
     const k = Math.min(st.speed, Math.ceil((p.refit.until - wall) / 60_000));
@@ -773,9 +777,24 @@ export function useSpeed(game: Game, s: PlayerSession, jobId: number): string | 
   if (typeof m === 'string') return m;
   const j = m.y.jobs.find((x) => x.id === Math.trunc(jobId));
   if (!j || j.end <= wall) return 'That work is done.';
-  const k = Math.min(st.speed, Math.ceil((j.end - wall) / 60_000));
-  st.speed -= k;
-  j.end = Math.max(wall, j.end - k * 60_000);
+  const tokenMs = TOKEN_SECS * 1000;
+  let left = j.end - wall;
+  let tokens = Math.max(0, p.speedups ?? 0);
+  while (tokens > 0 && left >= tokenMs) {
+    tokens--;
+    left -= tokenMs;
+  }
+  if (left > 0 && st.speed > 0) {
+    const k = Math.min(st.speed, Math.ceil(left / 60_000));
+    st.speed -= k;
+    left = Math.max(0, left - k * 60_000);
+  }
+  if (left > 0 && tokens > 0) {
+    tokens--;
+    left = Math.max(0, left - tokenMs);
+  }
+  p.speedups = tokens;
+  j.end = wall + left;
   save(game, s.accountId, st);
   game.holdings.touch();
   reckonBase(game, m.h);

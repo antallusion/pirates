@@ -15,6 +15,7 @@ import type { GoodId } from '../../shared/src/data/goods.ts';
 import { ISLE_OF_HALL, HALL_DAY, TREE_MAX, treeClosure, treeCost, treeNeeds } from '../../shared/src/data/isletree.ts';
 import type { TreeId } from '../../shared/src/data/isletree.ts';
 import { POWER_CREW } from '../../shared/src/data/baseships.ts';
+import { finishPrice } from '../../shared/src/data/shop.ts';
 import { DAY_LENGTH_SEC } from '../../shared/src/constants.ts';
 import type { IslandBiome } from '../../shared/src/world/regions.ts';
 import { seaHour } from './island.ts';
@@ -43,6 +44,7 @@ export interface TreeResult {
   silverAt: number[];
   /** Hours of the builders' work each hall level took (the sum of the steps' times since the last). */
   workAt: number[];
+  /** `speedup`: doubloons (owner, 2026-10-29: a work is finished now for speed-ups or doubloons, never silver). */
   spent: { build: number; goods: number; speedup: number };
   earned: number;
   hallIncome: number;
@@ -116,7 +118,7 @@ export function simulateTree(plan: TreePlan = STEADY): TreeResult {
         lv.set(j.what as TreeId, j.level);
         if (j.what === 'hall') {
           at[j.level] = j.end;
-          silverAt[j.level] = spent.build + spent.goods + spent.speedup;
+          silverAt[j.level] = spent.build + spent.goods;
           workAt[j.level] = work;
           work = 0;
         }
@@ -132,12 +134,9 @@ export function simulateTree(plan: TreePlan = STEADY): TreeResult {
         j.end = Math.max(t, j.end - TOKEN_SECS / 3600);
       }
       if (plan.rush && j.end > t) {
-        const p = Math.max(25, Math.ceil(((j.end - t) * 3600) / 60) * 12);
-        if (purse * 0.25 >= p) {
-          purse -= p;
-          spent.speedup += p;
-          j.end = t;
-        }
+        // finished now for doubloons (the purse untouched)
+        spent.speedup += finishPrice((j.end - t) * 3600);
+        j.end = t;
       }
     }
     finish(t);

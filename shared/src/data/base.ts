@@ -260,16 +260,9 @@ export function nextCrewAt(isleLevel: number): number | null {
 
 // ------------------------------------------------------------------------------------------------ speed-ups
 
-/** Silver to finish now: 12 a minute of work left (25 at the least). */
-export const SPEEDUP_SILVER_MIN = 12;
-export function speedupSilver(secsLeft: number): number {
-  return Math.max(25, Math.ceil(Math.max(0, secsLeft) / 60) * SPEEDUP_SILVER_MIN);
-}
-
-/** Provisions to finish now (extra hands fed): one for every three minutes left. */
-export function speedupGoods(secsLeft: number): Partial<Record<GoodId, number>> {
-  return { provisions: Math.max(2, Math.ceil(Math.max(0, secsLeft) / 180)) };
-}
+// Owner, 2026-10-29 («завершить сразу за серебро продается, а надо за дублоны и ускорители»): an island work is
+// finished now only with speed-ups (the free tokens below, the shop's minutes) or doubloons (shop.ts finishPrice) —
+// no silver, no provisions.
 
 /** A free speed-up token takes a quarter of an hour off the work; a captain keeps twenty at most. */
 export const TOKEN_SECS = 900;

@@ -99,14 +99,16 @@ export interface MineView {
   stock?: number;
 }
 
-export interface TownJobView {
+/** An island work under way (a building, a town building, a ship of the yard): its clock, and the doubloons that finish
+ *  it now (shop.ts finishPrice; owner, 2026-10-29: no silver, no provisions — speed-ups or doubloons). */
+export interface IsleJobView {
   id: number;
   level: number;
   start: number;
   end: number;
-  silver: number;
-  goods: Partial<Record<GoodId, number>>;
+  doubloons: number;
 }
+export type TownJobView = IsleJobView;
 
 /** docs/29: a building the island's tree asks, at a level, and the level it stands at. */
 export interface TreeNeedView {

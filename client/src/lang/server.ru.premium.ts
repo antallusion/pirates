@@ -45,6 +45,7 @@ export const SERVER_RU_PREMIUM: Record<string, string> = {
   'Buy the first brigade of your own before the second.': 'Сначала купите первую свою бригаду, потом вторую.',
   'Slowly: one purchase at a time.': 'Не так быстро: по одной покупке.',
   'No speed-ups in store: buy them in the shop.': 'В запасе нет ускорений: купите их в лавке.',
+  'No speed-ups left: buy them in the shop.': 'Ускорителей не осталось: купите их в лавке.',
   'No repair kits in store: buy them in the shop.': 'В запасе нет ремкомплектов: купите их в лавке.',
   'A repair kit: she is whole again ({0} left).': 'Ремкомплект: корабль снова цел (осталось {0}).',
   'A lucky charm: +1 luck and +{0} morale for this boarding ({1} left).': 'Талисман удачи: +1 к удаче и +{0} к боевому духу в этом абордаже (осталось {1}).',

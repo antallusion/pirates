@@ -22,7 +22,7 @@ import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { levelScale } from '../../../shared/src/data/shiplevel.ts';
-import { speedupGoods, speedupSilver } from '../../../shared/src/data/base.ts';
+import { finishPrice } from '../../../shared/src/data/shop.ts';
 import { dist } from '../../../shared/src/math.ts';
 import type { OwnShipView, OwnYardView } from '../../../shared/src/protocol.ts';
 import type { Island } from '../../../shared/src/world/worldgen.ts';
@@ -466,7 +466,7 @@ export function ownYardView(game: Game, s: PlayerSession, h: Holding, y: Yard): 
     return {
       id: x.id, role: x.role, name: OWN_NAMES[x.name % OWN_NAMES.length], classId: x.classId, level: x.level, xp: Math.floor(x.xp), xpNext: ownXpNext(x.level),
       hull: Math.round(hull * 100) / 100, state: x.state,
-      job: j ? { id: j.id, kind: j.kind ?? 'build', level: j.level, start: j.start, end: j.end, silver: speedupSilver(left), goods: speedupGoods(left) } : null,
+      job: j ? { id: j.id, kind: j.kind ?? 'build', level: j.level, start: j.start, end: j.end, doubloons: finishPrice(left) } : null,
       up: next === null ? null : { ...ownUpgradeCost(x.role, next), level: next, classId: hullFor(x.role, next), why: upWhy(h, y, x) },
       repair: whole || x.state === 'building' ? null : { ...ownRepairCost(x.role, x.level, hull, x.state === 'laid_up'), why: repairWhy(h, y, x, hull) },
       launchWhy: launchWhy(game, s, h, x), recallWhy: recallWhy(game, s, x),

@@ -37,6 +37,7 @@ import { setLang } from '../client/src/i18n.ts';
 import { applyDataLocale } from '../client/src/lang/data.ts';
 import { join, makeGame, onHull, steps } from './helpers.ts';
 import { offCoast } from './helpers.ts';
+import { finishJob } from './helpers.ts';
 
 let clock = 20_000 * 86_400_000;
 
@@ -400,7 +401,7 @@ test('the dig: sand where it is not, the Grail where it is — the chronicle tel
   const before = isleWeekGrowth(game, y, 1);
   assert.equal(buildTown(game, s, 'grail'), null);
   assert.ok(!advOf(s.profile!).held && advOf(s.profile!).built);
-  for (const j of [...y.jobs]) speedup(game, s, j.id, 'silver');
+  for (const j of [...y.jobs]) finishJob(game, s, j.id);
   reckonBase(game, h);
   assert.equal(townState(y).b.grail, 1);
   assert.ok(Math.abs(isleWeekGrowth(game, y, 1) - before * GRAIL_GROWTH) < 1e-9, 'every dwelling ×1.5');

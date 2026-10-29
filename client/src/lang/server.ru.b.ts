@@ -1136,6 +1136,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "No such plot.": "Нет такого участка.",
   "That work is done.": "Эта работа уже закончена.",
   "No speed-up tokens left.": "Ускорений не осталось.",
+  "Finish it with speed-ups or doubloons.": "Завершить можно ускорителями или за дублоны.",
   "Into the island’s yard: {0} units.": "На двор острова: {0} ед.",
   "Nothing new in the yard yet.": "На дворе пока ничего нового.",
   "Your island’s builders are rested: {0} speed-ups of {1} minutes.": "Строители вашего острова отдохнули: ускорений по {1} мин — {0}.",

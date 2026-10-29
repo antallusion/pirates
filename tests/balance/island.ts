@@ -7,7 +7,7 @@
 //
 // `npm run balance` prints nothing of this; `node tools/balance-island.ts` prints the whole report.
 
-import { BASE_RES, PRODUCERS, PRODUCER_KINDS, TOKEN_SECS, baseCost, crewsAt, maxLevel, plotsOf, producerFits, producerLimit, producerRate, speedupSilver, yardCap } from '../../shared/src/data/base.ts';
+import { BASE_RES, PRODUCERS, PRODUCER_KINDS, TOKEN_SECS, baseCost, crewsAt, maxLevel, plotsOf, producerFits, producerLimit, producerRate, yardCap } from '../../shared/src/data/base.ts';
 import type { BaseRes, ProducerKind } from '../../shared/src/data/base.ts';
 import { ISLE_LEVELS, ISLE_MAX } from '../../shared/src/data/estate.ts';
 import { BUILDINGS } from '../../shared/src/data/holdings.ts';
@@ -216,17 +216,7 @@ export function simulate(plan: Plan = NORMAL): SimResult {
         j.end = Math.max(t, j.end - TOKEN_SECS / 3600);
       }
     }
-    if (plan.rush) {
-      // She rushes whatever the builders have in hand for up to a quarter of the island's purse.
-      for (const j of byLeft()) {
-        const price = speedupSilver((j.end - t) * 3600);
-        if (purse * 0.25 >= price) {
-          purse -= price;
-          spent.speedup += price;
-          j.end = t;
-        }
-      }
-    }
+    // (owner, 2026-10-29: no rushing for silver any more — speed-ups or doubloons only, outside a silver economy)
     for (const j of jobs.filter((x) => x.end <= t + 1e-9)) {
       j.apply();
       jobs.splice(jobs.indexOf(j), 1);

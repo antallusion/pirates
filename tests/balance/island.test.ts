@@ -36,7 +36,8 @@ test('the hall comes at the pace of the plan: hall 2 in a few days, hall 3 in ab
 test('speed-ups save hours, not weeks: the tree is paced by silver, goods and the builders', () => {
   const rushed = simulateTree({ ...STEADY, rush: true }), plain = simulateTree(STEADY);
   for (let l = 2; l <= 5; l++) assert.ok(Math.abs(daysToHall(rushed, l) - daysToHall(plain, l)) <= 2, `hall ${l}: ${daysToHall(rushed, l).toFixed(1)} rushed, ${daysToHall(plain, l).toFixed(1)} not`);
-  assert.ok(rushed.spent.speedup > 0 && rushed.spent.speedup < rushed.earned * 0.08, `speed-ups ${Math.round(rushed.spent.speedup)} of ${Math.round(rushed.earned)}`);
+  // (owner, 2026-10-29: finishing now costs doubloons, not silver — the purse is the same rushed or not)
+  assert.ok(rushed.spent.speedup > 0, `doubloons ${Math.round(rushed.spent.speedup)}`);
 });
 
 test('the island is a long-term base, not the best money: its best yield by the hour never beats an hour at sea', () => {

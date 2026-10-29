@@ -791,9 +791,8 @@ export class IsleScene {
     }));
     this.cardEl.querySelector<HTMLElement>('[data-prspeed]')?.addEventListener('click', (e) => {
       const id = Number((e.currentTarget as HTMLElement).dataset.prspeed);
-      // the store of minutes first (as many as the work needs), else a free token: the server checks both
-      if (plan.speed.min > 0) this.send({ t: 'premium', action: 'speed', job: id });
-      else this.send({ t: 'base', action: 'speedup', job: id, pay: 'token' });
+      // her speed-ups, the free tokens and the shop's minutes together (shop.ts useSpeed checks both)
+      this.send({ t: 'premium', action: 'speed', job: id });
     });
     this.cardEl.querySelector<HTMLElement>('[data-prshop]')?.addEventListener('click', () => dispatchEvent(new CustomEvent('gravetide:shop', { detail: 'isle' })));
   }

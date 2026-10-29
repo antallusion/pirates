@@ -56,7 +56,7 @@ import type { Cargo, AmmoStock, ShipLoadout, TrophyHistory } from './sim/shipsta
 import type { IslandFeature } from './world/worldgen.ts';
 import type { IslandBiome, RegionId } from './world/regions.ts';
 import type { DailyKind } from './data/dailies.ts';
-import type { H3ClientMsg, H3ServerMsg, RazeView, TownView } from './h3proto.ts';
+import type { H3ClientMsg, H3ServerMsg, IsleJobView, RazeView, TownView } from './h3proto.ts';
 import type { H4ClientMsg, H4ServerMsg } from './h4proto.ts';
 import type { IsleClientMsg, IsleServerMsg } from './isleproto.ts';
 import type { FogClientMsg, FogServerMsg } from './fogproto.ts';
@@ -247,7 +247,7 @@ export type ClientMsg =
   | { t: 'base'; action: 'move'; plot: number; to: number }
   /** Pull a building down (owner, 2026-10-28): a plot's, or a town building's. */
   | { t: 'base'; action: 'raze'; plot?: number; town?: string }
-  | { t: 'base'; action: 'speedup'; job: number; pay: 'silver' | 'res' | 'token' }
+  | { t: 'base'; action: 'speedup'; job: number; pay: 'token' }
   /** The island's shipyard (docs/15 item 4): her own ships built, raised, mended, taken to sea and sent home. */
   | { t: 'base'; action: 'ship_build'; role: OwnRole }
   | { t: 'base'; action: 'ship_launch' | 'ship_recall' | 'ship_repair' | 'ship_upgrade'; ship: string }
@@ -2607,7 +2607,7 @@ export interface BaseCellView {
   condition: number;
   unpaid: boolean;
   /** The builders at work here: to what level, when they started and finish (wall ms), and what finishing now costs. */
-  job: { id: number; level: number; start: number; end: number; silver: number; goods: Partial<Record<GoodId, number>> } | null;
+  job: IsleJobView | null;
   /** The next level, or null at the greatest; `why` says what stands in the way. */
   up: (BaseCostView & { level: number; why: string | null; /** docs/29: what the tree asks of it. */ needs?: { id: string; level: number; have: number }[] }) | null;
   /** A producer's yield since the last collection; and whether it stands idle (its resource at the yard's cap). */
@@ -2634,6 +2634,8 @@ export interface BaseView {
   crews: { n: number; busy: number; next: number | null };
   speedups: number;
   tokenSecs: number;
+  /** Minutes in her store of the shop's speed-ups (spent with the tokens by «Ускорить»). */
+  speedMin: number;
   /** What an empty plot may take, and what stands in the way of each. */
   catalog: (BaseCostView & { what: string; why: string | null; /** docs/29: what the tree asks of it (the hall a building opens at). */ needs?: { id: string; level: number; have: number }[] })[];
   /** docs/29: the town hall's level (the tree's root: the island's level follows it). */
@@ -2698,7 +2700,7 @@ export interface OwnShipView {
   hull: number;
   state: 'building' | 'home' | 'sea' | 'laid_up' | 'refit';
   /** The shipwrights at work on her. */
-  job: { id: number; kind: 'build' | 'upgrade' | 'repair'; level: number; start: number; end: number; silver: number; goods: Partial<Record<GoodId, number>> } | null;
+  job: (IsleJobView & { kind: 'build' | 'upgrade' | 'repair' }) | null;
   /** The next level at the shipyard (null at her greatest) and what stands in the way. */
   up: (BaseCostView & { level: number; classId: ShipClassId; why: string | null }) | null;
   /** Mending her at the island (null: she is whole). */

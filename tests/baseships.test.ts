@@ -37,6 +37,7 @@ import { serverTable } from '../client/src/lang/server.ts';
 import { EN as BASE_EN, RU as BASE_RU } from '../client/src/lang/ui/base.ts';
 import { join, makeGame, onHull, steps } from './helpers.ts';
 import { offCoast } from './helpers.ts';
+import { finishJob } from './helpers.ts';
 import { ISLE_OF_HALL } from '../shared/src/data/isletree.ts';
 
 const MIN = 60_000;
@@ -86,7 +87,7 @@ function withShipyard(h: Holding, level = 1): void {
 function built(game: Game, s: PlayerSession, y: Yard, role: (typeof OWN_ROLES)[number]): OwnShip {
   assert.equal(shipBuild(game, s, role), null);
   const j = y.jobs.find((x) => x.ship && x.kind === 'build')!;
-  assert.equal(speedup(game, s, j.id, 'silver'), null);
+  assert.equal(finishJob(game, s, j.id), null);
   return y.ships!.find((x) => x.id === j.ship)!;
 }
 
@@ -233,7 +234,7 @@ test('she grows seasoned from a ship sunk near her, and the shipyard raises her 
   assert.equal(w.state, 'refit');
   const j = y.jobs.find((x) => x.ship === w.id)!;
   assert.equal(j.level, 2);
-  assert.equal(speedup(game, s, j.id, 'silver'), null);
+  assert.equal(finishJob(game, s, j.id), null);
   assert.equal(w.level, 2);
   assert.equal(w.xp, 0);
   assert.equal(w.state, 'home');
@@ -243,7 +244,7 @@ test('she grows seasoned from a ship sunk near her, and the shipyard raises her 
   assert.equal(shipUpgrade(game, s, w.id), 'Raise the shipyard to level 2 first.');
   h.buildings.find((b) => b.id === 'shipyard')!.level = 2;
   assert.equal(shipUpgrade(game, s, w.id), null);
-  speedup(game, s, y.jobs.find((x) => x.ship === w.id)!.id, 'silver');
+  finishJob(game, s, y.jobs.find((x) => x.ship === w.id)!.id);
   assert.equal(w.level, 4);
   assert.equal(w.classId, 'brigantine');
   // At sea she sails at her own level, not her captain's.

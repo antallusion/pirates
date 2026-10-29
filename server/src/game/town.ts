@@ -12,7 +12,7 @@ import type { TreeId } from '../../../shared/src/data/isletree.ts';
 import { BUILDINGS } from '../../../shared/src/data/holdings.ts';
 import type { BuildingId } from '../../../shared/src/data/holdings.ts';
 import type { TownId } from '../../../shared/src/data/town.ts';
-import { speedupGoods, speedupSilver } from '../../../shared/src/data/base.ts';
+import { finishPrice } from '../../../shared/src/data/shop.ts';
 import { weekBuy, weekGrowth, weekHall, weekSell } from '../../../shared/src/data/week.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -349,7 +349,7 @@ export function townView(game: Game, s: PlayerSession, h: Holding, y: Yard): Tow
     const next = level < TOWN[id].max ? { level: level + 1, ...townCost(id, level + 1), why: townWhy(game, s, h, y, id) ?? townHooks.landLack?.(s, land) ?? null, ...(Object.keys(land).length ? { land } : {}), ...(isTree(id) ? { needs: treeNeedView(h, y, id, level + 1) } : {}) } : null;
     const tier = TOWN[id].tier;
     return {
-      id, level, max: TOWN[id].max, job: j ? { id: j.id, level: j.level, start: j.start, end: j.end, silver: speedupSilver(left), goods: speedupGoods(left) } : null, next,
+      id, level, max: TOWN[id].max, job: j ? { id: j.id, level: j.level, start: j.start, end: j.end, doubloons: finishPrice(left) } : null, next,
       ...(tier ? { pool: Math.floor(pools[tier] ?? 0), growth: Math.round(isleWeekGrowth(game, y, tier) * 10) / 10 } : {}),
       ...(id === 'guild' && level > 0 ? { orders: guildRows(game, s, h, y) } : {}),
       ...(id === 'pen' && level > 0 && townHooks.pen ? { pen: townHooks.pen(game, s, y) } : {}),

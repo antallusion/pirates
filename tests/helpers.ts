@@ -10,6 +10,7 @@ import { AuthService } from '../server/src/auth.ts';
 import { Game } from '../server/src/game/Game.ts';
 import { grantCaptain } from '../server/src/game/captainshop.ts';
 import { CAPTAINS } from '../shared/src/data/captains.ts';
+import { mine, reckonBase } from '../server/src/game/base.ts';
 import type { WsConnection } from '../server/src/net/websocket.ts';
 import { Database } from '../server/src/persistence/db.ts';
 import { quietAdv } from '../server/src/game/advmap.ts';
@@ -157,4 +158,17 @@ export function offCoast(game: Game, ship: { state: { x: number; y: number; head
     return true;
   }
   return false;
+}
+
+/** A work on her island finished at once — the tests' shortcut (owner, 2026-10-29: a captain finishes one only with
+ *  speed-ups or doubloons, never silver). */
+export function finishJob(game: Game, s: import('../server/src/game/player.ts').PlayerSession, jobId: number): string | null {
+  const m = mine(game, s);
+  if (typeof m === 'string') return m;
+  const j = m.y.jobs.find((x) => x.id === Math.trunc(jobId));
+  if (!j) return 'That work is done.';
+  j.end = game.wallNow();
+  game.holdings.touch();
+  reckonBase(game, m.h);
+  return null;
 }

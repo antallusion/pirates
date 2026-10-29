@@ -245,7 +245,8 @@ test('speed-ups cut a building\'s timer by the minutes it needs; «finish now» 
   const j = y.jobs[0];
   j.end = clock + 2 * 3_600_000; // as a long work would be
   const left = j.end - clock;
-  assert.equal(useSpeed(game, s, j.id), 'No speed-ups in store: buy them in the shop.');
+  s.profile!.speedups = 0;
+  assert.equal(useSpeed(game, s, j.id), 'No speed-ups left: buy them in the shop.');
   // eight hours in store: only what the job needs is spent, the rest kept
   assert.equal(buyOffer(game, s, 'sp_290', pid()), null);
   assert.equal(shopState(game, s.accountId).speed, 480);
@@ -270,6 +271,52 @@ test('speed-ups cut a building\'s timer by the minutes it needs; «finish now» 
   assert.equal(finishNow(game, s, -1, pid()), s.profile!.refit ? null : 'That work is done.');
   assert.equal(s.profile!.refit, null, 'the yard is done');
   assert.equal(s.profile!.loadout.level, 6);
+});
+
+test('«Ускорить» spends the free tokens first, then the shop’s minutes; «Завершить за дублоны»: no silver, the ledger, a short balance refused (owner, 2026-10-29)', () => {
+  const { game, db } = world();
+  const s = captain(game, 'Rusher', 0, true);
+  const h = ownIsland(game, s.accountId)!;
+  const y = yardOf(game, h);
+  assert.equal(startBuild(game, s, null, 'p:lumber'), null);
+  const j = y.jobs[0];
+  // 50 minutes left: three whole tokens (45 min), then 5 of the shop's minutes
+  j.end = clock + 50 * 60_000;
+  s.profile!.speedups = 4;
+  shopState(game, s.accountId).speed = 100;
+  let g0 = s.profile!.gold;
+  assert.equal(useSpeed(game, s, j.id), null);
+  assert.equal(s.profile!.gold, g0, 'no silver for the speed-ups');
+  assert.equal(s.profile!.speedups, 1, 'three tokens, the fourth kept');
+  assert.equal(shopState(game, s.accountId).speed, 95, 'five minutes of the store');
+  assert.ok(!y.jobs.some((x) => x.id === j.id), 'done');
+  // too few: the tokens alone, the time left told by the view
+  assert.equal(startBuild(game, s, null, 'p:fishery'), null);
+  const k = y.jobs[0];
+  k.end = clock + 60 * 60_000;
+  g0 = s.profile!.gold; // (the building itself is paid in silver as ever: only finishing it is not)
+  s.profile!.speedups = 2;
+  shopState(game, s.accountId).speed = 0;
+  assert.equal(useSpeed(game, s, k.id), null);
+  assert.equal(s.profile!.speedups, 0);
+  assert.equal(k.end, clock + 30 * 60_000, 'half an hour left');
+  assert.equal(useSpeed(game, s, k.id), 'No speed-ups left: buy them in the shop.');
+  // the doubloons: short — refused, nothing moves
+  const price = finishPrice((k.end - clock) / 1000);
+  assert.equal(baseView(game, s)!.cells.find((c) => c.job?.id === k.id)?.job?.doubloons, price, 'the card shows the same price');
+  creditPremium(game, s.accountId, price - 1, 'admin', 'short');
+  assert.ok(finishNow(game, s, k.id, pid()), 'refused');
+  assert.equal(db.doubloons(s.accountId), price - 1);
+  assert.equal(k.end, clock + 30 * 60_000, 'the work goes on');
+  // enough: the price taken, its ledger row, no silver
+  creditPremium(game, s.accountId, 1, 'admin', 'top');
+  const fid = pid();
+  assert.equal(finishNow(game, s, k.id, fid), null);
+  assert.equal(db.doubloons(s.accountId), 0);
+  assert.ok(!y.jobs.some((x) => x.id === k.id), 'done');
+  assert.equal(s.profile!.gold, g0, 'no silver spent at all');
+  const rows = (db as unknown as { db: DatabaseSync }).db.prepare(`SELECT amount, detail FROM ledger WHERE account_id = ? AND kind = 'doubloons_buy'`).all(s.accountId) as { amount: number; detail: string }[];
+  assert.deepEqual(rows.map((r) => [r.amount, r.detail]), [[-price, `finish:${k.id}:${fid}`]]);
 });
 
 test('a resource pack into the yard (past its cap), a creature pack and a recruit pack into the army, a scroll pack', () => {

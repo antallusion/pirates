@@ -34,6 +34,7 @@ import { setLang } from '../client/src/i18n.ts';
 import { applyDataLocale } from '../client/src/lang/data.ts';
 import { join, makeGame, onHull } from './helpers.ts';
 import { offCoast } from './helpers.ts';
+import { finishJob } from './helpers.ts';
 
 let clock = 20_000 * 86_400_000;
 
@@ -84,7 +85,7 @@ function islander(game: Game, name = 'Town Builder'): { s: PlayerSession; home: 
 
 const finishAll = (game: Game, s: PlayerSession) => {
   const h = ownIsland(game, s.accountId)!;
-  for (const j of [...yardOf(game, h).jobs]) speedup(game, s, j.id, 'silver');
+  for (const j of [...yardOf(game, h).jobs]) finishJob(game, s, j.id);
   reckonBase(game, h);
 };
 

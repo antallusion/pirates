@@ -12,7 +12,7 @@ import { notifyAway } from './tgnotify.ts'; // the Telegram notices (owner, 2026
 import { singleHall } from '../../../shared/src/data/baselevels.ts';
 import {
   BARGE, BARGE_MUL, BASE_RES, YARD_GOODS, BIOME_YIELD, PLOT_CELLS, PRODUCERS, TOKEN_MAX, TOKEN_SECS, baseCost, crewsAt, isProducer, levelGate, maxLevel, nextCrewAt, plotsOf, producerFits,
-  producerLimit, producerOf, producerRate, speedupGoods, speedupSilver, yardCap,
+  producerLimit, producerOf, producerRate, yardCap,
 } from '../../../shared/src/data/base.ts';
 import type { BaseRes, ProducerKind } from '../../../shared/src/data/base.ts';
 import { ISLE_LEVELS, ISLE_MAX } from '../../../shared/src/data/estate.ts';
@@ -41,7 +41,8 @@ import { TREE_VERSION, migrateTree } from './holdings.ts';
 import type { TownState } from './town.ts';
 import { townOf } from '../../../shared/src/data/town.ts';
 import { freeCargo, questEvent } from './quests.ts'; // playthrough C: her jobs' cargo is not hers to spend
-import { HARVEST, extraCrews, harvestUntil } from './shop.ts';
+import { HARVEST, extraCrews, harvestUntil, shopState } from './shop.ts';
+import { finishPrice } from '../../../shared/src/data/shop.ts';
 import { razeView } from './raze.ts';
 import { planView } from './isleplan.ts'; // docs/29 §8: what to build next (owner, 2026-10-17) // the premium shop's brigades and harvest (owner, 2026-10-15)
 
@@ -485,34 +486,20 @@ export function moveTo(game: Game, s: PlayerSession, plot: number, to: number): 
   return null;
 }
 
-/** Finish the work now (silver, provisions) or a quarter of an hour sooner (a token). */
+/** A quarter of an hour off the work (a free token). Finishing it now is the shop's: speed-ups (shop.ts useSpeed, the
+ *  tokens with the shop's minutes) or doubloons (shop.ts finishNow) — owner, 2026-10-29: never silver nor provisions. */
 export function speedup(game: Game, s: PlayerSession, jobId: number, payWith: string): string | null {
   const m = mine(game, s);
   if (typeof m === 'string') return m;
   const { h, y } = m;
   const p = s.profile!;
+  if (payWith !== 'token') return 'Finish it with speed-ups or doubloons.';
   const j = y.jobs.find((x) => x.id === Math.trunc(jobId));
   if (!j) return 'That work is done.';
   const now = game.wallNow();
-  const left = Math.max(0, (j.end - now) / 1000);
-  if (payWith === 'token') {
-    if ((p.speedups ?? 0) <= 0) return 'No speed-up tokens left.';
-    p.speedups = (p.speedups ?? 0) - 1;
-    j.end = Math.max(now, j.end - TOKEN_SECS * 1000);
-  } else if (payWith === 'res') {
-    const goods = speedupGoods(left);
-    const near = lyingOff(game, s, h);
-    const lack = lacking(h, y, s, near, goods);
-    if (lack) return lack;
-    takeGoods(h, y, s, near, goods);
-    j.end = now;
-  } else if (payWith === 'silver') {
-    const price = speedupSilver(left);
-    if (p.gold < price) return lackMore(`Needs ${price} silver`, price, p.gold);
-    p.gold -= price;
-    game.db.ledger(s.accountId, 'isle_speedup', -price, `${h.island}:${j.what}`);
-    j.end = now;
-  } else return 'Unknown order';
+  if ((p.speedups ?? 0) <= 0) return 'No speed-up tokens left.';
+  p.speedups = (p.speedups ?? 0) - 1;
+  j.end = Math.max(now, j.end - TOKEN_SECS * 1000);
   game.holdings.touch();
   reckonBase(game, h);
   return null;
@@ -652,7 +639,7 @@ export function baseView(game: Game, s: PlayerSession): BaseView | null {
   const power = powerOf(h);
   const jobView = (j: BaseJob) => {
     const left = Math.max(0, (j.end - now) / 1000);
-    return { id: j.id, level: j.level, start: j.start, end: j.end, silver: speedupSilver(left), goods: speedupGoods(left) };
+    return { id: j.id, level: j.level, start: j.start, end: j.end, doubloons: finishPrice(left) };
   };
   const cells: BaseCellView[] = [];
   for (let k = 0; k < n; k++) {
@@ -696,7 +683,7 @@ export function baseView(game: Game, s: PlayerSession): BaseView | null {
     island: h.island, name: isl.name, biome: isl.biome, level: lvl, levelName: ISLE_LEVELS[lvl].name[0], size, plots: n, locked, cells,
     store: BASE_RES.map((g: BaseRes) => ({ good: g, n: Math.floor(y.res[g] ?? 0), cap, rate: Math.round((rates[g] ?? 0) * 10) / 10 })),
     crews: { n: crewsOf(h, game), busy: buildersBusy(y), next: nextCrewAt(lvl) },
-    speedups: p.speedups ?? 0, tokenSecs: TOKEN_SECS, catalog,
+    speedups: p.speedups ?? 0, tokenSecs: TOKEN_SECS, speedMin: Math.max(0, Math.floor(shopState(game, s.accountId).speed ?? 0)), catalog,
     slots: { used: slotsUsed(h), total: slotsOf(isl, h) },
     now, near: lyingOff(game, s, h),
     // docs/29: the island's level follows its town hall — no step of its own, no power asked (power brings a crew).
