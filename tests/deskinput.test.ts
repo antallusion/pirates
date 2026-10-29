@@ -172,20 +172,27 @@ test('a window open (the settings, any other): F and every ship\'s key wait; onl
   assert.ok(at > main.indexOf("if (k === 'escape') {") && at < main.indexOf('  keys.add(k);', at) && at < main.indexOf("    case 'dock': {"));
 });
 
-test('a finger on the open sea sets the course (owner, 2026-10-29: «поставить просто пальцем точку на карту и начать движение не получается»)', async () => {
-  const { seaTapAct } = await import('../client/src/ui/deskinput.ts');
-  const base = { mark: false, thing: false, place: false, docked: false, modal: false };
-  assert.equal(seaTapAct(base), 'sail', 'the open sea: the helmsman takes her there');
-  assert.equal(seaTapAct({ ...base, mark: true }), null, 'a ship or a stack: the target, never a course');
-  assert.equal(seaTapAct({ ...base, thing: true }), null, 'a thing: its own order (sailToTap)');
-  assert.equal(seaTapAct({ ...base, place: true }), null, 'a harbour or an island: selected');
-  assert.equal(seaTapAct({ ...base, docked: true }), null);
-  assert.equal(seaTapAct({ ...base, modal: true }), null);
-  // touch.ts's tap (SeaGesture) reaches main.ts's aim, which sails to the point through sailToScreen
-  const at = main.indexOf('  aim: (px, py) => {');
-  const aim = main.slice(at, main.indexOf('  zoom: (f) => {', at));
-  assert.match(aim, /const thing = !k && sailToTap\(px, py\);/);
-  assert.match(aim, /seaTapAct\(\{ mark: !!k, thing, place: !!selPlace,[^)]*\}\) === 'sail' && inGame\) sailToScreen\(px, py\);/);
+test('any finger tap on the sea sails her (owner, 2026-10-29: «тапнуть куда мне надо и начать плыть. порт или еще куда-то, куда угодно»)', async () => {
+  const { seaTapPlan } = await import('../client/src/ui/deskinput.ts');
+  const base = { mark: null, again: false, thing: false, place: null, modal: false, blocked: false } as const;
+  assert.equal(seaTapPlan(base), 'sea', 'the open sea: a course there');
+  assert.equal(seaTapPlan({ ...base, mark: 'ship' }), 'target', 'another ship: the target, the one exception');
+  assert.equal(seaTapPlan({ ...base, mark: 'ship', again: true }), 'chase', 'the target tapped again: sail to her');
+  assert.equal(seaTapPlan({ ...base, mark: 'roam', again: true }), 'chase');
+  assert.equal(seaTapPlan({ ...base, thing: true }), 'thing');
+  assert.equal(seaTapPlan({ ...base, place: 'port' }), 'port', 'a harbour: sailed to and put in');
+  assert.equal(seaTapPlan({ ...base, place: 'isle' }), 'place');
+  assert.equal(seaTapPlan({ ...base, place: 'wreck' }), 'place');
+  assert.equal(seaTapPlan({ ...base, modal: true }), 'none');
+  assert.equal(seaTapPlan({ ...base, blocked: true }), 'blocked', 'a long passage / a boarding: a word why, never silent');
+  assert.equal(seaTapPlan({ ...base, mark: 'ship', blocked: true }), 'target', 'a ship is still marked in a fight');
+  // main.ts: touch.ts's tap → seaTap; in a harbour's roads the course first, then the casting off; a port by its run
+  assert.match(main, /aim: \(px, py\) => seaTap\(px, py\),/);
+  const st = main.slice(main.indexOf('function seaTap('), main.indexOf('function sailToSpot('));
+  assert.match(st, /if \(plan === 'blocked'\) return void hud\.toast\(seaTapWhy\(/);
+  assert.match(st, /if \(plan === 'port'\) return startGoal\(`p:\$\{pl!\.id\}`\);/);
+  assert.ok(st.lastIndexOf("if (docked) net.send({ t: 'undock' });") > st.lastIndexOf('else sailToScreen(px, py);'), 'in port: the course, then she casts off');
+  assert.doesNotMatch(st, /dockedAt\) return/, 'never a silent «in port: nothing»');
   // the chart: a finger's tap at sea is the course at once (the mouse keeps its mark and «Плыть»)
   const wm = readFileSync(new URL('../client/src/ui/worldmap.ts', import.meta.url), 'utf8');
   assert.match(wm, /this\.tapAt\(state, e\.clientX, e\.clientY, showClear, e\.pointerType === 'touch'\)/);

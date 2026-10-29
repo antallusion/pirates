@@ -47,7 +47,7 @@ import { TacticalPanel } from './ui/tactical.ts';
 import { CAPTAINS } from '../../shared/src/data/captains.ts';
 import { AMMO, AMMO_IDS, CHASER_CONE, GUNS, KEYED_AMMO, MOUNTS, SHIP_CLASSES, isZoneBossClass } from '../../shared/src/data/ships.ts';
 import { PORT_DOCK_RADIUS, isNight, nightFactor, timeOfDay } from '../../shared/src/constants.ts';
-import { angleDiff, clamp, dist, toShipLocal } from '../../shared/src/math.ts';
+import { angleDiff, clamp, dist, pointInPolygon, toShipLocal } from '../../shared/src/math.ts';
 import type { Aggression, SeaMarkData, ServerMsg, ShipInfo } from '../../shared/src/protocol.ts';
 import { SF, STATIONS } from '../../shared/src/protocol.ts';
 import { REGIONS } from '../../shared/src/world/regions.ts';
@@ -139,7 +139,7 @@ import { renderChoice, renderTattoos } from './ui/tattoos.ts';
 import { renderDice, tickDice } from './ui/dice.ts';
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
 import { TutorPointer, shotStage } from './ui/pointer.ts';
-import { keyActsInWindow, leftClickSea, rightClickAct, seaTapAct, soloModifier, wheelZoom, windowTab } from './ui/deskinput.ts';
+import { keyActsInWindow, leftClickSea, rightClickAct, seaTapPlan, seaTapWhy, soloModifier, wheelZoom, windowTab } from './ui/deskinput.ts';
 import { resumeAfterEnd, resumeOn } from './ui/resumesail.ts';
 import { hereAct } from './ui/questact.ts'; // owner, 2026-10-23: a quest step done in this port
 import { buzz, guardVibrate } from './haptics.ts';
@@ -856,6 +856,65 @@ function allStopHere(): void {
   renderer.goal = null;
   setMark(null);
 }
+/** A harbour under a finger only on its town (its island) or within a thumb of its crest — not anywhere in 160 m of it
+ *  (placeAtScreen's, the mouse's selection): at a phone's zoom the whole screen about a harbour was «the harbour», and a
+ *  tap in its roads went nowhere (owner, 2026-10-29, Солтмарроу: «не могу нажать пальцем куда-то куда мне надо»). The
+ *  harbour she lies in is never the tap's: the sea about it is. */
+const FINGER_PORT_PX = 64;
+function fingerPlace(pl: ReturnType<typeof placeAtScreen>, w: { x: number; y: number }): ReturnType<typeof placeAtScreen> {
+  if (!pl || pl.kind === 'wreck') return pl;
+  // (an island's `r` bounds its shape and the water about it — Солтмарроу's is 1250 m: its land only, by its outline)
+  const onLand = (is: { poly: number[] }) => is.poly.length >= 6 && pointInPolygon(w.x, w.y, is.poly);
+  if (pl.kind === 'isle') {
+    const is = state.islands.get(Number(pl.id));
+    return is && onLand(is) ? pl : null;
+  }
+  if (pl.id === state.self?.dockedAt) return null;
+  const pt = state.ports.find((x) => x.id === pl.id);
+  const onTown = [...state.islands.values()].some((is) => (is.portId === pl.id || is.town === pl.id) && onLand(is));
+  return onTown || (pt && Math.hypot(pt.x - w.x, pt.y - w.y) * renderer.zoom <= FINGER_PORT_PX) ? pl : null;
+}
+/** A finger's tap on the sea (seaTapPlan, deskinput.ts; owner 2026-10-29: «мне нужно тапнуть куда мне надо и начать
+ *  плыть. порт или еще куда-то, куда угодно короче»): any tap sails her — at sea, and in a harbour's roads too (the
+ *  «В МОРЕ» state: the course is given, then she casts off, no «В море» first). Another ship or a creature stack is the
+ *  target (and its choices); tapped again, she sails to it. */
+function seaTap(px: number, py: number): void {
+  renderer.mouseX = px;
+  renderer.mouseY = py;
+  if (!inGame || !state.ownDisplay) return;
+  const before = { ship: targetId, roam: state.roamMark };
+  const ship = shipAtScreen(px, py), roam = ship === null ? roamAtScreen(px, py) : null;
+  const again = (ship !== null && ship === before.ship) || (roam !== null && roam === before.roam);
+  const k = markAt(px, py);
+  if (k) markTapAt = performance.now();
+  openTargetMenu(k === 'ship' && targetId !== null ? `ship:${targetId}` : k === 'roam' && state.roamMark !== null ? `roam:${state.roamMark}` : '');
+  const docked = !!state.self?.dockedAt;
+  const w = renderer.toWorld(px, py);
+  const pl = k ? null : fingerPlace(placeAtScreen(px, py), w);
+  const t = k || renderer.goalHit(px, py) ? null : tapTarget(state, w.x, w.y, renderer.zoom);
+  const blocked = state.voyage ? 'voyage' : state.boardTac || state.boardFight || state.boarding ? 'battle' : null;
+  const plan = seaTapPlan({ mark: k, again, thing: !!t || renderer.goalHit(px, py), place: pl?.kind ?? null, modal: !!modal, blocked: !!blocked });
+  selPlace = k === 'ship' && targetId !== null ? { kind: 'ship', id: targetId } : k ? null : pl; // (owner, 2026-10-26)
+  if (plan === 'none' || plan === 'target') return;
+  if (plan === 'blocked') return void hud.toast(seaTapWhy(blocked!, lang() === 'ru'), 'info');
+  if (plan === 'port') return startGoal(`p:${pl!.id}`); // (the run casts her off in port and puts her in on arrival)
+  if (plan === 'thing' && !t) return tapGoal(); // the goal's beacon or rim arrow: the run (cast off by the server in port)
+  if (plan === 'chase') {
+    const p = ship !== null ? state.ships.get(ship)?.cur : null;
+    const r = roam !== null ? state.roams.find((x) => x.id === roam) : undefined;
+    const at = p ? { x: p.x, y: p.y } : r ? roamNow(state, r) : null;
+    if (at) sailToSpot(at, 80);
+  } else if (plan === 'thing') {
+    if (docked && t) sailToSpot(t, t.near); // (its own order waits: in port the course is given, she casts off below)
+    else if (!sailToTap(px, py)) sailToScreen(px, py);
+  } else if (plan === 'place') {
+    const sw = selWhere();
+    if (sw) sailToSpot({ x: sw.x, y: sw.y }, sw.near);
+    else sailToScreen(px, py);
+  } else sailToScreen(px, py);
+  // in a harbour's roads: the course is kept by the helmsman (autosail.ts queued) and she casts off at once
+  if (docked) net.send({ t: 'undock' });
+}
 /** The helmsman's course to a spot (and how near he should bring her), drawn with its ring. */
 function sailToSpot(p: { x: number; y: number }, near?: number): void {
   touch.course = null; // the helm stick lets go, or it would take the wheel straight back
@@ -1063,19 +1122,7 @@ const touch = new TouchControls({
     helmAt = performance.now(); // her own hand on the sheets: the helmsman lets go a while (docs/23 item 33)
   },
   dash: () => net.send({ t: 'dash' }),
-  aim: (px, py) => {
-    renderer.mouseX = px;
-    renderer.mouseY = py;
-    // A tap on a ship makes her the target; on a creature stack, the stack (docs/19 D7) — and opens the choices about
-    // her beside her («Захват цели», «Преследовать», «Бой»: owner, 2026-10-07); a tap on the open sea puts them away.
-    const k = markAt(px, py);
-    if (k) markTapAt = performance.now();
-    openTargetMenu(k === 'ship' && targetId !== null ? `ship:${targetId}` : k === 'roam' && state.roamMark !== null ? `roam:${state.roamMark}` : '');
-    selPlace = k === 'ship' && targetId !== null ? { kind: 'ship', id: targetId } : k ? null : placeAtScreen(px, py); // (owner, 2026-10-26)
-    const thing = !k && sailToTap(px, py); // seaux: a tap on a thing on the sea sails her to it
-    // …and the open sea: a course to the point tapped (seaTapAct; owner 2026-10-29)
-    if (seaTapAct({ mark: !!k, thing, place: !!selPlace, docked: !!state.self?.dockedAt, modal: !!modal }) === 'sail' && inGame) sailToScreen(px, py);
-  },
+  aim: (px, py) => seaTap(px, py),
   zoom: (f) => {
     renderer.userZoomed = true;
     renderer.targetZoom = clampZoom(renderer.targetZoom * f); // far out (freecam.ts, owner 2026-10-17)
