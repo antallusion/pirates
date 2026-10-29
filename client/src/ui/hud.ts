@@ -1063,12 +1063,23 @@ export class Hud {
     const now = performance.now();
     if (key !== this.i1Key || now - this.i1At > 1000) {
       this.i1At = now;
+      // On a phone it stands at the top's middle, under the autopilot's pill (owner, 2026-10-29: on an iPhone 15 the
+      // notch's side covered it under her frame)
+      if (document.body.classList.contains('simple')) {
+        const as = document.getElementById('hud-autosail');
+        const r = as && !as.classList.contains('hidden') ? as.getBoundingClientRect() : null;
+        el.classList.add('i1-top');
+        el.style.left = '';
+        el.style.top = `${r && r.height > 0 ? Math.round(r.bottom + 4) : 6}px`;
+      } else {
+      el.classList.remove('i1-top');
       const adv = document.getElementById('hud-advice');
       const ar = adv && !adv.classList.contains('hidden') ? adv.getBoundingClientRect() : null;
       const at = ar && ar.height > 0 ? { x: Math.round(ar.left), y: Math.round(ar.bottom + 4) } : advicePlace(el);
       if (at) {
         el.style.left = `${Math.max(4, at.x)}px`;
         el.style.top = `${at.y}px`;
+      }
       }
     }
     if (key === this.i1Key) return;

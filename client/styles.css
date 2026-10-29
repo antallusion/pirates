@@ -3439,6 +3439,7 @@ body.touch .adv-badge { min-height: 32px; }
 .hud-isle1 .i1-m b { font: 600 12px/1.2 var(--sans, sans-serif); color: var(--bone, #e8dcc0); overflow-wrap: anywhere; }
 .hud-isle1 .i1-m i { font: 11px/1.2 var(--sans, sans-serif); font-style: normal; color: #c9b27a; }
 .hud-isle1 .btn { flex: none; margin: 0; }
+.hud-isle1.i1-top { left: 50%; transform: translateX(-50%); }
 body.touch .hud-isle1 .btn { min-height: 30px; }
 .rc-unit .rc-face { grid-row: span 2; width: 38px; height: 38px; margin: 0; border-radius: 50%; object-fit: cover; border: 1px solid #5c4a33; }
 .rc-unit b { font-size: 12.5px; line-height: 1.15; overflow-wrap: anywhere; }
