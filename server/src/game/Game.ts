@@ -26,7 +26,7 @@ import { sendTattoos, setTattoo, stepTattoos, takeChoice, tattooCount } from './
 import { caravanOrder, caravanShipLost, claimBerths, launchCaravan, sendCaravans, stepCaravans } from './caravans.ts';
 import type { TownId } from '../../../shared/src/data/town.ts';
 import { raze } from './raze.ts'; // pulling a building down (owner, 2026-10-28)
-import { baseView, collectYard, moveTo, orderBarge, speedup, startBuild, upgradeAt } from './base.ts';
+import { baseView, collectYard, moveTo, orderBarge, depositTreasury, unloadToYard, withdrawTreasury, speedup, startBuild, upgradeAt } from './base.ts';
 import { fogFlush, fogInit, fogReveal, fogSecond, scoutMessage, stepScoutNotices } from './fog.ts'; // the fog of war and the scouts (owner, 2026-10-17)
 import { ownShipsKill, shipBuild, shipLaunch, shipRecall, shipRepair, shipUpgrade, squadronOf, stepOwnShips } from './baseships.ts';
 import { abandonIsland, claimPrompt, raidPointer, robIsland } from './baseclaim.ts';
@@ -4120,6 +4120,12 @@ export class Game {
             return done(collectYard(this, s));
           case 'barge':
             return done(orderBarge(this, s));
+          case 'deposit':
+            return done(depositTreasury(this, s, Number(msg.n)));
+          case 'withdraw':
+            return done(withdrawTreasury(this, s, Number(msg.n)));
+          case 'unload':
+            return done(unloadToYard(this, s, String(msg.good) as GoodId, Math.trunc(Number(msg.n))));
           case 'build':
             return done(startBuild(this, s, Math.trunc(Number(msg.plot)), String(msg.what)));
           case 'upgrade':

@@ -218,7 +218,7 @@ export const TOWN: Record<TownId, TownDef> = {
   dw5: dw(5, ['Veterans’ Den', 'Притон ветеранов'], ['Cutthroats’ Den', 'Логово головорезов'], ['Boarders who have taken ships; upgraded, cutthroats. They drink rum.', 'Абордажники, бравшие корабли; улучшенный — головорезы. Пьют ром.'], 'smuggler_store'),
   dw6: dw(6, ['Admiralty', 'Адмиралтейство'], ['Admiralty Court', 'Адмиралтейский двор'], ['The officers’ guard; upgraded, the life guard. Paid in pearls as well.', 'Офицерская гвардия; улучшенное — лейб-гвардия. Платят и жемчугом.'], 'chart_house'),
   dw7: dw(7, ['Drowned Shrine', 'Святилище утопленников'], ['Abyssal Altar', 'Алтарь бездны'], ['The drowned rise for the Choir and the cursed; upgraded, the deep’s spawn. Pearls for the sea.', 'Утопленники встают для Хора и проклятых; улучшенное — порождения бездны. Жемчуг — морю.'], 'chapel'),
-  market: { id: 'market', names: [['Marketplace', 'Рынок'], ['Trading Row', 'Торговые ряды'], ['Exchange', 'Биржа'], ['Counting House', 'Торговый дом'], ['Merchants’ Guild', 'Гильдия купцов']], text: ['Trades the island’s resources for silver and for each other — at poor rates, better with each level.', 'Меняет ресурсы острова на серебро и друг на друга — по плохому курсу, с каждым уровнем чуть лучше.'], art: 'caravan_office', max: TREE_MAX },
+  market: { id: 'market', names: [['Marketplace', 'Рынок'], ['Trading Row', 'Торговые ряды'], ['Exchange', 'Биржа'], ['Counting House', 'Торговый дом'], ['Merchants’ Guild', 'Гильдия купцов']], text: ['Trades the island’s resources for silver and for each other — near the world’s prices, the spread narrower with each level.', 'Меняет ресурсы острова на серебро и друг на друга — по ценам, близким к мировым; с каждым уровнем разница меньше.'], art: 'caravan_office', max: TREE_MAX },
   // docs/17 H5: HoMM3's mage guild — five floors, each teaching a fixed list of its level's orders free.
   guild: {
     id: 'guild', names: [['Guild of Orders', 'Гильдия приказов'], ['Hall of Orders', 'Зал приказов'], ['School of Orders', 'Школа приказов'], ['College of Orders', 'Коллегия приказов'], ['Tower of Orders', 'Башня приказов']],
@@ -248,10 +248,18 @@ export const HALL_INCOME = HALL_DAY;
 /** Growth by the keep's level: none, the keep, … the citadel (3rd: +50%), … the castle (5th: +100%). */
 export const KEEP_GROWTH = [1, 1, 1.25, 1.5, 1.75, 2];
 
-/** The market: what it pays for a unit (by its base price) and what it asks, by its level. HoMM3's poor rates — the
- *  most it pays lies under the cheapest port's price, the least it asks over most ports' dearest. */
-export const MARKET_SELL = [0, 0.2, 0.225, 0.25, 0.275, 0.3];
-export const MARKET_BUY = [0, 3.4, 3.25, 3.1, 2.95, 2.8];
+/** The market: what it pays for a unit (a share of its base price) and what it asks, by its level. Elordaert, forum
+ *  2026-10-29: HoMM3's poor rates (it paid 0.2 and asked 3.4 of the base: iron 6.8 against 115.6) read as a broken
+ *  market. Now near the world's prices with a fair spread — it asks at most half again what it pays (×1.5 at the
+ *  first level, ×1.28 at the fifth). Its dearest pay even in a fair week (×1.25) stays under a producing harbour's
+ *  price (~0.83 of the base: 0.78 and the spread), and what it sells goes into the yard, never to the hold — so no
+ *  round trip through it pays. */
+export const MARKET_SELL = [0, 0.6, 0.61, 0.62, 0.63, 0.64];
+export const MARKET_BUY = [0, 0.9, 0.88, 0.86, 0.84, 0.82];
+/** The least the market's ask stands over its pay in any week (the fair: ×1.25 pay, ×0.85 ask). */
+export const MARKET_MIN_SPREAD = 1.2;
+/** What `n` units cost at the market's asking price (one sum, rounded up once). */
+export const marketCost = (ask: number, n: number): number => Math.ceil(ask * Math.max(0, Math.floor(n)) - 1e-9);
 /** What the market deals in: the six resources besides silver, and the island's stone. */
 export const MARKET_GOODS: GoodId[] = ['timber', 'iron', 'tar', 'gunpowder', 'pearls', 'rum', 'coal'];
 

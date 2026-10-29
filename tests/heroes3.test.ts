@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import { UNITS } from '../shared/src/data/army.ts';
 import { DAY_LENGTH_SEC } from '../shared/src/constants.ts';
 import { WEEKS, WEEK_DAYS, WEEK_KINDS, dayIndex, weekGrowth, weekKind, weekRng } from '../shared/src/data/week.ts';
-import { GROWTH, HALL_INCOME, KEEP_GROWTH, MARKET_BUY, MARKET_GOODS, MARKET_SELL, PORT_MARKUP, TOWN, TOWN_IDS, UNIT_GOODS, portDwellings, recruitPrice, townCost, upgradePrice } from '../shared/src/data/town.ts';
+import { GROWTH, HALL_INCOME, KEEP_GROWTH, MARKET_BUY, MARKET_GOODS, MARKET_SELL, PORT_MARKUP, marketCost, TOWN, TOWN_IDS, UNIT_GOODS, portDwellings, recruitPrice, townCost, upgradePrice } from '../shared/src/data/town.ts';
 import { FLAG_SECS, MINES, MINES_PER_REGION, RES_GOODS, buildMines, mineKindOf } from '../shared/src/data/mines.ts';
 import { GOODS } from '../shared/src/data/goods.ts';
 import { REGIONS } from '../shared/src/world/regions.ts';
@@ -19,8 +19,8 @@ import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import { adminWeek, stepCalendar, thisWeek, today, weekNow } from '../server/src/game/calendar.ts';
 import { dwellView, portPools, recruit, train } from '../server/src/game/dwell.ts';
-import { buildTown, marketTrade, townState, townView } from '../server/src/game/town.ts';
-import { baseView, reckonBase, speedup, yardOf } from '../server/src/game/base.ts';
+import { buildTown, marketRates, marketTrade, townState, townView } from '../server/src/game/town.ts';
+import { baseView, capOf, depositTreasury, reckonBase, speedup, unloadToYard, withdrawTreasury, yardOf } from '../server/src/game/base.ts';
 import { buyIsland, clearOutposts, ownIsland } from '../server/src/game/estate.ts';
 import { lairIsland } from '../server/src/game/wanted.ts';
 import { mineLandable, mineSites, mineState, minesDay, minesView, startFlag } from '../server/src/game/mines.ts';
@@ -297,24 +297,85 @@ test('recruiting from the island: lying off it, into the stacks at their worth; 
   void home;
 });
 
-test('the market trades at poor rates: it pays less than the cheapest port and asks more than most', () => {
+test('the market trades near the world prices (forum 2026-10-29): units bought, the treasury pays first, a fair spread', () => {
   const game = world();
   const { s } = islander(game);
   const h = ownIsland(game, s.accountId)!;
   const y = yardOf(game, h);
-  assert.match(marketTrade(game, s, 'silver', 'timber', 1000) ?? '', /no market/);
+  assert.match(marketTrade(game, s, 'silver', 'timber', 10) ?? '', /no market/);
   townState(y).b.market = 1;
-  y.res.timber = 100;
+  const rates = marketRates(game, y)!;
+  // Elordaert's order: iron for silver. It asks under the world's price now (iron 115.6 a unit was 3.4 of the base).
+  assert.ok(rates.buy.iron! < GOODS.iron.basePrice * 1.1 && rates.buy.iron! > GOODS.iron.basePrice * 0.6, `iron asks ${rates.buy.iron}`);
+  // n is the units bought; the treasury pays first, then the purse.
+  h.treasury = 50;
   const gold = s.profile!.gold;
+  const iron0 = y.res.iron ?? 0;
+  assert.equal(marketTrade(game, s, 'silver', 'iron', 3), null);
+  const cost = marketCost(rates.buy.iron!, 3);
+  assert.equal((y.res.iron ?? 0) - iron0, 3, 'three iron into the yard');
+  assert.equal(h.treasury, Math.max(0, 50 - cost), 'the treasury paid first');
+  assert.equal(s.profile!.gold, gold - Math.max(0, cost - 50), 'the purse paid the rest');
+  // Not enough in the treasury and the purse together: said with the sum.
+  s.profile!.gold = 0;
+  h.treasury = 10;
+  assert.match(marketTrade(game, s, 'silver', 'iron', 5) ?? '', /treasury and purse/);
+  // The yard's cap holds.
+  s.profile!.gold = 2_000_000;
+  assert.match(marketTrade(game, s, 'silver', 'timber', 1_000_000) ?? '', /yard holds at most/);
+  // Selling: the purse is paid.
+  y.res.timber = 100;
+  const g2 = s.profile!.gold;
   assert.equal(marketTrade(game, s, 'timber', 'silver', 100), null);
-  assert.equal(s.profile!.gold, gold + Math.floor(100 * GOODS.timber.basePrice * MARKET_SELL[1] * (weekNow(game) === 'fair' ? 1.15 : 1)));
-  assert.equal(marketTrade(game, s, 'silver', 'pearls', 5000), null);
-  assert.ok((y.res.pearls ?? 0) >= 1);
-  for (let L = 1; L <= 3; L++) {
-    assert.ok(MARKET_SELL[L] * 1.15 < 0.35, 'it pays under the cheapest port (0.35 of the base) even at a fair');
-    assert.ok(MARKET_BUY[L] * 0.85 > 2, 'it asks more than twice the base price even at a fair');
+  assert.equal(s.profile!.gold, g2 + Math.floor(100 * rates.sell.timber!));
+  for (let L = 1; L <= 5; L++) {
+    assert.ok(MARKET_BUY[L] / MARKET_SELL[L] <= 1.5 + 1e-9, `level ${L}: it asks at most half again what it pays`);
+    assert.ok(MARKET_SELL[L] * 1.25 < 0.83, `level ${L}: even at a fair it pays under a producing port's price`);
+  }
+  // Any week, any level (the fair pays more and asks less): the ask stays over the pay, so no round trip pays.
+  for (const kind of WEEK_KINDS) {
+    adminWeek(game, kind);
+    for (let L = 1; L <= 5; L++) {
+      townState(y).b.market = L;
+      const r = marketRates(game, y)!;
+      for (const g of MARKET_GOODS) assert.ok(r.buy[g]! >= r.sell[g]! * 1.15, `${kind} L${L} ${g}: asks ${r.buy[g]} pays ${r.sell[g]}`);
+    }
   }
   for (const g of MARKET_GOODS) assert.ok(GOODS[g], g);
+});
+
+test('bringing silver and goods to the island (forum 2026-10-29): the treasury from anywhere, the hold into the yard lying off', () => {
+  const game = world();
+  const { s } = islander(game);
+  const h = ownIsland(game, s.accountId)!;
+  const y = yardOf(game, h);
+  const t0 = h.treasury, g0 = s.profile!.gold;
+  assert.equal(depositTreasury(game, s, 1000), null);
+  assert.equal(h.treasury, t0 + 1000);
+  assert.equal(s.profile!.gold, g0 - 1000);
+  assert.equal(withdrawTreasury(game, s, 400), null, 'lying off: out again');
+  assert.equal(h.treasury, t0 + 600);
+  // The hold into the yard, up to its cap.
+  y.res.iron = 0;
+  s.ship!.cargo.iron = 30;
+  assert.equal(unloadToYard(game, s, 'iron', 0), null);
+  assert.equal(y.res.iron, 30);
+  assert.equal(s.ship!.cargo.iron ?? 0, 0);
+  const cap = capOf(h);
+  y.res.timber = cap - 5;
+  s.ship!.cargo.timber = 20;
+  assert.equal(unloadToYard(game, s, 'timber', 0), null);
+  assert.equal(y.res.timber, cap, 'the yard fills to its cap');
+  assert.equal(s.ship!.cargo.timber, 15, 'the rest stays aboard');
+  assert.match(unloadToYard(game, s, 'timber', 0) ?? '', /full/);
+  assert.match(unloadToYard(game, s, 'cloth' as never, 0) ?? '', /does not take/);
+  // Away from the island: the deposit still goes in, the yard and the withdrawal do not.
+  s.ship!.state.x += 20_000;
+  game.grid.upsert(s.ship!.id, s.ship!.state.x, s.ship!.state.y);
+  assert.equal(depositTreasury(game, s, 100), null, 'deposit from anywhere');
+  s.ship!.cargo.tar = 5;
+  assert.match(unloadToYard(game, s, 'tar', 0) ?? '', /Lie off/);
+  assert.match(withdrawTreasury(game, s, 100) ?? '', /harbour office/);
 });
 
 test('town data: every building named in both languages at every level, its art on the sheet, costs rising', () => {

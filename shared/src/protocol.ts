@@ -239,6 +239,9 @@ export type ClientMsg =
   | { t: 'estate'; action: 'visit'; island: number }
   /** One's own island as a base (docs/15 items 1–3): plots, the builders' work, the yard. */
   | { t: 'base'; action: 'view' | 'collect' | 'barge' }
+  /** Forum 2026-10-29: her silver into the island's treasury (anywhere), her hold into its yard (lying off; n 0: all that fits). */
+  | { t: 'base'; action: 'deposit' | 'withdraw'; n: number }
+  | { t: 'base'; action: 'unload'; good: GoodId; n: number }
   | { t: 'base'; action: 'build'; plot: number; what: string }
   | { t: 'base'; action: 'upgrade'; plot: number }
   | { t: 'base'; action: 'move'; plot: number; to: number }

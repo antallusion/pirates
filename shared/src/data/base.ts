@@ -22,6 +22,10 @@ import type { TreeId } from './isletree.ts';
 export type BaseRes = 'timber' | 'coal' | 'tar' | 'iron' | 'provisions';
 export const BASE_RES: BaseRes[] = ['timber', 'coal', 'tar', 'iron', 'provisions'];
 
+/** What a ship lying off her island may unload into its yard (forum 2026-10-29): the building stuff and the island
+ *  market's goods — never back out (the yard is no warehouse to ship from, so its market is no buy-low, sell-high). */
+export const YARD_GOODS: GoodId[] = ['timber', 'coal', 'tar', 'iron', 'provisions', 'gunpowder', 'pearls', 'rum'];
+
 /** docs/30: a barge of building stuff to her island's yard for silver — what a sloop brings in two or three runs (a small
  *  island with no wood or coal of its own wanted some twenty of them for its hall's second level). Its goods at
  *  BARGE_MUL of their base price, the freight in it. */

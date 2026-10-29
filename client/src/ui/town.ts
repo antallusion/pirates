@@ -215,12 +215,15 @@ export function townTab(v: BaseView, state: ClientState, mk: { give: string; get
     : `<p class="muted">${esc(L('town.mines.none'))}</p>`;
   const mk2 = t.market;
   const opt = (sel: string) => ['silver', ...MARKET_GOODS].map((g) => `<option value="${g}"${g === sel ? ' selected' : ''}>${esc(g === 'silver' ? L('market.silver') : GOODS[g as GoodId].name)}</option>`).join('');
-  const market = mk2
-    ? `<div class="tw-mk"><label>${esc(L('market.give'))} <select class="field" data-mkgive>${opt(mk.give)}</select></label><input class="field" type="number" min="1" value="${mk.n}" data-mkn aria-label="${esc(L('market.give'))}">
-        <label>${esc(L('market.get'))} <select class="field" data-mkget>${opt(mk.get)}</select></label></div>
-        <p class="tw-mkout" data-mkout>${esc(L('market.out', { n: fmt(marketOut(mk2, mk)) }))}</p>
+  const order = mk2 ? marketOrder(v, mk2, mk, gold, have) : null;
+  const market = mk2 && order
+    ? `<div class="tw-mk"><label>${esc(L('market.give'))} <select class="field" data-mkgive>${opt(mk.give)}</select></label>
+        <label>${esc(L('market.get'))} <select class="field" data-mkget>${opt(mk.get)}</select></label>
+        <label>${esc(mk.give === 'silver' ? L('market.buyN') : L('market.giveN'))} <input class="field" type="number" min="1" step="1" value="${mk.n}" data-mkn></label></div>
+        <p class="tw-mkout" data-mkout>${esc(L('market.out', { n: fmt(order.out) }))}${mk.get !== 'silver' && GOODS[mk.get as GoodId] ? ` ${icon(`good_${mk.get}`, '', 'ico-sm')}` : ''}${order.cost ? ` · <b>${esc(L('market.cost', { n: fmt(order.cost), t: fmt(Math.max(0, t.treasury)) }))}</b>` : ''}</p>
         <p class="muted tw-rates">${esc(rateLine(mk2, mk))}</p>
-        <button class="btn btn-small btn-primary" data-mkgo>${esc(L('market.btn'))}</button>`
+        ${order.why ? `<p class="tw-why bad" data-mkwhy>${esc(order.why)}</p>` : ''}
+        <button class="btn btn-small btn-primary" data-mkgo${order.why ? ' disabled' : ''}${order.why ? ` title="${esc(order.why)}"` : ''}>${esc(L('market.btn'))}</button>`
     : `<p class="muted">${esc(L('market.none'))}</p>`;
   return `<div class="town">${head}<div class="tw-grid">${cards}</div>
     <div class="tw-cols"><div class="card"><h4 class="card-h">${icon('outpost_mine', '', 'ico-md')}${esc(L('town.mines'))}</h4>${mines}</div>
@@ -230,13 +233,36 @@ export function townTab(v: BaseView, state: ClientState, mk: { give: string; get
 
 type Market = NonNullable<NonNullable<BaseView['town']>['market']>;
 
-/** What the market gives for the order (the same sums as the server's). */
+/** What the market gives for the order (the same sums as the server's). Silver given: `n` is the units bought. */
 function marketOut(m: Market, mk: { give: string; get: string; n: number }): number {
   const n = Math.max(0, Math.floor(mk.n));
   if (mk.give === mk.get) return 0;
-  if (mk.give === 'silver') return Math.floor(n / (m.buy[mk.get as GoodId] ?? Infinity));
+  if (mk.give === 'silver') return n;
   const value = n * (m.sell[mk.give as GoodId] ?? 0);
   return mk.get === 'silver' ? Math.floor(value) : Math.floor(value / (m.buy[mk.get as GoodId] ?? Infinity));
+}
+
+/** The order as the server will take it (Elordaert, forum 2026-10-29: «100» silver for iron showed «Получите 0» and the
+ *  button then said «Нужно 116»): what comes out, what it costs (the treasury first, then the purse), and why it may
+ *  not go — the button is off with that reason. */
+function marketOrder(v: BaseView, m: Market, mk: { give: string; get: string; n: number }, gold: number, have: Partial<Record<GoodId, number>>): { out: number; cost: number; why: string | null } {
+  const n = Math.max(0, Math.floor(mk.n));
+  const out = marketOut(m, mk);
+  const cap = v.store[0]?.cap ?? Infinity;
+  const inYard = (g: GoodId) => v.store.find((r) => r.good === g)?.n;
+  const room = (g: GoodId) => { const k = inYard(g); return k === undefined ? Infinity : Math.max(0, cap - k); };
+  if (mk.give === 'silver') {
+    const g = mk.get as GoodId;
+    const cost = Math.ceil((m.buy[g] ?? 0) * n - 1e-9);
+    const purse = Math.max(0, v.town?.treasury ?? 0) + Math.max(0, gold);
+    const why = n < 1 ? L('market.min', { n: 1 }) : n > room(g) ? L('market.room', { n: fmt(room(g)) }) : cost > purse ? L('market.short', { n: fmt(cost), h: fmt(purse) }) : null;
+    return { out, cost, why };
+  }
+  const g = mk.give as GoodId;
+  const per = mk.get === 'silver' ? 1 : (m.buy[mk.get as GoodId] ?? Infinity);
+  const least = Math.ceil(per / Math.max(1e-9, m.sell[g] ?? 0) - 1e-9);
+  const why = (have[g] ?? 0) < n ? L('market.lack', { n: fmt(have[g] ?? 0) }) : out < 1 ? L('market.min', { n: fmt(least) }) : mk.get !== 'silver' && out > room(mk.get as GoodId) ? L('market.room', { n: fmt(room(mk.get as GoodId)) }) : null;
+  return { out, cost: 0, why };
 }
 
 function rateLine(m: Market, mk: { give: string; get: string }): string {
