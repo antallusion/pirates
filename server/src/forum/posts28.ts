@@ -209,6 +209,18 @@ export const REPLIES_29: Reply[] = [
 - **Рынок острова** починен, появилась кнопка «Завезти» для серебра и груза.
 - **Автофокуса нет:** цель выбираете только вы.`,
   },
+  {
+    topic: 'Хаск Морроу - Бесполезен в ПВП?',
+    to: 18,
+    body: `Спасибо за разбор — вы правы, Хаска подтянули:
+
+1. **«Абордаж: выкл» теперь защищает от абордажа капитанов только под нейтральным флагом.** Под флагом города или пиратским переключатель остаётся включённым, но не действует — на карточке флага так и написано. От морских пиратов-НПС он по-прежнему спасает.
+2. **«Красный крюк» пробивает «Абордаж: выкл»:** за свои 10 секунд Хаск может взять на абордаж и такой корабль. Нейтральные корабли под защитой, как и раньше.
+3. **«Таранный ход» срывает снасти:** после удачного тарана цель 3,5 секунды идёт на 35% медленнее. Замедление действует поверх всех ускорений, так что от тарана не уйти даже на ульте штурмана.
+4. **«Кровь в воде» работает в любом абордаже и бою на гексах** — с игроками, НПС, в логовах и с боссами: +20% к силе абордажа, когда у врага осталось меньше половины людей (в бою на гексах — с той минуты, как он потерял половину), а убийства поднимают боевой дух, в том числе когда абордируют самого Хаска.
+
+Пишите, как теперь ощущается в бою.`,
+  },
 ];
 
 /** Writes the answers not yet on the forum; returns how many were written. */
@@ -216,10 +228,11 @@ export function postReplies29(store: ForumStore, now: number): number {
   let n = 0;
   store.tx(() => {
     REPLIES_29.forEach((r, i) => {
+      // our own threads by their title; a player's thread by the post answered in it
       const s = THREADS_28.find((t) => t.title === r.topic);
       const sec = s && store.sectionBySlug(s.section);
-      if (!sec) return;
-      const topic = store.sectionTopics(sec.id, true, 0, 500).find((x) => x.title === r.topic);
+      const asked = r.to !== null ? store.post(r.to) : undefined;
+      const topic = sec ? store.sectionTopics(sec.id, true, 0, 500).find((x) => x.title === r.topic) : asked && store.topic(asked.topic_id)?.title === r.topic ? store.topic(asked.topic_id) : undefined;
       if (!topic) return;
       if (store.topicPosts(topic.id, 0, 1000).some((p) => p.author_id === SYSTEM_ID && p.body_md === r.body)) return;
       const to = r.to !== null ? store.post(r.to) : undefined;
