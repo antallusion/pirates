@@ -298,7 +298,7 @@ export class SeaAbil {
     })();
     const band = (sel: string) => [...document.querySelectorAll<HTMLElement>(sel)].filter((e) => e.getClientRects().length && !e.classList.contains('hidden')).map((e) => e.getBoundingClientRect()).filter((r) => r.width > 2 && r.top < innerHeight * 0.5);
     let lo = 8, hi = innerWidth - 8;
-    for (const r of band('#hud-captain .cs, #touch > #tc-isle, #touch > #tc-offer, #touch > #tc-daily, #hud-chat > .chat-toggle')) lo = Math.max(lo, r.right + 8);
+    for (const r of band('#hud-captain .cs, #touch > #tc-isle, #touch > #tc-more, #touch > #tc-offer, #touch > #tc-daily, #hud-chat > .chat-toggle')) lo = Math.max(lo, r.right + 8);
     for (const r of band('#hud-map, #touch > #tc-menu, #touch > #tc-news, #mm-tab')) hi = Math.min(hi, r.left - 8);
     if (hi - lo < 220) {
       lo = 8;

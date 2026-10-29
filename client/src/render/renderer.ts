@@ -376,6 +376,8 @@ export class Renderer {
   private cosCache = new WeakMap<object, CosEquip>();
   /** The plates drawn this frame (the measure's count). */
   platesDrawn = 0;
+  /** She is in a fight (body.sea-fight, read once a frame): every ship's hull bar over its name then. */
+  private seaFight = false;
 
   /** WebGL layers: the shader sea below, the fog and lightning above (null: the 2D fallback draws them). */
   sea: GlSea | null;
@@ -681,6 +683,7 @@ export class Renderer {
     this.hudBand(); // the HUD's blocks, measured: the names keep out of them
     // (the names go as the chart comes: its darts are the ships then)
     this.platesDrawn = 0;
+    this.seaFight = document.body.classList.contains('sea-fight'); // (the ships' bars: hudmore, owner 2026-10-29)
     if (mix < 0.35) for (const s of [...ships].filter((x) => !x.own).sort((a, b) => b.y - a.y)) this.drawLabel(s, state, aim.boardTarget === s.id, aim.target === s.id);
     if (mix < 0.35) { const me = ships.find((x) => x.own); if (me) this.drawOwnPlate(me, state); } // docs/32 §12
     this.drawEmotes(ships); // docs/32 §12: an emote over a ship, ~3 s
@@ -3169,7 +3172,7 @@ export class Renderer {
     if (this.time - this.band.at > 0.5 || this.band.at < 0) {
       let top = 0, bottom = this.h;
       this.hudRects = [];
-      for (const sel of ['#hud-captain', '#hud-map', '#hud-region', '#hud-goals:not(.hidden)', '#hud-prompt', '#hud-stack > :not(.hidden)', '#hud-bottom', '#hud-menu', '#tc-stick', '#tc-sail', '#tc-fire', '#tc-act:not(.hidden)', '#tc-special:not(.hidden)', '#tc-abil:not(.hidden)', '#tc-target:not(.hidden)', '#tc-menu', '#tc-news:not(.hidden)', '#tc-isle:not(.hidden)', '#tc-offer:not(.hidden)', '#chat-toggle', '#chat.open', '#toasts:not(:empty)', '#encounter:not(.hidden)', '#surrender:not(.hidden)', '#advcard:not(.hidden)']) {
+      for (const sel of ['#hud-captain', '#hud-map', '#hud-region', '#hud-goals:not(.hidden)', '#hud-prompt', '#hud-stack > :not(.hidden)', '#hud-bottom', '#hud-menu', '#tc-stick', '#tc-sail', '#tc-fire', '#tc-act:not(.hidden)', '#tc-special:not(.hidden)', '#tc-abil:not(.hidden)', '#tc-target:not(.hidden)', '#tc-menu', '#tc-news:not(.hidden)', '#tc-isle:not(.hidden)', '#tc-more', '#tc-offer:not(.hidden)', '#chat-toggle', '#chat.open', '#toasts:not(:empty)', '#encounter:not(.hidden)', '#surrender:not(.hidden)', '#advcard:not(.hidden)']) {
         document.querySelectorAll<HTMLElement>(sel).forEach((e) => {
           const r = e.getBoundingClientRect();
           if (r.width > 0 && r.height > 0) this.hudRects.push(r);
@@ -4537,14 +4540,18 @@ export class Renderer {
       g.fill();
       g.fillStyle = 'rgba(180,180,180,0.8)';
     }
-    // Hull and sails bars.
-    const w = 46;
-    g.fillStyle = 'rgba(0,0,0,0.7)';
-    g.fillRect(x - w / 2 - 1, y + 15, w + 2, 7);
-    g.fillStyle = s.hull > 0.5 ? '#9b5a44' : s.hull > 0.25 ? '#b0703a' : '#c23d33';
-    g.fillRect(x - w / 2, y + 16, w * clamp(s.hull, 0, 1), 2.5);
-    g.fillStyle = '#b3ab96';
-    g.fillRect(x - w / 2, y + 19, w * clamp(s.sails, 0, 1), 2);
+    // Hull and sails bars — only where they tell something (owner, 2026-10-29: «скрывать плашки с хп… если бой не начат
+    // или цель не выбрана»): her mark, a ship hurt or in a battle, any while she fights; a whole ship on a calm sea
+    // keeps its name only.
+    if (isTarget || boardTarget || this.seaFight || s.hull < 0.995 || s.sails < 0.995 || s.flags & SF.IN_BATTLE) {
+      const w = 46;
+      g.fillStyle = 'rgba(0,0,0,0.7)';
+      g.fillRect(x - w / 2 - 1, y + 15, w + 2, 7);
+      g.fillStyle = s.hull > 0.5 ? '#9b5a44' : s.hull > 0.25 ? '#b0703a' : '#c23d33';
+      g.fillRect(x - w / 2, y + 16, w * clamp(s.hull, 0, 1), 2.5);
+      g.fillStyle = '#b3ab96';
+      g.fillRect(x - w / 2, y + 19, w * clamp(s.sails, 0, 1), 2);
+    }
     // Admiral's Eye: what your glass reads of her.
     const eye = state.self?.inspect.find((i) => i.id === s.id);
     if (eye) {

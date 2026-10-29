@@ -705,7 +705,7 @@ export class Hud {
       // the left row of round buttons (the chat, «Остров», her offer — their words under them included): the toasts
       // under it, or beside it where under it they would reach the helm (480×270 in Telegram's layout with a boss)
       let rowT = Infinity, rowB = 0, rowR = 0;
-      for (const el of document.querySelectorAll('#hud-chat > .chat-toggle, #tc-isle, #tc-offer, #tc-daily')) {
+      for (const el of document.querySelectorAll('#hud-chat > .chat-toggle, #tc-more, #tc-isle, #tc-offer, #tc-daily')) {
         if (!seen(el)) continue;
         for (const q of [el, ...el.querySelectorAll('.tc-isle-l, .tc-offer-t')]) {
           const r = q.getBoundingClientRect();
