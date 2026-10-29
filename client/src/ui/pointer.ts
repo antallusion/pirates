@@ -74,7 +74,8 @@ function openingTargets0(f: PointerFacts, op: string): string[] {
     // (the opening's softened foe strikes her colours soon: on her card the step's own choice — «Забрать всё и
     // затопить» sinks her, the gold «отпустить» counts as a boarding only and «Первый залп» stood still, QA 2026-10-22)
     case 'sink':
-      return ['[data-sur="sink"]:not([disabled])', '#tc-act[data-act="attack"]', '.act-btn.act-attack', ...(f.touch && f.pursuit ? ['#tc-fire'] : []), ...GOAL_SAIL];
+      // (no mark by itself any longer, owner 2026-10-29: with none taken «Цель» takes one — in a fight, where it shows)
+      return ['[data-sur="sink"]:not([disabled])', '#tc-act[data-act="attack"]', '.act-btn.act-attack', ...(f.touch && f.pursuit ? ['#tc-fire'] : []), ...(f.touch ? ['#tc-lock'] : []), ...GOAL_SAIL];
     case 'board':
       return ['[data-sur="release"]:not([disabled])', ...targetsOf({ ...f, stage: 'board' }), ...GOAL_SAIL];
     case 'neutral':
@@ -152,7 +153,7 @@ function targetsOf(f: PointerFacts): string[] {
       return f.docked ? TO_SEA : ['#tc-act[data-act="land"]', '.act-btn.act-land', ...GOAL_SAIL];
     case 'fork':
       // the story's fork, its card closed: «Цели и вести», where its two ways wait (never a finger on one of the two)
-      return ['#tc-news', '#tc-more'];
+      return ['#tc-news'];
     case 'men':
       // no men for the step's fight: a harbour, its «Армия» and the way through it
       // (at sea far from any harbour «Плыть» takes her to the nearest — server goalroute.ts NEEDS_MEN)

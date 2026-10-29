@@ -13,6 +13,13 @@ export const EN = {
   'resolve': 'Needs full resolve ({n}%)',
   'dread': 'Needs {n} Dread',
   'gold': 'Costs {n} silver',
+  'skBtn': 'Skills',
+  'skBtnReady': 'Skills: {n} ready',
+  'skFan': 'Active skills: talents and the deck gun',
+  'skNone': 'No active skills yet',
+  'skNoneD': 'Active skills come from talents (their trees in the captain’s book) and from a deck gun bought at a shipyard. Shots stay on the shot button.',
+  'skNoneWhy': 'Learn an active talent or mount a deck gun',
+  'skMount': 'Deck gun',
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -27,4 +34,11 @@ export const RU: Record<keyof typeof EN, string> = {
   'resolve': 'Нужна полная решимость ({n}%)',
   'dread': 'Нужно {n} Трепета',
   'gold': 'Стоит {n} серебра',
+  'skBtn': 'Умения',
+  'skBtnReady': 'Умения: готово {n}',
+  'skFan': 'Активные умения: таланты и палубное орудие',
+  'skNone': 'Активных умений пока нет',
+  'skNoneD': 'Активные умения дают таланты (их ветки — в книге капитана) и палубное орудие с верфи. Снаряды остаются на кнопке снарядов.',
+  'skNoneWhy': 'Изучите активный талант или поставьте палубное орудие',
+  'skMount': 'Палубное орудие',
 };

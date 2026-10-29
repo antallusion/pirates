@@ -413,7 +413,9 @@ export class SeaHud {
     this.castEl = make(`<button type="button" id="tc-cast" class="k-btn k-btn--icon tc-big tc-sail hidden" aria-label="${esc(L('sailAria'))}" title="${esc(L('sailAria'))}"><span class="tc-big-pic">${icon(SEA_ART.cast, '⛵', 'tc-big-ico')}</span><span class="tc-big-l">${esc(L('sail'))}</span><kbd class="kc kc-b" aria-hidden="true"></kbd></button>`) as HTMLButtonElement;
     this.deckEl = make(`<div id="tc-deck" class="sea-deck hidden" role="toolbar" aria-label="${esc(L('deck'))}"><div class="dk-row dk-abil"></div><div class="dk-row dk-shots"></div></div>`);
     attachWheel(this.fireEl, { options: () => hooks.fireOptions(), onPick: (o) => hooks.firePick(o.id), onTap: () => hooks.fire(), title: L('wheelFire') });
-    attachWheel(this.ammoEl, { options: () => hooks.fireOptions(), onPick: (o) => hooks.firePick(o.id), onTap: () => hooks.ammoNext(), title: L('wheelFire') });
+    // (the shot's wheel holds shots only: the abilities have «Приёмы», the talents and the mount «Умения» — owner,
+    // 2026-10-29: «4 будет с умениями из ядер»; «Огонь»'s wheel keeps them all)
+    attachWheel(this.ammoEl, { options: () => hooks.fireOptions().filter((o) => o.id.startsWith('a:')), onPick: (o) => hooks.firePick(o.id), onTap: () => hooks.ammoNext(), title: L('wheelAmmo') });
     attachWheel(this.actEl, { options: () => hooks.actOptions(), onPick: (o) => hooks.actPick(o.id), onTap: () => hooks.act(this.actEl.dataset.act), title: L('wheelAct') });
     tapOrHold(this.lockEl, () => hooks.nextTarget(), () => this.view?.target && hooks.target());
     this.castEl.addEventListener('click', () => hooks.sail());

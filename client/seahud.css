@@ -918,10 +918,14 @@ body.touch.mm-peek #hud-voyage { top: calc(var(--sa-t) + 46px); }
 
 /* ---------- «⋯» (owner, 2026-10-29: «на мобиле лютый графический перегруз, надо все как-то прятать в подменюшки,
    оставить только самое важное. и нажимая на эту подменюшку будут выезжать все остальные кнопочки»; hudmore.ts).
-   Out at all times: her plate, the helm, the chart with its map, the guns' cluster, the chat under the chart and the
-   one brass «⋯» first in the row under her plate. Behind it (.more-fold): the menu, the news, «Остров», her offer, the
-   day's gift, the parrot's emotes, the weak army's pill — a wide desk keeps the menu and the news under the chart
-   (body.more-desk). A tap slides them out of it into a brass tray in the same row; transform and opacity only. */
+   Out at all times: her plate, the helm, the chart with its map, the guns' cluster, «Цели и вести» (the quests) under
+   the chart and the one brass «⋯» first in the row under her plate. Behind it (.more-fold): the menu, the chat, «Остров»,
+   her offer, the day's gift, the parrot's emotes, the weak army's pill — a wide desk keeps the menu under the chart and
+   the chat by the helm (body.more-desk). A tap slides them out of it into a brass tray in the same row; transform and
+   opacity only. (owner, the same day: «иконка квеста должна быть вместо иконки чата, их надо поменять» — the quests
+   out, the chat in; «чуть больше расстояние иконкам надо дать… а то они налезают друг на друга» — the tray's gap --mg
+   is wider than the row's, so a count on a button's corner keeps off the next one.) */
+body.simple { --mg: calc(var(--tr-g) + 10px); }
 #tc-more, #tc-more-tray { display: none; }
 body.simple.hud-more #hud #touch > #tc-more { display: block; position: absolute; top: var(--lr-top); left: calc(var(--sa-l) + 8px); right: auto; bottom: auto; z-index: 3;
   width: var(--tr-b); height: var(--tr-b); min-width: 0; min-height: 0; padding: 0; pointer-events: auto; }
@@ -935,9 +939,12 @@ body.simple #hud #touch > #tc-more .tc-more-b { top: -4px; right: -6px; left: au
 body.simple #hud #touch > #tc-more .tc-more-b.hidden { display: none; }
 /* folded */
 body.hud-more:not(.more-open) .more-fold { display: none !important; }
+/* (the chat's own rule shows its button with an id's weight, chat.css; while the chat is open, or in a boarding, it is
+   the chat's: never folded then) */
+body.simple.hud-more:not(.more-open):not(.chat-open):not(.tac) #hud-chat > #chat-toggle.more-fold { display: none !important; }
 /* the tray: from the button rightward, as long as what is out, the words under «Остров» and the offer's clock inside it */
 body.simple.hud-more.more-open #hud #touch > #tc-more-tray { display: block; position: absolute; z-index: 0; left: calc(var(--sa-l) + 1px); top: calc(var(--lr-top) - 7px);
-  width: calc((var(--mn, 0) + 1) * (var(--tr-b) + var(--tr-g)) + 6px); height: calc(var(--tr-b) + 28px); box-sizing: border-box; pointer-events: auto;
+  width: calc((var(--mn, 0) + 1) * (var(--tr-b) + var(--mg)) - var(--mg) + 14px); height: calc(var(--tr-b) + 28px); box-sizing: border-box; pointer-events: auto;
   border-radius: calc(var(--tr-b) / 2 + 7px) 18px 18px 16px; background: linear-gradient(180deg, rgba(30, 24, 17, 0.9), rgba(10, 9, 7, 0.9));
   box-shadow: inset 0 0 0 1px rgba(176, 141, 87, 0.6), inset 0 1px 0 rgba(255, 230, 170, 0.08), 0 4px 14px rgba(0, 0, 0, 0.6);
   transform-origin: calc(var(--tr-b) / 2 + 7px) 50%; animation: more-tray 180ms var(--k-ease-out, ease-out) backwards; }
@@ -945,21 +952,22 @@ body.simple.hud-more.more-open #hud #touch > #tc-more-tray { display: block; pos
 body.simple.hud-more.more-open #hud #touch > .more-fold:not(.hidden),
 body.simple.hud-more.more-open:not(.chat-open):not(.tac) #hud-chat > .more-fold {
   position: absolute; top: var(--lr-top) !important; bottom: auto !important; right: auto !important; z-index: 2;
-  left: calc(var(--sa-l) + 8px + var(--mi, 1) * (var(--tr-b) + var(--tr-g))) !important; width: var(--tr-b) !important; height: var(--tr-b) !important;
+  left: calc(var(--sa-l) + 8px + var(--mi, 1) * (var(--tr-b) + var(--mg))) !important; width: var(--tr-b) !important; height: var(--tr-b) !important;
   animation: more-in 200ms var(--k-ease-out, ease-out) calc(var(--mi, 1) * 18ms) backwards; }
 body.simple.hud-more.more-open #hud #touch > #tc-offer.more-fold { animation: more-in 200ms var(--k-ease-out, ease-out) calc(var(--mi, 1) * 18ms) backwards, tc-offer-glow 2.8s ease-in-out 400ms infinite; }
 /* the weak army's pill under the tray */
 body.simple.hud-more.more-open #hud-advice.more-fold:not(.hidden) { left: calc(var(--sa-l) + 8px) !important; top: calc(var(--lr-top) + var(--tr-b) + 27px) !important;
   animation: more-pill 200ms var(--k-ease-out, ease-out) 60ms backwards; }
 @keyframes more-tray { from { opacity: 0; transform: scaleX(0.25); } }
-@keyframes more-in { from { opacity: 0; transform: translateX(calc(-1 * var(--mi, 1) * (var(--tr-b) + var(--tr-g)))) scale(0.55); } }
+@keyframes more-in { from { opacity: 0; transform: translateX(calc(-1 * var(--mi, 1) * (var(--tr-b) + var(--mg)))) scale(0.55); } }
 @keyframes more-pill { from { opacity: 0; transform: translateY(-8px); } }
 body.reduce-motion.more-open :is(#tc-more-tray, .more-fold), body.reduce-motion #tc-more .tc-more-dots { animation: none !important; transition: none !important; }
 @media (prefers-reduced-motion: reduce) { body.more-open :is(#tc-more-tray, .more-fold), #tc-more .tc-more-dots { animation: none !important; transition: none !important; } }
-/* the chat out, under the chart in the menu's old place (its own badge is the chat's), unless a wide desk keeps it by
-   the helm (chat.css) */
-body.simple.hud-more:not(.more-desk):not(.chat-open):not(.tac) #hud-chat > .chat-toggle { top: var(--tr-top); left: auto; right: calc(var(--sa-r) + 8px + (var(--mm) - var(--tr-b)) / 2); bottom: auto; width: var(--tr-b); height: var(--tr-b); }
-body.simple.hud-more:not(.more-desk):not(.chat-open):not(.tac) #hud-chat > .chat-toast { top: var(--tr-top); left: auto; right: calc(var(--sa-r) + 8px + (var(--mm) + var(--tr-b)) / 2 + var(--tr-g)); bottom: auto; }
+/* «Цели и вести» out, alone under the chart (in the chat's place before; a wide desk keeps the menu beside it) */
+body.simple.hud-more:not(.more-desk) #hud #touch > #tc-news { right: calc(var(--sa-r) + 8px + (var(--mm) - var(--tr-b)) / 2); }
+/* the chat folded: its line of private words beside «⋯» */
+body.simple.hud-more:not(.more-desk):not(.chat-open):not(.tac) #hud-chat > .chat-toast { top: var(--lr-top); left: calc(var(--sa-l) + 8px + var(--tr-b) + var(--tr-g)); right: auto; bottom: auto; }
+body.simple.hud-more.more-open #hud-chat > .chat-toast { display: none; }
 
 /* ---------- a clean sea on top (owner, 2026-10-29: «скрывать плашки с хп (вверху у врагов) и какие-то текстовые
    плашки вверху в центре, если бой не начат или цель не выбрана»). With no mark and no fight: no boss's bar (unless it
@@ -983,3 +991,30 @@ body.simple #hud-autosail .as-stop { min-height: 24px; min-width: 0; padding: 2p
   body.simple .hud-isle1 .i1-m i { font-size: 10px; }
   body.simple .hud-isle1 .btn { min-height: 26px !important; padding: 2px 8px; font-size: 11px; }
 }
+
+/* ---------- «Огонь» and its four (owner, 2026-10-29: «там где у нас огонь надо 4 вокруг иконки, а не три показывать,
+   4 будет с умениями из ядер… и расстояние небольшое вокруг этой кнопки огонь сделай, а то ядра и подзорная труба почти
+   налезло на огонь»). On a touch screen in a fight: «Умения» (seaabil.ts SKILL_IDS), «Приёмы», «Снаряд» and «Цель» on one
+   arc round «Огонь» on the screen's inner side, 42° apart, symmetric on its diagonal. The radius keeps 9–12 px between
+   the painted rings (each ring's art reaches 11 % past its button: seahud.css .sea-round::after) — «Огонь»'s and theirs,
+   and theirs from each other; the satellites 4 px smaller than the old ones so the arc keeps inside the corner.
+   Slots from low left up to the top: «Умения» 198°, «Приёмы» 156°, «Снаряд» 114° (its count hangs under it, clear of
+   «Огонь» and of «Приёмы»), «Цель» 72°. */
+body.simple.touch { --sat: calc(var(--sea-btn) - 4px); --fc: calc(var(--sea-pad) + 4px + var(--sea-fire) / 2); --fR: calc(var(--sea-fire) * 0.61 + var(--sat) * 0.61 + 12px); }
+body.simple.touch.sea-fight #touch > :is(#tc-skill, #tc-abil, #tc-ammo, #tc-lock) { width: var(--sat); height: var(--sat); translate: none; }
+body.simple.touch.sea-fight #touch > #tc-skill { right: calc(var(--sa-r) + var(--fc) + var(--fR) * 0.9511 - var(--sat) / 2); bottom: calc(var(--sa-b) + var(--fc) - var(--fR) * 0.309 - var(--sat) / 2); }
+body.simple.touch.sea-fight #touch > #tc-abil { right: calc(var(--sa-r) + var(--fc) + var(--fR) * 0.9135 - var(--sat) / 2); bottom: calc(var(--sa-b) + var(--fc) + var(--fR) * 0.4067 - var(--sat) / 2); }
+body.simple.touch.sea-fight #touch > #tc-ammo { right: calc(var(--sa-r) + var(--fc) + var(--fR) * 0.4067 - var(--sat) / 2); bottom: calc(var(--sa-b) + var(--fc) + var(--fR) * 0.9135 - var(--sat) / 2); }
+body.simple.touch.sea-fight #touch > #tc-lock { right: calc(var(--sa-r) + var(--fc) - var(--fR) * 0.309 - var(--sat) / 2); bottom: calc(var(--sa-b) + var(--fc) + var(--fR) * 0.9511 - var(--sat) / 2); }
+/* (no «Приёмы» on her: «Особое» takes its slot) */
+body.simple.touch.sea-fight:not(.sea-abil) #touch > #tc-special { width: var(--sat); height: var(--sat); right: calc(var(--sa-r) + var(--fc) + var(--fR) * 0.9135 - var(--sat) / 2); bottom: calc(var(--sa-b) + var(--fc) + var(--fR) * 0.4067 - var(--sat) / 2); }
+/* the row of things to do keeps left of the arc's widest point */
+body.simple.touch.sea-fight #touch > .tc-actrow { right: calc(var(--sa-r) + var(--fc) + var(--fR) * 0.9511 + var(--sat) / 2 + 12px); }
+body.simple.touch.sea-fight:not(.sea-docked) #touch > .tc-actrow { max-width: min(560px, 62vw, calc(100vw - var(--sa-r) - var(--fc) - var(--fR) * 0.9511 - var(--sat) / 2 - 12px - var(--helm-w))); }
+/* «Умения» with nothing in it yet: dim, its card says where they come from */
+body.simple #touch > #tc-skill.none .k-btn-ico { filter: grayscale(0.5) brightness(0.75); }
+
+/* ---------- the dash's chip off the wheel (owner, 2026-10-29: «и вот тут иконке дай чуть места расстояние чтобы не
+   налазело на штурвал»): on the wheel's upper right at 60°, ~8 px clear of the gold sail arc (#tc-sailring, 9 px past the
+   wheel) and of the «+»; a 30 px chip, its centre --stick/2 + 35 px from the wheel's. */
+body.simple.touch #tc-dashchip { top: calc(var(--stick) * 0.067 - 45.3px); right: calc(var(--stick) / 4 - 32.5px); }

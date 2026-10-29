@@ -689,7 +689,7 @@ export class Hud {
     }
     // (clear of the round buttons under the chart, and of the fight's on the right when the card unfolded sends them low)
     let tr = sx + sw;
-    const fight = [...document.querySelectorAll('#tc-special, #tc-abil:not(.hidden), #tc-ammo, #tc-lock, #tc-fire, #tc-actrow')].filter(seen)
+    const fight = [...document.querySelectorAll('#tc-special, #tc-abil:not(.hidden), #tc-skill:not(.hidden), #tc-ammo, #tc-lock, #tc-fire, #tc-actrow')].filter(seen)
       .map((el) => el.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0 && r.left > W / 2 && r.top < top + 70 * z);
     // (the band two toasts tall at most: only what reaches into it)
     const tb = top + 70 * z;

@@ -687,7 +687,7 @@ export class Renderer {
     if (mix < 0.35) for (const s of [...ships].filter((x) => !x.own).sort((a, b) => b.y - a.y)) this.drawLabel(s, state, aim.boardTarget === s.id, aim.target === s.id);
     if (mix < 0.35) { const me = ships.find((x) => x.own); if (me) this.drawOwnPlate(me, state); } // docs/32 §12
     this.drawEmotes(ships); // docs/32 §12: an emote over a ship, ~3 s
-    if (own) this.drawThreatMarks(ships, own);
+    if (own) this.drawThreatMarks(ships, own, aim.target ?? null, aim.boardTarget);
     this.goalMark = null;
     if (own) this.drawQuestMark(state, own);
     this.drawTexts();
@@ -3172,7 +3172,7 @@ export class Renderer {
     if (this.time - this.band.at > 0.5 || this.band.at < 0) {
       let top = 0, bottom = this.h;
       this.hudRects = [];
-      for (const sel of ['#hud-captain', '#hud-map', '#hud-region', '#hud-goals:not(.hidden)', '#hud-prompt', '#hud-stack > :not(.hidden)', '#hud-bottom', '#hud-menu', '#tc-stick', '#tc-sail', '#tc-fire', '#tc-act:not(.hidden)', '#tc-special:not(.hidden)', '#tc-abil:not(.hidden)', '#tc-target:not(.hidden)', '#tc-menu', '#tc-news:not(.hidden)', '#tc-isle:not(.hidden)', '#tc-more', '#tc-offer:not(.hidden)', '#chat-toggle', '#chat.open', '#toasts:not(:empty)', '#encounter:not(.hidden)', '#surrender:not(.hidden)', '#advcard:not(.hidden)']) {
+      for (const sel of ['#hud-captain', '#hud-map', '#hud-region', '#hud-goals:not(.hidden)', '#hud-prompt', '#hud-stack > :not(.hidden)', '#hud-bottom', '#hud-menu', '#tc-stick', '#tc-sail', '#tc-fire', '#tc-act:not(.hidden)', '#tc-special:not(.hidden)', '#tc-abil:not(.hidden)', '#tc-skill:not(.hidden)', '#tc-target:not(.hidden)', '#tc-menu', '#tc-news:not(.hidden)', '#tc-isle:not(.hidden)', '#tc-more', '#tc-offer:not(.hidden)', '#chat-toggle', '#chat.open', '#toasts:not(:empty)', '#encounter:not(.hidden)', '#surrender:not(.hidden)', '#advcard:not(.hidden)']) {
         document.querySelectorAll<HTMLElement>(sel).forEach((e) => {
           const r = e.getBoundingClientRect();
           if (r.width > 0 && r.height > 0) this.hudRects.push(r);
@@ -3279,13 +3279,15 @@ export class Renderer {
 
   /** Hostile ships and bosses beyond the edge of the screen: a mark on the rim pointing at each, with the range,
    * so a phone's close view never hides who is coming. */
-  private drawThreatMarks(ships: DrawShip[], own: SailState): void {
+  private drawThreatMarks(ships: DrawShip[], own: SailState, mark: number | null = null, board: number | null = null): void {
     const g = this.g;
     this.hudBand(); // the HUD's blocks, measured
     this.rimTaken = [];
     const marks: { s: DrawShip; d: number }[] = [];
     for (const s of ships) {
       if (s.own || s.sinkT > 0) continue;
+      // only her own mark (owner, 2026-10-29: «автофокусов быть не должно» — no foe's arrow on the rim she did not take)
+      if (s.id !== mark && s.id !== board) continue;
       const boss = s.info?.npcRole === 'boss';
       if (!boss && !(s.flags & SF.HOSTILE)) continue;
       const d = Math.hypot(s.x - own.x, s.y - own.y);
