@@ -112,7 +112,7 @@ import { SeaHud, bestSpecial, pettyOf, seaWord } from './ui/seahud.ts'; // docs/
 import { adriftFacts, adriftInfo, askScuttle, juryTapText } from './ui/adrift.ts'; // owner 2026-10-20: torn sails, the jury rig, scuttling home
 import type { DeckSlot, SeaKeys } from './ui/seahud.ts';
 import { HudMore } from './ui/hudmore.ts'; // owner, 2026-10-29: the rest of the round buttons behind one «⋯»
-import { SeaAbil, abilWhy } from './ui/seaabil.ts'; // the captain's abilities on a phone: «Приёмы» and its row (owner, 2026-10-26)
+import { SKILL_IDS, SeaAbil, abilWhy, skillWord } from './ui/seaabil.ts'; // the captain's abilities on a phone: «Приёмы» and its row (owner, 2026-10-26)
 import type { AbilView } from './ui/seaabil.ts';
 import { goalCount, goalSheetView } from './ui/goalsheet.ts'; // «Цели и вести»: the campaign, the quests taken, the orders
 import { attackKind, buildCursors, cursorUrl } from './ui/cursor.ts'; // the attack cursor (owner, 2026-10-07)
@@ -482,30 +482,17 @@ function resolveTarget(): number | null {
   };
   if (targetPinned && alive(targetId)) return targetId;
   targetPinned = false;
-  // The campaign's step a ship's fight (the opening's «Первый залп», «Борт о борт», a story's boarding): a ship first,
-  // the sea's beasts only with no ship about — the frame took a shark, the finger's «Атаковать» chased it four minutes
-  // through more sharks and the newcomer went down before «Борт о борт» (the run of 2026-10-23).
-  const shipsFirst = shipStep();
-  let best: number | null = null, bd = 1600, beast: number | null = null, bb = 1600;
-  for (const s of state.ships.values()) {
-    if (!s.info || !(s.cur.flags & SF.HOSTILE) || s.cur.flags & (SF.SINKING | SF.DOCKED)) continue;
-    const d = dist(own.x, own.y, s.cur.x, s.cur.y);
-    if (shipsFirst && s.info.npcRole === 'beast') {
-      if (d < bb) [bb, beast] = [d, s.id];
-      continue;
-    }
-    if (d < bd) {
-      bd = d;
-      best = s.id;
+  // No mark by itself (owner, 2026-10-29: «если я никого не атакую не показывай мне наверху плашки акула там или еще
+  // что-то. только если я атакую кого-то и взял в фокус. автофокусов быть не должно»): her mark is the ship she tapped,
+  // took with «Цель», chose in its menu or the helmsman closes with on her «Огонь» (pursuit) — never the nearest foe, an
+  // aggressor or a quest's ship. A shot at her is a toast and the fight's buttons, not a mark. The one exception is the
+  // First Watch's own lesson «Атакуйте»: its raider is the lesson's mark (its finger on «Атаковать»).
+  if (state.onboarding?.stage === 'attack') {
+    for (const s of state.ships.values()) {
+      if (s.info?.name === WATCH_RAIDER && s.cur.flags & SF.HOSTILE && alive(s.id)) return s.id;
     }
   }
-  return best ?? beast;
-}
-/** The campaign's step now is a ship's fight (sunk or boarded). */
-function shipStep(): boolean {
-  const q = state.self?.quests.find((x) => x.kind === 'campaign');
-  const k = q?.op ?? q?.does;
-  return k === 'sink' || k === 'board';
+  return null;
 }
 
 const portScreen = new PortScreen((m) => net.send(m), () => closeModal());
@@ -618,7 +605,7 @@ setInterval(() => {
 // the round buttons and the row of actions (2026-10-16: at 480×270 it lay under the row): from its own place it steps up
 // (and aside) to the first free spot of the bottom band. Four times a second, moved by \`translate\` only.
 // (the row's own buttons, not its box: with every thing to do in sight it wraps upward, its rows of unequal length)
-const INFO_OBSTACLES = '#tc-actrow:not(.hidden) > .k-btn, #tc-fire, #tc-cast:not(.hidden), #tc-ammo, #tc-special, #tc-abil:not(.hidden), #tc-lock, #tc-stick, #tc-speed, #tc-deck, #tc-act:not(.hidden), #tc-offer:not(.hidden), #tc-sail, #hud-captain .cs, #toasts > .toast, #hud-chat > .chat-toggle, #tc-menu, #tc-news, #tc-isle, #tc-more, #hud-map, #advcard:not(.hidden), #encounter:not(.hidden), #surrender:not(.hidden)';
+const INFO_OBSTACLES = '#tc-actrow:not(.hidden) > .k-btn, #tc-fire, #tc-cast:not(.hidden), #tc-ammo, #tc-special, #tc-abil:not(.hidden), #tc-skill:not(.hidden), #tc-lock, #tc-stick, #tc-speed, #tc-deck, #tc-act:not(.hidden), #tc-offer:not(.hidden), #tc-sail, #hud-captain .cs, #toasts > .toast, #hud-chat > .chat-toggle, #tc-menu, #tc-news, #tc-isle, #tc-more, #hud-map, #advcard:not(.hidden), #encounter:not(.hidden), #surrender:not(.hidden)';
 setInterval(() => {
   const el = document.getElementById('hud-bottom');
   if (!el) return;
@@ -1163,6 +1150,12 @@ const seaAbil = new SeaAbil($('touch'), (id) => {
   aimAtMark();
   sendAbility(id);
 });
+// «Умения» (owner, 2026-10-29: «4 будет с умениями из ядер… люди на мобилках не понимают что помимо ядер есть разные
+// активные способности»): the fourth round button by «Огонь» — her active talents and the deck mount, out of the shot's
+// wheel; used as the fire wheel's own entries are (pickFireWheel).
+const seaSkill = new SeaAbil($('touch'), (id) => {
+  if (id !== 'none') pickFireWheel(id);
+}, SKILL_IDS);
 // The island screen's way in from the sea (owner, 2026-10-15): «Остров» under the captain's plate. Always there (owner,
 // 2026-10-19: «под аватаркой кнопка острова, щас я ее не вижу или я еще остров не отрыл»): before she holds an island
 // it says how to found a town of her own and sails her to the nearest free island (the route `own`, goalroute.ts).
@@ -4212,7 +4205,7 @@ function seaFrame(): void {
     return !!e && !e.classList.contains('hidden');
   }).length + goalCount(goalSheetView(self));
   const unread = (Number(($('chat-unread').textContent ?? '').replace(/\D/g, '')) || 0) + (Number(($('unread').textContent ?? '').replace(/\D/g, '')) || 0);
-  // A fight on or near: her mark (picked, or the nearest foe within a mile), her guns busy, the helmsman after one.
+  // A fight on or near: her mark (picked by her: no auto-mark, owner 2026-10-29), her guns busy, the helmsman after one.
   const fight = !self.dockedAt && (targetId !== null || !!state.pursuit || !!you.combat);
   // A world boss as her mark: its slim line steps aside for her mark's (owner, 2026-10-07: «OLD MOORINGS» twice).
   document.body.classList.toggle('sea-boss-target', targetId !== null && (state.bosses.some((b) => b.id === targetId) || state.ships.get(targetId)?.info?.npcRole === 'boss'));
@@ -4237,6 +4230,7 @@ function seaFrame(): void {
   });
   hudMore.frame(simpleHud() && !state.onboarding?.stage);
   seaAbil.frame(touch.enabled && simpleHud() && !self.dockedAt ? abilView() : null);
+  seaSkill.frame(touch.enabled && simpleHud() && !self.dockedAt ? skillView() : null);
 }
 
 /** One simple sea HUD for every input (owner, 2026-10-07), unless the detailed interface is asked for. */
@@ -4272,6 +4266,26 @@ function abilView(): AbilView[] | null {
       ...(charging ? { why: abilWhy('resolve', Math.round(you.resolve)) } : dread ? { why: abilWhy('dread', a.dreadCost ?? 0) } : gold ? { why: abilWhy('gold', a.goldCost ?? 0) } : {}),
     };
   });
+}
+
+/** «Умения» on a phone (owner, 2026-10-29): her active talents and the deck mount, their cooldowns; none yet — one dim
+ *  entry that says where they come from (the button stays: it is how a newcomer learns there is more than the shot). */
+function skillView(): AbilView[] | null {
+  const self = state.self, you = state.you;
+  if (!self || !you || self.dockedAt) return null;
+  const now = state.estServerTime();
+  const out: AbilView[] = activeTalents(self.talents).slice(0, 5).map((tl) => {
+    const cd = (tl.active?.cooldown ?? 0) * (state.ownStats?.cooldownMul ?? 1);
+    return { id: `t:${tl.id}`, art: `tree_${tl.tree}`, name: tl.name, description: tl.description, ult: false, cooldown: cd, left: Math.max(0, (self.talentCooldowns[tl.id] ?? 0) - now), dim: false, charge: null };
+  });
+  const m = self.loadout.mount;
+  if (m) {
+    const def = MOUNTS[m];
+    const r = Math.max(0, Math.min(1, you.reload.mount));
+    out.push({ id: 'm:', art: `mount_${m}`, name: def.name, description: def.description, ult: false, cooldown: def.reload, left: r >= 1 ? 0 : (1 - r) * def.reload, dim: false, charge: null });
+  }
+  if (!out.length) out.push({ id: 'none', art: 'tree_command', name: skillWord('skNone'), description: skillWord('skNoneD'), ult: false, cooldown: 0, left: 0, dim: true, charge: null, why: skillWord('skNoneWhy') });
+  return out;
 }
 
 /** The desk's gun deck (owner, 2026-10-07: «возвращай иконки, обводки графические»): the captain's four abilities
@@ -4471,7 +4485,7 @@ function hudKeepOut(): TmRect[] {
   if (now - hudBoxesAt < 250) return hudBoxes;
   hudBoxesAt = now;
   hudBoxes = [];
-  for (const el of document.querySelectorAll<HTMLElement>('#hud-captain .cs, #hud-map, #tc-menu, #tc-news, #tc-isle, #tc-more, #tc-offer, #hud-chat > .chat-toggle, #tc-target, #hud-boss, #hud-watch, #tc-stick, #tc-sail, #tc-speed, #tc-fire, #tc-cast, #tc-ammo, #tc-lock, #tc-special, #tc-abil:not(.hidden), #tc-act, #tc-deck, #hud-bottom > *, #toasts > .toast')) {
+  for (const el of document.querySelectorAll<HTMLElement>('#hud-captain .cs, #hud-map, #tc-menu, #tc-news, #tc-isle, #tc-more, #tc-offer, #hud-chat > .chat-toggle, #tc-target, #hud-boss, #hud-watch, #tc-stick, #tc-sail, #tc-speed, #tc-fire, #tc-cast, #tc-ammo, #tc-lock, #tc-special, #tc-abil:not(.hidden), #tc-skill:not(.hidden), #tc-act, #tc-deck, #hud-bottom > *, #toasts > .toast')) {
     const r = el.getBoundingClientRect();
     if (r.width > 2 && r.height > 2 && el.getClientRects().length) hudBoxes.push({ left: r.left - 6, top: r.top - 6, right: r.right + 6, bottom: r.bottom + 6 });
   }

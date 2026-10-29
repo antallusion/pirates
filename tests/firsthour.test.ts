@@ -151,8 +151,11 @@ test('a ship\'s step and a shark at hand: no «Атаковать» finger on th
   }
   assert.ok(pointerTargets({ stage: 'c:neutral', touch: true, docked: false, battle: false, markBeast: true }).length > 0);
   const main = (await import('node:fs')).readFileSync('client/src/main.ts', 'utf8');
-  assert.match(main, /if \(shipsFirst && s\.info\.npcRole === 'beast'\)/);
-  assert.match(main, /return best \?\? beast;/);
+  // (owner, 2026-10-29: «автофокусов быть не должно») the frame takes nothing by itself — neither a ship nor a shark;
+  // only the First Watch's lesson raider is its mark
+  assert.ok(!/return best \?\? beast;/.test(main), 'no nearest foe taken');
+  assert.match(main, /if \(state\.onboarding\?\.stage === 'attack'\) \{\s+for \(const s of state\.ships\.values\(\)\) \{\s+if \(s\.info\?\.name === WATCH_RAIDER && s\.cur\.flags & SF\.HOSTILE && alive\(s\.id\)\) return s\.id;/);
+  assert.ok(pointerTargets({ stage: 'c:sink', touch: true, docked: false, battle: false }).includes('#tc-lock'), '«Цель» takes the mark');
 });
 
 test('«Что говорят старики» — rum to hand over, none aboard: the finger on the market\'s rum, not on «Сдать груз»', async () => {

@@ -1,15 +1,18 @@
 // «⋯» — the sea HUD's one brass button for everything that is not steering, the chart, the guns and her own plate
 // (owner, 2026-10-29: «на мобиле лютый графический перегруз, надо все как-то прятать в подменюшки, оставить только
 // самое важное. и нажимая на эту подменюшку будут выезжать все остальные кнопочки»).
-//   - Folded (MORE_ITEMS): the menu, the news, «Остров», her offer, the day's gift, the parrot's emotes and the weak
-//     army's pill. A wide desk keeps the menu and the news under the chart (it has the room; their keys are chips).
+//   - Folded (MORE_ITEMS): the menu, the chat, «Остров», her offer, the day's gift, the parrot's emotes and the weak
+//     army's pill. A wide desk keeps the menu under the chart (it has the room; its key is a chip) and the chat by the
+//     helm (chat.css).
+//   - Out under the chart: «Цели и вести», the quests (owner, 2026-10-29: «иконка квеста должна быть вместо иконки
+//     чата, их надо поменять» — the chat went into the tray in its place).
 //   - The button stands first in the row under her plate; a tap slides the row out of it in a brass tray (transform and
 //     opacity only: cheap on a phone), the weak army's pill under the row. A tap outside, Esc, or any of them picked
 //     folds it again.
 //   - Their counts and «!» gather on the button as one badge, so nothing that asks for her is lost.
 //   - Off in the First Watch (its lessons show the HUD a block at a time and point at these very buttons), in a boarding
 //     and with the detailed interface.
-// The chat stays out, under the chart (seahud.css), its own badge the chat's.
+// The chat's unread count (chat.ts #chat-unread) feeds the button's badge too.
 
 import { dict } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/seahud.ts';
@@ -18,9 +21,9 @@ import { badgeText, buttonHtml } from './kit/button.ts';
 const L = dict(EN, RU);
 
 /** What folds behind «⋯», in the tray's order. */
-export const MORE_ITEMS = ['#touch > #tc-menu', '#touch > #tc-news', '#touch > #tc-isle', '#touch > #tc-offer', '#touch > #tc-daily', '#hud-chat > #cos-qbtn', '#hud-advice'] as const;
+export const MORE_ITEMS = ['#touch > #tc-menu', '#hud-chat > #chat-toggle', '#touch > #tc-isle', '#touch > #tc-offer', '#touch > #tc-daily', '#hud-chat > #cos-qbtn', '#hud-advice'] as const;
 /** A wide desk keeps these out (its keys on their rims, the room under the chart). */
-const DESK_OUT = new Set<string>(['#touch > #tc-menu', '#touch > #tc-news']);
+const DESK_OUT = new Set<string>(['#touch > #tc-menu', '#hud-chat > #chat-toggle']);
 const DESK_WIDE = '(min-width: 1100px) and (min-height: 600px)';
 
 /** The badge the button carries for what is folded: the counts summed, else «!» for a mark with no number. */
@@ -126,7 +129,7 @@ export class HudMore {
       if (el.id === 'hud-advice') { marks.push('!'); continue; }
       // (her offers' count is a shop's, not a call: it glows in the tray, it does not add to the button)
       if (el.id === 'tc-offer') continue;
-      for (const b of el.querySelectorAll<HTMLElement>('.k-badge')) if (!b.classList.contains('hidden')) marks.push(b.textContent || '!');
+      for (const b of el.querySelectorAll<HTMLElement>('.k-badge, .chat-unread')) if (!b.classList.contains('hidden')) marks.push(b.textContent || '!');
     }
     const text = moreBadge(marks);
     if (text !== this.badgeKey) {

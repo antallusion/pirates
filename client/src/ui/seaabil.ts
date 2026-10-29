@@ -12,6 +12,9 @@
 //     in the middle of the sea (CLAUDE.md §3);
 //   - a tap anywhere else, the port, the end of the fight's sea folds it.
 // Its own component (not seahud.ts / actbar.ts): the fight's other buttons and the target's actions stay as they are.
+// The same component is «Умения» too (owner, 2026-10-29: «там где у нас огонь надо 4 вокруг иконки, а не три… 4 будет с
+// умениями из ядер. а то щас люди на мобилках не понимают что помимо ядер есть разные активные способности»): her
+// active talents and the deck mount, out of the shot's wheel onto a button of their own (SKILL_IDS).
 
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/seaabil.ts';
@@ -45,6 +48,18 @@ export function abilWhy(k: 'resolve' | 'dread' | 'gold', n: number): string {
   return L(k, { n });
 }
 
+/** The ids and words of one such button: «Приёмы» (the captain's) or «Умения» (her active talents and the mount). */
+export interface AbilIds {
+  id: string;
+  fan: string;
+  tip: string;
+  /** The body's class while it is out. */
+  body: string;
+  words: { btn: string; btnReady: string; fan: string };
+}
+export const ABIL_IDS: AbilIds = { id: 'tc-abil', fan: 'tc-abilfan', tip: 'tc-abiltip', body: 'sea-abil', words: { btn: 'btn', btnReady: 'btnReady', fan: 'fan' } };
+export const SKILL_IDS: AbilIds = { id: 'tc-skill', fan: 'tc-skillfan', tip: 'tc-skilltip', body: 'sea-skill', words: { btn: 'skBtn', btnReady: 'skBtnReady', fan: 'skFan' } };
+
 /** A press held this long shows the card. */
 const HOLD_MS = 420;
 
@@ -61,9 +76,11 @@ export class SeaAbil {
   private tipT: ReturnType<typeof setTimeout> | undefined = undefined;
 
   private use: (id: string) => void;
+  private ids: AbilIds;
 
-  constructor(root: HTMLElement, use: (id: string) => void) {
+  constructor(root: HTMLElement, use: (id: string) => void, ids: AbilIds = ABIL_IDS) {
     this.use = use;
+    this.ids = ids;
     const make = (html: string) => {
       const t = document.createElement('template');
       t.innerHTML = html.trim();
@@ -71,9 +88,9 @@ export class SeaAbil {
       root.append(el);
       return el;
     };
-    this.btnEl = make(`<button type="button" id="tc-abil" class="k-btn k-btn--icon k-btn--lg tc-abil sea-round hidden" aria-haspopup="true" aria-expanded="false" aria-controls="tc-abilfan"><span class="tc-abil-pic"></span><i class="tc-abil-cd" aria-hidden="true"></i><b class="k-badge tc-abil-n hidden" aria-hidden="true"></b></button>`) as HTMLButtonElement;
-    this.fanEl = make('<div id="tc-abilfan" class="tc-abilfan hidden" role="toolbar"></div>');
-    this.tipEl = make('<div id="tc-abiltip" class="tc-abiltip hidden" role="tooltip"></div>');
+    this.btnEl = make(`<button type="button" id="${ids.id}" class="k-btn k-btn--icon k-btn--lg tc-abil sea-round hidden" aria-haspopup="true" aria-expanded="false" aria-controls="${ids.fan}"><span class="tc-abil-pic"></span><i class="tc-abil-cd" aria-hidden="true"></i><b class="k-badge tc-abil-n hidden" aria-hidden="true"></b></button>`) as HTMLButtonElement;
+    this.fanEl = make(`<div id="${ids.fan}" class="tc-abilfan hidden" role="toolbar"></div>`);
+    this.tipEl = make(`<div id="${ids.tip}" class="tc-abiltip hidden" role="tooltip"></div>`);
     this.btnEl.addEventListener('click', () => this.toggle(!this.open));
     this.btnEl.addEventListener('contextmenu', (e) => e.preventDefault());
     this.wireFan();
@@ -91,7 +108,7 @@ export class SeaAbil {
   frame(list: AbilView[] | null): void {
     const on = !!list && list.length > 0;
     this.btnEl.classList.toggle('hidden', !on);
-    document.body.classList.toggle('sea-abil', on);
+    document.body.classList.toggle(this.ids.body, on);
     if (!on) {
       if (this.open) this.toggle(false);
       this.list = [];
@@ -111,14 +128,15 @@ export class SeaAbil {
       const n = this.btnEl.querySelector<HTMLElement>('.tc-abil-n')!;
       n.textContent = String(ready);
       n.classList.toggle('hidden', ready === 0);
-      const name = ready ? L('btnReady', { n: ready }) : L('btn');
+      const w = this.ids.words;
+      const name = ready ? L(w.btnReady as 'btnReady', { n: ready }) : L(w.btn as 'btn');
       this.btnEl.setAttribute('aria-label', name);
       this.btnEl.title = name;
     }
     const shape = [lang(), list.map((a) => `${a.id}:${a.art}:${a.charge === null ? 0 : 1}:${a.ult ? 1 : 0}`).join(',')].join('|');
     if (shape !== this.shape) {
       this.shape = shape;
-      this.fanEl.setAttribute('aria-label', L('fan'));
+      this.fanEl.setAttribute('aria-label', L(this.ids.words.fan as 'fan'));
       this.fanEl.innerHTML = list.map((a) => `<button type="button" class="k-btn k-btn--icon tc-abi sea-round${a.ult ? ' ult' : ''}" data-ab="${esc(a.id)}" aria-label="${esc(L('use', { name: a.name }))}">`
         + icon(a.art, '✦', 'k-btn-ico')
         + '<i class="tc-abi-cd" aria-hidden="true"></i>'
@@ -190,7 +208,7 @@ export class SeaAbil {
     const w = f.offsetWidth, h = f.offsetHeight;
     const gap = Math.max(8, Math.round(b.width * 0.22));
     const left = Math.max(6, b.left - gap - w);
-    const others = [...document.querySelectorAll<HTMLElement>('#touch > :not(#tc-abilfan):not(#tc-abiltip):not(#tc-abil):not(.hidden), #tc-actrow > .k-btn, #hud-map, #hud-captain .cs, #tc-target:not(.hidden), #hud-bottom > *')]
+    const others = [...document.querySelectorAll<HTMLElement>(`#touch > :not(.tc-abilfan):not(.tc-abiltip):not(#${this.ids.id}):not(.hidden), #tc-actrow > .k-btn, #hud-map, #hud-captain .cs, #tc-target:not(.hidden), #hud-bottom > *`)]
       .filter((e) => e.getClientRects().length && getComputedStyle(e).display !== 'none' && getComputedStyle(e).visibility !== 'hidden')
       .map((e) => e.getBoundingClientRect()).filter((r) => r.width > 2 && r.height > 2 && !(r.width > innerWidth * 0.8 && r.height > innerHeight * 0.8));
     const hits = (top: number) => others.some((r) => r.left < left + w + 2 && r.right > left - 2 && r.top < top + h + 2 && r.bottom > top - 2);
@@ -276,7 +294,7 @@ export class SeaAbil {
     if (!a) return this.hideTip();
     const state = a.locked ? L('lv6') : a.left > 0 ? L('left', { n: Math.ceil(a.left) }) : a.dim ? a.why ?? '' : L('ready');
     const html = `<b class="tc-abt-h">${icon(a.art, '', 'tc-abt-ico')}<span>${esc(a.name)}</span></b><span class="tc-abt-d">${esc(a.description)}</span>`
-      + `<span class="tc-abt-f"><span>${esc(L('cd', { n: Math.round(a.cooldown) }))}</span>${state ? `<span class="${a.locked || a.dim || a.left > 0 ? 'bad' : 'good'}">${esc(state)}</span>` : ''}</span>`;
+      + `<span class="tc-abt-f"><span>${a.cooldown > 0 ? esc(L('cd', { n: Math.round(a.cooldown) })) : ''}</span>${state ? `<span class="${a.locked || a.dim || a.left > 0 ? 'bad' : 'good'}">${esc(state)}</span>` : ''}</span>`;
     if (this.tipFor === id && !fresh && this.tipEl.dataset.h === html) return;
     this.tipFor = id;
     this.tipEl.dataset.h = html;
@@ -315,4 +333,9 @@ export class SeaAbil {
     this.tipFor = null;
     this.tipEl.classList.add('hidden');
   }
+}
+
+/** «Умения»'s own words (main.ts skillView). */
+export function skillWord(k: 'skNone' | 'skNoneD' | 'skNoneWhy' | 'skMount'): string {
+  return L(k);
 }

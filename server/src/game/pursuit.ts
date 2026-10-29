@@ -505,10 +505,11 @@ function autoBattle(game: Game, ship: ShipEntity, t: ShipEntity, run: Pursuit): 
 // ------------------------------------------------------------------ the gun captains (auto-aim, auto-fire)
 
 /** The ship her gunners lay on: her mark under «Атаковать», else the ship that struck her last (self-defence). */
-export function gunneryMark(game: Game, ship: ShipEntity): ShipEntity | null {
+export function gunneryMark(game: Game, ship: ShipEntity, selfDefence = true): ShipEntity | null {
   const run = pursuitOf(ship);
   const t = run && run.roam === undefined ? game.ships.get(run.target) : undefined;
   if (t && t.alive && !t.sinkingUntil && !t.surrendered && !damageBlocked(game, ship, t)) return t;
+  if (!selfDefence) return null;
   let best: ShipEntity | null = null, bt = game.now - SELF_DEFENCE;
   for (const [id, at] of ship.attackers) {
     if (at < bt) continue;
@@ -573,7 +574,9 @@ export function stepAutoFire(game: Game): void {
     const run = pursuitOf(ship);
     if (!s.autoFire && !(run && run.roam === undefined && !s.expert)) continue;
     if (ship.reload.port > 0 && ship.reload.starboard > 0 && (s.expert || (ship.chaserReload.bow > 0 && ship.chaserReload.stern > 0))) continue;
-    const t = gunneryMark(game, ship);
+    // (owner, 2026-10-29: «автофокусов быть не должно»): the crews fire by themselves only at the mark she ordered
+    // («Атаковать», «Огонь»'s run) — never at a ship that struck her of its own; her own «Огонь» still answers it
+    const t = gunneryMark(game, ship, false);
     if (!t) continue;
     // (her own shot spent: the next she has aboard — round, heavy, chain, grape — not silent guns over a full locker)
     if (ship.ammo[ship.ammoSel] <= 0) ship.ammoSel = SPARE_SHOT.find((a) => ship.ammo[a] > 0) ?? ship.ammoSel;
