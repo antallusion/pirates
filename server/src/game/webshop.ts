@@ -41,7 +41,7 @@ import { opsPrice, opsShut } from './liveops.ts';
 import type { PlayerSession } from './player.ts';
 import { buyShip, buyUnit, payIn, sendBalance, sendPremium, setWebMail, setWebPay, shipWhy, unitOffer, unitWhy } from './premium.ts';
 import { refitHolds } from './refit.ts';
-import { MAX_BERTHS } from './shipbuilding.ts';
+import { berthsFull } from './shipbuilding.ts';
 import { accountOfferWhy, buyForAccount, shopState } from './shop.ts';
 
 export type OrderStatus = 'pending' | 'paid' | 'done' | 'canceled' | 'failed';
@@ -294,7 +294,7 @@ export class WebShop {
         if (!p) return null;
         if (p.loadout?.classId === c) return 'yours';
         if ((p.level ?? 1) < (x.lv ?? 1)) return 'level';
-        return (p.berths?.length ?? 0) >= MAX_BERTHS ? 'berths' : null;
+        return berthsFull(p) ? 'berths' : null;
       }
       case 'unit': {
         const u = x.unit!;

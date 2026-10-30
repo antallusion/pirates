@@ -65,6 +65,13 @@ export const GRAPPLE_REACH = 1.8;
  *  the narrowest target she has, so the quick fight's broadsides do not sink her on the way in (the point of the game is
  *  to close and board). */
 export const BOARD_RUN = { maxSpeed: 0.7, accel: 4, turnRate: 0.8, incomingDamageMul: -0.4 } as const;
+/** Chain or grape from a ship on her boarding run fouls a sea ship's running rigging (forum 2026-10-30, Нефигугум:
+ *  «мелочь (пираты) отлетает от пушек, не успеваю сблизиться»): this much off her way for BOARD_SNARE_SEC, renewed. */
+export const BOARD_SNARE = 0.25;
+export const BOARD_SNARE_SEC = 5;
+/** A pirate of the sea running from a fight she has lost (her hull holed past her nerve) runs low in the water: this
+ *  much off her way while she runs — before, a small one at 22 % outsailed the captain for ever. */
+export const HOLED_RUN = 0.2;
 
 /** A laid broadside (auto-aim, docs/23 item 34): her gun captains train each gun on the mark within this many degrees
  *  of her beam, and every ball flies from its own port to the mark — they converge on her instead of flying parallel. */

@@ -30,14 +30,14 @@ import { IN_BATTLE_WHY, inBattle } from './inbattle.ts'; // owner, 2026-10-22
 import { campaignFoes } from './campaign.ts'; // owner, 2026-10-22: «Огонь» takes her quest's foe
 import { AIMED_SPREAD, AUTO_ARC_DEG, BOARD_RUN, CHASE_GIVE_UP, LAY_ARC_DEG, closeRange, leadPoint } from '../../../shared/src/data/gunnery.ts';
 import { roamInReach } from '../../../shared/src/data/roamers.ts';
-import { hullOf } from '../../../shared/src/data/reach.ts';
 import { AMMO, CHASER_CONE } from '../../../shared/src/data/ships.ts';
 import type { PursuitMode, PursuitStop } from '../../../shared/src/protocol.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { angleDiff, DEG, headingOf } from '../../../shared/src/math.ts';
 import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { stopAutosail, autosailOf } from './autosail.ts';
-import { boardingRangeBetween, canBoard, captainsShip, crewRefuses, startBoarding } from './boarding.ts';
+import { BOARD_ABEAM, BOARD_FAR, BOARD_SPEED, boardingRangeBetween, canBoard, captainsShip, crewRefuses, startBoarding } from './boarding.ts';
+import { BOARD_GAP, boardGap, hullOf } from '../../../shared/src/data/reach.ts';
 import { NO_BOARD_HER, NO_BOARD_OWN, boardingOffVs, noBoardHolds } from './colours.ts';
 import { applyDamage, damageBlocked, effectiveRange, fireBroadside, fireChaser, sideHeading } from './combat.ts';
 import type { Game } from './Game.ts';
@@ -115,6 +115,9 @@ export interface Pursuit {
   closing?: boolean;
   /** The odds taken («Рискнуть»), and she out of reach by then: the grapples fly as soon as she is alongside. */
   grapple?: boolean;
+  /** The boarding intercept (forum 2026-10-30): her nearest to the mark so far and when — a run that keeps closing is no
+   *  «endless chase», hits or none. */
+  nearest?: { d: number; at: number };
   /** Held fast: the planner's route to her mark, its next point, when planned and to where. */
   way?: { path: Path; i: number; at: number; tx: number; ty: number } | null;
   /** Held fast: since when (under a knot), how many times running, when last under way; sailed round by the route
@@ -333,8 +336,11 @@ export function stepPursuit(game: Game): void {
     // (seaux 2026-10-11: the auto-battle's broadsides only within her guns' reach — before, it settled the weak one
     // from as far as she could see her, 2.6 km; out of reach the pursuit below sails her in first)
     if (run.auto && Math.hypot(t.state.x - ship.state.x, t.state.y - ship.state.y) <= autoReach(ship) && autoBattle(game, ship, t, run)) continue;
-    // No endless chases (docs/23 item 44): forty seconds and not a hit either way.
-    const lastHit = Math.max(run.since, t.attackers.get(ship.id) ?? -Infinity, ship.attackers.get(t.id) ?? -Infinity);
+    // No endless chases (docs/23 item 44): forty seconds and not a hit either way — nor, running in to board (forum
+    // 2026-10-30, her gunners holding their fire on the prize), a cable gained on her.
+    const dNow = Math.hypot(t.state.x - ship.state.x, t.state.y - ship.state.y);
+    if (run.mode === 'board' && (!run.nearest || dNow < run.nearest.d - INTERCEPT_GAIN)) run.nearest = { d: dNow, at: now };
+    const lastHit = Math.max(run.since, t.attackers.get(ship.id) ?? -Infinity, ship.attackers.get(t.id) ?? -Infinity, run.mode === 'board' ? run.nearest?.at ?? -Infinity : -Infinity);
     // (The First Watch's raider never slips away from her pupil nor strikes to her: she is the lesson, QA 2026-10-07.)
     if (now - lastHit > CHASE_GIVE_UP && !t.isPlayer && game.npcs.get(t.id)?.practice !== ship.id) {
       const brain = game.npcs.get(t.id);
@@ -386,7 +392,7 @@ export function stepPursuit(game: Game): void {
         send(game, s, run);
         continue;
       }
-      if (run.grapple && d <= reach * 1.5 && canBoard(game, ship, t) === null) {
+      if (run.grapple && d <= reach * 2.5 && interceptReady(game, s, ship, t)) {
         stopPursuit(game, s, 'board');
         startBoarding(game, ship, t, 'standard');
         continue;
@@ -394,6 +400,32 @@ export function stepPursuit(game: Game): void {
       if (d >= ALONGSIDE_FROM) ship.input.sailTarget = 1;
     }
   }
+}
+
+/** The boarding intercept (forum 2026-10-30, Нефигугум: «мелочь (пираты) отлетает от пушек, не успеваю сблизиться»):
+ *  a run that gains this much on her mark is no endless chase. */
+export const INTERCEPT_GAIN = 25;
+/** The helmsman's grapples on his own mark fly within this many times the grapples' gap of water (her way matched by him,
+ *  on any bearing off her beam), INTERCEPT_QUEST_GAP for a ship her quest sent her after. */
+export const INTERCEPT_GAP = 1.6;
+export const INTERCEPT_QUEST_GAP = 2.2;
+
+/** Her quest's foe: the campaign's, or a ship sent after her. */
+export function questMark(game: Game, s: PlayerSession, t: ShipEntity): boolean {
+  const b = game.npcs.get(t.id);
+  return campaignFoes(game, s).includes(t.id) || (!!b && (b.huntAccount === s.accountId || b.huntFor === s.ship?.id || b.practice === s.ship?.id));
+}
+
+/** The helmsman alongside his mark: the grapples may fly — every rule of canBoard but the strict lie of the hulls, which he
+ *  sees to himself within INTERCEPT_GAP (INTERCEPT_QUEST_GAP for her quest's foe) of the grapples' water. */
+export function interceptReady(game: Game, s: PlayerSession, ship: ShipEntity, t: ShipEntity): boolean {
+  const why = canBoard(game, ship, t);
+  if (why === null) return true;
+  if (why !== BOARD_FAR && why !== BOARD_ABEAM && why !== BOARD_SPEED) return false;
+  const gap = BOARD_GAP * (questMark(game, s, t) ? INTERCEPT_QUEST_GAP : INTERCEPT_GAP);
+  if (boardGap(hullOf(ship), hullOf(t)) > gap) return false;
+  // (the rest of canBoard's rules after the lie of the hulls: her crew's heart and hands)
+  return crewRefuses(ship) === null;
 }
 
 /** Held fast (2026-10-09): under a knot for STUCK_SEC with her mark beyond a cable (a bay's pocket, a pier's slip, a

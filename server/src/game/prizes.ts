@@ -11,7 +11,7 @@ import { dist } from '../../../shared/src/math.ts';
 import { tx } from '../../../shared/src/sim/shipstats.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
 import type { TrophyHistory } from '../../../shared/src/sim/shipstats.ts';
-import { MAX_BERTHS } from './shipbuilding.ts';
+import { berthCap, berthsFull } from './shipbuilding.ts';
 import { boardingRangeBetween, canBoard, claimPrize, startBoatBoarding } from './boarding.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
@@ -63,7 +63,7 @@ export function takePrize(game: Game, s: PlayerSession, target: ShipEntity, keep
   if (need === null) return 'She cannot be taken as a prize';
   if (prizesOf(game, ship).length >= MAX_PRIZES) return `You can shepherd at most ${MAX_PRIZES} prizes`;
   if (ship.crew - need < Math.max(4, ship.stats.crewMin * 0.5)) return `A prize crew of ${need} would leave you short-handed`;
-  if (keep && s.profile!.berths.length + prizesOf(game, ship).filter((p) => p.trophy).length >= MAX_BERTHS) return `No berth free for a trophy (${MAX_BERTHS} at most)`;
+  if (keep && s.profile!.berths.length + prizesOf(game, ship).filter((p) => p.trophy).length >= berthCap(s.profile)) return `No berth free for a trophy (${berthCap(s.profile)} at most)`;
   if (keep) target.trophy = trophyHistory(game, s, target, keep);
   ship.crew -= need;
   target.crew = need;
@@ -97,7 +97,7 @@ export function sellPrizes(game: Game, s: PlayerSession, port: Port): void {
   for (const prize of prizesOf(game, ship)) {
     if (dist(prize.state.x, prize.state.y, port.x, port.y) > 3000) continue;
     // A trophy (docs/16 #5): into a berth here, her name and her story with her — unless every berth is taken.
-    if (prize.trophy && s.profile!.berths.length < MAX_BERTHS) {
+    if (prize.trophy && !berthsFull(s.profile!)) {
       const { gear: _gear, ...rest } = prize.loadout;
       void _gear;
       s.profile!.berths.push({ port: port.id, loadout: { ...rest, name: prize.trophy.was, trophy: prize.trophy }, hull: Math.max(0.2, prize.hull / prize.stats.hullMax) });

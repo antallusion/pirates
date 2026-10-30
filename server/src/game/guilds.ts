@@ -16,6 +16,7 @@
 //  - Islands: up to six guild islands (leased from the treasury by vice-admirals); a base on one raises it through
 //    five levels (+2 slots a level, weekly upkeep from the island's treasury).
 
+import { berthsFull } from './shipbuilding.ts';
 import { lackMore, lackRoom } from '../../../shared/src/data/buyfail.ts';
 import { legacyIslands } from '../../../shared/src/world/worldgen.ts';
 import { gyardView } from './guildyard.ts';
@@ -659,7 +660,7 @@ export function borrowShip(game: Game, s: PlayerSession, id: number): string | n
   const f = g.fleet.find((x) => x.id === id);
   if (!f || f.lentTo !== null) return 'That hull is out';
   if (f.port !== s.ship?.docked) return `She lies at ${game.portById(f.port)?.name ?? f.port}`;
-  if (p.berths.length >= 3) return 'Your berths are full';
+  if (berthsFull(p)) return 'Your berths are full';
   const deposit = Math.round(SHIP_CLASSES[f.loadout.classId].price * 0.2);
   if (p.gold < deposit) return lackMore(`The deposit is ${deposit} silver`, deposit, p.gold);
   p.gold -= deposit;

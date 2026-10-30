@@ -79,7 +79,11 @@ test('lay down a keel, wait for the yard, launch her; the old ship waits in her 
   assert.equal(ship.loadout.name, 'Iron Verdict II');
   assert.equal(p.berths.length, 1);
   assert.equal(p.berths[0].loadout.classId, oldClass);
+  ship.cargo = {}; // (forum 2026-10-30: the hold goes across with her — the sloop's hold would not take the timber left)
   c.push({ t: 'berth', action: 'swap', index: 0 });
+  // (forum 2026-10-30: the brig's men the old hull has no hammocks for are asked about first, then paid off)
+  const ask = c.last('berth_ask');
+  if (ask && ship.loadout.classId !== oldClass) c.push({ ...ask.again, force: true });
   assert.equal(ship.loadout.classId, oldClass);
   assert.equal(p.berths[0].loadout.classId, 'brig');
   const g0 = p.gold;

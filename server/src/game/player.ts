@@ -68,7 +68,7 @@ import type { CampaignState } from '../../../shared/src/data/campaign/progress.t
 import { contractFor } from '../../../shared/src/data/xpcurve.ts';
 import { dailyView, newDaily, sanitizeDaily } from './dailies.ts';
 import type { DailyState } from '../../../shared/src/data/dailies.ts';
-import { sanitizeShipbuilding } from './shipbuilding.ts';
+import { berthCap, sanitizeShipbuilding } from './shipbuilding.ts';
 import type { Berth, BuildOrder } from './shipbuilding.ts';
 import type { FigureheadId, Plan } from '../../../shared/src/data/shipbuild.ts';
 import type { Oath, QuestLog } from './quests.ts';
@@ -148,6 +148,8 @@ export interface Profile {
   builds: BuildOrder[];
   plans: Plan[];
   berths: Berth[];
+  /** «Причал»: berths bought for doubloons over the free five (shipbuilding.ts berthCap). */
+  berthsBought?: number;
   figureheads: FigureheadId[]; // carved figureheads found, not yet fitted
   exotic: Partial<Record<GoodId, number>>; // units bought in lawless waters (Exotic Goods)
   salvageDay: number; // Salvage King: the game day of the last raising
@@ -708,7 +710,8 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     pathSwitchAt: p.pathSwitchAt,
     builds: p.builds.map((b) => ({ id: b.id, port: b.port, classId: b.classId, name: b.name, done: b.done, start: b.start, frame: b.build.frame, plank: b.build.plank, quality: b.build.quality })),
     plans: p.plans.map((x) => ({ id: x.id, classId: x.classId, quality: x.quality, variants: x.variants, uses: x.uses })),
-    berths: p.berths.map((b) => ({ port: b.port, name: b.loadout.name, classId: b.loadout.classId, hull: Math.round(b.hull * 100), ...(b.loadout.trophy ? { trophy: b.loadout.trophy } : {}) })),
+    berths: p.berths.map((b) => ({ port: b.port, name: b.loadout.name, classId: b.loadout.classId, hull: Math.round(b.hull * 100), level: shipLevelOf(b.loadout), mods: Object.values(b.loadout.modules ?? {}).reduce((a, n) => a + (n ?? 0), 0), guns: [b.loadout.guns.port, b.loadout.guns.starboard], ...(b.loadout.mount ? { mount: b.loadout.mount } : {}), ...(b.loadout.trophy ? { trophy: b.loadout.trophy } : {}) })),
+    berthCap: berthCap(p),
     research: researchView(p),
     streak: streakView(p),
     figureheads: p.figureheads,

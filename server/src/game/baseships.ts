@@ -250,21 +250,31 @@ export function ownShipLost(game: Game, s: PlayerSession, esc: ShipEntity): void
 
 /** In a port's yard her own damaged ships are mended for silver, if her purse bears it. */
 export function ownPortRepairFleet(game: Game, s: PlayerSession): void {
+  for (const m of ownPortMends(game, s)) if (s.profile!.gold >= m.cost) m.pay();
+}
+
+/** The port's yard's bill for each of her own ships in the squadron that is hurt (forum 2026-10-30: shown in the port's
+ *  repair, paid with her own ship's). */
+export function ownPortMends(game: Game, s: PlayerSession): { e: FleetEscort; name: string; cost: number; pay: () => void }[] {
   const p = s.profile!;
   const h = ownIsland(game, s.accountId);
-  if (!h) return;
+  if (!h) return [];
+  const out: { e: FleetEscort; name: string; cost: number; pay: () => void }[] = [];
   for (const e of p.fleet.escorts) {
     if (!e.own || e.hull >= 0.999) continue;
     const x = shipsOf(h).find((k) => k.id === e.own);
     if (!x) continue;
     const cost = ownPortRepair(x.role, x.level, e.hull);
-    if (cost <= 0 || p.gold < cost) continue;
-    p.gold -= cost;
-    game.db.ledger(s.accountId, 'own_ship_repair', -cost, nameOf(x));
-    e.hull = 1;
-    x.hull = 1;
-    game.sendTo(s, { t: 'toast', msg: `The port’s yard mends ${nameOf(x)} for ${cost} silver.`, kind: 'info' });
+    if (cost <= 0) continue;
+    out.push({ e, name: nameOf(x), cost, pay: () => {
+      p.gold -= cost;
+      game.db.ledger(s.accountId, 'own_ship_repair', -cost, nameOf(x));
+      e.hull = 1;
+      x.hull = 1;
+      game.sendTo(s, { t: 'toast', msg: `The port’s yard mends ${nameOf(x)} for ${cost} silver.`, kind: 'info' });
+    } });
   }
+  return out;
 }
 
 // ------------------------------------------------------------------------------------------------ the shipyard's orders

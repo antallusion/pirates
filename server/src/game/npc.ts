@@ -36,7 +36,7 @@ import { avoidPort } from './events.ts';
 import { convoyArrived } from './empires.ts';
 import { applyDamage, dash, effectiveRange, fireBroadside, fireChaser, igniteShip, sideHeading } from './combat.ts';
 import { SURRENDER_WAIT, foughtClose, strikeColours, struck, surrenderClosed } from './struck.ts';
-import { CHASE_GIVE_UP } from '../../../shared/src/data/gunnery.ts';
+import { CHASE_GIVE_UP, HOLED_RUN } from '../../../shared/src/data/gunnery.ts';
 import { caravanSold } from './tradefx.ts';
 import { coveAt, loseTrail, signature } from './smugglefx.ts';
 import { applyTrade, bestRoute } from './economy.ts';
@@ -319,8 +319,12 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
     // Escort: hostile to whoever is hostile to its owner.
     if (other.id === npc.ownerId || other.ownerId === npc.ownerId) return false;
     const owner = game.ships.get(npc.ownerId);
-    if (npc.hiredBy !== undefined) return !!owner && hiredFoe(game, npc, owner, other);
-    return !!owner && (game.isHostile(other, owner) || owner.attackers.has(other.id) || other.attackers.has(owner.id));
+    // (forum 2026-10-30, Нефигугум: «сопровождение нападает на них» — her squadron by the guards' rule too: it answers
+    // whoever fired on her or on it, joins her own mark, and starts nothing with a ship at peace; the old rule took any
+    // ship that ever traded a blow with her, a bump included, for a foe for good)
+    if (npc.hiredBy !== undefined || npc.fleetId) return !!owner && hiredFoe(game, npc, owner, other);
+    const lately = (m: Map<number, number>, id: number) => (m.get(id) ?? -999) > game.now - 120;
+    return !!owner && (game.isHostile(other, owner) || lately(owner.attackers, other.id) || lately(other.attackers, owner.id));
   }
   if (game.npcs.get(npc.id)?.practice === other.id) return true;
   if (other.isPlayer && game.npcs.get(npc.id)?.huntFor === other.id) return true;
@@ -732,6 +736,9 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
   // (a foe softened for a fresh captain's first fights — the opening's tender — fights it out: since the reaches were
   // halved, owner 2026-10-22, a pirate running at 22 % outran a long 9-pounder's 205 m and the lesson was never done)
   if (role === 'pirate' && lowHull && prey && ship.softFor === undefined) {
+    // (holed, she runs low in the water — forum 2026-10-30: a small pirate at 22 % outsailed a ⚓4 captain for ever)
+    if (!ship.hasEffect('holed_run')) ship.addEffect({ id: 'holed_run', until: now + 4, mods: { maxSpeed: -HOLED_RUN } }, now);
+    else { const e = ship.effects.find((x) => x.id === 'holed_run'); if (e) e.until = now + 4; }
     const away = headingOf(ship.state.x - (prey as ShipEntity).state.x, ship.state.y - (prey as ShipEntity).state.y);
     steer(game, ship, brain, away, 1);
     return;
@@ -766,6 +773,7 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
       return;
     }
     brain.target = p.id;
+    if (ship.ownerId !== null) keepUp(game, ship, false); // (her station's haste is not for the fight)
     engage(game, ship, brain, p, preyD);
     return;
   }
@@ -812,7 +820,10 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
       const tx = owner.state.x + f.x * off.y + r.x * off.x, ty = owner.state.y + f.y * off.y + r.y * off.x;
       const d = dist(ship.state.x, ship.state.y, tx, ty);
       // Close up fast when out of station; match the flagship's heading once there.
-      if (ship.hiredBy !== undefined) {
+      // (forum 2026-10-30, Нефигугум: the escorts fell astern and strayed — a ship of hers out of station by a cable
+      // gets every hand to the braces until she is back: KEEP_UP's way, the wind no matter)
+      keepUp(game, ship, d > KEEP_UP_FROM || (d > KEEP_UP_TO && ship.hasEffect(KEEP_UP_ID)));
+      if (ship.hiredBy !== undefined || ship.fleetId) {
         // (a hired guard keeps abreast of her: she presses on while astern of her station and eases off ahead of it —
         // at the fleet's 0.8 she trailed a captain under full sail by a cable, QA 2026-10-25)
         const ahead = (ship.state.x - tx) * f.x + (ship.state.y - ty) * f.y;
@@ -827,6 +838,23 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
     }
   }
   followPath(game, ship, brain);
+}
+
+/** A ship of a captain's squadron this far from her station presses on with KEEP_UP (forum 2026-10-30), until she is
+ *  this near it again. */
+export const KEEP_UP_FROM = 160;
+export const KEEP_UP_TO = 50;
+export const KEEP_UP_ID = 'keep_station';
+export const KEEP_UP = { maxSpeed: 0.8, accel: 3, turnRate: 0.5 } as const;
+
+/** Her squadron's «keep station» on or off. */
+export function keepUp(game: Game, ship: ShipEntity, on: boolean): void {
+  if (on === ship.hasEffect(KEEP_UP_ID)) return;
+  if (on) ship.addEffect({ id: KEEP_UP_ID, until: game.now + 1e9, mods: { ...KEEP_UP }, flags: ['personal_wind'] }, game.now);
+  else {
+    ship.effects = ship.effects.filter((e) => e.id !== KEEP_UP_ID);
+    ship.recompute(game.now);
+  }
 }
 
 /** Her captain in port: she stands off to HIRE_WAIT_R from the harbour on her own side of it and lies to there. */

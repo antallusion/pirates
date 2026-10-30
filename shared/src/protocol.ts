@@ -182,18 +182,20 @@ export type ClientMsg =
   | { t: 'oath'; oath: 'code' | 'marque' }
   | { t: 'build'; req: { classId: ShipClassId; name: string; frame: WoodId; plank: WoodId; rares: Partial<Record<RareSlot, GoodId>>; figurehead?: FigureheadId; planId?: string; master?: boolean } }
   | { t: 'build_launch'; id: string }
-  | { t: 'berth'; action: 'swap' | 'sell'; index: number }
+  | { t: 'berth'; action: 'swap' | 'sell'; index: number; /** «Пересесть»: the men over her hammocks paid off (asked first). */ force?: boolean }
+  | { t: 'berth'; action: 'buy' }
   /** The yard's tree of hulls (docs/20): learn a hull with her parents' experience and the free pool. */
   | { t: 'research'; classId: ShipClassId }
   | { t: 'plan_buy'; classId: ShipClassId }
   | { t: 'figurehead_buy'; id?: FigureheadId }
   | { t: 'shipyard'; action: 'repair' }
+  | { t: 'shipyard'; action: 'repair_escorts' }
   | { t: 'shipyard'; action: 'module'; module: ModuleId }
   | { t: 'shipyard'; action: 'unfit'; module: ModuleId }
   | { t: 'shipyard'; action: 'keel' }
   | { t: 'craft'; recipe: CraftRecipe; n: number }
   | { t: 'shipyard'; action: 'guns'; side: Side; gun: GunId }
-  | { t: 'shipyard'; action: 'buy_ship'; classId: ShipClassId }
+  | { t: 'shipyard'; action: 'buy_ship'; classId: ShipClassId; /** «Купить и оставить старый на причале». */ keep?: boolean; /** The men over her hammocks paid off (asked first). */ force?: boolean }
   | { t: 'shipyard'; action: 'mount'; mount: MountId }
   | { t: 'shipyard'; action: 'refit' }
   | { t: 'gear'; action: 'equip'; uid: number }
@@ -843,7 +845,9 @@ export interface PrivateState {
   /** Shipbuilding (docs/02 §3). */
   builds: { id: string; port: string; classId: ShipClassId; name: string; done: number; start: number; frame: WoodId; plank: WoodId; quality: PlanQuality }[];
   plans: { id: string; classId: ShipClassId | null; quality: PlanQuality; variants: VariantId[]; uses: number }[];
-  berths: { port: string; name: string; classId: ShipClassId; hull: number; trophy?: TrophyHistory }[];
+  berths: { port: string; name: string; classId: ShipClassId; hull: number; /** Her ⚓, her fittings' levels in all, her guns (port, starboard), her deck mount (forum 2026-10-30: «Причал»). */ level?: number; mods?: number; guns?: [GunId, GunId]; mount?: MountId; trophy?: TrophyHistory }[];
+  /** Her berths in all: the free ones (two) and those bought (server shipbuilding.ts berthCap). */
+  berthCap?: number;
   /** The yard's tree of hulls (docs/20): each hull's experience, the free pool, the hulls researched. */
   research?: ResearchView;
   /** Ships sunk or taken in a row since she last made port (docs/16 #4), and what it adds to plunder and experience. */
@@ -1093,7 +1097,10 @@ export interface PortView {
   yard: { woods: WoodId[]; /** What the port's carvers sell (one or two). */ figureheads: FigureheadId[]; plans: boolean; master: boolean };
   shipyard: {
     tier: number;
+    /** Her own ship's and the squadron's together (the one button mends all). */
     repairCost: number;
+    /** «Починить сопровождение» (forum 2026-10-30): the ships with her, hurt, and their share of repairCost. */
+    escorts?: { cost: number; ships: EscortMendView[] };
     ships: { classId: ShipClassId; price: number; tradeIn: number }[];
     /** `unfit`: what taking out her top level costs (the level is lost; Modular Refit: 0). */
     modules: { module: ModuleId; level: number; cost: number; max: number; excellent: boolean; unfit?: number }[];
@@ -1128,6 +1135,15 @@ export interface PortView {
   /** The goods her quests ask her to bring and she has not aboard (owner, 2026-10-21: «квест на покупку рома»): sold here
    *  or not, the stock, how many fit her hold now, and the nearest harbours that sell it — the market's card for it. */
   questBuys?: { quest: string; name: string; good: GoodId; qty: number; soldHere: boolean; stock: number; fit: number; sellers: BuySeller[] }[];
+}
+
+/** A ship with her that the port's yard would mend (forum 2026-10-30): her name, her hull now (per cent), the price; `away`
+ *  — a guard hired at sea lying off the harbour. */
+export interface EscortMendView {
+  name: string;
+  hull: number;
+  cost: number;
+  away?: boolean;
 }
 
 export interface ShipInfo {
@@ -2182,6 +2198,9 @@ export type ServerMsg =
   | { t: 'pursuit'; on: boolean; target?: number; mode?: PursuitMode; why?: PursuitStop; roam?: number }
   /** The odds of a boarding asked before the grapples fly (docs/23 item 49): the window «Скорее всего, вы проиграете». */
   | { t: 'board_risk'; risk: BoardRisk }
+  /** «Пересесть» or a new hull (forum 2026-10-30): `men` of her army will not fit the hull — asked, then sent `again` with
+   *  `force` (they are paid off ashore). */
+  | { t: 'berth_ask'; men: number; again: Extract<ClientMsg, { t: 'berth'; action: 'swap' | 'sell' }> | Extract<ClientMsg, { t: 'shipyard'; action: 'buy_ship' }> }
   /** docs/25 item 64: a mate of her group boards (or is boarded) within reach: she may come aboard (null: no longer). */
   | { t: 'board_offer'; offer: BoardOffer | null }
   /** The chance for the target line (docs/23 item 49). */

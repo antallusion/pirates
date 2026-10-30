@@ -11,7 +11,7 @@ import { dist } from '../../../shared/src/math.ts';
 import type { Game } from './Game.ts';
 import type { NpcBrain } from './npc.ts';
 import type { PlayerSession } from './player.ts';
-import { MAX_BERTHS } from './shipbuilding.ts';
+import { berthsFull } from './shipbuilding.ts';
 import { prizeCrewNeeded, prizeValue } from './prizes.ts';
 import { cargoValue } from '../../../shared/src/sim/shipstats.ts';
 import type { ShipEntity } from './ship.ts';
@@ -140,7 +140,7 @@ export function surrenderOffer(game: Game, s: PlayerSession, ship: ShipEntity): 
     id: ship.id, name: ship.name, classId: ship.loadout.classId, faction: ship.faction, role: ship.npcRole, captain: ship.captainName,
     ransom: seaRansom(ship.shipLevel, cargoValue(ship.cargo)), cargo: units, gold: ship.purse, // the ransom by her waters (docs/31 §9)
     prize: crew !== null ? { crew, value: prizeValue(ship, me) } : null,
-    trophy: crew !== null && (s.profile?.berths.length ?? MAX_BERTHS) < MAX_BERTHS,
+    trophy: crew !== null && !!s.profile && !berthsFull(s.profile),
     range: SURRENDER_RANGE, until: (brain?.surrenderedAt || game.now) + SURRENDER_WAIT,
     outcome: game.outcomeNums(s, me, ship, ship.purse), // the two choices (owner, 2026-10-18)
   };

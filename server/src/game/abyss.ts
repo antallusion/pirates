@@ -5,6 +5,7 @@
 // season's raid on the Eye (bosses.ts); abyssal metal, ritual shards and the Raising Ritual of the ghost ship;
 // and the chapters of the story of who moved the stars.
 
+import { berthsFull } from './shipbuilding.ts';
 import { bossXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { dist } from '../../../shared/src/math.ts';
 import type { AbyssView } from '../../../shared/src/protocol.ts';
@@ -279,7 +280,7 @@ export function raisingRitual(game: Game, s: PlayerSession): string | null {
   if (ship.docked || dist(ship.state.x, ship.state.y, eye.x, eye.y) > 1500) return 'The ritual is spoken at the rim of the Eye of the Abyss';
   if ((p.ritualShards ?? 0) < 3) return `Three ritual shards are needed (you have ${p.ritualShards ?? 0})`;
   if ((ship.cargo.cursed_relics ?? 0) < 30) return 'Thirty cursed relics must go into the Eye';
-  if (p.berths.length >= 4) return 'You have no berth free for her';
+  if (berthsFull(p)) return 'You have no berth free for her';
   p.ritualShards -= 3;
   ship.cargo.cursed_relics = (ship.cargo.cursed_relics ?? 0) - 30;
   if (!ship.cargo.cursed_relics) delete ship.cargo.cursed_relics;
