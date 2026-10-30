@@ -40,18 +40,18 @@ function inPort(name: string): { game: Game; c: FakeConn; s: PlayerSession; db: 
 
 // ------------------------------------------------------------------------------------------------ 2. «Причал»
 
-test('«Причал»: two berths free, +1 for 300 doubloons each to ten, the doubloons off in one ledger row; saved with her', () => {
+test('«Причал»: three berths free, +1 for 300 doubloons each to ten, the doubloons off in one ledger row; saved with her', () => {
   const { game, c, s, db } = inPort('Berth Buyer');
   const p = s.profile!;
-  assert.equal(BERTHS_FREE, 2);
+  assert.equal(BERTHS_FREE, 3);
   assert.equal(BERTH_PRICE, 300);
-  assert.equal(berthCap(p), 2);
+  assert.equal(berthCap(p), 3);
   c.push({ t: 'berth', action: 'buy' });
   assert.match(c.last('toast')!.msg, /A berth costs 300 doubloons/);
-  assert.equal(berthCap(p), 2, 'too poor: nothing bought');
+  assert.equal(berthCap(p), 3, 'too poor: nothing bought');
   creditPremium(game, s.accountId, 5000, 'admin', 'berths');
   c.push({ t: 'berth', action: 'buy' });
-  assert.equal(berthCap(p), 3);
+  assert.equal(berthCap(p), 4);
   assert.equal(db.doubloons(s.accountId), 5000 - 300);
   for (let i = 0; i < 20; i++) c.push({ t: 'berth', action: 'buy' });
   assert.equal(berthCap(p), BERTHS_CAP, 'ten at most');
@@ -88,8 +88,9 @@ test('a new hull: «Обменять» trades the old one in; «Купить и 
   assert.equal(p.berths.length, 1, 'traded in, not berthed');
   // the berths full: «оставить» refused, the trade-in still open
   p.berths.push({ port, loadout: { ...ship.loadout, name: 'Filler' }, hull: 1 });
+  p.berths.push({ port, loadout: { ...ship.loadout, name: 'Filler 2' }, hull: 1 });
   c.push({ t: 'shipyard', action: 'buy_ship', classId: 'lugger', keep: true });
-  assert.match(c.last('toast')!.msg, /You already berth 2 ships/);
+  assert.match(c.last('toast')!.msg, /You already berth 3 ships/);
   assert.equal(ship.loadout.classId, 'pinnace');
 });
 
