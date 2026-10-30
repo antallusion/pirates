@@ -72,6 +72,12 @@ export interface NpcBrain {
   /** Beating to a mark (docs/16 P5): the last moment she was (a beat lapsed 3 s starts afresh on the better tack), and
    *  her last going about. */
   beatAt?: number;
+  /** The way she has chosen to come round on a long turn (+1 starboard, −1 port), held until she is round (steer's
+   *  sweep): re-chosen each tick she dithered, the rudder hard over one way and the other, and ran on at full way into
+   *  the rock she was turning from (isle-collide «never run aground», 2026-10-30). */
+  swingSign?: number;
+  /** The hand she rounds a thing in her way on (steer's lead line), held while her course stays foul. */
+  avoidSide?: number;
   tackAt?: number;
   surrenderedAt: number;
   /** She has struck her colours once in this life (docs/16 #3): having thought better of it, she fights on. */
@@ -1227,21 +1233,30 @@ function steer(game: Game, ship: ShipEntity, brain: NpcBrain, desired: number, s
   // keel drags on along the whole run (two soundings missed a reef between them, or nearer than the first), the bared
   // banks. In a chase she looks no farther than her mark (`upTo`): a coast behind her mark is not in her way.
   const look = Math.min(180 + ship.state.speed * 7, Math.max(upTo + ship.stats.length * 0.5, ship.stats.length * 2 + 40));
-  if (courseFoul(game, ship, desired, look)) {
+  const foul = courseFoul(game, ship, desired, look);
+  if (!foul) brain.avoidSide = undefined;
+  if (foul) {
     // Round it: the nearest clear course either way, the starboard hand first as she always did (the sea's fights are
     // tuned on it, tests/balance/); none at her look, the same at a short one (a thing close aboard); boxed in, the
     // way out under easy canvas.
     const short = ship.stats.length * 1.5 + 40 + ship.state.speed * 2;
     let found: number | null = null;
+    // (the hand she rounds it on, once chosen, first while it stays foul: a merchant re-chose it every think, port then
+    // starboard, and circled a rock for half a minute until she struck it — isle-collide, 2026-10-30)
+    const side = brain.avoidSide;
+    const offs = side === undefined ? AVOID : [...AVOID.filter((o) => Math.sign(o) === side), ...AVOID.filter((o) => Math.sign(o) !== side)];
+    let took = 0;
     for (const l of short < look - 20 ? [look, short] : [look]) {
-      for (const off of AVOID) {
+      for (const off of offs) {
         if (!courseFoul(game, ship, desired + off, l)) {
           found = wrapAngle(desired + off);
+          took = off;
           break;
         }
       }
       if (found !== null) break;
     }
+    brain.avoidSide = found !== null ? Math.sign(took) : undefined;
     if (found !== null) desired = found;
     else {
       // Boxed in (a pocket of a reef, a pier's slip): the open water nearest her head at a hull's length, slowly; none
@@ -1264,13 +1279,22 @@ function steer(game: Game, ship: ShipEntity, brain: NpcBrain, desired: number, s
   const swing = angleDiff(ship.state.heading, desired);
   if (Math.abs(swing) > 0.3) {
     const reach = 50 + ship.state.speed * 5;
+    // (the long way round sweeps the rest of the circle: 2π less the short way)
     const sweep = (sign: number) => {
-      for (let a = 0.3; a < Math.abs(swing) + 0.01; a += 0.3) if (courseFoul(game, ship, ship.state.heading + sign * a, reach)) return false;
+      const arc = Math.sign(swing) === sign ? Math.abs(swing) : Math.PI * 2 - Math.abs(swing);
+      for (let a = 0.3; a < arc + 0.01; a += 0.3) if (courseFoul(game, ship, ship.state.heading + sign * a, reach)) return false;
       return true;
     };
-    const sign = Math.sign(swing);
-    if (!sweep(sign) && sweep(-sign)) desired = wrapAngle(ship.state.heading - sign * 0.8);
-  }
+    // The short way, unless something lies on it: then the long way, and that held until she is round (or it fouls in
+    // turn) — before, the short way cleared as she started the long one, she swung back, and dithered onto the rock.
+    const short = Math.sign(swing);
+    let sign = brain.swingSign !== undefined && sweep(brain.swingSign) ? brain.swingSign : short;
+    if (sign === short && !sweep(short) && sweep(-short)) sign = -short;
+    brain.swingSign = sign === short ? undefined : sign;
+    if (sign !== short) desired = wrapAngle(ship.state.heading + sign * 0.8);
+    // Her bow on something close aboard while she comes round: way off her, so she turns inside it, not over it.
+    if (!fight && courseFoul(game, ship, ship.state.heading, ship.stats.length + 20 + ship.state.speed * 4)) sail = Math.min(sail, 0.35);
+  } else brain.swingSign = undefined;
   // Stuck detection: if we barely moved in 20 s, reverse a bit and replan.
   if (now - brain.stuckCheck.t > 20) {
     const moved = dist(ship.state.x, ship.state.y, brain.stuckCheck.x, brain.stuckCheck.y);
