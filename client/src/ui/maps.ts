@@ -7,7 +7,7 @@ import { NAME_RU } from '../lang/data.ts';
 import { composedNameRu } from '../lang/names.ts';
 import { EN, RU } from '../lang/ui/maps.ts';
 import { serverText } from '../lang/server.ts';
-import { esc } from './dom.ts';
+import { esc, icon } from './dom.ts';
 
 const L = dict(EN, RU);
 
@@ -25,9 +25,10 @@ export function placeName(s: string): string {
 
 const POINTS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const;
 
-export function mapCard(m: MapView): string {
+/** A map's card. `sail`: with «Плыть к кладу» (`data-tmsail`, the goal `tm:<id>`) where it marks its spot. */
+export function mapCard(m: MapView, sail = false): string {
   const tags: string[] = [];
-  if (m.kind === 'circle' || (m.kind === 'fragment' && m.r >= 0)) tags.push(esc(m.r === 0 ? L('spot') : L('search', { r: Math.round(m.r) })));
+  if (!m.spot && (m.kind === 'circle' || (m.kind === 'fragment' && m.r >= 0))) tags.push(esc(m.r === 0 ? L('spot') : L('search', { r: Math.round(m.r) })));
   if (m.sealed) tags.push(`<span style="color:var(--good)">${esc(L('sealed'))}</span>`);
   else if (m.verdict) tags.push(m.verdict === 'genuine' ? `<span style="color:var(--good)">${esc(L('genuine'))}</span>` : `<span style="color:var(--bad)">${esc(L('forgery'))}</span>`);
   if (m.copy) tags.push(esc(L('copy')));
@@ -43,5 +44,8 @@ export function mapCard(m: MapView): string {
     art = `<svg viewBox="0 0 40 40" width="40" height="40" style="float:right"><circle cx="20" cy="20" r="18" fill="#101418" stroke="#2ee6c8"/><path d="M20,4 L24,20 L20,17 L16,20 Z" fill="#2ee6c8" transform="rotate(${deg.toFixed(0)} 20 20)"/></svg>`;
     tags.push(esc(L('needle', { dir: L(`pt.${POINTS[Math.round(deg / 45) % 8]}`) })));
   }
-  return `<div class="tmap" style="overflow:hidden;padding:3px 0">${art}<b>${esc(placeName(m.name))}</b> <span class="muted">${tags.join(' · ')}</span>${m.clue ? `<div style="font-style:italic;font-size:12px;color:var(--fog)">${esc(serverText(m.clue))}</div>` : ''}</div>`;
+  // what to do, in one line (Нефигугум, forum post 26: «как пользоваться картами сокровищ … вгоняют в депрессию»)
+  const how = m.spot ? L('how.spot') : m.bearing !== undefined || m.kind === 'cursed' ? L('how.needle') : L('how.piece');
+  const btn = sail && m.spot ? `<button type="button" class="btn btn-small btn-primary tmap-sail" data-tmsail="${esc(m.id)}" title="${esc(L('sailTip'))}">${icon('stat_sails', '', 'ico-sm')}${esc(L('sail'))}</button>` : '';
+  return `<div class="tmap" style="overflow:hidden;padding:3px 0">${art}<b>${esc(placeName(m.name))}</b> <span class="muted">${tags.join(' · ')}</span>${m.clue ? `<div style="font-style:italic;font-size:12px;color:var(--fog)">${esc(serverText(m.clue))}</div>` : ''}<div class="tmap-how" style="font-size:12px;margin:2px 0 4px;color:#e8d6a8">${esc(how)}</div>${btn}</div>`;
 }

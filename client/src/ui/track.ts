@@ -127,8 +127,10 @@ export function objective(state: ObjState, x: number, y: number): Objective | nu
     return { kind: 'contract', ...(port ? { key: `c:${c.id}` } : {}), title: c.title, text: count.trim(), left: Math.max(0, c.expiresAt - now), ...(port ? at(port.x, port.y) : {}) };
   }
   // A treasure map in the hold with a circle to search: the nearest one leads (owner, 2026-09-29: chests to find).
-  const maps = (self.maps ?? []).filter((m) => m.r > 0).sort((a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y));
-  if (maps[0]) return { kind: 'map', title: maps[0].name, text: '', ...at(maps[0].x, maps[0].y) };
+  // (its dig spot where the chart marks one — Нефигугум, forum post 26 — else the circle's middle)
+  const pt = (m: (typeof self.maps)[number]) => (m.spot ? { x: m.spot[0], y: m.spot[1] } : { x: m.x, y: m.y });
+  const maps = (self.maps ?? []).filter((m) => m.spot || m.r > 0).sort((a, b) => Math.hypot(pt(a).x - x, pt(a).y - y) - Math.hypot(pt(b).x - x, pt(b).y - y));
+  if (maps[0]) return { kind: 'map', ...(maps[0].spot ? { key: `tm:${maps[0].id}` } : {}), title: maps[0].name, text: '', ...at(pt(maps[0]).x, pt(maps[0]).y) };
   let best: { x: number; y: number } | null = null, bd = 6000;
   for (const s of state.sights) {
     const d = Math.hypot(s.x - x, s.y - y);

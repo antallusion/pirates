@@ -16,6 +16,11 @@ export const EN = {
   'pt.SW': 'SW',
   'pt.W': 'W',
   'pt.NW': 'NW',
+  'how.spot': 'The spot is marked ✕ on the chart. Tap «Sail to the treasure»: the ship sails there and the boats dig by themselves.',
+  'how.needle': 'Follow the needle; near the chest the «Dig» button comes up.',
+  'how.piece': 'A piece of the legendary chart: every new piece narrows the circle. Inside it the «Dig» button comes up.',
+  'sail': 'Sail to the treasure',
+  'sailTip': 'The helmsman takes her to the spot; there the boats go digging',
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -34,4 +39,9 @@ export const RU: Record<keyof typeof EN, string> = {
   'pt.SW': 'зюйд-вест',
   'pt.W': 'вест',
   'pt.NW': 'норд-вест',
+  'how.spot': 'Место клада отмечено ✕ на карте. Нажмите «Плыть к кладу»: корабль доплывёт сам, и шлюпки сами начнут копать.',
+  'how.needle': 'Плывите по стрелке; рядом с кладом появится кнопка «Копать».',
+  'how.piece': 'Кусок легендарной карты: каждый новый кусок сужает круг. Внутри круга появится кнопка «Копать».',
+  'sail': 'Плыть к кладу',
+  'sailTip': 'Рулевой доведёт корабль до места, там шлюпки сами пойдут копать',
 };

@@ -22,8 +22,12 @@ export const EN = {
   unload: 'Unload',
   unloadAll: 'Unload all',
   full: 'Yard full',
-  bargeH: 'No ship to spare?',
-  bargeHint: '«Order a barge» on the island’s sheet brings timber, coal and iron for silver (the treasury pays first). With a marketplace, the town’s market sells resources for silver too.',
+  bargeH: 'Barge of resources',
+  bargeLine: 'Brings timber {t}, coal {c} and iron {i} to the island’s yard at once, for silver. Works from anywhere, at sea or in port.',
+  bargeBtn: 'Order a barge',
+  bargeHint: 'The treasury pays first, then your purse. The bigger the town hall, the bigger the barge.',
+  bargeFull: 'The yard is full of timber, coal and iron: no room for a barge now.',
+  bargeShort: 'Not enough silver: {n} more (treasury and purse together).',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -47,6 +51,10 @@ export const RU: Record<keyof typeof EN, string> = {
   unload: 'Выгрузить',
   unloadAll: 'Выгрузить всё',
   full: 'Двор полон',
-  bargeH: 'Нет свободного корабля?',
-  bargeHint: '«Заказать барку» на листе острова привозит брёвна, уголь и железо за серебро (сначала платит казна). А если построен рынок, он продаёт ресурсы за серебро.',
+  bargeH: 'Барка с ресурсами',
+  bargeLine: 'Привезёт на склад острова лес {t}, уголь {c} и железо {i} — сразу, за серебро. Заказать можно откуда угодно: в море или в порту.',
+  bargeBtn: 'Заказать барку',
+  bargeHint: 'Сначала платит казна острова, потом ваш кошелёк. Чем выше ратуша, тем больше барка.',
+  bargeFull: 'Склад полон леса, угля и железа: барку сейчас некуда разгрузить.',
+  bargeShort: 'Не хватает серебра: ещё {n} (казна и кошелёк вместе).',
 };

@@ -231,7 +231,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
       modules: MODULE_IDS.filter((m) => !(m === 'figurehead_kraken' && tier < 2 && !ship.hasFlag('modular_refit')) && fitsHere(ship, port, m) && (!MODULES[m].blueprint || p.blueprints.includes(m))).map((m) => {
         const level = ship.loadout.modules[m] ?? 0;
         const max = moduleLimit(ship, m);
-        return { module: m, level, cost: level >= max ? 0 : Math.round(moduleCost(m, level + 1, ship.cls.tier) * yardMul(ship)), max, excellent: (ship.loadout.excellent ?? []).includes(m) };
+        return { module: m, level, cost: level >= max ? 0 : Math.round(moduleCost(m, level + 1, ship.cls.tier) * yardMul(ship)), max, excellent: (ship.loadout.excellent ?? []).includes(m), ...(level > 0 ? { unfit: unfitFee(ship, m) } : {}) };
       }),
       mounts: mountOffers(ship, port),
       guns: GUN_IDS.filter((g) => GUNS[g].minTier <= Math.max(tier, 1) && GUNS[g].minTier <= ship.cls.tier && castHere(port, g)).map((g) => ({ gun: g, cost: GUNS[g].price * ship.stats.gunsPerSide })),
@@ -509,12 +509,19 @@ export function shipyardModule(game: Game, s: PlayerSession, port: Port, module:
   return null;
 }
 
+/** What the yard charges to take out the top level of a fitting: 10% of its price (Modular Refit: nothing). The level is
+ *  gone — no refund and no store keeps fittings (the yard's card says so before the tap, Нефигугум, post 26). */
+export function unfitFee(ship: ShipEntity, module: ModuleId): number {
+  const level = ship.loadout.modules[module] ?? 0;
+  return ship.hasFlag('modular_refit') || level <= 0 ? 0 : Math.round(moduleCost(module, level, ship.cls.tier) * 0.1 * yardMul(ship));
+}
+
 /** Take out one level of a fitting: the yard charges 10% of its price; Modular Refit does it for nothing. */
 export function shipyardUnfit(game: Game, s: PlayerSession, module: ModuleId): string | null {
   const ship = s.ship!;
   const level = ship.loadout.modules[module] ?? 0;
   if (!MODULES[module] || level <= 0) return 'Nothing fitted there';
-  const cost = ship.hasFlag('modular_refit') ? 0 : Math.round(moduleCost(module, level, ship.cls.tier) * 0.1 * yardMul(ship));
+  const cost = unfitFee(ship, module);
   if (s.profile!.gold < cost) return lackMore(`Taking it out costs ${cost} silver`, cost, s.profile!.gold);
   s.profile!.gold -= cost;
   if (cost) game.db.ledger(s.accountId, 'module', -cost, `unfit:${module}`);

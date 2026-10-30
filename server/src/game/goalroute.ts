@@ -38,6 +38,8 @@ import { autosailOf, helmTouched, lastStopOf, pathView, pausedCourse, planFrom, 
 import { beastsAlive } from './beasts.ts';
 import { commonView } from './commongoal.ts';
 import { canDive } from './explorefx.ts';
+import { startLanding } from './exploration.ts'; // «Плыть к кладу»: the boats dig on arrival
+import { mapSpot } from './treasure.ts';
 import { ensurePortShoals, fishingView, shoalsOf } from './fishing.ts';
 import type { Game } from './Game.ts';
 import { fieldDist, seaField } from './nav.ts';
@@ -63,6 +65,9 @@ export const ROUTE_VIEW = 6000;
 export const ROUTE_NEWBIE = 12;
 /** The place is looked at again this often while the run lasts (seconds). */
 export const ROUTE_CHECK = 2;
+/** Within this of a treasure map's spot (m) a run to it sends the boats digging (the dig itself wants her hull within
+ *  reach of the spot: short of it the landmarks say which way, explorefx.ts resolveDig). */
+const TM_AUTODIG = 250;
 /** A tap of the same goal within this is the same tap (seconds). */
 export const ROUTE_TAP = 1;
 /** The sailing distances are computed for this many of the nearest candidates in a straight line. */
@@ -87,6 +92,7 @@ export const ROUTE_WORDS = {
 /** The trades' lines shown on arrival (English; translated on the client). */
 export const ROUTE_HINTS = {
   net: 'Gulls over a shoal: slow down and cast the net.',
+  dig: 'The treasure spot: she heaves to and the boats go digging by themselves.',
   rod: 'Keep a steady pace on open water, far from land: the rod works.',
   lamp: 'At night lie still and light the lamp.',
   trap: 'Set the traps close by the shore.',
@@ -738,7 +744,7 @@ function bossPlaces(game: Game, region?: RegionId): Resolved {
 }
 
 /** Every key a goal is routed by (the client builds them; anything else is refused). */
-export const GOAL_KEYS = ['q', 'c', 't', 'd', 'w', 'r', 'cm', 'inv', 'g', 'f', 'b', 'zb', 'boss', 'dv', 'sg'] as const;
+export const GOAL_KEYS = ['q', 'c', 't', 'd', 'w', 'r', 'cm', 'inv', 'g', 'f', 'b', 'zb', 'boss', 'dv', 'sg', 'tm'] as const;
 
 /** The places a goal's key names now. */
 export function resolveGoal(game: Game, s: PlayerSession, key: string): Resolved {
@@ -801,6 +807,14 @@ export function resolveGoal(game: Game, s: PlayerSession, key: string): Resolved
       if (s.ship.docked === pt.id) return { done: true };
       return { cands: [portCand(pt)] };
     }
+    case 'tm': {
+      // «Плыть к кладу» (Нефигугум, forum post 26): a treasure map's dig spot; dug up (the map gone), the goal is met
+      const m = s.profile.explore.maps.find((x) => x.id === id);
+      if (!m) return { done: true };
+      const at = mapSpot(game, s, m);
+      if (!at) return { none: ROUTE_WORDS.none };
+      return { cands: [{ x: at.x, y: at.y, r: 40, kind: 'place', name: m.name, hint: ROUTE_HINTS.dig }] };
+    }
     case 'own': {
       // the island button (owner, 2026-10-19: «кнопка острова… или я еще остров не отрыл»): her own island, or before
       // she holds one the nearest wild island to found her town on (docs/29: any but a port's, the first free)
@@ -829,6 +843,8 @@ interface Follow {
   checkAt: number;
   /** When she came to a ship of the goal (or a fight broke the course off): the next is sailed for once the sea is quiet. */
   reachedAt: number | null;
+  /** A treasure map's run (`tm:`): the boats were sent ashore with spades at its spot. */
+  dug?: boolean;
   /** A harbour's step: when she was last put in there by the run (it docks her on arrival), and how many times. */
   dockAt?: number;
   docks?: number;
@@ -1044,6 +1060,9 @@ export function stepRoutes(game: Game): void {
     const near = arriveOf(f.view) + 20;
     // a harbour's step: brought in, she is put in (never left hove to off the quays, drifting off on the current)
     if (f.view.act === 'dock' && putIn(game, s, f)) continue;
+    // a treasure map's spot (Нефигугум, forum post 26): brought there, the boats go digging by themselves — the land
+    // button's «Копать» is the same tap, for when she came on her own
+    if (f.key.startsWith('tm:') && !run && !f.dug && !ship.landing && d <= TM_AUTODIG && startLanding(game, s) === null) f.dug = true;
     if (run) continue; // (a new place was steered for above, as it was said)
     // No course on: after a port (cast off), after a fight, after a ship of the goal reached and dealt with — the next
     // place is sailed for once the sea is quiet and her hand is off the wheel; never a place she is at.

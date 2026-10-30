@@ -1,6 +1,7 @@
 // World map: a dark nautical chart. Only what the captain has charted is drawn — information is a resource.
 
 import { drawHubMark, isFerryHub } from './ferry.ts'; // owner, 2026-10-30: «Переход» hubs
+import { anchorSpan, yardSpan } from '../../../shared/src/data/yardhulls.ts'; // the «Верфи» filter (Нефигугум, post 26)
 import { EN as HIRE_EN, RU as HIRE_RU } from '../lang/ui/seahire.ts';
 import { portMark } from '../../../shared/src/data/paintart.ts';
 import { drawFog, drawScouts, underFog, visibleOnChart } from '../render/fog.ts'; // the fog of war (owner, 2026-10-17)
@@ -52,14 +53,26 @@ import { chipRow, winHead } from './kit/window.ts';
 const W = dict(WIN_EN, WIN_RU);
 
 /** The chart's layers (docs/23 item 73): the essentials, or everything. */
-export type MapLayer = 'ports' | 'goals' | 'lairs' | 'all';
+export type MapLayer = 'ports' | 'goals' | 'lairs' | 'all' | 'yards';
 const LAYERS_KEY = 'gravetide.mapLayers';
 /** Where she stands on the chart by default: everything at a desk, the essentials on a phone. */
 export function defaultLayers(phone: boolean): Set<MapLayer> {
   return new Set<MapLayer>(phone ? ['ports', 'goals', 'lairs'] : ['all']);
 }
-/** A layer chip tapped: «Всё» alone is everything; a single layer toggles (never none). */
+/** A layer chip tapped: «Всё» alone is everything; a single layer toggles (never none). «Верфи» (Нефигугум, post 26) is
+ *  a filter of its own over the rest: on or off, whatever else is shown. */
 export function toggleLayer(cur: Set<MapLayer>, l: MapLayer): Set<MapLayer> {
+  if (l === 'yards') {
+    const n = new Set<MapLayer>(cur);
+    if (n.has('yards')) n.delete('yards');
+    else n.add('yards');
+    return n.size ? n : new Set<MapLayer>(['ports']);
+  }
+  const out = toggleBase(new Set<MapLayer>([...cur].filter((x) => x !== 'yards')), l);
+  if (cur.has('yards')) out.add('yards');
+  return out;
+}
+function toggleBase(cur: Set<MapLayer>, l: MapLayer): Set<MapLayer> {
   if (l === 'all') return cur.has('all') ? new Set<MapLayer>(['ports', 'goals', 'lairs']) : new Set<MapLayer>(['all']);
   const next = new Set<MapLayer>([...cur].filter((x) => x !== 'all'));
   if (cur.has('all')) return new Set<MapLayer>([l]);
@@ -297,11 +310,12 @@ export class WorldMap {
       { id: 'goals', icon: 'goal', label: W('map.goals') },
       { id: 'lairs', icon: 'danger', label: W('map.lairs') },
       { id: 'all', icon: 'menu_map', label: W('map.all') },
-    ].map((x) => ({ ...x, hint: W('map.layersHint') })), [...this.layers], 'mlayer');
+      { id: 'yards', icon: 'build_shipyard', label: L('layer.yards'), hint: L('layer.yardsHint') },
+    ].map((x) => ({ hint: W('map.layersHint'), ...x })), [...this.layers], 'mlayer');
     root.innerHTML = `${winHead(L('title'), { crest: 'menu_map', chips, sub: L(document.body.classList.contains('touch') ? 'subTouch' : 'sub', { islands: `${state.discovered.size} ${plural(state.discovered.size, L('island.one'), L('island.few'), L('island.many'))}` }) })}
       <div class="map-wrap"><canvas id="worldmap-canvas"></canvas>${this.pickBar(state)}<div class="map-wp-acts">${this.onAutosail ? `<button type="button" class="k-btn k-btn--primary k-btn--lg map-wp-sail${waypoint() ? '' : ' hidden'}" data-hint="${esc(W('map.sailHint'))}" title="${esc(EL('as_goTitle'))}">${icon('stat_sails', '⛵', 'k-btn-ico')}<span class="k-btn-l">${esc(W('map.sail'))}</span><small class="map-wp-name">${esc(this.markLabel())}</small></button>` : ''}<button type="button" class="k-btn k-btn--secondary k-btn--md map-wp-clear${waypoint() ? '' : ' hidden'}" title="${esc(L('wp.clearTitle'))}">${icon('goal', '', 'k-btn-ico')}<span class="k-btn-l">${esc(L('wp.clear'))}</span></button>${this.onPuzzle && ((state.adv?.pieces ?? 0) > 0 || state.adv?.grail === 'held') ? `<button type="button" class="k-btn k-btn--secondary k-btn--md map-pz">${icon('map_treasure', '', 'k-btn-ico')}<span class="k-btn-l">${esc(H4L('puzzle.btn'))}</span></button>` : ''}</div>
       <details class="map-legend"${localStorage.getItem(LEGEND_KEY) === '1' ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}<span><b style="color:var(--gold);font-weight:400">⚓</b>&nbsp;${L('lg.sector')}</span>${LEGEND_C.map(([id, key]) => `<span title="${esc(DL('map.demandHint'))}">${icon(id, '', 'ico')}${DL(key)}</span>`).join('')}<span><b style="color:#8fc3e8;font-weight:400">▪▪▪</b>&nbsp;${LS('key.convoy')}</span><span><b style="color:#dfe6f0;font-weight:400">➔</b>&nbsp;${LS('key.front')}</span><span><b style="color:#b0302a;font-weight:400">■</b>&nbsp;${LS('key.lair')}</span><span><b style="color:#cdb98a;font-weight:400">●</b>&nbsp;${LI('tide.legend')}</span><span><b style="color:#d0503a;font-weight:400">▲</b>&nbsp;${LI('look.legend')}</span><span><b style="color:#f5c77a;font-weight:400">✶</b>&nbsp;${LI('light.legend')}</span><span>${icon('map_treasure', '', 'ico')}${LI('cache.chart')}</span><span><b style="color:#e8ce78;font-weight:400">◆</b>&nbsp;${LROAM('lg')}</span><span><b style="color:#cfeef2;font-weight:400">▲</b>&nbsp;${LF('legend')}</span>${socialLegend()}${heroLegend()}${isleLegend()}</div></details></div>
-      <div class="map-logs">${zoneHint(state)}${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}
+      <div class="map-logs">${zoneHint(state)}${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m, !!this.onGoal)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}
       ${invasionLog(state.self?.invasion)}${dailyLog(state.self?.daily)}${commonLog(state.self?.common)}${worldGoalsLog(state)}${lfgLog(state)}${this.tasksLog(state)}${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => { const share = inGroup && (q.kind === 'job' || q.kind === 'story'); return `<div class="mq-item"><button class="mq-row${q.target ? '' : ' off'}${q.id === tracked ? ' tracked' : ''}${share ? ' shareable' : ''}" data-q="${esc(q.id)}" title="${esc(L('track'))}"><b>${q.id === tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>${this.onGoal ? `<button type="button" class="btn btn-small btn-primary mq-sail" data-qsail="q:${esc(q.id)}" title="${esc(W('map.sailHint'))}">${icon('stat_sails', '', 'ico-sm')}${esc(W('map.sail'))}</button>` : ''}${share ? `<button class="btn btn-small mq-share" data-share="${esc(q.id)}" title="${esc(L('shareTitle'))}">${esc(L('share'))}</button>` : ''}</div>`; }).join('')}</div>` : ''}</div>`;
     root.querySelectorAll<HTMLElement>('[data-mlayer]').forEach((b) => (b.onclick = () => {
       this.layers = toggleLayer(this.layers, b.dataset.mlayer as MapLayer);
@@ -350,6 +364,7 @@ export class WorldMap {
     }));
     // ux2: «Плыть» on a quest — the course to its place, on through its steps; the chart shuts.
     root.querySelectorAll<HTMLElement>('[data-qsail]').forEach((b) => (b.onclick = () => this.onGoal?.(b.dataset.qsail!)));
+    root.querySelectorAll<HTMLElement>('[data-tmsail]').forEach((b) => (b.onclick = () => this.onGoal?.(`tm:${b.dataset.tmsail!}`))); // «Плыть к кладу»
     // route (2026-10-15): every goal's line of the log — the nearest place it is done
     if (this.onGoal) bindGoalTaps(root, (k) => this.onGoal?.(k));
     // Share a quest with the group: each groupmate who may take it is asked.
@@ -532,7 +547,7 @@ export class WorldMap {
     const tx = (x: number) => (x - this.cx) * k + W / 2;
     const ty = (y: number) => (y - this.cy) * k + H / 2;
     // docs/23 item 73: the chart's layers — on a phone only the essentials (ports, goals, lairs about her level).
-    const on = (l: MapLayer) => this.layers.has('all') || this.layers.has(l);
+    const on = (l: MapLayer) => (l !== 'yards' && this.layers.has('all')) || this.layers.has(l);
     const ownLv = state.self ? shipLevelOf(state.self.loadout) : 1;
     // Painted chart symbols (Higgsfield `icon.map_*`, faction crests); the old ink shapes only while they load.
     const ms = Math.max(20, Math.min(34, 18 + this.zoom * 2));
@@ -767,9 +782,16 @@ export class WorldMap {
     // Ports: key ports are on every chart; villages only once found.
     // (docs/29: the harbour towns of step 9 — ids `<sea>_t<n>` — are found as the villages are)
     const found = new Set([...state.discovered].map((id) => state.islands.get(id)?.portId ?? state.islands.get(id)?.town));
-    for (const p of on('ports') ? visibleOnChart(state.seen, state.ports) : []) {
+    const yards = on('yards'); // «Верфи» (Нефигугум, post 26): the ports with a shipyard, its rank and its hulls' ⚓
+    for (const p of on('ports') || yards ? visibleOnChart(state.seen, state.ports) : []) {
       const known = (!p.id.includes('_v') && !/_t[0-9]+$/.test(p.id)) || found.has(p.id);
       if (!known) continue;
+      if (!on('ports') && p.shipyardTier <= 0) continue;
+      const span = yards && p.shipyardTier > 0 ? yardSpan(p.shipyardTier, p.faction) : null;
+      if (span) {
+        g.font = '600 11px Inter, system-ui, sans-serif';
+        label(L('yard.tag', { tier: p.shipyardTier, span: anchorSpan(span) }), tx(p.x), ty(p.y) + ms * 0.95, '#f0d48e', 0);
+      }
       // her mark by her size (a capital, a town, a village, a floating town: the owner's sheet of 2026-10-24), her flag's
       // crest small at its foot; the crest alone while the mark loads
       if (mark(`icon.${portMark(p)}`, tx(p.x), ty(p.y), ms * 0.95)) mark(`icon.faction_${p.faction}`, tx(p.x) + ms * 0.34, ty(p.y) + ms * 0.3, ms * 0.48);
@@ -1005,20 +1027,7 @@ export class WorldMap {
       g.fillRect(tx(st.x) - 4, ty(st.y) - 4, 8, 8);
       g.fillText(`${GOODS[st.good]?.name ?? st.good.replace('_', ' ')} ${st.stock}/${st.capacity}`, tx(st.x), ty(st.y) + 16);
     }
-    // Treasure maps: the search circle; sunken wrecks you know of.
-    for (const m of on('goals') ? state.self?.maps ?? [] : []) {
-      if (m.r < 0) continue; // riddles, drawings and needles draw no area
-      const rr = Math.max(8, m.r * k);
-      const area = g.createRadialGradient(tx(m.x), ty(m.y), 0, tx(m.x), ty(m.y), rr);
-      area.addColorStop(0, 'rgba(217,180,90,0.18)');
-      area.addColorStop(1, 'rgba(217,180,90,0)');
-      g.fillStyle = area;
-      g.beginPath();
-      g.arc(tx(m.x), ty(m.y), rr, 0, Math.PI * 2);
-      g.fill();
-      mark('icon.map_treasure', tx(m.x), ty(m.y), ms);
-      label(placeName(m.name), tx(m.x), ty(m.y) - ms * 0.65, m.tier >= 3 ? '#e8c65a' : '#c9a25a');
-    }
+    // (treasure maps: over the fog, below)
     // The tavern's whispers she paid for (docs/16 #14) and her merchants' runs (#12).
     hearsayMarks(g, state.self?.hearsay ?? [], tx, ty, k, ms, now, mark, label, age);
     for (const r of on('all') ? state.self?.runs ?? [] : []) {
@@ -1060,8 +1069,74 @@ export class WorldMap {
     // her group, her mark, her scouts and her ship stand over it: a quest into the fog still leads there.
     drawFog(g, state.seen, state.seenVer, { x0: this.cx - W / 2 / k, y0: this.cy - H / 2 / k, k, w: W, h: H, time: performance.now() / 1000 });
     fogged = true;
-    // (the hubs of the «Переход» under her fog are not marked: an unknown port is not told — Нефигугум, post 24,
-    // topic 7; their badge stands with the port once she has seen it, above)
+    // Under her fog (Нефигугум, post 26: «новичку надо хотя бы примерно видеть, куда плыть»): a hub of the «Переход» as
+    // a dim ⇄ with «Неизвестный порт-узел» — never its name (post 24: an unknown port is not told; the ferry's list keeps
+    // it shut till she finds it, ferry.ts) — and with «Верфи» on, a key port's yard, dim, its rank and ⚓, no name.
+    if (on('ports') || yards) for (const p of state.ports) {
+      if (!underFog(state.seen, p.x, p.y)) continue;
+      const hub = on('ports') && isFerryHub(p.id);
+      const keyPort = !p.id.includes('_v') && !/_t[0-9]+$/.test(p.id);
+      const span = yards && keyPort && p.shipyardTier > 0 ? yardSpan(p.shipyardTier, p.faction) : null;
+      if (!hub && !span) continue;
+      g.save();
+      g.globalAlpha = 0.6;
+      if (hub) drawHubMark(g, tx(p.x), ty(p.y), Math.max(7, ms * 0.3));
+      else if (!mark('icon.build_shipyard', tx(p.x), ty(p.y), ms * 0.7)) {
+        g.fillStyle = '#c9a25a';
+        g.fillRect(tx(p.x) - 4, ty(p.y) - 4, 8, 8);
+      }
+      g.restore();
+      g.font = `${this.zoom > 2 ? 12 : 11}px "IM Fell English SC", serif`;
+      if (hub) label(L('hub.unknown'), tx(p.x), ty(p.y) - Math.max(12, ms * 0.5), 'rgba(232,196,106,0.7)', 2);
+      if (span) {
+        g.font = '600 11px Inter, system-ui, sans-serif';
+        label(L('yard.fog', { tier: p.shipyardTier, span: anchorSpan(span) }), tx(p.x), ty(p.y) + Math.max(14, ms * 0.7), 'rgba(240,212,142,0.7)', 2);
+      }
+    }
+    // Treasure maps (Нефигугум, forum post 26: «карты вгоняют в депрессию»): over the fog, as her goals are — the dig
+    // spot as a red ✕ on the chest's mark with «Клад: …»; a map with no spot yet (a legendary piece) its circle.
+    for (const m of on('goals') ? state.self?.maps ?? [] : []) {
+      if (m.spot) {
+        const x = tx(m.spot[0]), y = ty(m.spot[1]);
+        g.save();
+        g.fillStyle = 'rgba(10,8,6,0.55)';
+        g.beginPath();
+        g.arc(x, y, ms * 0.62, 0, Math.PI * 2);
+        g.fill();
+        g.strokeStyle = m.tier >= 3 ? '#e8c65a' : '#d9b45a';
+        g.lineWidth = 2;
+        g.stroke();
+        g.restore();
+        mark('icon.map_treasure', x, y, ms * 0.9);
+        g.save();
+        g.lineCap = 'round';
+        const c = ms * 0.3;
+        for (const [w, col] of [[5, 'rgba(10,8,6,0.85)'], [2.6, '#d8402e']] as const) {
+          g.strokeStyle = col;
+          g.lineWidth = w;
+          g.beginPath();
+          g.moveTo(x - c, y - c); g.lineTo(x + c, y + c);
+          g.moveTo(x + c, y - c); g.lineTo(x - c, y + c);
+          g.stroke();
+        }
+        g.restore();
+        g.font = `600 ${this.zoom > 2 ? 13 : 12}px Inter, system-ui, sans-serif`;
+        label(L('tm.label', { place: tmPlace(m) }), x, y - ms * 0.8, m.tier >= 3 ? '#f2d27a' : '#f0d48e', 0);
+        continue;
+      }
+      if (m.r < 0) continue; // a cursed map's needle draws no area
+      const rr = Math.max(8, m.r * k);
+      const area = g.createRadialGradient(tx(m.x), ty(m.y), 0, tx(m.x), ty(m.y), rr);
+      area.addColorStop(0, 'rgba(217,180,90,0.18)');
+      area.addColorStop(1, 'rgba(217,180,90,0)');
+      g.fillStyle = area;
+      g.beginPath();
+      g.arc(tx(m.x), ty(m.y), rr, 0, Math.PI * 2);
+      g.fill();
+      mark('icon.map_treasure', tx(m.x), ty(m.y), ms);
+      g.font = `600 ${this.zoom > 2 ? 13 : 12}px Inter, system-ui, sans-serif`;
+      label(L('tm.label', { place: tmPlace(m) }), tx(m.x), ty(m.y) - ms * 0.65, m.tier >= 3 ? '#e8c65a' : '#c9a25a', 0);
+    }
     drawScouts(g, state.scouts, state.scoutsAt, tx, ty, ms * 0.7);
     // A scout's pick: her reach from the island, a dashed ring.
     if (this.scoutPick && state.scouts?.home) {
@@ -1288,4 +1363,10 @@ export class WorldMap {
       }
     }
   }
+}
+
+/** A treasure map's place for «Клад: …»: the island of «Stained map — Isle», else the map's own name. */
+function tmPlace(m: { name: string; kind: string }): string {
+  const i = m.name.indexOf(' — ');
+  return placeName(i >= 0 && (m.kind === 'circle' || m.kind === 'player') ? m.name.slice(i + 3) : m.name);
 }

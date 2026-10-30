@@ -1702,6 +1702,14 @@ export class Hud {
     // The fog of war (owner, 2026-10-17): what she has not seen lies under it — islands, ports, lairs, the sea's things;
     // ships, her marks and her scouts over it.
     drawFog(g, state.seen, state.seenVer, { x0: own.x - range, y0: own.y - range, k, w: W, h: H, time: settings().reduceMotion ? 0 : performance.now() / 1000, q: 1, tone: 1 });
+    // a «Переход» hub not found yet (Нефигугум, post 26): a dim ⇄ over the fog, roughly where to sail — no name
+    g.save();
+    g.globalAlpha = 0.55;
+    for (const p of state.ports) {
+      if (!isFerryHub(p.id) || Math.abs(p.x - own.x) > range || Math.abs(p.y - own.y) > range || !underFog(state.seen, p.x, p.y)) continue;
+      drawHubMark(g, tx(p.x), ty(p.y), 4.5);
+    }
+    g.restore();
     drawScouts(g, state.scouts, state.scoutsAt, tx, ty, 9);
     // Ships by shape (§11.2): circle a friend, square a neutral, diamond an enemy, notched diamond a bounty.
     const cb = settings().colorblind;
@@ -1746,12 +1754,28 @@ export class Hud {
     g.strokeStyle = 'rgba(217,180,90,0.8)';
     g.setLineDash([3, 3]);
     for (const m of self?.maps ?? []) {
-      if (m.r < 0) continue;
+      if (m.r < 0 || m.spot) continue;
       g.beginPath();
       g.arc(tx(m.x), ty(m.y), Math.max(3, m.r * k), 0, Math.PI * 2);
       g.stroke();
     }
     g.setLineDash([]);
+    // a treasure map's dig spot (Нефигугум, forum post 26): a red ✕ on a dark disc, clamped to the dial's rim when far
+    for (const m of self?.maps ?? []) {
+      if (!m.spot) continue;
+      const x = Math.max(6, Math.min(W - 6, tx(m.spot[0]))), y = Math.max(6, Math.min(H - 6, ty(m.spot[1])));
+      g.fillStyle = 'rgba(10,8,6,0.7)';
+      g.beginPath();
+      g.arc(x, y, 5, 0, Math.PI * 2);
+      g.fill();
+      g.strokeStyle = '#e04a34';
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(x - 3, y - 3); g.lineTo(x + 3, y + 3);
+      g.moveTo(x + 3, y - 3); g.lineTo(x - 3, y + 3);
+      g.stroke();
+    }
+    g.lineWidth = 1;
     // The squares of the sea (docs/16 P2): their borders faint on the dial, her own square's levels at its foot.
     if (state.sectors.length) {
       g.strokeStyle = 'rgba(200,190,150,0.22)';

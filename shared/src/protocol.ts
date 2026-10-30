@@ -1095,7 +1095,8 @@ export interface PortView {
     tier: number;
     repairCost: number;
     ships: { classId: ShipClassId; price: number; tradeIn: number }[];
-    modules: { module: ModuleId; level: number; cost: number; max: number; excellent: boolean }[];
+    /** `unfit`: what taking out her top level costs (the level is lost; Modular Refit: 0). */
+    modules: { module: ModuleId; level: number; cost: number; max: number; excellent: boolean; unfit?: number }[];
     guns: { gun: GunId; cost: number }[];
     mounts: { mount: MountId; cost: number }[];
     /** Raising her a level (canon D12). */
@@ -1241,6 +1242,9 @@ export interface MapView {
   copy?: boolean;
   /** A legendary fragment: which one, and how many the chart has. */
   piece?: [number, number];
+  /** Where to dig (Нефигугум, forum post 26): marked on the chart at once; «Плыть к кладу» (goal `tm:<id>`) sails there and
+   *  the boats dig by themselves. None on a cursed map (its needle) or a legendary piece until the set gives the spot. */
+  spot?: [number, number];
 }
 
 /** The season (seasons.ts): its theme, your path, the tables, the Pantheon. */

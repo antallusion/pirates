@@ -330,8 +330,29 @@ export function mapAction(game: Game, s: PlayerSession, port: Port | null, actio
 
 // ================================================================== the view
 
-/** A map as the captain reads it: circles only where the map draws one; words, outlines, a pulled needle. */
+/** Where the chest of a map lies, as the chart marks it (Нефигугум, forum post 26: «карты вгоняют в депрессию» — a
+ *  map marks its dig spot at once, «Плыть к кладу» takes her there and the boats dig by themselves). Every map but two:
+ *  a cursed one keeps its whispering needle, and a piece of the season's legendary chart its narrowing circle (the
+ *  race for the whole sea) until the pieces give the very spot. A forgery marks its empty pit just the same. */
+export function mapSpot(game: Game, s: PlayerSession, m: TreasureMap): { x: number; y: number } | null {
+  const kind = m.kind ?? 'circle';
+  if (kind === 'cursed') return null;
+  if (kind === 'fragment') {
+    const c = legendCircle(game, s, m);
+    return c && c.r === 0 ? { x: c.x, y: c.y } : null;
+  }
+  return { x: m.sx, y: m.sy };
+}
+
+/** A map as the captain reads it: circles only where the map draws one; words, outlines, a pulled needle; and the dig
+ *  spot (mapSpot). */
 export function mapView(game: Game, s: PlayerSession, m: TreasureMap): MapView {
+  const v = mapViewBase(game, s, m);
+  const at = mapSpot(game, s, m);
+  return at ? { ...v, spot: [Math.round(at.x), Math.round(at.y)] } : v;
+}
+
+function mapViewBase(game: Game, s: PlayerSession, m: TreasureMap): MapView {
   const kind = m.kind ?? 'circle';
   const ship = s.ship;
   const base: MapView = { id: m.id, name: m.name, tier: m.tier, kind, x: 0, y: 0, r: -1, clue: m.clue, verdict: m.verdict, sealed: m.sealed || undefined, copy: m.copy || undefined };

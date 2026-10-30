@@ -30,7 +30,7 @@ import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { GOODS, isInfStock, stockText } from '../../../shared/src/data/goods.ts';
 import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
 import { AMMO, AMMO_IDS, GUNS, MODULES, MOUNTS, SHIP_CLASSES, defaultGunFor } from '../../../shared/src/data/ships.ts';
-import type { MountId, ShipClassId } from '../../../shared/src/data/ships.ts';
+import type { ModuleId, MountId, ShipClassId } from '../../../shared/src/data/ships.ts';
 import type { ClientMsg, PortView, RefitView } from '../../../shared/src/protocol.ts';
 import { ownLevelChip } from './levels.ts';
 import { cargoVolume, computeShipStats } from '../../../shared/src/sim/shipstats.ts';
@@ -477,8 +477,13 @@ export class PortScreen {
         return this.send({ t: 'shipyard', action: 'refit' });
       case 'module':
         return this.send({ t: 'shipyard', action: 'module', module: d.module as never });
-      case 'unfit':
-        return this.send({ t: 'shipyard', action: 'unfit', module: d.module as never });
+      case 'unfit': {
+        // Нефигугум, post 26: one tap took a fitting out — what it costs and that the level is gone, asked first
+        const fee = Number(d.fee) || 0, lv = Number(d.lv) || 1;
+        const name = MODULES[d.module as ModuleId]?.name ?? d.module!;
+        void ask(L(fee ? 'confirm.unfit' : 'confirm.unfitFree', { name, from: lv, to: lv - 1, n: fmt(fee) }), L('yard.takeOut')).then((ok) => ok && this.send({ t: 'shipyard', action: 'unfit', module: d.module as never }));
+        return;
+      }
       case 'keel':
         return this.send({ t: 'shipyard', action: 'keel' });
       case 'gun':
@@ -676,7 +681,7 @@ export class PortScreen {
       const matNote = mat && !maxed ? `<p class="muted">${esc(L('yard.matNote', { n: mat.units, good: GOODS[mat.good].name.toLowerCase() }))}</p>` : '';
       return `<div class="card"><h4>${icon(`mod_${m.module}`, '', 'ico-md')}${esc(def.name)} <span class="muted">${m.level}/${m.max}</span>${m.excellent ? ` <span class="gold">${esc(L('yard.excellent'))}</span>` : ''}</h4><p>${esc(def.description)}</p>${matNote}
         <button class="btn btn-small" data-act="module" data-module="${m.module}" ${maxed ? 'disabled' : ''}>${esc(maxed ? L('yard.fullyFitted') : L('yard.fitLevel', { n: m.level + 1, cost: fmt(m.cost) }))}</button>
-        ${m.level > 0 ? `<button class="btn btn-small" data-act="unfit" data-module="${m.module}" title="${esc(self.talents.shp_modular_refit ? L('yard.unfitFree') : L('yard.unfitFee'))}">${esc(L('yard.takeOut'))}</button>` : ''}</div>`;
+        ${m.level > 0 ? `<button class="btn btn-small" data-act="unfit" data-module="${m.module}" data-fee="${m.unfit ?? 0}" data-lv="${m.level}" title="${esc(m.unfit ? L('yard.unfitFee', { n: fmt(m.unfit) }) : L('yard.unfitFree'))}">${esc(L('yard.takeOut'))} · ${m.unfit ? `−${money(m.unfit)}` : esc(L('yard.free'))}</button>` : ''}</div>`;
     }).join('');
     const guns = (['port', 'starboard'] as const).map((side) => `<div class="card"><h4 class="card-h">${icon(`gun_${self.loadout.guns[side]}`, '', side === 'port' ? 'ico-md flip' : 'ico-md')}${esc(L(side === 'port' ? 'yard.portBattery' : 'yard.starboardBattery', { n: cur.gunPortsPerSide, gun: GUNS[self.loadout.guns[side]].name }))}</h4>
       ${sy.guns.map((gdef) => {

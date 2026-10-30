@@ -15,6 +15,8 @@ import { hasTamer } from '../../../shared/src/data/drifts.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { portDwellings } from '../../../shared/src/data/town.ts';
+import { levelRange } from '../../../shared/src/data/shiplevel.ts';
+import { anchorSpan, yardSpan } from '../../../shared/src/data/yardhulls.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { ClientMsg, PortInfoGood, PortInfoView, PortPublic } from '../../../shared/src/protocol.ts';
 import { KEY_PORTS, REGIONS } from '../../../shared/src/world/regions.ts';
@@ -121,8 +123,14 @@ const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
 
 function services(state: ClientState, port: PortPublic, v: PortInfoView | null): string {
   const hulls = (v?.hulls ?? []).map((id) => SHIP_CLASSES[id as ShipClassId]?.name).filter(Boolean) as string[];
+  // the hulls' levels (Нефигугум, post 26: «корабли ⚓4–6 в портах 2 и выше … портов 2 я не нашел»): by what the port
+  // sells her (a career's extra rank counted), else by its rank
+  const ids = (v?.hulls ?? []).filter((id) => SHIP_CLASSES[id as ShipClassId]) as ShipClassId[];
+  const span: [number, number] | null = ids.length
+    ? [Math.min(...ids.map((id) => levelRange(id)[0])), Math.max(...ids.map((id) => levelRange(id)[1]))]
+    : yardSpan(port.shipyardTier, port.faction);
   const yard = port.shipyardTier > 0
-    ? tile('menu_ship', L('pc.yard', { n: port.shipyardTier }), hulls.length ? hulls.join(', ') : L('pc.yardRepair'))
+    ? tile('menu_ship', `${L('pc.yard', { n: port.shipyardTier })}${span ? ` · ${L('pc.yardSpan', { span: anchorSpan(span) })}` : ''}`, hulls.length ? hulls.join(', ') : L('pc.yardRepair'))
     : tile('menu_ship', L('pc.noYard'), '', true);
   const key = KEY_PORTS.some((k) => k.id === port.id);
   const dw = portDwellings({ ...port, size: Math.max(1, Math.min(3, port.size)) as 1 | 2 | 3, key });

@@ -14,6 +14,7 @@ export const SERVER_RU_ROUTE: Record<string, string> = {
   'She casts off: the helmsman takes her there.': 'Отдаём швартовы: рулевой ведёт корабль к цели.',
   'You are there already: it is done in this port.': 'Вы уже на месте: это делается в этом порту.',
   'Gulls over a shoal: slow down and cast the net.': 'Чайки над косяком: сбавьте ход и забросьте сеть.',
+  'The treasure spot: she heaves to and the boats go digging by themselves.': 'Место клада: корабль ложится в дрейф, и шлюпки сами идут копать.',
   'Keep a steady pace on open water, far from land: the rod works.': 'Держите ровный ход в открытом море, вдали от берега: так клюёт на удочку.',
   'At night lie still and light the lamp.': 'Ночью остановитесь и зажгите фонарь.',
   'Set the traps close by the shore.': 'Ставьте ловушки у самого берега.',

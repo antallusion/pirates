@@ -5,7 +5,8 @@
 
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
-import { YARD_GOODS } from '../../../shared/src/data/base.ts';
+import { BARGE, BARGE_MUL, YARD_GOODS } from '../../../shared/src/data/base.ts';
+import type { BaseRes } from '../../../shared/src/data/base.ts';
 import type { BaseView, ClientMsg } from '../../../shared/src/protocol.ts';
 import { dict } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/islehaul.ts';
@@ -40,8 +41,28 @@ export function haulCard(v: BaseView, state: ClientState): string {
     <p class="muted">${esc(HL('yardHint'))}</p>
     ${v.near ? '' : `<p class="tw-why">${esc(HL('yardFar'))}</p>`}
     ${rows || `<p class="muted">${esc(HL('yardNone'))}</p>`}</div>`;
-  const barge = `<div class="card ih-card"><h4 class="card-h">${icon('good_timber', '', 'ico-md')}${esc(HL('bargeH'))}</h4><p class="muted">${esc(HL('bargeHint'))}</p></div>`;
-  return `<div class="ih">${treasury}${yard}${barge}</div>`;
+  // The barge (Нефигугум, post 26: «Кто такой лист острова? … где там кнопка отправить»): its own button here, what it
+  // brings, the price and that it comes at once — from anywhere, at sea or in port (server: base.ts orderBarge).
+  const hall = Math.max(1, v.hall ?? 1);
+  const bc = bargeCostOf(v.store, hall);
+  const short = bc > 0 && gold + tre < bc;
+  const barge = `<div class="card ih-card ih-barge"><h4 class="card-h">${icon('good_timber', '', 'ico-md')}${esc(HL('bargeH'))}</h4>
+    <p>${esc(HL('bargeLine', { t: fmt((BARGE.timber ?? 0) * hall), c: fmt((BARGE.coal ?? 0) * hall), i: fmt((BARGE.iron ?? 0) * hall) }))}</p>
+    <div class="ih-row"><button class="btn btn-primary" data-ihbarge${!bc || short ? ' disabled' : ''}>${icon('good_timber', '', 'ico-sm')}${esc(HL('bargeBtn'))}${bc ? ` · ${money(bc)}` : ''}</button></div>
+    <p class="muted">${esc(!bc ? HL('bargeFull') : short ? HL('bargeShort', { n: fmt(bc - gold - tre) }) : HL('bargeHint'))}</p></div>`;
+  return `<div class="ih">${treasury}${barge}${yard}</div>`;
+}
+
+/** What a barge of building stuff costs now, by the yard's room (docs/30; server: base.ts orderBarge, bargeCost). */
+export function bargeCostOf(store: { good: string; n: number; cap: number }[], hall: number): number {
+  let cost = 0;
+  for (const [g, n0] of Object.entries(BARGE) as [BaseRes, number][]) {
+    const n = n0 * hall; // as big as her town hall (server: bargeSize)
+    const row = store.find((x) => x.good === g);
+    const room = row ? Math.max(0, Math.floor(row.cap - row.n)) : n;
+    cost += Math.round(Math.min(n, room) * GOODS[g].basePrice * BARGE_MUL);
+  }
+  return cost;
 }
 
 export function bindHaul(root: HTMLElement, v: BaseView, state: ClientState, send: (m: ClientMsg) => void): void {
@@ -57,6 +78,10 @@ export function bindHaul(root: HTMLElement, v: BaseView, state: ClientState, sen
   root.querySelector<HTMLElement>('[data-ihout]')?.addEventListener('click', () => {
     const n = Math.min(amt(), Math.floor(v.claim?.treasury ?? 0));
     if (n > 0) send({ t: 'base', action: 'withdraw', n });
+  });
+  root.querySelector<HTMLButtonElement>('[data-ihbarge]')?.addEventListener('click', (e) => {
+    (e.currentTarget as HTMLButtonElement).disabled = true;
+    send({ t: 'base', action: 'barge' });
   });
   root.querySelectorAll<HTMLButtonElement>('[data-ihun]').forEach((el) => (el.onclick = () => {
     el.disabled = true;

@@ -10,9 +10,9 @@ import { bindSupply, supplyTab } from './supply.ts'; // docs/18 #32
 import { bindScouts, scoutsCard, tickScouts } from './scouts.ts'; // the fog of war's scouts (owner, 2026-10-17)
 import { EN as I18_EN, RU as I18_RU } from '../lang/ui/isles18.ts';
 import { guildYardCard, wireGuildYard } from './social.ts';
-import { BARGE, BARGE_MUL, GRID, PLOT_CELLS, PRODUCERS, isProducer, producerOf, producerRate } from '../../../shared/src/data/base.ts';
+import { GRID, PLOT_CELLS, PRODUCERS, isProducer, producerOf, producerRate } from '../../../shared/src/data/base.ts';
 import { boostHtml, tickBoost, wireBoost } from './isleboost.ts'; // finishing a work: speed-ups or doubloons (owner, 2026-10-29)
-import type { BaseRes, ProducerKind } from '../../../shared/src/data/base.ts';
+import type { ProducerKind } from '../../../shared/src/data/base.ts';
 import { ISLE_LEVELS } from '../../../shared/src/data/estate.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -48,6 +48,7 @@ import { EN as H_EN, RU as H_RU } from '../lang/ui/h3.ts';
 import { EN as WIN_EN, RU as WIN_RU } from '../lang/ui/win.ts';
 import { chipRow, quickBar, winHead } from './kit/window.ts';
 import { srcAttr } from './srctip.ts'; // «Где взять» (owner, 2026-10-30)
+import { bargeCostOf } from './islehaul.ts'; // the barge's price (also on the island's «Завезти»)
 
 const L = dict(EN, RU);
 const CO = dict(CO_EN, CO_RU);
@@ -668,14 +669,3 @@ export class BaseWindow {
   }
 }
 
-/** What a barge of building stuff costs now, by the yard's room (docs/30; server: base.ts orderBarge). */
-function bargeCostOf(store: { good: string; n: number; cap: number }[], hall: number): number {
-  let cost = 0;
-  for (const [g, n0] of Object.entries(BARGE) as [BaseRes, number][]) {
-    const n = n0 * hall; // as big as her town hall (server: bargeSize)
-    const row = store.find((x) => x.good === g);
-    const room = row ? Math.max(0, Math.floor(row.cap - row.n)) : n;
-    cost += Math.round(Math.min(n, room) * GOODS[g].basePrice * BARGE_MUL);
-  }
-  return cost;
-}
