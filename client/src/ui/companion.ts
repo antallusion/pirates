@@ -1,5 +1,6 @@
 // The orca calf's card in the ship window (docs/12 P10 #2): its name, its growth, what it does, and its harnesses.
 
+import { detailAttr } from './detailattr.ts'; // the detail card (owner, 2026-10-30)
 import { ownHull, viewHull } from '../reachview.ts';
 import { hullsGap } from '../../../shared/src/data/reach.ts';
 import { TRADE_RANGE } from '../../../shared/src/data/social.ts';
@@ -120,7 +121,7 @@ export function petsCard(state: ClientState): string {
   const ru = lang() === 'ru' ? 1 : 0;
   const rows = v.owned.map((pet) => {
     const on = v.deck === pet;
-    return `<div class="cmp-h${on ? ' on' : ''}">${petIcon(pet, 'pet-ico')}<div class="cmp-h-t"><b>${esc(PETS[pet].name[ru])}${on ? ` <span class="tt-worn">${esc(L('onDeck'))}</span>` : ''}</b><span class="muted">${esc(PETS[pet].gives[ru])}</span></div>
+    return `<div class="cmp-h${on ? ' on' : ''}"${detailAttr(`pet:${pet}`)}>${petIcon(pet, 'pet-ico')}<div class="cmp-h-t"><b>${esc(PETS[pet].name[ru])}${on ? ` <span class="tt-worn">${esc(L('onDeck'))}</span>` : ''}</b><span class="muted">${esc(PETS[pet].gives[ru])}</span></div>
       ${on ? `<button class="btn btn-small" data-petdeck="">${esc(L('below'))}</button>` : `<button class="btn btn-small" data-petdeck="${pet}">${esc(L('toDeck'))}</button>`}</div>`;
   }).join('');
   return `<div class="card cmp-card"><h4 class="card-h">${petIcon(v.deck ?? v.owned[0], 'ico-md')}${esc(L('pets'))}</h4>${rows}<p class="muted cmp-forge">${esc(L('petsHint'))}</p></div>`;

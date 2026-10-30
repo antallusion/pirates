@@ -3,6 +3,7 @@
 // silver, their spoils; nothing to learn from a grey one), her party against it, HoMM3's offer at ×3. «Атаковать»
 // from it; «Отпустить» when they would flee.
 
+import { detailAttr } from './detailattr.ts'; // the detail card (owner, 2026-10-30)
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId } from '../../../shared/src/data/army.ts';
 import { ROAMS, roamGap, roamPay, roamRange } from '../../../shared/src/data/roamers.ts';
@@ -31,7 +32,7 @@ export function roamCardHtml(state: ClientState, v: RoamView): string {
   const gap = roamGap(mine, v.level);
   const pay = roamPay(v.level, v.size);
   const lines = [
-    `<div class="rc-head">${unitIcon(u, 'army-face')}<div><b>${esc(L('c.title', { what: roamName(v.kind), lv: v.level }))}</b><div class="muted">${esc(L('c.count', { word: w.word, a, b, n: v.n }))}</div></div></div>`,
+    `<div class="rc-head"${detailAttr(`unit:${u}`)}>${unitIcon(u, 'army-face')}<div><b>${esc(L('c.title', { what: roamName(v.kind), lv: v.level }))}</b><div class="muted">${esc(L('c.count', { word: w.word, a, b, n: v.n }))}</div></div></div>`,
     `<div class="muted">${esc(d.specials.length ? L('c.specials', { list: d.specials.map(specialName).join(', ') }) : L('c.none'))}</div>`,
     `<div>${esc(gap > 0 ? L('c.pay', { x: fmt(xpAt(mine, v.level, pay.xp)), s: fmt(pay.silver) }) : L('c.grey'))}</div>`,
   ];

@@ -5,6 +5,7 @@
 // paper doll, gear.ts). The level-up's choice also comes up by itself as a card «выберите один из двух» (levelUpSheet).
 // And the HUD's compact bar of sea orders: her will and a finger-wide button for each sea order she knows.
 
+import { detailAttr } from './detailattr.ts'; // the detail card (owner, 2026-10-30)
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { ARTIFACTS, ART_CLASS_NAMES, ART_RARITY, ART_SETS, RELICS, relicIcon } from '../../../shared/src/data/artifacts.ts';
 import { EN as REL_EN, RU as REL_RU } from '../lang/ui/relics.ts';
@@ -81,9 +82,9 @@ function relicCard(r: NonNullable<HeroView['relics']>[number]): string {
   const parts = d.parts.map((id) => {
     const a = ARTIFACTS[id];
     const st = r.worn.includes(id) ? 'worn' : r.held.includes(id) ? 'held' : 'miss';
-    return `<span class="hx-rpart ${st}" title="${esc(`${T(a.name)} · ${T(SLOT_NAMES[a.slot])} · ${RL(`relic.${st}`)}`)}">${icon(a.icon, '◆', 'ico-sm')}</span>`;
+    return `<span class="hx-rpart ${st}"${detailAttr(`art:${id}`)} title="${esc(`${T(a.name)} · ${T(SLOT_NAMES[a.slot])} · ${RL(`relic.${st}`)}`)}">${icon(a.icon, '◆', 'ico-sm')}</span>`;
   }).join('');
-  return `<div class="hx-relic${on ? ' on' : ''}"><div class="hx-rhead">${icon(relicIcon(d.id), '◆', 'ico-md hx-rface')}<b>${esc(T(d.name))}</b><span class="muted hx-rn">${esc(on ? RL('relic.on') : RL('relic.of', { n: r.worn.length, m: d.parts.length }))}</span></div>
+  return `<div class="hx-relic${on ? ' on' : ''}"${detailAttr(`relic:${r.id}:${r.worn.length}`)}><div class="hx-rhead">${icon(relicIcon(d.id), '◆', 'ico-md hx-rface')}<b>${esc(T(d.name))}</b><span class="muted hx-rn">${esc(on ? RL('relic.on') : RL('relic.of', { n: r.worn.length, m: d.parts.length }))}</span></div>
     <div class="hx-rparts">${parts}</div><small>${esc(T(d.text))}</small></div>`;
 }
 
@@ -204,7 +205,7 @@ export class HeroWindow {
       ? `<div class="hx-offer card"><h4 class="card-h">${icon('xp', '', 'ico-md')}${esc(L('levelUp'))}<span class="muted hx-pend">${esc(L('pending', { n: h.pending }))}</span></h4>
         <div class="hx-picks">${h.offer.map((o, i) => {
           const d = SKILLS[o.id];
-          return `<div class="hx-pick">${icon(d.icon, '✦', 'ico-lg')}<span class="hx-pick-t"><b>${esc(T(d.name))}</b><span class="hx-rank">${esc(o.r === 1 ? L('newSkill') : L('raise', { rank: T(RANK_NAMES[o.r - 1]) }))} · ${esc(T(RANK_NAMES[o.r - 1]))}</span>${pips(o.r)}<small>${esc(T(d.text[o.r - 1]))}</small><small class="muted">${esc(L('kin', { tree: TREES[d.tree].name }))}</small></span><button class="btn btn-small btn-primary" data-hpick="${i}">${esc(L('take'))}</button></div>`;
+          return `<div class="hx-pick"${detailAttr(`skill:${o.id}:${o.r}`, { hold: true })}><span class="dc-tap"${detailAttr(`skill:${o.id}:${o.r}`)}>${icon(d.icon, '✦', 'ico-lg')}</span><span class="hx-pick-t"><b>${esc(T(d.name))}</b><span class="hx-rank">${esc(o.r === 1 ? L('newSkill') : L('raise', { rank: T(RANK_NAMES[o.r - 1]) }))} · ${esc(T(RANK_NAMES[o.r - 1]))}</span>${pips(o.r)}<small>${esc(T(d.text[o.r - 1]))}</small><small class="muted">${esc(L('kin', { tree: TREES[d.tree].name }))}</small></span><button class="btn btn-small btn-primary" data-hpick="${i}">${esc(L('take'))}</button></div>`;
         }).join('')}</div></div>`
       : h.focus
         ? focusCard(h.focus, 'data-hfocus')
@@ -213,11 +214,11 @@ export class HeroWindow {
       const x = h.skills[i];
       if (!x) return `<div class="hx-slot empty"><span class="hx-sico">＋</span><span class="muted">${esc(L('slotFree'))}</span></div>`;
       const d = SKILLS[x.id];
-      return `<div class="hx-slot${x.r >= GM_RANK ? ' gm' : ''}" title="${esc(T(skillText(x.id, x.r)))}">${icon(d.icon, '✦', 'ico-md')}<span class="hx-st"><b>${esc(T(d.name))}</b><span class="hx-rank">${esc(T(RANK_NAMES[x.r - 1]))} ${pips(x.r)}</span><small>${esc(T(skillText(x.id, x.r)))}</small></span></div>`;
+      return `<div class="hx-slot${x.r >= GM_RANK ? ' gm' : ''}"${detailAttr(`skill:${x.id}:${x.r}`)} title="${esc(T(skillText(x.id, x.r)))}">${icon(d.icon, '✦', 'ico-md')}<span class="hx-st"><b>${esc(T(d.name))}</b><span class="hx-rank">${esc(T(RANK_NAMES[x.r - 1]))} ${pips(x.r)}</span><small>${esc(T(skillText(x.id, x.r)))}</small></span></div>`;
     }).join('');
     const sets = (Object.keys(ART_SETS) as ArtSetId[]).map((id) => {
       const on = h.sets.includes(id);
-      return `<div class="hx-set${on ? ' on' : ''}"><b>${esc(T(ART_SETS[id].name))}</b><span class="muted">${esc(on ? L('setOn') : ART_SETS[id].pieces.map((p) => T(ARTIFACTS[p].name)).join(' · '))}</span><small>${esc(T(ART_SETS[id].text))}</small></div>`;
+      return `<div class="hx-set${on ? ' on' : ''}"${detailAttr(`aset:${id}`)}><b>${esc(T(ART_SETS[id].name))}</b><span class="muted">${esc(on ? L('setOn') : ART_SETS[id].pieces.map((p) => T(ARTIFACTS[p].name)).join(' · '))}</span><small>${esc(T(ART_SETS[id].text))}</small></div>`;
     }).join('');
     // A choice waiting (docs/23 item 70): it comes first, its «Взять» in sight on a phone.
     const first = (h.pending && h.offer.length) || !!h.focus;
@@ -247,7 +248,7 @@ export class HeroWindow {
       const cast = known && d.use === 'sea'
         ? `<button class="btn btn-small btn-primary" data-hcast="${id}" ${docked || wait > 0 || h.will < cost ? 'disabled' : ''} title="${esc(docked ? L('inPort') : '')}">${esc(wait > 0 ? L('ready', { n: wait }) : L('cast'))}</button>`
         : '';
-      return `<div class="hx-order${known ? ' known' : ''}${d.level > h.cap && !known ? ' high' : ''}">${icon(d.icon, '✦', 'ico-md')}<span class="hx-ot"><b>${esc(T(d.name))}</b><span class="hx-otag"><span class="tag">${esc(L('lv', { n: d.level }))}</span><span class="tag ${d.use}">${esc(L(d.use))}</span><span class="tag ${res}">${esc(L(res === 'stam' ? 'costStam' : 'cost', { n: cost }))}</span>${known ? '' : `<span class="muted">${esc(L('unknown'))}</span>`}</span><small>${esc(T(d.text))}</small></span>${cast}</div>`;
+      return `<div class="hx-order${known ? ' known' : ''}${d.level > h.cap && !known ? ' high' : ''}"${detailAttr(`order:${id}`)}>${icon(d.icon, '✦', 'ico-md')}<span class="hx-ot"><b>${esc(T(d.name))}</b><span class="hx-otag"><span class="tag">${esc(L('lv', { n: d.level }))}</span><span class="tag ${d.use}">${esc(L(d.use))}</span><span class="tag ${res}">${esc(L(res === 'stam' ? 'costStam' : 'cost', { n: cost }))}</span>${known ? '' : `<span class="muted">${esc(L('unknown'))}</span>`}</span><small>${esc(T(d.text))}</small></span>${cast}</div>`;
     }).join('');
     return `<div class="w-chips hx-schools" role="tablist">${SCHOOLS.map((s) => `<button type="button" class="w-chip${s === sc ? ' on' : ''}" role="tab" aria-selected="${s === sc}" data-hschool="${s}"${s === sc ? ` data-hint="${esc(`${L('schoolNote', { skill: T(skill.name) })} ${L('capNote', { n: h.cap })} ${L('learnAt')}`)}"` : ''}>${icon(SCHOOL_ICON[s], '', 'w-chip-ico')}${esc(T(SCHOOL_NAMES[s]))} <span class="muted">${h.orders.filter((id) => ORDERS[id].school === s).length}</span></button>`).join('')}</div>
       ${willBar(h)}
@@ -263,14 +264,14 @@ export class HeroWindow {
         const d = ORDERS[g.id];
         const known = h.orders.includes(g.id);
         const high = d.level > h.cap;
-        return `<div class="hx-order${known ? ' known' : ''}">${icon(d.icon, '✦', 'ico-md')}<span class="hx-ot"><b>${esc(T(d.name))}</b><span class="hx-otag"><span class="tag">${esc(T(SCHOOL_NAMES[d.school]))}</span><span class="tag">${esc(L('lv', { n: d.level }))}</span><span class="tag ${d.use}">${esc(L(d.use))}</span></span><small>${esc(T(d.text))}</small></span>${known ? `<span class="muted">${esc(L('learnt'))}</span>` : `<button class="btn btn-small btn-primary" data-hlearn="${g.id}" ${high || gold < g.price ? 'disabled' : ''} title="${esc(high ? L('tooHigh') : '')}">${esc(high ? L('tooHigh') : L('learn'))}${high ? '' : money(g.price)}</button>`}</div>`;
+        return `<div class="hx-order${known ? ' known' : ''}"${detailAttr(`order:${g.id}`)}>${icon(d.icon, '✦', 'ico-md')}<span class="hx-ot"><b>${esc(T(d.name))}</b><span class="hx-otag"><span class="tag">${esc(T(SCHOOL_NAMES[d.school]))}</span><span class="tag">${esc(L('lv', { n: d.level }))}</span><span class="tag ${d.use}">${esc(L(d.use))}</span></span><small>${esc(T(d.text))}</small></span>${known ? `<span class="muted">${esc(L('learnt'))}</span>` : `<button class="btn btn-small btn-primary" data-hlearn="${g.id}" ${high || gold < g.price ? 'disabled' : ''} title="${esc(high ? L('tooHigh') : '')}">${esc(high ? L('tooHigh') : L('learn'))}${high ? '' : money(g.price)}</button>`}</div>`;
       }).join('')}</div>`
       : `<p class="muted">${esc(L('noGuild'))}</p>`;
     const wares = v.wares
       ? `<div class="hx-wares">${v.wares.map((w, i) => {
         const a = ARTIFACTS[w.art];
         const prim = PRIMS.filter((p) => a.prim?.[p]).map((p) => `${T(PRIM_NAMES[p])} +${a.prim![p]}`).join(' · ');
-        return `<div class="hx-ware" style="border-color:${RARITY_COLOR[ART_RARITY[a.cls]]}">${icon(a.icon, '◆', 'ico-lg')}<span class="hx-ot"><b style="color:${RARITY_COLOR[ART_RARITY[a.cls]]}">${esc(T(a.name))}</b><span class="muted">${esc(T(ART_CLASS_NAMES[a.cls]))} · ${esc(T(SLOT_NAMES[a.slot]))}${a.set ? ` · ${esc(T(ART_SETS[a.set].name))}` : ''}</span><small>${esc(prim)}</small><small class="muted">${esc(T(a.text))}</small></span>${w.price < 0 ? `<span class="muted">${esc(L('sold'))}</span>` : `<button class="btn btn-small btn-primary" data-hbuy="${i}" ${gold < w.price ? 'disabled' : ''}>${esc(L('buy'))}${money(w.price)}</button>`}</div>`;
+        return `<div class="hx-ware"${detailAttr(`art:${w.art}`)} style="border-color:${RARITY_COLOR[ART_RARITY[a.cls]]}">${icon(a.icon, '◆', 'ico-lg')}<span class="hx-ot"><b style="color:${RARITY_COLOR[ART_RARITY[a.cls]]}">${esc(T(a.name))}</b><span class="muted">${esc(T(ART_CLASS_NAMES[a.cls]))} · ${esc(T(SLOT_NAMES[a.slot]))}${a.set ? ` · ${esc(T(ART_SETS[a.set].name))}` : ''}</span><small>${esc(prim)}</small><small class="muted">${esc(T(a.text))}</small></span>${w.price < 0 ? `<span class="muted">${esc(L('sold'))}</span>` : `<button class="btn btn-small btn-primary" data-hbuy="${i}" ${gold < w.price ? 'disabled' : ''}>${esc(L('buy'))}${money(w.price)}</button>`}</div>`;
       }).join('')}</div>`
       : `<p class="muted">${esc(L('noMerchant'))}</p>`;
     // docs/18 item 10: other paths' pages at the guild, twice the price.
@@ -279,7 +280,7 @@ export class HeroWindow {
         const d = ORDERS[g.id];
         const known = h.orders.includes(g.id);
         const high = d.level > h.cap;
-        return `<div class="hx-order${known ? ' known' : ''}">${icon(d.icon, '✦', 'ico-md')}<span class="hx-ot"><b>${esc(T(d.name))}</b><span class="hx-otag"><span class="tag">${esc(d.path ? CAPTAINS[d.path].archetype : '')}</span><span class="tag">${esc(T(SCHOOL_NAMES[d.school]))}</span><span class="tag">${esc(L('lv', { n: d.level }))}</span></span><small>${esc(T(d.text))}</small></span>${known ? `<span class="muted">${esc(L('learnt'))}</span>` : `<button class="btn btn-small btn-primary" data-hlearn="${g.id}" ${high || gold < g.price ? 'disabled' : ''}>${esc(high ? L('tooHigh') : L('learn'))}${high ? '' : money(g.price)}</button>`}</div>`;
+        return `<div class="hx-order${known ? ' known' : ''}"${detailAttr(`order:${g.id}`)}>${icon(d.icon, '✦', 'ico-md')}<span class="hx-ot"><b>${esc(T(d.name))}</b><span class="hx-otag"><span class="tag">${esc(d.path ? CAPTAINS[d.path].archetype : '')}</span><span class="tag">${esc(T(SCHOOL_NAMES[d.school]))}</span><span class="tag">${esc(L('lv', { n: d.level }))}</span></span><small>${esc(T(d.text))}</small></span>${known ? `<span class="muted">${esc(L('learnt'))}</span>` : `<button class="btn btn-small btn-primary" data-hlearn="${g.id}" ${high || gold < g.price ? 'disabled' : ''}>${esc(high ? L('tooHigh') : L('learn'))}${high ? '' : money(g.price)}</button>`}</div>`;
       }).join('')}</div>`
       : '';
     return `<div class="gi-h">${icon('bt_captain', '', 'ico-sm')}${esc(L('guild'))}</div>${guild}${foreign}<div class="gi-h">${icon('item_signet', '', 'ico-sm')}${esc(L('merchant'))}</div>${wares}`;
@@ -315,7 +316,7 @@ export function levelUpSheet(state: ClientState, send: (m: ClientMsg) => void): 
       ? `<p class="lu-sub">${esc(L('focusTitle', { n: focus.lv }))}${focus.pending > 1 ? ` · ${esc(L('pending', { n: focus.pending }))}` : ''}</p><div class="lu-picks">${focus.offer.map((p, i) => `<button type="button" class="lu-pick" data-lupick="${i}">${icon(PRIM_ICON[p], '✦', 'lu-ico')}<span class="lu-t"><b>${esc(T(PRIM_NAMES[p]))} +1</b><small>${esc(T(PRIM_TEXT[p]))}</small></span></button>`).join('')}</div>`
       : `<p class="lu-sub">${esc(W('cap.pick'))}${h.pending > 1 ? ` · ${esc(L('pending', { n: h.pending }))}` : ''}</p><div class="lu-picks">${h.offer.map((o, i) => {
       const d = SKILLS[o.id];
-      return `<button type="button" class="lu-pick" data-lupick="${i}">${icon(d.icon, '✦', 'lu-ico')}<span class="lu-t"><b>${esc(T(d.name))}</b><span class="hx-rank">${esc(o.r === 1 ? L('newSkill') : L('raise', { rank: T(RANK_NAMES[o.r - 1]) }))}</span>${pips(o.r)}<small>${esc(T(d.text[o.r - 1]))}</small></span></button>`;
+      return `<button type="button" class="lu-pick" data-lupick="${i}"${detailAttr(`skill:${o.id}:${o.r}`, { hold: true })}><span class="dc-tap"${detailAttr(`skill:${o.id}:${o.r}`)}>${icon(d.icon, '✦', 'lu-ico')}</span><span class="lu-t"><b>${esc(T(d.name))}</b><span class="hx-rank">${esc(o.r === 1 ? L('newSkill') : L('raise', { rank: T(RANK_NAMES[o.r - 1]) }))}</span>${pips(o.r)}<small>${esc(T(d.text[o.r - 1]))}</small></span></button>`;
     }).join('')}</div>`);
     // One pick per offer: a second tap before the redraw went to the next level's offer, unseen (docs/23 item 94). The
     // redraw (a new key: the next offer, or none) brings fresh buttons.

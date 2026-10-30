@@ -15,7 +15,7 @@ import { esc, icon } from './dom.ts';
 
 const L = dict(EN, RU);
 
-export type TmId = 'lock' | 'pursue' | 'fight' | 'talk' | 'hire';
+export type TmId = 'lock' | 'pursue' | 'fight' | 'talk' | 'hire' | 'info';
 
 export interface TmChoice {
   id: TmId;
@@ -155,15 +155,15 @@ export class TargetMenu {
   hoverAt(x: number, y: number, onTarget: boolean): void {
     if (!this.isOpen) return;
     const near = (r: DOMRect) => x >= r.left - 4 && x <= r.right + 4 && y >= r.top - 4 && y <= r.bottom + 4;
-    this.hoverIn = [...this.el.querySelectorAll<HTMLElement>('.tm-pic, .tm-l')].some((e) => near(e.getBoundingClientRect()));
+    this.hoverIn = [...this.el.querySelectorAll<HTMLElement>('.tm-pic, .tm-l, .tm-extra')].some((e) => near(e.getBoundingClientRect()));
     if (this.hoverIn || onTarget) this.keep();
     else this.leave();
   }
 
   /** Open (or redraw) the choices about a target. */
-  show(about: string, choices: TmChoice[], name: string): void {
+  show(about: string, choices: TmChoice[], name: string, info = false): void {
     if (!choices.length) return this.hide();
-    const key = `${about}|${choices.map((c) => `${c.id}:${c.art}:${c.label}:${c.on ? 1 : 0}`).join(',')}`;
+    const key = `${about}|${info ? 'i|' : ''}${choices.map((c) => `${c.id}:${c.art}:${c.label}:${c.on ? 1 : 0}`).join(',')}`;
     if (!this.isOpen || this.about !== about) {
       this.openedAt = performance.now();
       this.keep();
@@ -173,7 +173,9 @@ export class TargetMenu {
       this.choicesKey = key;
       this.el.setAttribute('aria-label', L('tm.aria', { name }));
       this.el.innerHTML = choices.map((c, i) => `<button type="button" class="tm-item${c.on ? ' on' : ''}" role="menuitem" data-tm="${c.id}" style="--tm-i:${i}" aria-label="${esc(c.title)}" title="${esc(c.title)}"${c.on ? ' aria-pressed="true"' : ''}>`
-        + `<span class="tm-pic">${icon(c.art, '•', 'tm-ico')}</span><span class="tm-l">${esc(c.label)}</span></button>`).join('');
+        + `<span class="tm-pic">${icon(c.art, '•', 'tm-ico')}</span><span class="tm-l">${esc(c.label)}</span></button>`).join('')
+        // «Подробнее» (owner, 2026-10-30): a small ⓘ on the ring's free side, outside its layout (detail.ts card)
+        + (info ? `<button type="button" class="tm-extra" role="menuitem" data-tm="info" aria-label="${esc(L('tm.infoT'))}" title="${esc(L('tm.infoT'))}">ⓘ</button>` : '');
     }
     if (!this.isOpen) {
       this.el.classList.remove('hidden', 'tm-open');
@@ -188,13 +190,24 @@ export class TargetMenu {
     if (!items.length) return;
     const size = items[0].offsetWidth || 44;
     const g = menuLayout(items.length, x, y, r, innerWidth, innerHeight, size, avoid, items.map((b) => b.querySelector<HTMLElement>('.tm-l')?.offsetWidth ?? 0));
-    // in among the HUD's own controls the choices would lie over them: none there (the action button has her)
-    if (g.crowded) return this.hide();
+    // in among the HUD's own controls the choices would lie over them: none there (the action button has her) — but
+    // the small ⓘ of her card, when she has one, still stands beside her (owner, 2026-10-30)
+    const ex0 = this.el.querySelector<HTMLElement>('.tm-extra');
+    if (g.crowded && !ex0) return this.hide();
+    this.el.classList.toggle('tm-crowded', g.crowded);
     this.el.dataset.side = g.side;
     items.forEach((b, i) => {
       b.style.transform = `translate(${Math.round(g.items[i].x - size / 2)}px, ${Math.round(g.items[i].y - size / 2)}px)`;
       if (b.dataset.lp !== g.items[i].lp) b.dataset.lp = g.items[i].lp;
     });
+    // the ⓘ: level with her on the side the ring leaves free, on the screen
+    const ex = this.el.querySelector<HTMLElement>('.tm-extra');
+    if (ex) {
+      const R = Math.max(r, 16) + size / 2 + 12, w = ex.offsetWidth || 34;
+      const ix = Math.max(w / 2 + 4, Math.min(innerWidth - w / 2 - 4, g.side === 'right' ? x - R : x + R));
+      const iy = Math.max(w / 2 + 4, Math.min(innerHeight - w / 2 - 4, y));
+      ex.style.transform = `translate(${Math.round(ix - w / 2)}px, ${Math.round(iy - w / 2)}px)`;
+    }
   }
 
   /** The mouse has left the target: the choices go a moment later, unless it comes onto them (or back). */

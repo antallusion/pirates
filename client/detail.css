@@ -1,0 +1,92 @@
+/* The detail card (client/src/ui/detail.ts): the game's dark panel with a brass edge in the middle of the screen, the
+   name in its colour, a big picture, numbers with icons, words; ✕ in the corner, a tap beside it closes it. One at a time.
+   A phone held sideways (844×390, 740×360): the numbers and the words side by side so it stays short; it scrolls inside. */
+
+.dc-root { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: max(8px, var(--sa-t, 0px)) max(8px, var(--sa-r, 0px)) max(8px, var(--sa-b, 0px)) max(8px, var(--sa-l, 0px)); box-sizing: border-box; }
+.dc-root.hidden { display: none; }
+.dc-scrim { position: absolute; inset: 0; background: rgba(4, 6, 8, 0.55); }
+.dc-card { --dc-c: #e8c872; position: relative; display: flex; flex-direction: column; width: min(600px, 100%); max-height: 100%; box-sizing: border-box;
+  background: linear-gradient(180deg, rgba(24, 22, 19, 0.98), rgba(12, 12, 13, 0.98)); border: 1px solid #b08d57; border-radius: 8px;
+  box-shadow: 0 0 0 1px #000, inset 0 0 0 1px rgba(232, 196, 106, 0.12), 0 10px 32px rgba(0, 0, 0, 0.7); color: #e8dcc0; font: 400 13px/1.38 Inter, system-ui, sans-serif; }
+.dc-card::before { content: ''; position: absolute; left: 10px; right: 10px; top: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--dc-c), transparent); opacity: 0.8; border-radius: 2px; }
+.dc-scroll { overflow-y: auto; overscroll-behavior: contain; padding: 12px 14px 12px; -webkit-overflow-scrolling: touch; }
+.dc-x { position: absolute; z-index: 2; top: 4px; right: 4px; width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border: 1px solid #6f5a38; border-radius: 50%; background: rgba(10, 10, 12, 0.92); color: #e8dcc0; font: 600 20px/1 Inter, sans-serif; cursor: pointer; }
+.dc-x:hover, .dc-x:focus-visible { border-color: #e0b862; color: #fff; outline: none; box-shadow: 0 0 10px rgba(224, 184, 98, 0.35); }
+
+.dc-head { display: flex; align-items: center; gap: 12px; padding-right: 46px; margin-bottom: 10px; }
+.dc-art { flex: 0 0 auto; width: 72px; height: 72px; display: grid; place-items: center; border: 1px solid #6f5a38; border-radius: 6px; background: radial-gradient(circle at 50% 38%, #2a2620, #0f0d0b); overflow: hidden; }
+.dc-art .dc-ico { width: 60px; height: 60px; object-fit: contain; }
+.dc-art-unit { width: 84px; height: 96px; }
+.dc-art-unit img.dc-fig { width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%; border: 0; border-radius: 0; background: none; }
+.dc-art-ship { width: 112px; height: 72px; }
+.dc-art-ship { display: flex; align-items: center; justify-content: center; }
+.dc-art-ship img { height: 108px; width: auto; max-width: none; flex: none; transform: rotate(90deg); filter: drop-shadow(0 3px 4px #000); }
+.dc-ht { min-width: 0; }
+.dc-name { margin: 0; font: 700 19px/1.15 'Cormorant Garamond', Georgia, serif; text-shadow: 0 1px 0 #000; overflow-wrap: anywhere; }
+.dc-name .lvl-chip { margin-right: 6px; font-size: 0.72em; }
+.dc-sub { margin-top: 2px; color: #b6a888; font-size: 12px; }
+
+.dc-body { display: grid; gap: 10px 16px; }
+.dc-body.dc-two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.dc-col { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.dc-rows { display: flex; flex-direction: column; gap: 1px; }
+.dc-row { display: flex; align-items: center; gap: 6px; min-height: 24px; padding: 1px 4px; border-radius: 3px; }
+.dc-row:nth-child(odd) { background: rgba(255, 255, 255, 0.025); }
+.dc-ri { flex: 0 0 18px; display: grid; place-items: center; }
+.dc-ri .ico-sm { width: 18px; height: 18px; margin: 0; }
+.dc-rk { flex: 1 1 auto; min-width: 5.5em; color: #c9bc9c; }
+.dc-rbar { flex: 0 0 56px; height: 5px; background: #0a0c0e; border: 1px solid #000; box-shadow: inset 0 0 0 1px rgba(232, 196, 106, 0.12); position: relative; }
+.dc-rbar > i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #8a6a2a, #e0b862); }
+.dc-rv { flex: 0 1 auto; min-width: 0; color: #f0e6cc; font-variant-numeric: tabular-nums; text-align: right; overflow-wrap: anywhere; }
+.dc-up .dc-rv { color: #7fd07a; }
+.dc-down .dc-rv { color: #e07a5f; }
+.dc-bars { display: flex; flex-direction: column; gap: 4px; }
+.dc-bar { display: grid; grid-template-columns: 70px 1fr 40px; align-items: center; gap: 6px; font-size: 12px; color: #c9bc9c; }
+.dc-bar b { text-align: right; color: #f0e6cc; font-variant-numeric: tabular-nums; }
+.dc-track { height: 8px; position: relative; background: #0a0c0e; border: 1px solid #000; box-shadow: inset 0 0 0 1px rgba(232, 196, 106, 0.12); }
+.dc-track > i { position: absolute; left: 0; top: 0; bottom: 0; }
+.dc-bar-hull .dc-track > i { background: linear-gradient(90deg, #6e2a20, #c8553d); }
+.dc-bar-sails .dc-track > i { background: linear-gradient(90deg, #5d6a72, #c9d4da); }
+.dc-bar-crew .dc-track > i { background: linear-gradient(90deg, #6a5a2a, #d8b45a); }
+.dc-extra { overflow: hidden; }
+.dc-extra .tg-army { margin: 0; font-size: 12.5px; }
+.dc-extra .army-mini { width: 26px; height: 26px; cursor: help; }
+.dc-notes { display: flex; flex-direction: column; gap: 5px; }
+.dc-n { margin: 0; }
+.dc-n-gift { color: #9fd3a0; }
+.dc-n-head { color: #e0b862; font-weight: 600; margin-top: 2px; }
+.dc-n-on { color: #9fd3a0; }
+.dc-n-off { color: #7d7564; }
+.dc-n-muted { color: #9a8f78; font-size: 12px; }
+.dc-n-flavor { color: #c9b98f; font-style: italic; }
+.dc-h { margin: 0 0 4px; font: 700 13px/1.2 'Cormorant Garamond', Georgia, serif; color: #e0b862; letter-spacing: 0.02em; }
+.dc-src ul { margin: 0 0 6px; padding-left: 16px; }
+.dc-src li { margin: 1px 0; }
+.dc-acts { position: sticky; bottom: -12px; z-index: 1; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin: 10px -14px -12px; padding: 8px 14px 10px; border-top: 1px solid rgba(176, 141, 87, 0.35); background: linear-gradient(180deg, rgba(16, 15, 14, 0.96), rgba(12, 12, 13, 0.99)); }
+.dc-acts .btn { min-height: 40px; min-width: 96px; }
+
+/* The ⓘ that opens a card where the tap does something else (a ship's target frame). */
+.dc-info { display: inline-grid; place-items: center; width: 26px; height: 26px; padding: 0; margin-left: auto; border: 1px solid #6f5a38; border-radius: 50%; background: rgba(10, 10, 12, 0.85); color: #e0b862; font: 700 14px/1 Georgia, serif; cursor: pointer; pointer-events: auto; }
+.dc-info:hover { border-color: #e0b862; color: #fff; }
+[data-detail] { cursor: help; }
+[data-detail]:focus-visible, [data-detail-hold]:focus-visible { outline: 1px solid #e0b862; outline-offset: 1px; }
+
+/* A phone: short screens (held sideways) — a smaller head, the card all of the height. */
+@media (max-height: 520px) {
+  .dc-scroll { padding: 8px 10px 8px; }
+  .dc-head { margin-bottom: 6px; gap: 10px; }
+  .dc-art { width: 56px; height: 56px; }
+  .dc-art .dc-ico { width: 48px; height: 48px; }
+  .dc-art-unit { width: 64px; height: 72px; }
+  .dc-art-ship { width: 90px; height: 56px; }
+  .dc-art-ship img { height: 86px; }
+  .dc-name { font-size: 17px; }
+  .dc-row { min-height: 22px; }
+  .dc-card { font-size: 12.5px; }
+  .dc-acts { bottom: -8px; margin: 8px -10px -8px; padding: 6px 10px 8px; }
+}
+@media (max-width: 520px) {
+  .dc-body.dc-two { grid-template-columns: minmax(0, 1fr); }
+}
+.army-ops .army-ops-info { margin: 0 6px 0 0; flex: none; }
+.dc-tap { display: inline-flex; }

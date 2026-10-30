@@ -1,5 +1,6 @@
 // Boarding plunder, shipwreck, ship/cargo and help dialogs.
 
+import { detailAttr } from './detailattr.ts'; // the detail card (owner, 2026-10-30)
 import { mountFallen } from './waystation.ts'; // docs/35
 import { bindCompanion, bottleCard, chestCard, companionCard, petsCard } from './companion.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -84,7 +85,7 @@ function renderOutcome(root: HTMLElement, r: BoardingResult, state: ClientState,
     `<button class="btn choice out-choice ${cls}" data-fate="${fate}" title="${esc(title)}" aria-label="${esc(title)}">${icon(ico, '', 'choice-ico')}<span><b>${two(title, short)}</b><small>${esc(sub)}</small></span></button>`;
   root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('board.title', { name: placeName(r.targetName) }))}</h2><div class="sub">${esc(L('board.sub', { cls: SHIP_CLASSES[r.targetClass].name, ours: r.crewLost, theirs: r.enemyCrewLost }))}${report ? ` · ${esc(report)}` : ''}</div>${r.struck ? `<div class="sub board-report">${esc(LC('board.struck'))}</div>` : ''}</div></div>
     <div class="modal-body out-body">
-      <div class="out-hold">${goods.slice(0, 8).map((g) => `<span class="out-good" title="${esc(GOODS[g].name)}">${icon(`good_${g}`, '', 'ico-sm')}<b>${r.cargo[g]}</b></span>`).join('')}<span class="muted">${esc(units ? LO('out.hold', { n: units }) : LO('out.holdEmpty'))}</span><span class="out-good">${icon('coin', '', 'ico-sm')}<b>${fmt(r.gold)}</b></span>${AMMO_IDS.filter((a) => r.ammo[a] > 0).map((a) => `<span class="out-good" title="${esc(AMMO[a].name)}">${icon(`ammo_${a}`, '', 'ico-sm')}<b>${r.ammo[a]}</b></span>`).join('')}</div>
+      <div class="out-hold">${goods.slice(0, 8).map((g) => `<span class="out-good"${detailAttr(`good:${g}`)} title="${esc(GOODS[g].name)}">${icon(`good_${g}`, '', 'ico-sm')}<b>${r.cargo[g]}</b></span>`).join('')}<span class="muted">${esc(units ? LO('out.hold', { n: units }) : LO('out.holdEmpty'))}</span><span class="out-good">${icon('coin', '', 'ico-sm')}<b>${fmt(r.gold)}</b></span>${AMMO_IDS.filter((a) => r.ammo[a] > 0).map((a) => `<span class="out-good" title="${esc(AMMO[a].name)}">${icon(`ammo_${a}`, '', 'ico-sm')}<b>${r.ammo[a]}</b></span>`).join('')}</div>
       ${r.joined?.length ? `<p class="good out-line">${esc(L('board.joined', { n: r.joined.reduce((a, x) => a + x.n, 0) }))}</p>` : ''}
       ${r.noQuarter ? `<p class="bad out-line">${esc(L('board.noQuarter', { talent: talentName('brd_no_quarter') }))}</p>` : `<p class="muted out-line out-text">${esc(LO('out.text'))}</p>`}
       ${!r.noQuarter && outcomeNote(o) ? `<p class="muted out-line">${esc(LO(outcomeNote(o) === 'noRoom' ? 'out.noRoom' : 'out.noMen'))}</p>` : ''}
@@ -123,13 +124,13 @@ export function renderBoarding(root: HTMLElement, r: BoardingResult, state: Clie
     root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('board.title', { name: placeName(r.targetName) }))}</h2><div class="sub">${esc(L('board.sub', { cls: SHIP_CLASSES[r.targetClass].name, ours: r.crewLost, theirs: r.enemyCrewLost }))}</div>${r.struck ? `<div class="sub board-report">${esc(LC('board.struck'))}</div>` : ''}${r.report ? `<div class="sub board-report">${esc([L(r.report.tac ? 'board.reportTac' : 'board.report', { rounds: r.report.rounds, won: r.report.won, lost: r.report.lost }), r.report.duel === 'won' ? L('board.duelWon') : '', r.report.moves ? L('board.moves', { n: r.report.moves }) : ''].filter(Boolean).join(' · '))}</div>` : ''}</div></div>
       <div class="modal-body"><div class="cols"><div>
         <h3 class="title-sm" style="font-size:20px">${esc(L('board.cargo'))}</h3>
-        ${goods.length ? goods.map((g) => `<div class="loot-grid">${icon(`good_${g}`, '', 'item-ico')}<div class="item-text"><b>${esc(GOODS[g].name)}</b><span class="muted">${esc(L('board.aboard', { n: r.cargo[g] ?? 0 }))}${state.self?.appraisal?.[g] ? ` · ${money(state.self.appraisal[g]!.price)}` : ''}</span></div><b class="loot-take">${take[g] ?? 0}</b>
+        ${goods.length ? goods.map((g) => `<div class="loot-grid"><span class="dc-tap"${detailAttr(`good:${g}`)}>${icon(`good_${g}`, '', 'item-ico')}</span><div class="item-text"><b>${esc(GOODS[g].name)}</b><span class="muted">${esc(L('board.aboard', { n: r.cargo[g] ?? 0 }))}${state.self?.appraisal?.[g] ? ` · ${money(state.self.appraisal[g]!.price)}` : ''}</span></div><b class="loot-take">${take[g] ?? 0}</b>
           <input type="range" min="0" max="${r.cargo[g]}" value="${take[g] ?? 0}" data-g="${g}" /></div>`).join('') : `<p class="muted">${esc(L('board.empty'))}</p>`}
         <p class="${used > holdMax ? 'up' : 'muted'}">${esc(L('board.hold', { used: dec1(used), max: holdMax.toFixed(0) }))}</p>
         ${Object.keys(r.destroyed).length ? `<p class="muted">${esc(L('board.destroyed', { list: Object.entries(r.destroyed).map(([g, n]) => `${lang() === 'ru' ? GOODS[g as GoodId].name.toLowerCase() : GOODS[g as GoodId].name} × ${n}`).join(' · ') }))}</p>` : ''}
       </div><div>
         <div data-fallen-slot></div>
-        <div class="card"><h4 class="card-h">${icon('coin', '', 'ico-md')}${esc(L('board.coin'))}</h4><div class="spoils">${money(r.gold)}${AMMO_IDS.filter((a) => r.ammo[a] > 0).map((a) => `<span class="ammo-chip" title="${esc(AMMO[a].name)}">${icon(`ammo_${a}`, '', 'ico-md')}<b>${r.ammo[a]}</b></span>`).join('')}</div></div>
+        <div class="card"><h4 class="card-h">${icon('coin', '', 'ico-md')}${esc(L('board.coin'))}</h4><div class="spoils">${money(r.gold)}${AMMO_IDS.filter((a) => r.ammo[a] > 0).map((a) => `<span class="ammo-chip"${detailAttr(`ammo:${a}`)} title="${esc(AMMO[a].name)}">${icon(`ammo_${a}`, '', 'ico-md')}<b>${r.ammo[a]}</b></span>`).join('')}</div></div>
         ${r.joined?.length || r.recruits > 0 ? `<div class="card"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('board.prisoners'))}</h4>${r.joined?.length ? `<p class="good">${esc(L('board.joined', { n: r.joined.reduce((a, x) => a + x.n, 0) }))}</p>` : ''}${r.recruits > 0 ? `<p>${esc(L(r.recruits === 1 ? 'board.prisonersOne' : 'board.prisonersText', { n: r.recruits }))}</p><div class="loot-row"><span>${esc(L('board.signOn'))}</span><b>${recruit}</b><input type="range" min="0" max="${r.recruits}" value="${recruit}" id="recruit" /></div>` : ''}</div>` : ''}
         <div class="card"><h4 class="card-h">${icon('tree_boarding', '', 'ico-md')}${esc(L('board.fate'))}</h4>
           ${r.noQuarter ? `<p class="bad">${esc(L('board.noQuarter', { talent: talentName('brd_no_quarter') }))}</p><div class="choice-grid one"><button class="btn btn-danger choice" data-fate="sink">${icon('fire', '', 'choice-ico')}<span>${esc(L('board.burn'))}</span></button></div>` : `
@@ -207,11 +208,11 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
   const cargo = holdMix(self.cargo, st).map((p) => [p.good, p.n, p.vol] as const);
   const art = assetUrl(cls.sprite);
   // A figure with its picture: the stat tiles of the ship screen.
-  const tile = (pic: string, label: string, value: string, flip = false) =>
-    `<div class="stat-tile">${icon(pic, '', flip ? 'stat-ico flip' : 'stat-ico')}<span class="stat-l">${esc(label)}</span><b class="stat-v">${value}</b></div>`;
+  const tile = (pic: string, label: string, value: string, flip = false, key = '') =>
+    `<div class="stat-tile"${key ? detailAttr(key) : ''}>${icon(pic, '', flip ? 'stat-ico flip' : 'stat-ico')}<span class="stat-l">${esc(label)}</span><b class="stat-v">${value}</b></div>`;
   const hasSale = cargo.some(([g]) => self.appraisal?.[g as GoodId]);
   const used = cargoVolume(self.cargo, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
-  root.innerHTML = `<div class="modal-head ship-head"><div class="ship-hero">${art ? `<img src="${art}" alt="" draggable="false" />` : ''}</div><div><h2>${esc(self.loadout.trophy ? placeName(self.loadout.name) : self.loadout.name)}</h2><div class="sub">${esc(cls.name)} — ${esc(cls.role)}</div><div class="sub ship-passive">${icon('xp', '', 'ico-sm')}${esc(L('ship.passive', { name: cls.passive.name, text: cls.passive.description }))}</div>${giftLine(cls.id)}</div><div class="ship-head-r">${openGear ? `<button class="btn btn-small btn-primary" data-open-gear>${icon('menu_cabin', '', 'ico-sm')}${esc(L('ship.gear'))}</button>` : ''}${openLook ? `<button class="btn btn-small" data-open-look>${icon('faction_free', '', 'ico-sm')}${esc(L('ship.look'))}</button>` : ''}${scuttle && !self.dockedAt ? `<button class="btn btn-small btn-danger" data-scuttle title="${esc(LA('ship.scuttleT'))}">${icon('map_wreck', '', 'ico-sm')}${esc(LA('ship.scuttle'))}</button>` : ''}<div class="muted">${esc(L('ship.close', { key: kb('ship') }))}</div></div></div>
+  root.innerHTML = `<div class="modal-head ship-head"><div class="ship-hero"${detailAttr(`hull:${cls.id}`)}>${art ? `<img src="${art}" alt="" draggable="false" />` : ''}</div><div><h2>${esc(self.loadout.trophy ? placeName(self.loadout.name) : self.loadout.name)}</h2><div class="sub">${esc(cls.name)} — ${esc(cls.role)}</div><div class="sub ship-passive">${icon('xp', '', 'ico-sm')}${esc(L('ship.passive', { name: cls.passive.name, text: cls.passive.description }))}</div>${giftLine(cls.id)}</div><div class="ship-head-r">${openGear ? `<button class="btn btn-small btn-primary" data-open-gear>${icon('menu_cabin', '', 'ico-sm')}${esc(L('ship.gear'))}</button>` : ''}${openLook ? `<button class="btn btn-small" data-open-look>${icon('faction_free', '', 'ico-sm')}${esc(L('ship.look'))}</button>` : ''}${scuttle && !self.dockedAt ? `<button class="btn btn-small btn-danger" data-scuttle title="${esc(LA('ship.scuttleT'))}">${icon('map_wreck', '', 'ico-sm')}${esc(LA('ship.scuttle'))}</button>` : ''}<div class="muted">${esc(L('ship.close', { key: kb('ship') }))}</div></div></div>
     <div class="modal-body"><div class="stat-grid">
       ${tile('stat_sails', L('ship.speed'), `${esc(L('ship.speedVal', { v: dec1(st.maxSpeed) }))}${self.hold?.over ? `<small class="ship-over">${esc(L('ship.over', { n: self.hold.slow, v: dec1(st.maxSpeed * (1 - self.hold.slow / 100)) }))}</small>` : ''}`)}
       ${tile('menu_ship', L('ship.turn'), esc(L('ship.turnVal', { v: dec1((st.turnRate * 180) / Math.PI) })))}
@@ -221,8 +222,8 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
       ${tile('stat_sails', L('ship.sails'), String(st.sailHpMax))}
       ${tile('stat_crew', L('ship.crew'), esc(L('ship.crewVal', { n: self.crew, min: st.crewMin, max: st.crewMax })))}
       ${tile('tab_market', L('ship.hold'), esc(L('ship.holdVal', { used: dec1(used), max: st.holdVolume.toFixed(0), weight: st.holdWeight.toFixed(0) })))}
-      ${tile(`gun_${self.loadout.guns.port}`, L('ship.port'), `${cls.gunPortsPerSide - self.gunsDisabled.port}/${cls.gunPortsPerSide}<small>${esc(GUNS[self.loadout.guns.port].name)}</small>`, true)}
-      ${tile(`gun_${self.loadout.guns.starboard}`, L('ship.starboard'), `${cls.gunPortsPerSide - self.gunsDisabled.starboard}/${cls.gunPortsPerSide}<small>${esc(GUNS[self.loadout.guns.starboard].name)}</small>`)}
+      ${tile(`gun_${self.loadout.guns.port}`, L('ship.port'), `${cls.gunPortsPerSide - self.gunsDisabled.port}/${cls.gunPortsPerSide}<small>${esc(GUNS[self.loadout.guns.port].name)}</small>`, true, `gun:${self.loadout.guns.port}`)}
+      ${tile(`gun_${self.loadout.guns.starboard}`, L('ship.starboard'), `${cls.gunPortsPerSide - self.gunsDisabled.starboard}/${cls.gunPortsPerSide}<small>${esc(GUNS[self.loadout.guns.starboard].name)}</small>`, false, `gun:${self.loadout.guns.starboard}`)}
       ${tile('fire', L('ship.gunMuls'), `×${dec2(st.reloadMul)} / ×${dec2(st.spreadMul)} / ×${dec2(st.gunDamageMul)}`)}
       ${tile('tree_boarding', L('ship.boarding'), esc(L('ship.boardingVal', { range: st.boardingRange.toFixed(0), power: dec2(st.boardingPower) })))}
       ${tile('ab_spotters_eye', L('ship.detection'), esc(L('ship.detectionVal', { v: st.detection.toFixed(0) })))}
@@ -235,7 +236,7 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
         const a = self.appraisal?.[g as GoodId];
         const where = a ? state.ports.find((p) => p.id === a.port)?.name ?? a.port : '';
         const good = GOODS[g as GoodId];
-        return `<div class="cargo-row">${icon(`good_${g}`, '', 'item-ico')}
+        return `<div class="cargo-row"${detailAttr(`good:${g}`, { sell: a?.price })}>${icon(`good_${g}`, '', 'item-ico')}
           <div class="item-text"><b class="${good.contraband ? 'contra' : ''}">${esc(good.name)}</b><span class="muted">${esc(L('ship.volume'))} ${dec1(v)} (${Math.round((v / Math.max(1, st.holdVolume)) * 100)}%) · ${esc(L('ship.weight'))} ${dec1((n ?? 0) * good.weight)}${a ? ` · ${esc(where)}` : ''}</span></div>
           <b class="cargo-qty">×${Math.floor(n ?? 0)}</b>
           ${hasSale ? `<span class="cargo-sale">${a ? money(a.price * Math.floor(n ?? 0)) : ''}</span>` : ''}

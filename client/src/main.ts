@@ -1,7 +1,7 @@
 // Client entry: login → captain selection → the ocean. Wires network, state, input, renderer and UI.
 
-import { LB, menAskText } from './ui/berths.ts'; // forum 2026-10-30: «Причал»
 import './compat.ts'; // first of all: the calls Safari 15 lacks (iOS 15 is the floor)
+import { LB, menAskText } from './ui/berths.ts'; // forum 2026-10-30: «Причал»
 import { WayWindow, mountFallen, resRid } from './ui/waystation.ts'; // docs/35
 import { setWayFog, wayName } from './render/waystations.ts'; // docs/35
 import { fogFarLayer, underFog } from './render/fog.ts'; // the fog of war (owner, 2026-10-17)
@@ -25,6 +25,8 @@ import { NetHaulPanel } from './ui/nethaul.ts';
 import { departHooks, departOrAsk } from './ui/depart.ts';
 import { adviceFor, showAdvice } from './ui/buyadvice.ts';
 import { RouteRun } from './ui/goalrun.ts';
+import { mountDetail, openDetail } from './ui/detail.ts';
+import type { DetailAct } from './ui/detail.ts';
 import { mountSrcTip } from './ui/srctip.ts'; // «Где взять» (owner, 2026-10-30) // ux2 / route: the run to a goal's nearest place
 import { EN as UX2_EN, RU as UX2_RU } from './lang/ui/ux2.ts';
 import type { AutosailStop } from '../../shared/src/data/autosail.ts';
@@ -730,6 +732,34 @@ mountSrcTip({
     if (isleScene.isOpen) isleScene.openThing(id);
   },
 });
+// The detail card of everything (owner, 2026-10-30: «нажал — тултип а-ля модалка и крестик чтоб закрыть»): every
+// `data-detail` opens it; a ship's card offers the target menu's own «Цель / Атаковать / Плыть».
+mountDetail({
+  state: () => state,
+  shipActs: (id) => {
+    const s = state.ships.get(id);
+    const out: DetailAct[] = [];
+    if (!s?.info || id === state.entityId) return out;
+    if (!(s.cur.flags & (SF.IN_BATTLE | SF.VOYAGE)) && !state.voyage) {
+      const have = new Set((targetChoices(`ship:${id}`)?.choices ?? []).map((c) => c.id));
+      for (const a of ['lock', 'fight', 'pursue'] as const) if (have.has(a)) out.push(a);
+    }
+    if (s.info.isPlayer) out.push('inspect');
+    return out;
+  },
+  shipAct: (id, act) => {
+    const s = state.ships.get(id);
+    if (act === 'inspect') {
+      if (s?.info?.isPlayer) net.send({ t: 'inspect', name: s.info.captainName });
+      return;
+    }
+    pickTargetChoice(act, `ship:${id}`);
+  },
+  go: (key) => {
+    leaveIsle(false);
+    startGoal(key);
+  },
+});
 // The premium shop (owner, 2026-10-03): from the micro menu and the cabin; `topup` opens it at the packs.
 const premiumWindow = new PremiumWindow((m) => net.send(m));
 premiumWindow.toast = (msg, kind) => hud.toast(msg, kind);
@@ -1266,6 +1296,9 @@ const seaHud = new SeaHud($('touch'), {
     // The line shows a marked creature stack: its card (docs/19 D7); else the ship's frame.
     const rf = !targetPinned && !state.pursuit ? roamFocus() : null;
     if (rf?.marked) return openRoamLook(rf.v);
+    // a ship: her detail card (owner, 2026-10-30) — the frame only for a struck merchant's tribute
+    const ts = targetId !== null ? state.ships.get(targetId) : undefined;
+    if (ts?.info && !(ts.info.npcRole === 'merchant' && ts.cur.flags & SF.SURRENDERED) && openDetail(`ship:${targetId}`)) return;
     seaHud.lend(['hud-target'], 'target');
   },
 });
@@ -4589,7 +4622,7 @@ function canBoardNow(id: number): boolean {
 }
 
 /** The choices about a target (`ship:id`, `roam:id`) and where she stands on the screen, or null: nothing to offer. */
-function targetChoices(about: string): { choices: TmChoice[]; name: string; x: number; y: number; r: number } | null {
+function targetChoices(about: string): { choices: TmChoice[]; name: string; x: number; y: number; r: number; info?: boolean } | null {
   const [kind, sid] = about.split(':');
   const id = Number(sid);
   const own = state.ownDisplay, you = state.you, self = state.self;
@@ -4611,6 +4644,9 @@ function targetChoices(about: string): { choices: TmChoice[]; name: string; x: n
       hud.toast(LP('hint'), 'info');
       return null;
     }
+    // «Подробнее» (owner, 2026-10-30): the small ⓘ beside the ring opens her detail card (client/src/ui/detail.ts) with
+    // «Цель / Атаковать / Плыть»; a ship she cannot fight (a friend, a ship in port's peace) offers it alone
+    if (s?.info && id !== state.entityId && !f?.attackable) return { name: s.info.isPlayer ? s.info.captainName : placeName(s.info.name), x: renderer.sx(s.cur.x), y: renderer.sy(s.cur.y), r: Math.max(18, SHIP_CLASSES[s.info.classId].length * 0.5 * renderer.zoom), choices: [{ id: 'info', art: 'bt_book', label: seaWord('tm.info'), title: seaWord('tm.infoT') }] };
     if (!s?.info || !f?.attackable) return null;
     const board = canBoardNow(id);
     const beast = beastOfClass(s.info.classId);
@@ -4626,6 +4662,7 @@ function targetChoices(about: string): { choices: TmChoice[]; name: string; x: n
         // A peaceful ship of the sea: hire her as a guard (owner, 2026-10-25; the card says why not, the server decides).
         ...(!s.info.isPlayer && s.info.npcRole && (HIRE_ROLES as readonly string[]).includes(s.info.npcRole) && !s.info.named && !s.info.elite && s.info.shipLevel !== undefined && !(s.cur.flags & (SF.HOSTILE | SF.SURRENDERED | SF.SINKING | SF.BOARDING)) ? [{ id: 'hire' as const, art: 'ab_call_escort', label: LHIRE('hr.tm'), title: LHIRE('hr.tmT') }] : []),
       ],
+      info: true,
     };
   }
   if (kind === 'roam') {
@@ -4652,6 +4689,10 @@ function pickTargetChoice(id: TmId, about: string): void {
   const [kind, sid] = about.split(':');
   const n = Number(sid);
   if (kind === 'ship') {
+    if (id === 'info') {
+      openDetail(`ship:${n}`);
+      return;
+    }
     if (id === 'talk') return ceasefireCard.ask(n);
     if (id === 'hire') return hireCard.ask(n);
     pinTarget(n); // the pursuit and the fight are about her: she is the mark too
@@ -4703,7 +4744,7 @@ function hudKeepOut(): TmRect[] {
 function openTargetMenu(about: string): void {
   const t = about ? targetChoices(about) : null;
   if (!t || hudKeepOut().some((b) => t.x > b.left && t.x < b.right && t.y > b.top && t.y < b.bottom)) return targetMenu.hide();
-  targetMenu.show(about, t.choices, t.name);
+  targetMenu.show(about, t.choices, t.name, t.info);
   targetMenu.place(t.x, t.y, t.r, hudKeepOut());
 }
 
@@ -4737,7 +4778,7 @@ function targetMenuFrame(): void {
   // A desk: the mouse near her (a sailing ship slips from under a still mouse: a little room round her) or on the
   // choices keeps them; on the choices they stand still for the click instead of following her.
   if (!touch.enabled) targetMenu.hoverAt(mouseAt.x, mouseAt.y, Math.hypot(mouseAt.x - t.x, mouseAt.y - t.y) <= t.r + 34);
-  targetMenu.show(targetMenu.about, t.choices, t.name);
+  targetMenu.show(targetMenu.about, t.choices, t.name, t.info);
   if (!targetMenu.hovered) targetMenu.place(t.x, t.y, t.r, hudKeepOut());
 }
 

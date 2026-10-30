@@ -5,6 +5,7 @@
 // for a building, «Открыть карточку». A mouse shows it on hover; a finger (and a click) pins it, a tap outside closes it.
 // It stands beside its chip and never leaves the screen.
 
+import { detailAttr } from './detailattr.ts'; // the detail card (owner, 2026-10-30)
 import { sourcesOf } from '../../../shared/src/data/sources.ts';
 import type { SrcLine } from '../../../shared/src/data/sources.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -83,7 +84,7 @@ export function srcHtml(id: string, need?: number, have?: number): string {
   const go = lines.find((s): s is Extract<SrcLine, { k: 'ports' }> => s.k === 'ports');
   return `<div class="st-h">${head}</div>${count}<p class="st-where">${esc(L('where'))}</p>
     ${lines.length ? `<ul class="st-list">${lines.map((s) => `<li>${esc(srcText(s))}</li>`).join('')}</ul>` : `<p class="muted">${esc(L('none'))}</p>`}
-    ${go ? `<div class="st-act"><button type="button" class="btn btn-small" data-stgo="${esc(go.key)}">${icon('menu_ship', '', 'ico-sm')}${esc(L('go'))}</button></div>` : ''}`;
+    <div class="st-act">${go ? `<button type="button" class="btn btn-small" data-stgo="${esc(go.key)}">${icon('menu_ship', '', 'ico-sm')}${esc(L('go'))}</button>` : ''}<button type="button" class="btn btn-small"${detailAttr(kind === 'g' ? `good:${what}` : `lres:${what}`)}>ⓘ ${esc(L('info'))}</button></div>`;
 }
 
 export interface SrcTipHooks {

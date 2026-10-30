@@ -4,6 +4,7 @@
 // for, in one tap: «Продать всё», «Припасы», «Починить», the upgrade «было → стало», the hire slider, the three best
 // quests; the full lists stay below for those who trade by hand.
 
+import { detailAttr } from './detailattr.ts'; // the detail card (owner, 2026-10-30)
 import { EN as ISLES_EN, RU as ISLES_RU } from '../lang/ui/isles.ts';
 import { priceClockHtml } from './portcard.ts'; // the price period's countdown (owner, 2026-10-30)
 import { omenLog } from './journal.ts';
@@ -648,7 +649,7 @@ export class PortScreen {
       const stolen = Math.min(have, self.stolen[r.good] ?? 0);
       const trend = r.trend > 0.03 ? `<span class="up">▲</span>` : r.trend < -0.03 ? `<span class="down">▼</span>` : '';
       const tags = [view.dealOfDay === r.good ? L('market.dealOfDay') : '', r.legal ? '' : L('market.contraband'), g.spoilPerHour ? L('market.perishable') : '', g.danger > 0.3 ? L('market.dangerous') : '', stolen ? L('market.stolen', { n: stolen }) : ''].filter(Boolean).join(' · ');
-      return `<div class="w-row mk-row${have ? ' have' : ''}" data-good="${r.good}" data-hint="${esc(`${g.name}. ${g.description}`)}">${icon(`good_${r.good}`, '', 'w-row-ico')}
+      return `<div class="w-row mk-row${have ? ' have' : ''}" data-good="${r.good}"${detailAttr(`good:${r.good}`, { buy: r.buy, sell: r.sell })} data-hint="${esc(`${g.name}. ${g.description}`)}">${icon(`good_${r.good}`, '', 'w-row-ico')}
         <span class="w-row-t"><b class="${r.legal ? '' : 'contra'}">${esc(g.name)}</b><small>${esc(have ? (isInfStock(r.stock) ? `${W('mk.have', { n: have })} · ${W('mk.stock', { n: stockText(r.stock) })}` : W('mk.have', { n: have })) : W('mk.stock', { n: stockText(r.stock) }))}${tags ? ` · ${esc(tags)}` : ''}</small></span>
         <span class="w-row-n" title="${esc(W('mk.priceHint', { buy: r.buy, sell: r.sell }))}">${money(r.buy)}<small>${money(r.sell)}${trend}</small></span>
         <span class="w-row-b"><button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="buy" data-good="${r.good}" ${r.stock > 0 ? '' : 'disabled'}>${esc(L('btn.buy'))}</button><button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="sell" data-good="${r.good}" ${have ? '' : 'disabled'}>${esc(L('btn.sell'))}</button></span></div>`;
@@ -657,11 +658,11 @@ export class PortScreen {
     const next = qtys[(qtys.indexOf(this.qty) + 1) % qtys.length] ?? 1;
     const by = `<button type="button" class="w-chip on mk-by" data-qty="${next}" data-hint="${esc(W('mk.byHint'))}" aria-label="${esc(`${W('mk.by')} ${this.qty}`)}"><span class="muted">${esc(W('mk.by'))}</span> <b>${this.qty}</b></button>`;
     // A rarer shot neither sold here nor in the hold is not listed (the common kinds always are).
-    const ammo = AMMO_IDS.filter((a, i) => i <= AMMO_IDS.indexOf('cursed') || view.ammoPrices[a] > 0 || self.ammo[a] > 0).map((a) => `<div class="w-row" data-hint="${esc(`${AMMO[a].name}. ${AMMO[a].description}`)}">${icon(`ammo_${a}`, '', 'w-row-ico')}
+    const ammo = AMMO_IDS.filter((a, i) => i <= AMMO_IDS.indexOf('cursed') || view.ammoPrices[a] > 0 || self.ammo[a] > 0).map((a) => `<div class="w-row"${detailAttr(`ammo:${a}`)} data-hint="${esc(`${AMMO[a].name}. ${AMMO[a].description}`)}">${icon(`ammo_${a}`, '', 'w-row-ico')}
       <span class="w-row-t"><b>${esc(AMMO[a].name)}</b><small>${esc(view.ammoPrices[a] > 0 ? L('market.inHold', { n: self.ammo[a], price: view.ammoPrices[a] }) : L('market.inHoldOnly', { n: self.ammo[a] }))}</small></span>
       ${view.ammoPrices[a] > 0 ? `<span class="w-row-b">${[20, 50].map((n) => `<button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="ammo" data-ammo="${a}" data-n="${n}">+${n}</button>`).join('')}</span>` : ''}</div>`).join('');
     const intel = view.priceIntel?.length
-      ? `<table class="grid"><tr><th>${esc(L('th.good'))}</th><th>${esc(L('th.port'))}</th><th>${esc(L('th.sellsFor'))}</th><th>${esc(L('th.age'))}</th></tr>${view.priceIntel.slice(0, 12).map((i) => `<tr><td>${icon(`good_${i.good}`)}${esc(GOODS[i.good].name)}</td><td>${esc(placeName(i.name))}</td><td>${money(i.sell)}</td><td class="muted">${esc(L('unit.min', { n: Math.round(i.ageSec / 60) }))}</td></tr>`).join('')}</table>`
+      ? `<table class="grid"><tr><th>${esc(L('th.good'))}</th><th>${esc(L('th.port'))}</th><th>${esc(L('th.sellsFor'))}</th><th>${esc(L('th.age'))}</th></tr>${view.priceIntel.slice(0, 12).map((i) => `<tr><td${detailAttr(`good:${i.good}`)}>${icon(`good_${i.good}`)}${esc(GOODS[i.good].name)}</td><td>${esc(placeName(i.name))}</td><td>${money(i.sell)}</td><td class="muted">${esc(L('unit.min', { n: Math.round(i.ageSec / 60) }))}</td></tr>`).join('')}</table>`
       : '';
     const fence = view.fence !== null ? `<div class="card"><h4>${esc(L('fence.title'))}</h4><p class="muted">${esc(L('fence.text', { pct: Math.round(view.fence * 100) }))}</p>
         ${(Object.keys(self.cargo) as (keyof typeof GOODS)[]).filter((g) => GOODS[g].contraband && (self.cargo[g] ?? 0) >= 1).map((g) => `<button class="btn btn-small" data-act="fence" data-good="${g}">${esc(L('fence.sell', { n: Math.floor(self.cargo[g] ?? 0), good: GOODS[g].name }))}</button>`).join(' ') || `<span class="muted">${esc(L('fence.nothing'))}</span>`}</div>` : '';
@@ -691,7 +692,7 @@ export class PortScreen {
       const maxed = m.level >= m.max;
       const mat = view.materialDiscount[m.module];
       const matNote = mat && !maxed ? `<p class="muted">${esc(L('yard.matNote', { n: mat.units, good: GOODS[mat.good].name.toLowerCase() }))}</p>` : '';
-      return `<div class="card"><h4>${icon(`mod_${m.module}`, '', 'ico-md')}${esc(def.name)} <span class="muted">${m.level}/${m.max}</span>${m.excellent ? ` <span class="gold">${esc(L('yard.excellent'))}</span>` : ''}</h4><p>${esc(def.description)}</p>${matNote}
+      return `<div class="card"${detailAttr(`module:${m.module}:${Math.max(1, m.level)}`)}><h4>${icon(`mod_${m.module}`, '', 'ico-md')}${esc(def.name)} <span class="muted">${m.level}/${m.max}</span>${m.excellent ? ` <span class="gold">${esc(L('yard.excellent'))}</span>` : ''}</h4><p>${esc(def.description)}</p>${matNote}
         <button class="btn btn-small" data-act="module" data-module="${m.module}" ${maxed ? 'disabled' : ''}>${esc(maxed ? L('yard.fullyFitted') : L('yard.fitLevel', { n: m.level + 1, cost: fmt(m.cost) }))}</button>
         ${m.level > 0 ? `<button class="btn btn-small" data-act="unfit" data-module="${m.module}" data-fee="${m.unfit ?? 0}" data-lv="${m.level}" title="${esc(m.unfit ? L('yard.unfitFee', { n: fmt(m.unfit) }) : L('yard.unfitFree'))}">${esc(L('yard.takeOut'))} · ${m.unfit ? money(m.unfit) : esc(L('yard.free'))}</button>` : ''}</div>`;
     }).join('');
@@ -699,12 +700,12 @@ export class PortScreen {
       ${sy.guns.map((gdef) => {
         const g = GUNS[gdef.gun];
         const mounted = self.loadout.guns[side] === gdef.gun;
-        return `<div class="item-row" title="${esc(g.description)}">${icon(`gun_${gdef.gun}`, '', 'item-ico')}<div class="item-text"><b>${esc(g.name)}</b><span class="muted">${esc(L('yard.gunStats', { dmg: g.damage, range: g.range, reload: g.reload }))}</span><span class="muted">${esc(g.description)}</span></div><button class="btn btn-small item-btn" data-act="gun" data-side="${side}" data-gun="${gdef.gun}" ${mounted ? 'disabled' : ''}>${mounted ? esc(L('yard.mounted')) : money(gdef.cost)}</button></div>`;
+        return `<div class="item-row"${detailAttr(`gun:${gdef.gun}`)} title="${esc(g.description)}">${icon(`gun_${gdef.gun}`, '', 'item-ico')}<div class="item-text"><b>${esc(g.name)}</b><span class="muted">${esc(L('yard.gunStats', { dmg: g.damage, range: g.range, reload: g.reload }))}</span><span class="muted">${esc(g.description)}</span></div><button class="btn btn-small item-btn" data-act="gun" data-side="${side}" data-gun="${gdef.gun}" ${mounted ? 'disabled' : ''}>${mounted ? esc(L('yard.mounted')) : money(gdef.cost)}</button></div>`;
       }).join('')}</div>`).join('');
     const mounts = `<div class="card"><h4 class="card-h">${icon('mount_mortar', '', 'ico-md')}${esc(L('mount.title'))}</h4>${sy.mounts.map((m) => {
       const def = MOUNTS[m.mount];
       const fitted = self.loadout.mount === m.mount;
-      return `<div class="item-row">${icon(`mount_${m.mount}`, '', 'item-ico')}<div class="item-text"><b>${esc(def.name)}</b><span class="muted">${esc(def.description)}</span></div><button class="btn btn-small item-btn" data-act="mount" data-mount="${m.mount}" ${fitted ? 'disabled' : ''}>${fitted ? esc(L('mount.fitted')) : money(m.cost)}</button></div>`;
+      return `<div class="item-row"${detailAttr(`mount:${m.mount}`)}>${icon(`mount_${m.mount}`, '', 'item-ico')}<div class="item-text"><b>${esc(def.name)}</b><span class="muted">${esc(def.description)}</span></div><button class="btn btn-small item-btn" data-act="mount" data-mount="${m.mount}" ${fitted ? 'disabled' : ''}>${fitted ? esc(L('mount.fitted')) : money(m.cost)}</button></div>`;
     }).join('') || `<p class="muted">${esc(L('mount.none'))}</p>`}</div>`;
     // The yard's tree of hulls (docs/20): a hull not yet researched shows what it waits for, and its research.
     const research = self.research ?? { xp: {}, free: 0, done: [] };
@@ -721,7 +722,7 @@ export class PortScreen {
         : q?.ready ? `<button class="btn btn-small btn-primary item-btn" data-act="research" data-cls="${s.classId}">${esc(RL('research', { n: fmt(q.cost) }))}</button>`
         : `<button class="btn btn-small item-btn" data-research-open title="${esc(RL('openTip'))}">${icon('tab_board', '', 'ico-sm')}${esc(RL('yardLocked'))}</button>`;
       const lock = q ? `<span class="hull-lock muted">${esc(q.known.length ? RL('cost', { have: fmt(Math.min(q.cost, q.pool)), cost: fmt(q.cost) }) : RL('st.lockedBy', { names: q.parents.map((p) => SHIP_CLASSES[p].name).join(', ') }))}</span>` : '';
-      return `<div class="card hull-card"><div class="hull-art">${art ? `<img src="${art}" alt="" draggable="false" />` : ''}</div>
+      return `<div class="card hull-card"${detailAttr(`hull:${s.classId}`)}><div class="hull-art">${art ? `<img src="${art}" alt="" draggable="false" />` : ''}</div>
         <div class="hull-text"><b>${esc(c.name)}</b> <span class="muted">${esc(levelSpan(c.id))} · ${esc(c.role)}</span>
           <div class="hull-stats"><span>${icon('stat_hull', '', 'ico-sm')}${c.hull}</span><span>${icon('stat_sails', '', 'ico-sm')}${c.maxSpeed}</span><span>${icon('fire', '', 'ico-sm')}${c.gunPortsPerSide}×2</span><span>${icon('tab_market', '', 'ico-sm')}${c.holdVolume}</span><span>${icon('stat_crew', '', 'ico-sm')}${c.crewMin}–${c.crewMax}</span></div>${lock}</div>
         ${buy}</div>`;
@@ -805,7 +806,7 @@ export class PortScreen {
     const wh = self.warehouses[view.portId] ?? {};
     const matText = Object.entries(mats).map(([g, n]) => {
       const got = Math.floor(self.cargo[g as GoodId] ?? 0) + Math.floor(wh[g as GoodId] ?? 0);
-      return `<span class="mat ${got >= (n ?? 0) ? '' : 'short'}" title="${esc(L('build.matTitle'))}">${icon(`good_${g}`)}${esc(GOODS[g as GoodId].name)} <b>${got}/${n}</b></span>`;
+      return `<span class="mat ${got >= (n ?? 0) ? '' : 'short'}"${detailAttr(`good:${g}`)} title="${esc(L('build.matTitle'))}">${icon(`good_${g}`)}${esc(GOODS[g as GoodId].name)} <b>${got}/${n}</b></span>`;
     }).join('');
     const pct = (a: number, z: number) => { const d = Math.round((a / z - 1) * 100); return `${d >= 0 ? '+' : '−'}${Math.abs(d)}%`; };
     const figs = [...yard.figureheads, ...self.figureheads].filter((f, i, a) => a.indexOf(f) === i);
@@ -966,7 +967,7 @@ ${orders}${berths}</div>` : ''}`;
       const left = x.until > now ? Math.round((x.until - now) / 60) : 0;
       const status = x.mine ? `<span class="good">${esc(L('site.yours', { n: left, stock: x.stock, cap: x.capacity }))}</span>` : x.holder ? `<span class="bad">${esc(L('site.held', { who: x.holder, n: left }))}</span>` : `<span class="muted">${esc(L('site.unclaimed'))}</span>`;
       const can = !x.holder || x.mine;
-      return ledgerRow({ ico: icon(`good_${x.good}`), title: esc(placeName(x.island)), to: GOODS[x.good].name, toCls: 'muted',
+      return ledgerRow({ ico: `<span class="dc-tap"${detailAttr(`good:${x.good}`)}>${icon(`good_${x.good}`)}</span>`, title: esc(placeName(x.island)), to: GOODS[x.good].name, toCls: 'muted',
         meta: [`<span class="lr-kv">${esc(L('site.rate', { n: x.rate }))}</span>`, `<span class="lr-kv">${status}</span>`],
         acts: `<button class="btn btn-small" data-act="rights" data-site="${esc(x.id)}" ${can ? '' : 'disabled'}>${esc(x.mine ? L('site.extend') : L('site.buy'))} ${money(x.cost)}</button>` });
     }).join('');
@@ -975,7 +976,7 @@ ${orders}${berths}</div>` : ''}`;
     const rows = [...goods].filter((g) => (wh.goods[g as never] ?? 0) > 0 || (self.cargo[g as never] ?? 0) >= 1).map((g) => {
       const stored = Math.floor(wh.goods[g as never] ?? 0);
       const held = Math.floor(self.cargo[g as never] ?? 0);
-      return ledgerRow({ ico: icon(`good_${g}`), title: esc(GOODS[g as never as keyof typeof GOODS].name),
+      return ledgerRow({ ico: `<span class="dc-tap"${detailAttr(`good:${g}`)}>${icon(`good_${g}`)}</span>`, title: esc(GOODS[g as never as keyof typeof GOODS].name),
         meta: [`<span class="lr-kv"><small>${esc(L('th.hold'))}</small>${held}</span>`, `<span class="lr-kv"><small>${esc(L('th.stored'))}</small>${stored}</span>`],
         acts: `<button class="btn btn-small" data-act="store" data-good="${g}" data-n="${held}" ${held ? '' : 'disabled'}>${esc(L('wh.storeAll'))}</button><button class="btn btn-small" data-act="store" data-good="${g}" data-n="${-stored}" ${stored ? '' : 'disabled'}>${esc(L('wh.takeAll'))}</button>` });
     }).join('');
@@ -1096,7 +1097,7 @@ function refitCard(r: RefitView, name: string): string {
   }
   if (!r.next) return `<div class="card refit">${head}<p class="muted">${esc(L('refit.top'))}</p></div>`;
   const n = r.next;
-  const goods = n.goods.map((g) => `<span class="refit-good${g.have < g.qty ? ' short' : ''}">${icon(`good_${g.good}`, '', 'ico-sm')}${esc(GOODS[g.good].name)} <b>${Math.min(g.have, g.qty)}/${g.qty}</b>${g.where ? ` <small class="muted">${esc(L('refit.where', { port: placeName(g.where!) }))}</small>` : ''}</span>`).join('')
+  const goods = n.goods.map((g) => `<span class="refit-good${g.have < g.qty ? ' short' : ''}"${detailAttr(`good:${g.good}`)}>${icon(`good_${g.good}`, '', 'ico-sm')}${esc(GOODS[g.good].name)} <b>${Math.min(g.have, g.qty)}/${g.qty}</b>${g.where ? ` <small class="muted">${esc(L('refit.where', { port: placeName(g.where!) }))}</small>` : ''}</span>`).join('')
     + (n.hearts ? `<span class="refit-good${n.hearts.have < n.hearts.qty ? ' short' : ''}">${icon('storm_heart', '', 'ico-sm')}${esc(L('refit.heart'))} <b>${Math.min(n.hearts.have, n.hearts.qty)}/${n.hearts.qty}</b></span>` : '');
   return `<div class="card refit">${head}
     <p>${esc(L('refit.gain', { n: n.to }))}</p>${n.gift ? `<p class="good">${esc(L('refit.gift'))}</p>` : ''}

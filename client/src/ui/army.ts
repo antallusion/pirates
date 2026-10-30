@@ -17,8 +17,11 @@ import { SHIP_BEAST_NAMES, isShipBeast } from '../../../shared/src/data/shipbeas
 import { EN, RU } from '../lang/ui/army.ts';
 import { beastFace } from '../render/beastface.ts';
 import { dec1, esc, fmt, icon } from './dom.ts';
+import { detailAttr, infoBtn } from './detailattr.ts'; // the detail card (owner, 2026-10-30)
+import { EN as DET_EN, RU as DET_RU } from '../lang/ui/detail.ts';
 
 const L = dict(EN, RU);
+const DTL = dict(DET_EN, DET_RU);
 const DL = dict(DEN, DRU);
 type K = keyof typeof EN;
 
@@ -43,7 +46,9 @@ export function unitIcon(u: UnitId, cls: string): string {
   const face = beastFace(u);
   const tint = face.fig ? undefined : face.tint;
   const html = icon(face.fig ? face.id : unitArt(u), '', `${cls} beast-face${tint ? ' beast-tok' : ''}${face.fig ? ' fig' : ''}`);
-  return tint ? html.replace('<img ', `<img style="filter:${tint}" `) : html;
+  // every creature's figure opens its detail card on a long press or a right click, wherever it is drawn (detail.ts)
+  const held = html.replace('<img ', `<img${detailAttr(`unit:${u}`, { hold: true })} `);
+  return tint ? held.replace('<img ', `<img style="filter:${tint}" `) : held;
 }
 
 /** A kind's standing beyond its tier (owner, 2026-10-27: «фон относительно их статуса»): the great ones ashore and the
@@ -87,7 +92,7 @@ export function armySlot(s: ArmyStack | null, cls = ''): string {
   const r = unitRank(s.u);
   const pow = armyPower([s]);
   const tip = `${unitName(s.u)} ×${s.n} — ${L('tier', { n: d.tier })}${d.up ? `, ${L('up')}` : ''}${r ? `, ${L(`r.${r}` as K)}` : ''}. ${L('rate', { n: fmt(Math.round(pow)) })}. ${unitNote(s.u)}${d.specials.length ? ` ${L('specials')}: ${d.specials.map(specialName).join(', ')}.` : ''}${s.g ? ` ${L('gift.note')}.` : ''}`;
-  return `<div class="army-slot ${slotCls(s.u)}${s.g ? ' gift' : ''} ${cls}" title="${esc(tip)}">${unitIcon(s.u, 'army-face')}${tierMark(d.tier, d.up)}${s.g ? giftMark() : ''}<b class="army-rate" title="${esc(L('rate', { n: fmt(Math.round(pow)) }))}">${icon('act_attack', '', 'army-rate-ico')}${stackRating(pow)}</b><b class="army-n">${fmt(s.n)}</b></div>`;
+  return `<div class="army-slot ${slotCls(s.u)}${s.g ? ' gift' : ''} ${cls}"${detailAttr(`unit:${s.u}:${s.n}`)} title="${esc(tip)}">${unitIcon(s.u, 'army-face')}${tierMark(d.tier, d.up)}${s.g ? giftMark() : ''}<b class="army-rate" title="${esc(L('rate', { n: fmt(Math.round(pow)) }))}">${icon('act_attack', '', 'army-rate-ico')}${stackRating(pow)}</b><b class="army-n">${fmt(s.n)}</b></div>`;
 }
 
 /** The row of her class's slots, filled from the strongest. */
@@ -107,7 +112,7 @@ export function armyPanel(army: readonly ArmyStack[], slots: number, edit = fals
   const list = army.map((s) => {
     const d = UNITS[s.u];
     const r = unitRank(s.u);
-    return `<div class="army-line"><span class="army-thumb ${slotCls(s.u)}">${unitIcon(s.u, 'army-face-sm')}</span><div class="item-text"><b>${esc(unitName(s.u))} <span class="muted">×${s.n}</span>${s.g ? ` <span class="chip army-gift-chip" title="${esc(L('gift.note'))}">${esc(L('gift'))}</span>` : ''} <span class="army-line-rate">${icon('act_attack', '', 'army-rate-ico')}${stackRating(armyPower([s]))}</span></b><span class="muted">${esc(L('tier', { n: d.tier }))}${d.up ? ` · ${esc(L('up'))}` : ''}${r ? ` · ${esc(L(`r.${r}` as K))}` : ''} · ${esc(L('stat', { atk: d.atk, def: d.def, dmin: d.dmin, dmax: d.dmax, hp: d.hp }))}${d.specials.length ? ` · ${esc(d.specials.map(specialName).join(', '))}` : ''}</span></div></div>`;
+    return `<div class="army-line"${detailAttr(`unit:${s.u}:${s.n}`)}><span class="army-thumb ${slotCls(s.u)}">${unitIcon(s.u, 'army-face-sm')}</span><div class="item-text"><b>${esc(unitName(s.u))} <span class="muted">×${s.n}</span>${s.g ? ` <span class="chip army-gift-chip" title="${esc(L('gift.note'))}">${esc(L('gift'))}</span>` : ''} <span class="army-line-rate">${icon('act_attack', '', 'army-rate-ico')}${stackRating(armyPower([s]))}</span></b><span class="muted">${esc(L('tier', { n: d.tier }))}${d.up ? ` · ${esc(L('up'))}` : ''}${r ? ` · ${esc(L(`r.${r}` as K))}` : ''} · ${esc(L('stat', { atk: d.atk, def: d.def, dmin: d.dmin, dmax: d.dmax, hp: d.hp }))}${d.specials.length ? ` · ${esc(d.specials.map(specialName).join(', '))}` : ''}</span></div></div>`;
   }).join('');
   // docs/18 IV: the creatures aboard — their own window (food, ranks, the pen, the tamer).
   const beasts = army.some((x) => UNITS[x.u]?.beast) ? `<button class="btn btn-small army-tame" data-tame>${icon('build_kennel', '', 'ico-sm')}${esc(DL('open'))}</button>` : '';
@@ -121,7 +126,7 @@ export function armyPanel(army: readonly ArmyStack[], slots: number, edit = fals
 export function armyGlance(men: number, units: readonly UnitId[]): string {
   if (men <= 0) return '';
   const w = strengthWord(men);
-  const faces = units.slice(0, 7).map((u) => `<span class="army-mini${UNITS[u]?.up ? ' up' : ''}" title="${esc(unitName(u))}">${unitIcon(u, 'army-face-xs')}</span>`).join('');
+  const faces = units.slice(0, 7).map((u) => `<span class="army-mini${UNITS[u]?.up ? ' up' : ''}"${detailAttr(`unit:${u}`)} title="${esc(unitName(u))}">${unitIcon(u, 'army-face-xs')}</span>`).join('');
   return `<div class="tg-army" title="${esc(L('strength'))}"><b class="tg-army-w">${esc(w.word)}</b> <span class="muted">${esc(w.range)}</span><span class="tg-army-faces">${faces}</span></div>`;
 }
 
@@ -153,7 +158,8 @@ function editRow(army: readonly ArmyStack[], slots: number): string {
     }
     const k = stackKey(s);
     const cls = k === (splitOf ?? sel) ? 'sel' : picked && picked !== s && picked.u === s.u && !!picked.g === !!s.g ? 'target' : '';
-    out.push(armySlot(s, cls).replace('<div class="army-slot', `<div draggable="true" data-sk="${esc(k)}" class="army-slot`));
+    // (a tap picks the stack here: its card on a long press, a right click, or the ⓘ of the bar under the row)
+    out.push(armySlot(s, cls).replace(' data-detail="', ' data-detail-hold="').replace('<div class="army-slot', `<div draggable="true" data-sk="${esc(k)}" class="army-slot`));
   }
   return `<div class="army-row army-edit">${out.join('')}</div>`;
 }
@@ -175,7 +181,7 @@ function opsBar(army: readonly ArmyStack[], slots: number): string {
       <span class="army-ops-btns"><button class="btn btn-small btn-primary" data-split-go>${esc(L('op.split'))}</button>${cancel}</span></div>`;
   }
   const noSplit = s.n < 2 || army.length >= slots;
-  return `<div class="army-ops"><b>${name}</b>${s.g ? ` <span class="chip army-gift-chip">${esc(L('gift'))}</span>` : ''}<span class="muted army-ops-hint">${esc(L(coarse() ? 'op.hintTouch' : 'op.hint'))}</span>${msg}
+  return `<div class="army-ops">${infoBtn(`unit:${s.u}:${s.n}`, DTL('info'), 'army-ops-info')}<b>${name}</b>${s.g ? ` <span class="chip army-gift-chip">${esc(L('gift'))}</span>` : ''}<span class="muted army-ops-hint">${esc(L(coarse() ? 'op.hintTouch' : 'op.hint'))}</span>${msg}
     <span class="army-ops-btns"><button class="btn btn-small" data-op-split ${noSplit ? `disabled title="${esc(L(s.n < 2 ? 'split.one' : 'split.noslot'))}"` : ''}>${esc(L('op.split'))}</button><button class="btn btn-small btn-danger" data-op-dismiss ${army.length <= 1 ? 'disabled' : ''}>${esc(L('op.dismiss'))}</button>${cancel}</span></div>`;
 }
 

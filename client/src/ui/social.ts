@@ -2,6 +2,7 @@
 // the week in the HUD, the journal and the chart (#32), the trade window alongside (#33), the guild's shipyard card
 // (#34) and the signal flags (#35).
 
+import { itemDetailAttr } from './detail.ts'; // the detail card (owner, 2026-10-30)
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId } from '../../../shared/src/data/army.ts';
 import { unitIcon, unitName } from './army.ts';
@@ -187,7 +188,7 @@ const listBeasts = (b: { u: UnitId; n: number }[] | undefined) => (b ?? []).map(
 
 function gearChip(it: Item, pick: boolean, on: boolean): string {
   const inner = `${itemIcon(it, itemSlot(it), 'ico-sm')}${coloured(it)}<span class="muted">${it.ilvl}</span>${it.bound ? `<span class="tr-bound">${esc(L('tr_bound'))}</span>` : ''}`;
-  return pick ? `<button type="button" class="tr-gear${on ? ' on' : ''}" data-tr-item="${it.uid}" aria-pressed="${on}"${it.bound ? ' disabled' : ''}>${inner}</button>` : `<details class="tr-gear-in"><summary class="tr-gear on">${inner}</summary>${itemCardHtml(it)}</details>`;
+  return pick ? `<button type="button" class="tr-gear${on ? ' on' : ''}" data-tr-item="${it.uid}" aria-pressed="${on}"${it.bound ? ' disabled' : ''}>${inner}</button>` : `<details class="tr-gear-in"><summary class="tr-gear on"${itemDetailAttr(it)}>${inner}</summary>${itemCardHtml(it)}</details>`;
 }
 
 export function renderTrade(root: HTMLElement, state: ClientState, send: (m: ClientMsg) => void): void {

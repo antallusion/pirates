@@ -1,6 +1,7 @@
 // Letters of marque on the client (docs/12 P10 #15): the office of a port's flag (enlisting, the rank and its merit,
 // the day's pay, the fleet order, the livery, the quartermaster's stores) and the order's panel at sea.
 
+import { itemDetailAttr } from './detail.ts'; // the detail card (owner, 2026-10-30)
 import { RANKS, RANK_MERIT, RANK_PAY, SERVICES } from '../../../shared/src/data/marque.ts';
 import { SLOT_NAMES, itemSlot } from '../../../shared/src/data/items.ts';
 import { compassPoint } from '../../../shared/src/data/companions.ts';
@@ -92,7 +93,7 @@ export function serviceCard(state: ClientState, v: ServicePortView | undefined):
     ? `<p>${esc(serverText(o.text))}</p><p class="muted mq-left">${esc(L('left', { n: o.n, need: o.need, m: minutesLeft(state, o.until) }))}</p>`
     : `<p class="muted">${esc(L('none'))}</p>${here ? `<button class="btn btn-small btn-primary" data-act="service" data-sact="order">${esc(L('take'))}</button>` : `<p class="muted">${esc(L('takeHere'))}</p>`}`;
   const store = here && v.wares.length ? `<div class="giver-h">${esc(L('store'))}</div><p class="muted">${esc(L('storeText'))}</p>
-    <div class="mq-wares">${v.wares.map((w, i) => `<details class="mq-ware"><summary>${itemIcon(w.item, itemSlot(w.item))}<span class="gs-t">${coloured(w.item)}<span class="muted gs-sub">${esc(SLOT_NAMES[itemSlot(w.item)][ru()])} · ⚓${w.item.ilvl}</span></span>
+    <div class="mq-wares">${v.wares.map((w, i) => `<details class="mq-ware"><summary><span class="dc-tap"${itemDetailAttr(w.item)}>${itemIcon(w.item, itemSlot(w.item))}</span><span class="gs-t">${coloured(w.item)}<span class="muted gs-sub">${esc(SLOT_NAMES[itemSlot(w.item)][ru()])} · ⚓${w.item.ilvl}</span></span>
       ${w.sold ? `<span class="muted mq-sold">${esc(L('sold'))}</span>` : `<button class="btn btn-small" data-act="service" data-sact="buy" data-i="${i}" ${self.gold < w.price ? 'disabled' : ''}>${money(w.price)}</button>`}</summary>${itemCardHtml(w.item)}</details>`).join('')}</div>` : '';
   return `<div class="card mq-card"><h4 class="card-h">${icon(`service_${sv.id}`, '', 'ico-md') || icon(`faction_${sv.id}`, '', 'ico-md')}${esc(def.name[ru()])}</h4>
     <p class="mq-rank"><b>${esc(L('rank', { rank: RANKS[sv.rank][ru()], m: sv.merit }))}</b></p>
