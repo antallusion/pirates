@@ -10,7 +10,7 @@
   - Новые аккаунты нигде не заводились.
 - **Как устроено на приёмнике.**
   - Отдельный пользователь `gtbackup` с домом в `/opt/gravetide-backups`, пароль заблокирован.
-  - Ключ в `authorized_keys` ограничен так: `from="206.223.249.61",command="/usr/bin/rrsync -no-del /opt/gravetide-backups/store",restrict`.
+  - Ключ в `authorized_keys` ограничен так: `from="212.109.192.4",command="/usr/bin/rrsync -no-del /opt/gravetide-backups/store",restrict`.
   - Значит, с KZ можно только класть файлы в `store/`. Удалить их, получить shell или выйти за пределы `store/` нельзя, это проверено.
   - Кроме этого на приёмнике ничего не трогалось.
 - **Скрипт.** `tools/ops/backup-offsite.sh`, на KZ он лежит в `/opt/gravetide/ops/backup-offsite.sh`. По шагам:
@@ -108,7 +108,7 @@ ssh kz tail /var/log/gravetide-offsite.log
 
 Шаги владельца:
 1. **Cloudflare.** Добавить в Cloudflare (бесплатный план) домен `gravetidegame.com` и у регистратора (hostland.ru) заменить NS на два NS, которые выдаст Cloudflare.
-2. **Запись `cdn`.** В DNS Cloudflare сделать запись `cdn` → `A 206.223.249.61` с оранжевым облаком (Proxied). Режим SSL/TLS — **Full**.
+2. **Запись `cdn`.** В DNS Cloudflare сделать запись `cdn` → `A 212.109.192.4` с оранжевым облаком (Proxied). Режим SSL/TLS — **Full**.
 3. **Сказать «CDN готов».** Дальше работа координатора:
    - выпустить сертификат на `cdn.gravetidegame.com`;
    - добавить его в `server_name` блока nginx;
