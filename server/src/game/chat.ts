@@ -10,6 +10,11 @@
 //  - the history: the channels' last CHAT_HISTORY lines kept in memory, private conversations in the database (the last
 //    CHAT_DM_KEEP of each), sent on coming aboard; nothing older than CHAT_KEEP_MS (eight hours) is kept or sent, pruned
 //    on every line and once a minute (chatPrune; owner, 2026-10-29);
+//  - the channels outlive a restart (owner, 2026-10-30: «чат должен сохраняться 8 часов и его мог увидеть при открытии
+//    даже чел который был в оффлайне»): the world, the ships in sight (with where each was said: shown to whoever
+//    comes aboard in sight of it) and the guilds go to the database (kv `chat_chan`, a zone's own `chat_chan:<zone>`)
+//    a few seconds after a line and on every save (the shutdown's too), and come back, cut to the window, on boot. The
+//    groups do not: a group is the process's (party.ts), gone with a restart, its number given to another;
 //  - other zones: lines go over the zone mesh (zones/zone.ts) and the Redis bus (persistence/redis.ts) when there is
 //    one; a line arriving twice (both ways) is taken once, by its id.
 
@@ -86,17 +91,70 @@ interface Hub {
   rate: Map<number, Rate>;
   /** world time of the last timed prune */
   prunedAt: number;
+  /** a line kept (or cut) since the last write to the database */
+  dirty: boolean;
+  /** world time of the last write */
+  savedAt: number;
 }
+
+/** What the database keeps of the channels (the groups' lines are not kept: see the head). */
+interface ChanRec {
+  world: ChatLineView[];
+  local: LocalLine[];
+  guilds: [number, ChatLineView[]][];
+}
+
+/** The channels' record: one for the whole ocean, a zone's own in a multi-zone world (its own ships in sight). */
+function chanKey(game: Game): string {
+  return game.zone ? `chat_chan:${game.zone.id}` : 'chat_chan';
+}
+
+/** A write of the channels no more often than this (world seconds), and always on a save (Game.saveAll). */
+export const CHAT_SAVE_EVERY = 5;
 
 const hubs = new WeakMap<Game, Hub>();
 
 function hub(game: Game): Hub {
   let h = hubs.get(game);
   if (!h) {
-    h = { proc: randomBytes(3).toString('hex'), seq: 0, seen: new Set(), seenQ: [], world: [], local: [], groups: new Map(), guilds: new Map(), rate: new Map(), prunedAt: 0 };
+    h = { proc: randomBytes(3).toString('hex'), seq: 0, seen: new Set(), seenQ: [], world: [], local: [], groups: new Map(), guilds: new Map(), rate: new Map(), prunedAt: 0, dirty: false, savedAt: game.now };
     hubs.set(game, h);
+    load(game, h);
   }
   return h;
+}
+
+/** The channels as the last process left them, cut to the window; their ids remembered (a line relayed again is
+ *  taken once). */
+function load(game: Game, h: Hub): void {
+  let rec: ChanRec | undefined;
+  try {
+    rec = game.db.getKv<ChanRec>(chanKey(game));
+  } catch {
+    rec = undefined;
+  }
+  if (!rec) return;
+  const now = game.wallNow();
+  const ok = (l: ChatLineView | undefined): l is ChatLineView => !!l && typeof l.text === 'string' && typeof l.at === 'number';
+  h.world = chatWindow((rec.world ?? []).filter(ok), now, lineAt);
+  h.local = chatWindow((rec.local ?? []).filter((l) => ok(l?.line) && Number.isFinite(l.x) && Number.isFinite(l.y)), now, localAt);
+  for (const [gid, list] of rec.guilds ?? []) {
+    const kept = chatWindow((list ?? []).filter(ok), now, lineAt);
+    if (kept.length) h.guilds.set(Number(gid), kept);
+  }
+  for (const l of [...h.world, ...h.local.map((x) => x.line), ...[...h.guilds.values()].flat()]) if (l.id) seenBefore(h, l.id);
+}
+
+/** The channels into the database when a line came or went: with `every` (world seconds) no more often than that
+ *  (Game.everySecond), without it now (Game.saveAll, the shutdown's among them). */
+export function chatSave(game: Game, every = 0): void {
+  const h = hubs.get(game);
+  if (!h?.dirty) return;
+  if (every > 0 && game.now < h.savedAt + every) return;
+  h.dirty = false;
+  h.savedAt = game.now;
+  const rec: ChanRec = { world: h.world, local: h.local, guilds: [...h.guilds] };
+  game.db.setKv(chanKey(game), rec);
 }
 
 /** Seen this id before? (and remember it: the last thousand) */
@@ -114,6 +172,7 @@ const localAt = (l: LocalLine) => l.line.at;
 /** Into a channel's list, and the list cut to the chat's window (eight hours, fifty lines). */
 function keep<T extends ChatLineView | LocalLine>(game: Game, list: T[], item: T): void {
   list.push(item);
+  hub(game).dirty = true;
   const kept = chatWindow(list, game.wallNow(), ('line' in item ? localAt : lineAt) as (x: T) => number | undefined);
   if (kept !== list) list.splice(0, list.length, ...kept);
 }
@@ -128,11 +187,15 @@ export function chatPrune(game: Game, every = 0): void {
     h.prunedAt = game.now;
   }
   const now = game.wallNow();
-  h.world = chatWindow(h.world, now, lineAt);
-  h.local = chatWindow(h.local, now, localAt);
+  const w = chatWindow(h.world, now, lineAt);
+  const loc = chatWindow(h.local, now, localAt);
+  if (w !== h.world || loc !== h.local) h.dirty = true;
+  h.world = w;
+  h.local = loc;
   for (const m of [h.groups, h.guilds]) {
     for (const [k, list] of m) {
       const kept = chatWindow(list, now, lineAt);
+      if (kept !== list && m === h.guilds) h.dirty = true;
       if (kept.length) m.set(k, kept);
       else m.delete(k);
     }

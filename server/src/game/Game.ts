@@ -5,7 +5,7 @@ import { DOCK_SLOW, LANDING_R, REACH_DOCK, REACH_SLACK, hullOf } from '../../../
 import { dockWithin } from '../../../shared/src/world/dock.ts';
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { provisionsPerMinute } from '../../../shared/src/data/voyage.ts';
-import { chatCommand, chatFromAfar, chatHist, chatIn, chatOnLogin, chatPrune, chatRead, chatReport, cleanChat, guildSay } from './chat.ts'; // docs/28
+import { chatCommand, chatFromAfar, chatHist, chatIn, chatOnLogin, chatPrune, chatRead, chatSave, CHAT_SAVE_EVERY, chatReport, cleanChat, guildSay } from './chat.ts'; // docs/28
 import { callOn, drink, hallView, invite, sign } from './guests.ts';
 import { lookOf, setLook, unlockDeed } from './looks.ts';
 import { cosMessage, cosWire, dressShip, forgetCos, sendCos, stepCosmetics } from './cosmetics.ts'; // docs/32 §12
@@ -1037,6 +1037,7 @@ export class Game {
     stepCommon(this);
     stepTasks(this);
     chatPrune(this, 60); // docs/28: the chat's window (eight hours, fifty lines), once a minute
+    chatSave(this, CHAT_SAVE_EVERY); // docs/28: the channels into the database a few seconds after a line (a restart keeps them)
     stepEmpires(this);
     // (the seldom steps each keep their period but take a second of their own in it — stacked on the same second
     // they made the tick's spikes: docs/19 E19's open item, 2026-10-09)
@@ -5378,6 +5379,8 @@ export class Game {
   }
 
   saveAll(): void {
+    chatSave(this); // docs/28: the chat's channels (the shutdown's save among them)
+    this.guilds.save(this); // the guilds' changes since their last half-minute write (a guild founded just before a restart)
     this.db.transaction(() => {
       for (const s of this.byAccount.values()) this.saveSession(s);
       const markets = serializeMarkets(this.markets);
