@@ -340,7 +340,7 @@ test('the «go there and do it» runs end inside the reaches and do it: a wreck 
   steps(game, 20 * 20);
 });
 
-test('boarding from 300 m: «На абордаж» sails her in; a merchant striking on the way puts her terms up and stops her, and the terms taken sail her alongside', () => {
+test('boarding from 300 m: «На абордаж» is not offered there («Подойдите ближе»), «Атаковать → абордаж» sails her in; a merchant striking on the way puts her terms up and stops her, and the terms taken sail her alongside', () => {
   const { game } = makeGame();
   const { s, c, ship } = captain(game, 'Boarder Bo');
   ship.crew = ship.stats.crewMax;
@@ -350,7 +350,10 @@ test('boarding from 300 m: «На абордаж» sails her in; a merchant stri
   npc.input = { rudder: 0, sailTarget: 0.25 };
   npc.state.speed = 2;
   c.push({ t: 'board', target: npc.id, aggression: 'standard', risk: true });
-  assert.ok(!ship.boarding, 'not from 300 m');
+  assert.ok(!ship.boarding && !ship.grapple, 'not from 300 m');
+  // (owner 2026-10-30: «На абордаж» only within 100 m of her hull — farther, the metres still to close)
+  assert.ok(c.all('toast').some((m) => /^Come closer: \d+ m$/.test(m.msg)), 'come closer: N m');
+  c.push({ t: 'attack', target: npc.id, mode: 'board' });
   let t = 0;
   for (; t < 20 * 90 && !ship.boarding && !npc.surrendered; t++) game.step();
   if (!ship.boarding) {

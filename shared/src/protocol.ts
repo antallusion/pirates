@@ -1559,6 +1559,8 @@ export type GameEvent =
    *  over her; or a combo's cue over the caster (combo: the combo's first ability). */
   | { k: 'skill'; ship: number; id: string; x: number; y: number; dmg?: number; men?: number; heal?: number; combo?: true }
   | { k: 'tether'; a: number; b: number; until: number }
+  /** The grapples thrown at 100 m (owner 2026-10-30): `a` hauls `b` alongside until `until` (world s), then the battle. */
+  | { k: 'grapple'; a: number; b: number; until: number }
   | { k: 'lance'; x: number; y: number; x2: number; y2: number }
   | { k: 'fx'; fx: 'deep_call' | 'maw' | 'barrage' | 'mortar' | 'mortar_launch' | 'harpoon_miss' | 'smoke' | 'war_cry' | 'explosion' | 'star_fix' | 'ram' | 'hot_barrels' | 'broken_mast' | 'crossfire' | 'breach' | 'between_worlds' | 'maw_warn' | 'undertow' | 'drowned_hands'
     | 'white_water' | 'boss_roar' | 'lightning' | 'ink' | 'bile' | 'swallow' | 'spit' | 'song' | 'ice' | 'claws' | 'coil' | 'rise' | 'axes' | 'dig' | 'plankton' | 'spout' | 'rocket' | 'firework' | 'struck'

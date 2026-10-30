@@ -7,6 +7,7 @@
 // sea step on the game's clock, the moments of the screens (a purchase, a fight's rounds) on a fixed allowance. All of it
 // within ten minutes of the game.
 
+import { grappleWhy } from '../server/src/game/grapple.ts';
 import { autosailOf } from '../server/src/game/autosail.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -176,10 +177,12 @@ test('a fresh account plays the opening through on the real sea within ten minut
   conn.push({ t: 'goto', key: 'q:c01_03' });
   until(() => campaignFoes(game, s).some((id) => id !== first.id && game.ships.get(id)?.alive), 120, 'the second tender comes');
   const second = game.ships.get(campaignFoes(game, s).find((id) => id !== first.id)!)!;
-  // «На абордаж» as the button sends it (Game.ts 'board': the helmsman comes alongside and the grapples fly there; a
-  // pursuit alone never throws them, and the old 90 s waited alongside for a battle that never came)
-  conn.push({ t: 'board', target: second.id, risk: true } as never);
-  until(() => !!ship().boarding || second.surrendered || !second.alive, 180, 'alongside');
+  // «Атаковать → абордаж» sails her in; within 100 m «На абордаж» as the button sends it (owner 2026-10-30: the button is
+  // offered at 100 m, the grapples haul the two alongside, then the battle — grapple.ts)
+  conn.push({ t: 'attack', target: second.id, mode: 'board' } as never);
+  until(() => !!ship().boarding || !!ship().grapple || second.surrendered || !second.alive || grappleWhy(game, ship(), second) === null, 180, 'within 100 m');
+  if (!ship().boarding && !ship().grapple && second.alive && !second.surrendered) conn.push({ t: 'board', target: second.id, risk: true } as never);
+  until(() => !!ship().boarding || second.surrendered || !second.alive, 30, 'alongside');
   if (ship().boarding?.fight.tac) {
     giveScrolls(game);
     tacAction(game, ship(), { a: 'quick' });

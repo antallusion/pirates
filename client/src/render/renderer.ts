@@ -79,7 +79,7 @@ import { shipCloth, shipColours } from '../ui/flags.ts'; // docs/24 D1–D2
 import type { ShipColours } from '../ui/flags.ts';
 import { EN as FL_EN, RU as FL_RU } from '../lang/ui/flags.ts';
 import { objective } from '../ui/track.ts';
-import { AIM_CHARGE, AIM_PERFECT, AIM_TAP, AIM_WAVER, aimFocus, windDrift } from '../../../shared/src/data/gunnery.ts';
+import { AIM_CHARGE, AIM_PERFECT, AIM_TAP, AIM_WAVER, aimFocus, gunRange, windDrift } from '../../../shared/src/data/gunnery.ts';
 import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { islandLife } from '../../../shared/src/world/islandlife.ts';
 import type { LifeSite } from '../../../shared/src/world/islandlife.ts';
@@ -2722,6 +2722,34 @@ export class Renderer {
     markRing(g, this.sx(d.cx), this.sy(d.cy), d.r * this.zoom, d.startsIn > 0 ? '#e0b862' : '#d05a50', true, 0.8);
   }
 
+  /** The grapples (owner 2026-10-30): three lines from her rail to the mark's, the hooks flying out over the first 0.6 s
+   *  (an arc over the water), then taut as the two are hauled together. */
+  private drawGrapples(a: DrawShip, b: DrawShip, t: number): void {
+    const g = this.g;
+    const dx = b.x - a.x, dy = b.y - a.y, l = Math.hypot(dx, dy) || 1;
+    const nx = -dy / l, ny = dx / l; // across the line between them
+    const fly = Math.min(1, t / 0.6);
+    for (const k of [-1, 0, 1]) {
+      const off = k * 7; // along her rail, a few metres apart (fore, waist, aft)
+      const ax = a.x + nx * off, ay = a.y + ny * off;
+      const bx = b.x + nx * off, by = b.y + ny * off;
+      const ex = ax + (bx - ax) * fly, ey = ay + (by - ay) * fly;
+      const lift = fly < 1 ? Math.sin(fly * Math.PI) * Math.min(18, l * 0.25) : 3; // the hook's arc, then a light sag
+      const mx = (ax + ex) / 2, my = (ay + ey) / 2 - lift;
+      g.strokeStyle = 'rgba(176,150,104,0.95)';
+      g.lineWidth = Math.max(1, 0.7 * this.zoom);
+      g.beginPath();
+      g.moveTo(this.sx(ax), this.sy(ay));
+      g.quadraticCurveTo(this.sx(mx), this.sy(my), this.sx(ex), this.sy(ey));
+      g.stroke();
+      // the hook itself: a small dark iron claw at the line's head
+      g.fillStyle = '#2b2622';
+      g.beginPath();
+      g.arc(this.sx(ex), this.sy(ey), Math.max(1.6, 1.1 * this.zoom), 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+
   private drawTethers(state: ClientState, ships: DrawShip[]): void {
     const g = this.g;
     const now = state.estServerTime();
@@ -2730,6 +2758,10 @@ export class Renderer {
     g.save();
     for (const t of this.fx.tethers) {
       const a = pos.get(t.a)!, b = pos.get(t.b)!;
+      if (t.hooks !== undefined) {
+        this.drawGrapples(a, b, (performance.now() - t.hooks) / 1000);
+        continue;
+      }
       const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2 + 6; // the cable sags
       g.strokeStyle = 'rgba(150,130,95,0.9)';
       g.lineWidth = Math.max(1, 0.6 * this.zoom);
@@ -3468,7 +3500,7 @@ export class Renderer {
       if (has) {
         const ready = you.reload[aim.chaser] >= 1;
         const keel = aim.chaser === 'bow' ? own.heading : own.heading + Math.PI;
-        const range = GUNS.long_9.range * (state.ownStats?.rangeMul ?? 1) * AMMO[you.ammoSel === 'grape' ? 'round' : you.ammoSel].rangeMul;
+        const range = gunRange(GUNS.long_9.range, state.ownStats?.rangeMul ?? 1, AMMO[you.ammoSel === 'grape' ? 'round' : you.ammoSel].rangeMul);
         const dw = clamp(aim.dist, 40, range);
         const d = dw * this.zoom;
         this.drawFall(x, y, keel - Math.PI / 2, CHASER_CONE * 0.5, cls.length * this.zoom * 0.5, range * this.zoom, d, ready ? [143, 179, 217] : [110, 118, 126], ready ? 1 : 0.5, this.driftOf(state, keel, dw, you.ammoSel === 'grape' ? 'round' : you.ammoSel));
@@ -3476,7 +3508,7 @@ export class Renderer {
     }
     for (const side of ['port', 'starboard'] as const) {
       const gun = GUNS[self.loadout.guns[side]];
-      const range = gun.range * (state.ownStats?.rangeMul ?? 1) * AMMO[you.ammoSel].rangeMul;
+      const range = gunRange(gun.range, state.ownStats?.rangeMul ?? 1, AMMO[you.ammoSel].rangeMul);
       const ready = you.reload[side] >= 1;
       const active = aim.side === side;
       const h = own.heading + (side === 'port' ? -Math.PI / 2 : Math.PI / 2);

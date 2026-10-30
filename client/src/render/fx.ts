@@ -89,7 +89,7 @@ export class Fx {
   /** When each lair gun last fired (x,y key → performance seconds), so the fort's barrel follows its shot. */
   gunShots = new Map<string, { dir: number; at: number }>();
   lights: Light[] = [];
-  tethers: { a: number; b: number; until: number }[] = [];
+  tethers: { a: number; b: number; until: number; hooks?: number }[] = [];
   beams: { x: number; y: number; x2: number; y2: number; t: number }[] = [];
   shake = 0;
   /** Balls on her own hull since the renderer last looked (docs/23, 2026-10-09: the camera's knock, by the blow). */
@@ -354,6 +354,12 @@ export class Fx {
       case 'tether':
         this.tethers = this.tethers.filter((t) => t.a !== e.a);
         this.tethers.push({ a: e.a, b: e.b, until: e.until });
+        break;
+      case 'grapple':
+        // The grapples at 100 m (owner 2026-10-30): three lines fly from her rail and haul the two together (`hooks`:
+        // performance.now() of the throw — the hooks' flight is drawn by the renderer).
+        this.tethers = this.tethers.filter((t) => t.a !== e.a);
+        this.tethers.push({ a: e.a, b: e.b, until: e.until + 0.5, hooks: performance.now() });
         break;
       case 'lance':
         this.beams.push({ x: e.x, y: e.y, x2: e.x2, y2: e.y2, t: 0 });

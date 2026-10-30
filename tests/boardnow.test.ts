@@ -85,8 +85,8 @@ test('«На абордаж» on a full-strength pirate: the odds window when it
   assert.equal(ship.boarding!.with, npc.id);
 });
 
-test('«Рискнуть» after the ships drew apart reading the odds: the helmsman takes her alongside and the grapples fly there', async () => {
-  const { pursuitOf, attackBlocked } = await import('../server/src/game/pursuit.ts');
+test('«Рискнуть» after the ships drew apart reading the odds: past 100 m «Подойдите ближе», within it the grapples haul the two alongside and the battle opens (owner 2026-10-30)', async () => {
+  const { pursuitOf } = await import('../server/src/game/pursuit.ts');
   const { game } = makeGame();
   const { c, ship } = atSea(game, 'Grapple Gil');
   const npc = alongside(game, ship, 'pirate', 160);
@@ -95,13 +95,24 @@ test('«Рискнуть» after the ships drew apart reading the odds: the helm
   brain.keep = true;
   assert.match(String(canBoard(game, ship, npc)), /Too far/);
   c.push({ t: 'board', target: npc.id, aggression: 'standard', risk: true });
-  assert.ok(pursuitOf(ship)?.grapple, 'the run alongside, the grapples to fly');
-  assert.equal(attackBlocked(game, ship, npc), null);
-  const trace: string[] = [];
-  for (let i = 0; i < 600 && !ship.boarding; i++) {
-    game.step();
-    if (i % 60 === 0) trace.push(`${Math.round(Math.hypot(npc.state.x - ship.state.x, npc.state.y - ship.state.y))}:${pursuitOf(ship)?.mode ?? '-'}:${canBoard(game, ship, npc)}`);
-  }
-  assert.ok(ship.boarding, `grappled once alongside: ${trace.join(' ')} ${JSON.stringify(c.all('pursuit'))} ${c.all('toast').map((t) => t.msg).join('|')}`);
+  assert.ok(!ship.grapple && !ship.boarding && !pursuitOf(ship), 'nothing from 160 m');
+  assert.ok(c.all('toast').some((m) => /^Come closer: \d+ m$/.test(m.msg)), c.all('toast').map((m) => m.msg).join('|'));
+  // within 100 m of her hull (90 m centre to centre: a brig's beam and the sloop's): the grapples fly, no battle yet
+  const v = headingVec(ship.state.heading - Math.PI / 2);
+  npc.state.x = ship.state.x + v.x * 90;
+  npc.state.y = ship.state.y + v.y * 90;
+  game.grid.upsert(npc.id, npc.state.x, npc.state.y);
+  c.push({ t: 'board', target: npc.id, aggression: 'standard', risk: true });
+  const g = (ship as { grapple: { until: number } | null }).grapple;
+  assert.ok(g && (npc as { grapple: unknown }).grapple && !ship.boarding, 'the grapples thrown: the approach, not the battle at once');
+  const until = g.until - game.now;
+  assert.ok(until >= 2 && until <= 4, `2–4 s of approach (${until.toFixed(1)})`);
+  // she cannot sail off while the lines hold: full sail away, and still drawn in
+  npc.input = { rudder: 0, sailTarget: 1 };
+  const gap0 = Math.hypot(npc.state.x - ship.state.x, npc.state.y - ship.state.y);
+  for (let i = 0; i < 20 * 5 && !ship.boarding; i++) game.step();
+  assert.ok(ship.boarding, 'the battle once alongside');
   assert.equal(ship.boarding!.with, npc.id);
+  const gap1 = Math.hypot(npc.state.x - ship.state.x, npc.state.y - ship.state.y);
+  assert.ok(gap1 < gap0 * 0.6 && gap1 < 45, `hauled together: ${gap0.toFixed(0)} → ${gap1.toFixed(0)} m`);
 });

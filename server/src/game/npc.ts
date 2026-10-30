@@ -134,7 +134,10 @@ export interface NpcBrain {
  *  пусть начинают атаковать на расстоянии 150»: on a phone held sideways (±281 m across, ±130 m up and down of her) both
  *  ships are on the screen when the first gun speaks. They close to it, and their fighting helm holds its band inside it
  *  (FIGHT_NEAR–FIGHT_HOLD of it) whatever their guns' reach. */
-export const NPC_OPEN_FIRE = 150;
+export const NPC_OPEN_FIRE = 250;
+/** …and the band their fighting helm holds stays where it was (owner 2026-10-30: the guns +100 m, so the sea's own open
+ *  fire from 250 m, was 150 — but they still close to 105–140 m and fight there, on her screen). */
+export const NPC_HELM_REACH = 150;
 /** Once the fight is joined — she has fired on her mark, or her mark has struck her, within this many seconds — she
  *  fights with her guns' own reach (a captain who opens out to her long gun's 250 m is answered, not kited). */
 export const NPC_JOINED_SEC = 20;
@@ -157,9 +160,9 @@ export function npcMayFire(game: Game, ship: ShipEntity, brain: NpcBrain, target
   return (ship.attackers.get(target.id) ?? -Infinity) > now - NPC_JOINED_SEC;
 }
 
-/** The reach her fighting helm works to: her guns' own for a captain, NPC_OPEN_FIRE at most for the sea's own. */
+/** The reach her fighting helm works to: her guns' own for a captain, NPC_HELM_REACH at most for the sea's own. */
 function helmReach(ship: ShipEntity, brain: NpcBrain, range: number): number {
-  return brain.captain || ship.isPlayer ? range : Math.min(range, NPC_OPEN_FIRE);
+  return brain.captain || ship.isPlayer ? range : Math.min(range, NPC_HELM_REACH);
 }
 
 const SHIP_NAMES = [
@@ -895,11 +898,20 @@ function followPath(game: Game, ship: ShipEntity, brain: NpcBrain): void {
   steer(game, ship, brain, headingOf(wx - ship.state.x, wy - ship.state.y), 1);
 }
 
+/** A pirate's chain shot on a captain's ship stops once her canvas is down to this share (owner 2026-10-30), and she
+ *  counts as beaten down for the grapples there (was 45 % and 40 %: the pirate stripped her rigging to run her down). */
+export const NPC_CHAIN_TO_CAPTAIN = 0.8;
+function captainSail(t: ShipEntity): boolean {
+  return t.isPlayer || t.ownerId !== null;
+}
+
 function chooseAmmo(ship: ShipEntity, target: ShipEntity, d: number, wantsBoard: boolean, boardingNow = wantsBoard): AmmoId {
   const has = (a: AmmoId) => ship.ammo[a] > 0;
   const inRange = (a: AmmoId) => d < Math.max(effectiveRange(ship, 'port', a), effectiveRange(ship, 'starboard', a)) * 0.95;
   if (boardingNow && has('grape') && inRange('grape') && target.crew > target.stats.crewMax * 0.35) return 'grape';
-  if (wantsBoard && has('chain') && inRange('chain') && target.sails > target.stats.sailHpMax * 0.45) return 'chain';
+  // (owner 2026-10-30, «паруса очень быстро выходят из строя, буквально после одного-двух нападений»: a pirate's chain
+  // takes a captain's canvas down to four fifths, enough to slow her, not the 45 % that left it in rags every fight)
+  if (wantsBoard && has('chain') && inRange('chain') && target.sails > target.stats.sailHpMax * (captainSail(target) ? NPC_CHAIN_TO_CAPTAIN : 0.45)) return 'chain';
   if (has('round')) return 'round';
   return has('chain') ? 'chain' : 'grape';
 }
@@ -911,7 +923,7 @@ export function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: Sh
   // (grape only once she runs in for the grapples — her mark beaten down, or a captain's boarding run on her: since the
   // reaches were halved, owner 2026-10-22, her rigging band of 70–100 m lay inside grape's reach and she swept a fresh
   // captain's deck from the first broadside — the opening's crew lost before its first stack, QA 2026-10-23)
-  const boardingNow = wantsBoard && (target.surrendered || target.sails < target.stats.sailHpMax * 0.4 || target.crew < target.stats.crewMax * 0.5 || target.hull < target.stats.hullMax * 0.55 || target.hasEffect('board_run'));
+  const boardingNow = wantsBoard && (target.surrendered || target.sails < target.stats.sailHpMax * (captainSail(target) ? NPC_CHAIN_TO_CAPTAIN + 0.01 : 0.4) || target.crew < target.stats.crewMax * 0.5 || target.hull < target.stats.hullMax * 0.55 || target.hasEffect('board_run'));
   ship.ammoSel = chooseAmmo(ship, target, d, wantsBoard, boardingNow);
   // The First Watch's raider is a lesson, not a massacre: she closes as a pirate does (the pupil's grapples must reach
   // her) but never throws her own (she boarded, won and robbed a novice every 90 s, the lesson's gunnery never done).
@@ -925,7 +937,7 @@ export function engage(game: Game, ship: ShipEntity, brain: NpcBrain, target: Sh
   const sk = brain.skill ?? npcSkill(ship.shipLevel);
   // (A captain running in on her for the grapples, pursuit.ts board_run: a boarder meets her alongside — circling her at
   // her chain shot's hundred metres, since the reaches were halved (owner, 2026-10-22), the two never came together.)
-  const weakened = target.surrendered || target.sails < target.stats.sailHpMax * 0.4 || target.crew < target.stats.crewMax * 0.5 || target.hull < target.stats.hullMax * 0.55;
+  const weakened = target.surrendered || target.sails < target.stats.sailHpMax * (captainSail(target) ? NPC_CHAIN_TO_CAPTAIN + 0.01 : 0.4) || target.crew < target.stats.crewMax * 0.5 || target.hull < target.stats.hullMax * 0.55;
   const { px, py, leadD, leadBearing } = engageHelm(game, ship, brain, target, d, wantsBoard ? (weakened || target.hasEffect('board_run') ? 'board' : 'rig') : 'guns', sk.lead);
   const rangeOf = (side: 'port' | 'starboard') => effectiveRange(ship, side, ship.ammoSel);
   // The sea's own hold their fire till they are within NPC_OPEN_FIRE of her, or the fight is joined.

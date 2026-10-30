@@ -6,7 +6,7 @@ import { regattaBlocked } from './regatta.ts';
 import { tributeBroken } from './raiding.ts';
 import { lairImpact } from './wanted.ts';
 import { ladderBetween } from './ladder.ts';
-import { AIM_CHARGE, BOARD_SNARE, BOARD_SNARE_SEC, DASH_COOLDOWN, DASH_EVADE, DASH_EVADE_CHANCE, DASH_TIME, LAY_ARC_DEG, LAY_OVER, SEA_DAMAGE, SEA_RELOAD, aimFocus, windDriftAngle } from '../../../shared/src/data/gunnery.ts';
+import { REACH_BONUS, gunRange, AIM_CHARGE, BOARD_SNARE, BOARD_SNARE_SEC, DASH_COOLDOWN, DASH_EVADE, DASH_EVADE_CHANCE, DASH_TIME, LAY_ARC_DEG, LAY_OVER, SEA_DAMAGE, SEA_RELOAD, aimFocus, windDriftAngle } from '../../../shared/src/data/gunnery.ts';
 import { ALPHA_OFF_LADDER, ALPHA_OVER, IRON_RAIN_PIERCE, alphaShare, seaCrewPace, seaCritPace, seaGrapePace, seaHullPace, seaReloadBy } from '../../../shared/src/data/seabalance.ts';
 import { forgiveStray } from './stray.ts';
 import { onboardingVolley, PRACTICE_HULL, PUPIL_HULL } from './onboarding.ts';
@@ -90,11 +90,20 @@ export interface VolleyRec {
   t: number;
   battery?: Set<number>; // Grand Battery: targets already shaken by this volley
   men?: Map<number, number>; // men killed per target (docs/17 H1: one "−N" a broadside)
+  sails?: Map<number, number>; // canvas torn per target (SAIL_VOLLEY_CAP)
   /** What her captain's kit put into it (docs/25 items 13–41: seaskill.ts), and the once-a-broadside parts spent. */
   kit?: VolleyKit & { critDone?: boolean; fireDone?: boolean; armyDone?: Set<number> };
 }
 
 export const COMBAT_TAG = 20;
+
+/** Owner 2026-10-30 («паруса очень быстро выходят из строя, буквально после одного-двух нападений»): the most of her canvas
+ *  one broadside tears, as a share of it — chain shot (the rigging's shot) the most, bar and grape less, any other
+ *  ball (round shot) a little. One chain broadside of a sloop's tore 70 % of an equal's canvas. */
+export const SAIL_VOLLEY_CAP = { chain: 0.1, bar: 0.06, grape: 0.035, other: 0.01 } as const;
+export function sailVolleyCap(ammo: string): number {
+  return ammo === 'chain' ? SAIL_VOLLEY_CAP.chain : ammo === 'bar' ? SAIL_VOLLEY_CAP.bar : ammo === 'grape' ? SAIL_VOLLEY_CAP.grape : SAIL_VOLLEY_CAP.other;
+}
 
 /** Critical hits on her parts (docs/16 #2). Chain shot amidships into rigging already half torn brings a topmast down
  *  (the chance a hit, the seconds and the share of her speed it costs); a heavy ball may find her powder room. All
@@ -144,7 +153,7 @@ export function sideHeading(ship: ShipEntity, side: Side): number {
 export function effectiveRange(ship: ShipEntity, side: Side, ammo: AmmoId): number {
   const gun = GUNS[ship.loadout.guns[side]];
   const chain = ammo === 'chain' ? 1 + tval(ship.stats, 'chainRange') : 1;
-  return gun.range * ship.stats.rangeMul * AMMO[ammo].rangeMul * chain;
+  return gunRange(gun.range, ship.stats.rangeMul, AMMO[ammo].rangeMul * chain); // (+REACH_BONUS: owner 2026-10-30)
 }
 
 /** A ball loses up to 30% of its weight over this many times her reach. The reaches were halved (owner, 2026-10-22: the
@@ -376,7 +385,7 @@ export function fireChaser(game: Game, ship: ShipEntity, end: ChaserEnd, tx: num
   const cone = CHASER_CONE + tval(ship.stats, 'chaserArc') * DEG;
   const h = keel + Math.max(-cone, Math.min(cone, off));
   const gun = GUNS[CHASER_GUN];
-  const range = gun.range * ship.stats.rangeMul * AMMO[ammo].rangeMul;
+  const range = gunRange(gun.range, ship.stats.rangeMul, AMMO[ammo].rangeMul);
   const d = clamp(Math.hypot(tx - ship.state.x, ty - ship.state.y), 40, range);
   // Her mark: the ship nearest the point she aims at (her chasers load by it, as her broadsides do).
   const mark = shipNear(game, ship, tx, ty);
@@ -613,7 +622,8 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   const ammo = AMMO[p.ammo];
   const gd = p.gun ? GUNS[p.gun] : undefined; // the gun's own trade (ships.ts), on a broadside's balls
   if (target.named && shooter?.isPlayer) target.scar = p.ammo === 'incendiary' ? 'fire' : 'cannon'; // the scar he will carry (docs/12 P10 #1)
-  const falloff = 1 - 0.3 * clamp(p.traveled / Math.max(1, p.maxRange * FALLOFF_REACH), 0, 1);
+  // (on the reach before the owner's +100 m of 2026-10-30: a ball at 140 m strikes as hard as it did)
+  const falloff = 1 - 0.3 * clamp(p.traveled / Math.max(1, Math.max(p.maxRange * 0.5, p.maxRange - REACH_BONUS) * FALLOFF_REACH), 0, 1);
   // Angle of impact: how closely the ball travels along the target's keel line.
   const ball = headingVec(p.heading);
   const keel = headingVec(target.state.heading);
@@ -684,7 +694,15 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   // as her hull is (a broadside takes the share of it that it takes of her hull, chain shot five times round's).
   const parts = table ? seaCritPace(target.combatLevel) : 1;
   const canvas = table ? hullPace / SEA_DAMAGE : 1;
-  const sailDmg = p.damage * (p.ammo === 'chain' ? pace : 1) * canvas * ammo.sailMul * falloff * (sst?.sailDamageMul ?? 1) * chain * lad.dealt * (gd?.sailMul ?? 1) * (1 + (kv?.sails ?? 0));
+  let sailDmg = p.damage * (p.ammo === 'chain' ? pace : 1) * canvas * ammo.sailMul * falloff * (sst?.sailDamageMul ?? 1) * chain * lad.dealt * (gd?.sailMul ?? 1) * (1 + (kv?.sails ?? 0));
+  if (p.volley !== undefined && sailDmg > 0) {
+    const rec = game.volleys.get(p.volley);
+    if (rec) {
+      const torn = (rec.sails ??= new Map()).get(target.id) ?? 0;
+      sailDmg = Math.max(0, Math.min(sailDmg, target.stats.sailHpMax * sailVolleyCap(p.ammo) - torn));
+      rec.sails.set(target.id, torn + sailDmg);
+    }
+  }
   const grape = p.ammo === 'grape' ? 1 + (sst ? tval(sst, 'grapeCrew') : 0) : 1;
   // Splinter Storm: every ball into the hull sends splinters through the gun deck.
   const splinters = sst?.flags.has('splinter_storm') && p.ammo !== 'grape' && felt > 5 ? 1 : 0;

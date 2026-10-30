@@ -95,6 +95,7 @@ import { heroAction, heroSecond, heroSource } from './hero.ts';
 import { checkChartDeed, checkDeeds, checkStatDeeds, grantDeed, learnContext, onDockDeeds, onLevelUp, respec, switchLoadout, unspentPoints } from './progression.ts';
 import type { RespecMode } from './progression.ts';
 import type { EconomyReport, IndexPoint } from './econmetrics.ts';
+import { cutGrappling, grappleWhy, startGrapple, stepGrapples } from './grapple.ts'; // owner 2026-10-30: boarding at 100 m
 import { detonateFireship, fireMount, isTethered, mountReloadTime, shipyardMount, stepTethers } from './mounts.ts';
 import { STATION_NAMES, floodCapacity, setStation, stepFlooding } from './damagecontrol.ts';
 import { Rng } from '../../../shared/src/rng.ts';
@@ -776,6 +777,7 @@ export class Game {
     this.collideShips();
     prof.lap('collisions');
     stepTethers(this, dt);
+    stepGrapples(this, dt); // owner 2026-10-30: the grapples at 100 m haul the two ships alongside
     stepProjectiles(this, dt);
     prof.lap('projectiles');
     stepBoarding(this);
@@ -3909,38 +3911,31 @@ export class Game {
         const monster = bossBoardOrder(this, ship, target);
         if (monster !== undefined) return err(monster);
         const agg = msg.aggression === 'careful' || msg.aggression === 'brutal' ? msg.aggression : 'standard';
-        const why = canBoard(this, ship, target);
-        if (why) {
-          // The odds taken («Рискнуть») while the ships drew apart: the helmsman takes her alongside and the grapples
-          // fly there (owner, 2026-10-18: «на нпс сразу можно было абордажить»), not «too far» and a second press.
-          // Not alongside (owner, 2026-10-22: the grapples fly only side by side): the same — her helmsman comes
-          // alongside and they fly there; the odds of a risky one asked first, as at the rail.
-          // (forum 2026-10-30: from as far as she sees her — the intercept cuts her off, not only within a cable or so)
-          if ((why === BOARD_FAR || why === BOARD_ABEAM || why === BOARD_SPEED) && Math.hypot(target.state.x - ship.state.x, target.state.y - ship.state.y) < PURSUIT_SIGHT) {
-            if (msg.risk !== true) {
-              const risk = boardRisk(this, ship, target, RISK_BUDGET_MS);
-              if (risk.risky) return this.sendTo(s, { t: 'board_risk', risk });
-            }
-            if (startPursuit(this, s, target.id, 'board') === null) {
-              const run = pursuitOf(ship);
-              if (run) run.grapple = true;
-              return;
-            }
-          }
-          return err(why);
-        }
+        // Owner 2026-10-30 («абордаж должен быть доступен на расстоянии 100м … показать после кнопки сближение кораблей»):
+        // within BOARD_OFFER of her hull the grapples fly and the two are hauled alongside (grapple.ts), then the battle;
+        // farther, «Подойдите ближе» — her «Атаковать → абордаж» sails her in (the intercept, pursuit.ts).
+        const why = grappleWhy(this, ship, target);
+        if (why) return err(why);
         // A senior, or a slim chance (docs/23 items 49–51): the odds first, «Рискнуть» or «Отступить».
         if (msg.risk !== true) {
           const risk = boardRisk(this, ship, target, RISK_BUDGET_MS);
           if (risk.risky) return this.sendTo(s, { t: 'board_risk', risk });
         }
-        startBoarding(this, ship, target, agg);
+        // (already alongside — the hulls within the grapples' few metres, side by side, the way matched: nothing to close,
+        // the battle at once, as before)
+        if (canBoard(this, ship, target) === null) {
+          startBoarding(this, ship, target, agg);
+          return;
+        }
+        stopPursuit(this, s, 'board');
+        startGrapple(this, ship, target, agg);
         return;
       }
       case 'board_cut':
         // (the battle she is in takes the order: a boarding's before a fight ashore — owner, 2026-10-22, the two never
         // stand together now, inbattle.ts, but an order must never go to a battle over while a live one waits)
         if (landFighting(this, s) && !ship.boarding) return err(landTac(this, s, 'cut')); // back to the boats from a lair (docs/18 II)
+        if (cutGrappling(this, ship)) return; // (the lines thrown at 100 m, not yet alongside: owner 2026-10-30)
         return err(cutGrapples(this, ship));
       case 'board_tactic':
         return err(setTactic(this, ship, msg.tactic));
@@ -5313,7 +5308,7 @@ export class Game {
     for (const o of this.ships.values()) if (o.tether) {
       tethered.add(o.id);
       tethered.add(o.tether.target);
-    }
+    } else if (o.grapple) tethered.add(o.id); // (the grapples' lines are drawn as a cable is)
     const frame = { rows: new Map<number, { row: ShipRow; key: string }>(), tethered };
     const vis = new Map<number, { r: number; fog: boolean }>();
     const visible = (o: ShipEntity, fogSense: boolean) => {

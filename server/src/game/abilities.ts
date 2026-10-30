@@ -2,6 +2,7 @@
 // numbers by rank, facet, talent and mastery: docs/25 items 13–43); this module casts them (area damage, delayed strikes,
 // summons, reveals, the state her next broadsides carry — server/src/game/seaskill.ts reads it there).
 
+import { REACH_BONUS } from '../../../shared/src/data/gunnery.ts';
 import { lairImpact } from './wanted.ts';
 import { findAbility } from '../../../shared/src/data/captains.ts';
 import { SEA_SKILLS, bribeCost, burstReload, escortCost, volleyShare } from '../../../shared/src/data/seaskill.ts';
@@ -68,7 +69,7 @@ export function useAbility(game: Game, ship: ShipEntity, abilityId: string, tx?:
   if (def.targeting === 'point' || def.targeting === 'ship') {
     if (!Number.isFinite(x) || !Number.isFinite(y)) return 'Choose a target';
     const d = dist(ship.state.x, ship.state.y, x, y);
-    const range = def.range ?? 200;
+    const range = (def.range ?? 200) + REACH_BONUS; // (owner 2026-10-30: every aimed order reaches +100 m)
     if (d > range) {
       // Clamp to max range along the aim direction.
       x = ship.state.x + ((x - ship.state.x) / d) * range;
