@@ -645,14 +645,14 @@ body.touch #mm-tab:focus-visible .mm-tab-pill { box-shadow: none; }
    (.i1-yield). tools/mobile/declutter/topstack.mjs measures it. */
 body.simple #hud #hud-stack { gap: 4px; }
 body.simple #hud-stack > #hud-isle1 { order: 20; align-self: center; width: auto !important; max-width: min(400px, 46vw, 100%) !important; box-sizing: border-box; z-index: auto;
-  padding: 2px 3px 2px 6px; border-radius: var(--k-r-round, 999px); background: rgba(11, 13, 16, 0.8); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55); }
+  padding: 2px 3px 2px 6px; border-radius: 3px; background: rgba(11, 13, 16, 0.8); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55); }
 body.simple #hud-stack > #hud-isle1.i1-yield { visibility: hidden !important; pointer-events: none; }
 /* (one line: the step, then what it waits for or brings — the rest cut with «…») */
 body.simple #hud-stack > #hud-isle1 .i1-m { display: block; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0; }
 body.simple #hud-stack > #hud-isle1 .i1-m b { display: inline; font-size: 12px; overflow-wrap: normal; }
 body.simple #hud-stack > #hud-isle1 .i1-m i { display: inline; font-size: 11px; }
 body.simple #hud-stack > #hud-isle1 .i1-m i::before { content: ' · '; }
-body.simple #hud-stack > #hud-isle1 .btn { min-height: 24px !important; padding: 1px 9px; font-size: 11px; border-radius: var(--k-r-round, 999px); }
+body.simple #hud-stack > #hud-isle1 .btn { min-height: 24px !important; padding: 1px 9px; font-size: 11px; border-radius: 3px; }
 body.simple #hud-stack:has(> #hud-isle1:not(.hidden)) { max-height: none; overflow: visible; }
 /* the toasts: each as wide as its words, in the middle of their band, small */
 body.simple:not(.tac) #toasts { align-items: center; }

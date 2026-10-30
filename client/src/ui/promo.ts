@@ -431,7 +431,7 @@ export class Promos {
           ${live.until ? `<div class="po-hurry">${esc(L('hurry'))} ${this.clock(live)}</div>` : ''}
           <div class="po-price">${this.priceHtml(live)}${gain}</div>${why}</div></div>
       ${insideHtml}
-      <div class="po-acts">${many ? `<button type="button" class="btn btn-small po-nav g-only" data-poprev aria-label="${esc(L('prev'))}">${glyphSvg('prev')}</button>` : ''}
+      <div class="po-acts"><button type="button" class="btn btn-small po-shop" data-poshop>${esc(L('shop'))}</button>${many ? `<button type="button" class="btn btn-small po-nav g-only" data-poprev aria-label="${esc(L('prev'))}">${glyphSvg('prev')}</button>` : ''}
         <button type="button" class="btn btn-small" data-polater>${esc(this.overPlace === 'entry' ? L('later') : L('close'))}</button>
         ${live.special === 'first' ? '' : `<button type="button" class="btn btn-small" data-pomore>${esc(L('more'))}</button>`}
         <button type="button" class="btn btn-small btn-primary po-buy" data-pobuy${live.why && live.why !== 'poor' ? ' disabled' : ''}>${buy}</button>
@@ -453,6 +453,11 @@ export class Promos {
       this.shut();
       const fam = OFFERS.get(live.offer)?.fam;
       dispatchEvent(new CustomEvent('gravetide:shop', { detail: fam ? { tab: fam.sec === 'deals' ? 'sea' : fam.tabs[0], sec: fam.sec } : 'topup' }));
+    });
+    // «Магазин» (owner, 2026-10-30): the whole shop from the offer's card
+    el.querySelector<HTMLElement>('[data-poshop]')?.addEventListener('click', () => {
+      this.shut();
+      dispatchEvent(new CustomEvent('gravetide:shop'));
     });
     el.querySelector<HTMLElement>('[data-pobuy]')!.onclick = () => this.buy(live);
   }

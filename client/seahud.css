@@ -997,14 +997,14 @@ body.simple.hud-more.more-open #hud-chat > .chat-toast { display: none; }
 body.simple:not(.sea-target):not(.sea-fight) #hud-stack > #hud-boss:not(:has(.balert)) { display: none !important; }
 body.simple.touch:not(.sea-target):not(.sea-fight) #hud-bottom > #hud-prompt { display: none; }
 body.simple #hud-stack > #hud-autosail { align-self: center !important; width: auto !important; max-width: min(320px, 100%) !important; box-sizing: border-box;
-  border-radius: var(--k-r-round, 999px) !important; padding: 2px 3px 2px 10px !important; background: rgba(11, 13, 16, 0.78); }
+  border-radius: 3px !important; padding: 2px 3px 2px 10px !important; background: rgba(11, 13, 16, 0.78); }
 /* (as wide as its words: no inline-size container — that sized it to nothing — so the narrow column's own rule, the
    destination's words go first) */
 body.simple #hud-stack > #hud-autosail { container-type: normal; border: 1px solid rgba(232, 196, 106, 0.55) !important; border-image: none !important; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55); gap: 6px; }
 @media (max-width: 760px) { body.simple #hud-autosail .as-to { display: none; } }
 body.simple #hud-autosail .as-lbl { display: none; }
 body.simple #hud-autosail .as-d { flex: 0 1 auto; max-width: 200px; }
-body.simple #hud-autosail .as-stop { min-height: 24px; min-width: 0; padding: 2px 9px; border-radius: var(--k-r-round, 999px); }
+body.simple #hud-autosail .as-stop { min-height: 24px; min-width: 0; padding: 2px 9px; border-radius: 3px; }
 /* the island's first step (owner, 2026-10-28): smaller on a phone, at the left — never over the sea's middle */
 @media (max-height: 520px) {
   body.simple .hud-isle1 { max-width: min(280px, 29vw); gap: 4px; padding: 2px 3px 2px 5px; }

@@ -90,7 +90,7 @@
 /* The second row: chips, one line that scrolls sideways when it must. */
 .w-chips { flex: none; display: flex; gap: var(--k-sp-1); padding: var(--k-sp-1) var(--k-sp-2); overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid rgba(140, 107, 58, 0.25); }
 .w-chips::-webkit-scrollbar { display: none; }
-.w-chip { position: relative; flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: var(--k-h-2); padding: 0 12px 0 8px; border: 1px solid rgba(140, 107, 58, 0.35); border-radius: 22px; background: rgba(8, 9, 11, 0.6); color: var(--k-bone);
+.w-chip { position: relative; flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: var(--k-h-2); padding: 0 12px 0 8px; border: 1px solid rgba(140, 107, 58, 0.35); border-radius: 3px; background: rgba(8, 9, 11, 0.6); color: var(--k-bone);
   font: 600 var(--k-fs-2)/1 var(--k-font-sans); white-space: nowrap; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   transition: transform var(--k-dur-1) var(--k-ease-out), border-color var(--k-dur-2) var(--k-ease-out); }
 .w-chip-ico { width: 24px; height: 24px; object-fit: contain; margin: 0; }
