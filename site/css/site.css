@@ -281,6 +281,31 @@ p { margin: 0 0 1em; }
 .trait b { color: var(--gold1); }
 .badge { display: inline-block; vertical-align: middle; padding: 3px 10px; border-radius: 999px; font: 600 10px var(--sans); letter-spacing: 0.16em; text-transform: uppercase; }
 .badge.gold { background: var(--gold); color: #2a1a06; }
+/* The fleet's planning numbers (Нефигугум, forum post 28): the line and role tags, the hold picked out, price and yard. */
+.fleet-tools { padding-top: 34px; }
+.fleet-tools .filters { margin-bottom: 10px; }
+.fleet-sort { align-items: center; }
+.fleet-sort span { color: var(--muted); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
+.fleet-sort .chip { padding: 7px 14px; font-size: 13px; }
+.fleet-sec[hidden] { display: none; }
+@media (max-width: 640px) {
+  .fleet-tools { padding-top: 22px; }
+  .fleet-tools .filters { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; gap: 6px; margin-bottom: 8px; padding-bottom: 2px; }
+  .fleet-tools .chip { flex: none; padding: 7px 12px; font-size: 13px; }
+  .fleet-sort span { flex: none; font-size: 11px; }
+}
+.ship-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
+.tag { padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line2); font-size: 12px; color: #cfc8b8; }
+.tag.t-combat { border-color: rgba(201, 84, 64, 0.7); } .tag.t-trade { border-color: rgba(245, 196, 81, 0.6); } .tag.t-fast { border-color: rgba(110, 170, 220, 0.7); } .tag.t-hauler { border-color: rgba(170, 150, 110, 0.7); }
+.ship-tags { align-items: center; }
+.ship-tags .role { font-size: 12.5px; color: var(--muted); }
+.ship .stats.mini { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+.ship .stats.mini .stat b { font-size: 15px; white-space: nowrap; }
+.ship .stats.mini .stat span { min-height: 0; }
+.stats.mini .stat.hold { background: rgba(60, 46, 18, 0.55); }
+.stats.mini .stat.hold b { color: var(--gold1); }
+.ship-buy { font-size: 14px; color: #c4bdae; margin: 0 0 10px; }
+.ship-buy b { color: var(--gold1); font-weight: 600; }
 
 /* ---- the call to action */
 .cta-band { margin: 40px 0 0; padding: 70px 0; background: linear-gradient(180deg, transparent, rgba(245, 196, 81, 0.05) 50%, transparent); }

@@ -20,6 +20,8 @@ import { BOSS_UNIT_IDS, BOSS_UNIT_NAMES } from '../../shared/src/data/bossunits.
 import { TITAN_IDS, TITAN_NAMES } from '../../shared/src/data/titans.ts';
 import { LAIRS } from '../../shared/src/data/lairs.ts';
 import { SHIP_CLASSES } from '../../shared/src/data/ships.ts';
+import type { ShipClassId } from '../../shared/src/data/ships.ts';
+import { hullCard } from '../../shared/src/data/hullcard.ts';
 import { LEVEL_RANGE } from '../../shared/src/data/shiplevel.ts';
 import { CAPTAINS, CAPTAIN_IDS } from '../../shared/src/data/captains.ts';
 import { ORDER_IDS } from '../../shared/src/data/hero.ts';
@@ -388,23 +390,36 @@ function captains(lang: Lang): string {
 }
 
 const LISTS: Record<string, Tr> = { fast: ['Fast ships', 'Быстрые корабли'], combat: ['Warships', 'Боевые корабли'], trade: ['Traders', 'Торговые корабли'], hauler: ['Haulers', 'Тяжёлые грузовозы'] };
+const FLEET_UI: Record<string, Tr> = {
+  hold: ['Hold', 'Трюм'], slots: ['Army stacks', 'Слоты армии'], hammocks: ['Crew / hammocks', 'Команда / койки'], turn: ['Turn', 'Поворот'], cap: ['Captain', 'Капитан'],
+  sort: ['Sort', 'Сортировка'], byRank: ['By rank', 'По рангу'], byHold: ['By hold', 'По трюму'], bySpeed: ['By speed', 'По скорости'],
+  calibre: ['Calibre up to', 'Калибр до'], lv: ['lvl {n}+', 'с {n} ур.'],
+};
+const fu = (k: string, lang: Lang, v: Record<string, string | number> = {}) => L(lang, FLEET_UI[k]).replace(/\{(\w+)\}/g, (m, x: string) => String(v[x] ?? m));
+// The fleet's cards read the game's own numbers through the hull card (shared/src/data/hullcard.ts; Нефигугум, forum
+// post 28: «а трюм?»): her hold by level, crew and hammocks, army stacks, the price and where she is sold, her role.
 function ships(lang: Lang): string {
-  const all = Object.values(SHIP_CLASSES) as unknown as { id: string; name: string; role: string; list?: string; tier: number; hull: number; maxSpeed: number; gunPortsPerSide: number; crewMin: number; crewMax: number; premium?: { price: number }; passive?: { name: string; description: string }; sprite: string }[];
-  const ru = (id: string, k: string, en: string) => (lang === 'ru' ? DATA_RU[`ships.SHIP_CLASSES.${id}.${k}`] ?? en : en);
+  const all = Object.values(SHIP_CLASSES) as unknown as { id: string; list?: string; tier: number; premium?: { price: number }; sprite: string; name: string }[];
   const lr = (id: string) => (LEVEL_RANGE as Record<string, [number, number]>)[id];
   const card = (s: (typeof all)[number]) => {
-    const r = lr(s.id);
-    return `<article class="ship panel reveal${s.premium ? ' prem' : ''}"><div class="ship-art">${img(asset(s.sprite), s.name)}</div><div class="ship-txt">
-<h3>${esc(ru(s.id, 'name', s.name))}${s.premium ? ` <span class="badge gold">${u('premium', lang)}</span>` : ''}</h3><p class="muted">${T(ru(s.id, 'role', s.role), lang)}</p>
-<div class="stats mini">${r ? stat('rank', `⚓${r[0]}${r[1] !== r[0] ? `–${r[1]}` : ''}`, lang) : ''}${stat('guns', s.gunPortsPerSide, lang)}${stat('hull', s.hull, lang)}${stat('speed', s.maxSpeed, lang)}${stat('crew', `${s.crewMin}–${s.crewMax}`, lang)}</div>
-${s.passive ? `<p class="trait"><img src="${K('ico/star')}" alt="" width="18" height="18"><b>${esc(ru(s.id, 'passive.name', s.passive.name))}.</b> ${T(ru(s.id, 'passive.description', s.passive.description), lang)}</p>` : ''}</div></article>`;
+    const h = hullCard(s.id as ShipClassId, lang);
+    const st = (k: string) => h.stats.find((x) => x.k === k)!;
+    const mini = (label: string, v: string | number, cls = '') => `<div class="stat${cls ? ` ${cls}` : ''}"><span>${label}</span><b>${v}</b></div>`;
+    const crew = `${st('crew').lo} / ${st('hammocks').text}`;
+    return `<article class="ship panel reveal${s.premium ? ' prem' : ''}" data-list="${h.list}" data-rank="${h.levels[0] * 100 + h.tier}" data-hold="${st('hold').lo}" data-speed="${st('speed').lo}"><div class="ship-art">${img(asset(s.sprite), h.name)}</div><div class="ship-txt">
+<h3>${esc(h.name)}${s.premium ? ` <span class="badge gold">${u('premium', lang)}</span>` : ''}</h3><p class="ship-tags"><span class="tag t-${h.list}">${esc(h.listName)}</span><span class="role">${esc(h.roleName)}</span></p><p class="muted">${T(h.flavour, lang)}</p>
+<div class="stats mini">${mini(u('rank', lang), h.levelText)}${mini(fu('hold', lang), st('hold').text, 'hold')}${mini(u('hull', lang), st('hull').text)}${mini(u('speed', lang), st('speed').text)}${mini(u('guns', lang), h.guns.perSide)}${mini(fu('hammocks', lang), crew)}${mini(fu('slots', lang), st('slots').text)}${mini(fu('turn', lang), st('turn').text)}${mini(fu('calibre', lang), `${h.guns.maxLb} ${lang === 'ru' ? 'фн' : 'pdr'}`)}${mini(fu('cap', lang), fu('lv', lang, { n: h.captainLevel }))}</div>
+<p class="ship-buy"><b>${esc(h.price.text)}</b> · ${esc(h.sold.text)}</p>
+<p class="trait"><img src="${K('ico/star')}" alt="" width="18" height="18"><b>${esc(h.traits[0].name)}.</b> ${T(h.traits[0].text, lang)}</p></div></article>`;
   };
-  const body = Object.keys(LISTS).map((k) => {
+  const tools = `<div class="wrap fleet-tools"><div class="filters" role="toolbar"><button class="chip on" data-fl="">${u('all', lang)} <i>${all.filter((s) => s.list).length}</i></button>${Object.keys(LISTS).map((k) => `<button class="chip" data-fl="${k}">${L(lang, LISTS[k])} <i>${all.filter((s) => s.list === k).length}</i></button>`).join('')}</div>
+<div class="filters fleet-sort" role="toolbar" aria-label="${fu('sort', lang)}"><span>${fu('sort', lang)}:</span><button class="chip on" data-sort="rank">${fu('byRank', lang)}</button><button class="chip" data-sort="hold">${fu('byHold', lang)}</button><button class="chip" data-sort="speed">${fu('bySpeed', lang)}</button></div></div>`;
+  const body = tools + Object.keys(LISTS).map((k) => {
     const xs = all.filter((s) => s.list === k).sort((a, b) => (lr(a.id)?.[0] ?? 0) - (lr(b.id)?.[0] ?? 0) || a.tier - b.tier);
-    return `<section class="wrap sec">${sectionHead(lang === 'ru' ? plural(xs.length, 'корпус', 'корпуса', 'корпусов') : `${xs.length} hulls`, L(lang, LISTS[k]), lang)}<div class="ships">${xs.map(card).join('')}</div></section>`;
+    return `<section class="wrap sec fleet-sec" data-list="${k}">${sectionHead(lang === 'ru' ? plural(xs.length, 'корпус', 'корпуса', 'корпусов') : `${xs.length} hulls`, L(lang, LISTS[k]), lang)}<div class="ships">${xs.map(card).join('')}</div></section>`;
   }).join('');
   return page(lang, {
-    path: 'ships/', active: 'ships', title: lang === 'ru' ? 'Флот GRAVETIDE' : 'GRAVETIDE Fleet', desc: lang === 'ru' ? 'Все корабли игры: ранги, пушки, корпус, скорость и особенности.' : 'Every ship of the game: ranks, guns, hull, speed and traits.',
+    path: 'ships/', active: 'ships', title: lang === 'ru' ? 'Флот GRAVETIDE' : 'GRAVETIDE Fleet', desc: lang === 'ru' ? 'Все корабли игры: ранги, трюм, пушки, корпус, скорость, команда, цена, где купить и особенности.' : 'Every ship of the game: ranks, hold, guns, hull, speed, crew, price, where sold and traits.',
     hero: { img: K('hero/home'), kicker: lang === 'ru' ? 'Верфь' : 'Shipyard', title: lang === 'ru' ? 'Флот' : 'Fleet', lead: lang === 'ru' ? 'Десять рангов кораблей — от рыбацкого кеча до линейного корабля и премиум-корпусов со своими спутниками.' : 'Ten ranks of ships — from a fishing ketch to a man-o’-war and premium hulls with companions of their own.' },
     body,
   });
