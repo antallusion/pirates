@@ -1198,7 +1198,8 @@ export class WorldMap {
       g.restore();
       const hub = state.voyage?.ferry ? state.ports.find((p) => p.id === state.voyage!.ferry) : undefined;
       const rt = state.route?.view;
-      const named = hub?.name ?? (rt?.name || null) ?? courseName(state, course.to);
+      // (a place under her fog is not named: a mark in the mist says only «your mark»)
+      const named = hub?.name ?? (rt?.name || null) ?? (underFog(state.seen, course.to.x, course.to.y) ? null : courseName(state, course.to));
       const d = ahead.left;
       const dist = d >= 1000 ? RL('dist.km', { n: dec1(d / 1000) }) : RL('dist.m', { n: Math.round(d / 10) * 10 });
       pill = { text: `${named ? placeName(named) : L('course.mark')} · ${dist}`, x: ex, y: ey - Math.max(14, ms * 0.75) };

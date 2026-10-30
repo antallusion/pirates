@@ -9,6 +9,7 @@ import { isFerryHub } from '../../../shared/src/data/ferry.ts';
 import type { ClientMsg, FerryView } from '../../../shared/src/protocol.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { dict } from '../i18n.ts';
+import { serverText } from '../lang/server.ts';
 import { EN, RU } from '../lang/ui/ferry.ts';
 import type { ClientState } from '../state.ts';
 import { dec1, esc, icon, money } from './dom.ts';
@@ -25,7 +26,7 @@ function span(sec: number): string {
 /** The list of a hub's routes. `here`: she lies in this port (the buttons live); `left`: her cooldown now (s). */
 export function ferryHtml(state: ClientState, view: FerryView, here: boolean, left = view.left, compact = false): string {
   const gold = state.self?.gold ?? 0;
-  const why = here ? (left > 0 ? LF('wait', { t: span(left) }) : view.why) : null;
+  const why = here ? (left > 0 ? LF('wait', { t: span(left) }) : view.why ? serverText(view.why) : null) : null;
   const rows = view.routes.map((r) => {
     const p = state.ports.find((q) => q.id === r.to);
     if (!p) return '';
