@@ -196,6 +196,7 @@ server.listen(PORT, HOST, () => {
 async function shutdown(): Promise<void> {
   console.log('[server] saving world and shutting down…');
   game.stop();
+  await tg?.stop();
   await link?.close();
   zone?.stop();
   await db.close();

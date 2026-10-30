@@ -21,6 +21,7 @@ import { doubloonPack } from '../../shared/src/data/premium.ts';
 import { tgDevice, tgLang, tgText, tgTime } from '../../shared/src/data/telegram.ts';
 import type { TgLang, TgnCat } from '../../shared/src/data/telegram.ts';
 import { noticeLink, notifyCommand, setNoticeDesk, setNotices } from './game/tgnotify.ts';
+import { tgFetchFromEnv } from './net/egress.ts';
 
 export interface TgUser {
   id: number;
@@ -209,8 +210,31 @@ export interface TelegramOptions {
    *  open it by its direct link in fullscreen (`t.me/<bot>?startapp=play&mode=fullscreen`) instead of a web_app button,
    *  which Telegram opens in its tall mode with its own header (the Mini App then asks for fullscreen itself). */
   mainApp?: boolean;
+  /** How the bot's updates arrive (TG_UPDATES): 'webhook' (default, setWebhook), 'poll' (getUpdates long polling:
+   *  outbound only, so it works through TG_PROXY when Telegram can't reach the server), 'auto' (the webhook, and long
+   *  polling as soon as getWebhookInfo shows Telegram failing to deliver, or setWebhook fails). */
+  updates?: TgUpdatesMode;
+  /** getUpdates' long-poll wait, seconds (under the egress proxy's 30 s request timeout). */
+  pollTimeoutS?: number;
+  /** auto: how often getWebhookInfo is asked, ms. */
+  watchMs?: number;
+  sleep?: (ms: number) => Promise<void>;
   now?: () => number;
   log?: (line: string) => void;
+}
+
+export type TgUpdatesMode = 'webhook' | 'poll' | 'auto';
+
+/** The updates the bot asks for, by webhook or by getUpdates. */
+const ALLOWED_UPDATES = ['message', 'callback_query', 'pre_checkout_query'];
+/** auto: a delivery error this recent (s) with updates waiting means the webhook doesn't get through. */
+const WEBHOOK_ERROR_WINDOW_S = 600;
+
+export interface TgWebhookInfo {
+  url?: string;
+  pending_update_count?: number;
+  last_error_date?: number;
+  last_error_message?: string;
 }
 
 export class TelegramService {
@@ -229,6 +253,15 @@ export class TelegramService {
   private log: (line: string) => void;
   private pending = new Map<string, Pending>();
   private hits = new Map<string, { n: number; reset: number }>();
+  readonly updates: TgUpdatesMode;
+  /** Long polling is running (TG_UPDATES=poll, or auto after the webhook failed). */
+  polling = false;
+  private pollTimeoutS: number;
+  private watchMs: number;
+  private sleep: (ms: number) => Promise<void>;
+  private offset = 0;
+  private watch: ReturnType<typeof setInterval> | null = null;
+  private pollDone: Promise<void> | null = null;
 
   constructor(o: TelegramOptions) {
     this.db = o.db;
@@ -244,6 +277,10 @@ export class TelegramService {
     this.admins = new Set(o.admins ?? []);
     this.now = o.now ?? Date.now;
     this.log = o.log ?? ((l) => console.log(l));
+    this.updates = o.updates ?? 'webhook';
+    this.pollTimeoutS = o.pollTimeoutS ?? 25;
+    this.watchMs = o.watchMs ?? 60_000;
+    this.sleep = o.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
     setPayDesk(o.game, { invoice: (a, p, l) => this.invoice(a, p, l), refund: (c) => this.refund(c) });
     setNoticeDesk(o.game, { send: (chat, cat, text, l) => this.notice(chat, cat, text, l) });
   }
@@ -251,20 +288,118 @@ export class TelegramService {
   /** On start: the webhook (message and pre_checkout_query only), the menu button «Играть» → the Mini App, the
    *  commands. Failures are logged by their code and do not stop the world. */
   async setup(): Promise<void> {
+    const hook: [string, Record<string, unknown>] = this.updates === 'poll'
+      ? ['deleteWebhook', { drop_pending_updates: false }]
+      : ['setWebhook', { url: `${this.publicUrl}/tg/webhook`, secret_token: this.secret, allowed_updates: ALLOWED_UPDATES }];
     const steps: [string, Record<string, unknown>][] = [
-      ['setWebhook', { url: `${this.publicUrl}/tg/webhook`, secret_token: this.secret, allowed_updates: ['message', 'callback_query', 'pre_checkout_query'] }],
+      hook,
       ['setChatMenuButton', { menu_button: { type: 'web_app', text: tgText('play', 'ru'), web_app: { url: this.webappUrl } } }],
       ['setMyCommands', { commands: this.commands('en') }],
       ['setMyCommands', { commands: this.commands('ru'), language_code: 'ru' }],
     ];
+    let hookFailed = false;
     for (const [m, p] of steps) {
       try {
         await this.api.call(m, p);
         this.log(`[tg] ${m} ok`);
       } catch (e) {
+        if (m === hook[0]) hookFailed = true;
         this.log(`[tg] ${m} failed: ${(e as Error).message}`);
       }
     }
+    if (this.updates === 'poll') this.startPolling('TG_UPDATES=poll');
+    else if (this.updates === 'auto') {
+      if (hookFailed) await this.toPolling('setWebhook failed');
+      else {
+        this.watch = setInterval(() => void this.checkWebhook(), this.watchMs);
+        this.watch.unref?.();
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------------------------- long polling
+
+  /** auto: Telegram's own account of the webhook: a fresh delivery error with updates piling up, or no webhook at
+   *  all, and the bot polls instead. True once polling. */
+  async checkWebhook(): Promise<boolean> {
+    if (this.polling) return true;
+    let info: TgWebhookInfo;
+    try {
+      info = await this.api.call<TgWebhookInfo>('getWebhookInfo');
+    } catch (e) {
+      this.log(`[tg] getWebhookInfo failed: ${(e as Error).message}`);
+      return false;
+    }
+    const age = Math.floor(this.now() / 1000) - (info.last_error_date ?? 0);
+    const failing = !!info.last_error_date && age < WEBHOOK_ERROR_WINDOW_S && (info.pending_update_count ?? 0) > 0;
+    if (!failing && info.url) return false;
+    const why = info.url ? `webhook failing: ${String(info.last_error_message ?? '').slice(0, 120)} (${info.pending_update_count} waiting)` : 'no webhook set';
+    await this.toPolling(why);
+    return true;
+  }
+
+  /** Drops the webhook (keeping the waiting updates) and polls instead. */
+  private async toPolling(why: string): Promise<void> {
+    if (this.polling) return;
+    if (this.watch) clearInterval(this.watch);
+    this.watch = null;
+    try {
+      await this.api.call('deleteWebhook', { drop_pending_updates: false });
+    } catch (e) {
+      this.log(`[tg] deleteWebhook failed: ${(e as Error).message}`);
+    }
+    this.startPolling(why);
+  }
+
+  private startPolling(why: string): void {
+    if (this.polling) return;
+    this.polling = true;
+    this.log(`[tg] updates by long polling (${why})`);
+    this.pollDone = this.pollLoop();
+  }
+
+  /** Stops the long polling and the webhook watch (the server's shutdown); resolves once the loop is out. */
+  async stop(): Promise<void> {
+    if (this.watch) clearInterval(this.watch);
+    this.watch = null;
+    this.polling = false;
+    await this.pollDone;
+  }
+
+  private async pollLoop(): Promise<void> {
+    let backoff = 1000;
+    let lastLog = -Infinity;
+    while (this.polling) {
+      let batch: TgUpdate[];
+      try {
+        batch = await this.api.call<TgUpdate[]>('getUpdates', { offset: this.offset, timeout: this.pollTimeoutS, allowed_updates: ALLOWED_UPDATES });
+        backoff = 1000;
+      } catch (e) {
+        if (!this.polling) break;
+        // 409: a webhook is set again (another process' setup); getUpdates refuses while one is set
+        if (e instanceof TgApiError && e.code === 409) await this.api.call('deleteWebhook', { drop_pending_updates: false }).catch(() => undefined);
+        if (this.now() - lastLog > 60_000) {
+          lastLog = this.now();
+          this.log(`[tg] getUpdates failed: ${(e as Error).message}`);
+        }
+        await this.sleep(backoff);
+        backoff = Math.min(backoff * 2, 30_000);
+        continue;
+      }
+      if (Array.isArray(batch) && batch.length) await this.handleBatch(batch);
+    }
+  }
+
+  /** A getUpdates batch: the pre-checkout queries first and together (Telegram gives them 10 s), then the rest in
+   *  order; the offset moves past the batch after (a payment seen twice is credited once: `paid` keys on the charge). */
+  async handleBatch(batch: TgUpdate[]): Promise<void> {
+    const pre = batch.filter((u) => u.pre_checkout_query);
+    const rest = batch.filter((u) => !u.pre_checkout_query);
+    const fail = (e: unknown): void => this.log(`[tg] update failed: ${(e as Error).message}`);
+    await Promise.all(pre.map((u) => this.handleUpdate(u).catch(fail)));
+    for (const u of rest) await this.handleUpdate(u).catch(fail);
+    const last = Math.max(...batch.map((u) => u.update_id ?? -1));
+    if (last >= this.offset) this.offset = last + 1;
   }
 
   /** The «Играть» button under a message: the Main Mini App's fullscreen direct link (TG_MAIN_APP), else the web_app. */
@@ -676,7 +811,8 @@ export interface TgUpdate {
 // ------------------------------------------------------------------------------------------------ from the environment
 
 /** The service from the environment, or null without TELEGRAM_BOT_TOKEN (then every Telegram route is a 404 and the
- *  client shows no Telegram button). TELEGRAM_FAKE=1 answers the Bot API locally (QA: no network, no webhook). */
+ *  client shows no Telegram button). TELEGRAM_FAKE=1 answers the Bot API locally (QA: no network, no webhook).
+ *  TG_PROXY=http://127.0.0.1:8118 sends the Bot API through the server's egress proxy (net/egress.ts). */
 export function telegramFromEnv(o: { db: Db; auth: AuthService; game: Game; publicUrl: string }, env: NodeJS.ProcessEnv = process.env): TelegramService | null {
   const token = env.TELEGRAM_BOT_TOKEN?.trim();
   if (!token) return null;
@@ -684,13 +820,20 @@ export function telegramFromEnv(o: { db: Db; auth: AuthService; game: Game; publ
   return new TelegramService({
     ...o,
     token,
-    fetch: fake ? fakeBotApi() : (globalThis.fetch as unknown as FetchFn),
+    fetch: fake ? fakeBotApi() : (tgFetchFromEnv(env) as unknown as FetchFn),
     webappUrl: env.TG_PUBLIC_URL ?? 'https://tg.gravetidegame.com',
     bot: env.TELEGRAM_BOT_USERNAME ?? 'gravetide_bot',
     secret: env.TELEGRAM_WEBHOOK_SECRET,
     admins: (env.TELEGRAM_ADMIN_IDS ?? '').split(',').map((x) => Number(x.trim())).filter((x) => Number.isSafeInteger(x) && x > 0),
     mainApp: env.TG_MAIN_APP === '1',
+    updates: tgUpdatesMode(env.TG_UPDATES),
   });
+}
+
+/** TG_UPDATES: poll | auto | webhook (anything else = webhook). */
+export function tgUpdatesMode(v: string | undefined): TgUpdatesMode {
+  const m = (v ?? '').trim().toLowerCase();
+  return m === 'poll' || m === 'auto' ? m : 'webhook';
 }
 
 /** A Bot API that answers every method locally (TELEGRAM_FAKE=1 and the tests): `calls` keeps what was asked. */
