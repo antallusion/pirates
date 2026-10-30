@@ -576,6 +576,38 @@ function pullTight(game: Game, ship: ShipEntity, p: Path, hw: HullWater): Path {
   return out;
 }
 
+/** The helmsman looks this far ahead for another ship on her course (forum 2026-10-30, Нефигугум: «я их тараню»). */
+export const SHIP_LOOK = 140;
+/** …and gives her this much water besides her own half beam and hers. */
+export const SHIP_CLEAR = 14;
+
+/** Another ship on the stretch ahead of her bow (forum 2026-10-30: the autopilot ran a newcomer into the Crown's
+ *  patrols, the patrols took the bumps for rams): where she is and where she will be in two seconds — not her own
+ *  squadron, her prizes, a ship she is grappled with, nor one already astern of her bow. */
+export function shipOnLane(game: Game, ship: ShipEntity, x0: number, y0: number, x1: number, y1: number, wide: number): boolean {
+  const dx = x1 - x0, dy = y1 - y0;
+  const len2 = dx * dx + dy * dy;
+  if (len2 < 1) return false;
+  const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+  let hit = false;
+  game.forShipsNear(mx, my, Math.sqrt(len2) / 2 + 80, (o) => {
+    if (hit || o.id === ship.id || !o.alive || o.docked || o.sinkingUntil || o.ghost) return;
+    if (o.ownerId === ship.id || (ship.ownerId !== null && (o.id === ship.ownerId || o.ownerId === ship.ownerId)) || ship.boarding?.with === o.id) return;
+    const r = wide + o.stats.beam * 0.5 + SHIP_CLEAR;
+    const ov = headingVec(o.state.heading);
+    for (const t of [0, 2]) {
+      const px = o.state.x + ov.x * o.state.speed * SPEED_SCALE * t, py = o.state.y + ov.y * o.state.speed * SPEED_SCALE * t;
+      const k = ((px - x0) * dx + (py - y0) * dy) / len2;
+      if (k < 0 || k > 1) continue;
+      if (Math.hypot(x0 + dx * k - px, y0 + dy * k - py) < r) {
+        hit = true;
+        return;
+      }
+    }
+  });
+  return hit;
+}
+
 /** Steering for her route's next point: beats to windward on the better tack, feels ahead for foul water. Returns the
  *  heading to steer, or null when there is no clear water ahead at all. Exported for the tests. */
 export function autosailHeading(game: Game, ship: ShipEntity, run: AutoSail): number | null {
@@ -621,11 +653,22 @@ export function autosailHeading(game: Game, ship: ShipEntity, run: AutoSail): nu
   // point she steers for: the water beyond a mark by a hulk is the hulk, and she went round and round it.)
   const look = Math.min(160 + ship.state.speed * 8, Math.max(Math.hypot(tx - x, ty - y) + ship.stats.length * 0.5, ship.stats.length * 2 + 40));
   const wide = ship.stats.beam * 0.5 + 6, bow = ship.stats.length * 0.5;
-  const foul = (h: number) => {
+  const water = (h: number) => {
     const v = headingVec(h);
     const x1 = x + v.x * look, y1 = y + v.y * look, x2 = x + v.x * look * 0.5, y2 = y + v.y * look * 0.5;
     return foulWater(game, ship, x1, y1) || foulWater(game, ship, x2, y2) || laneFoul(game, ship, x + v.x * bow, y + v.y * bow, x1, y1, wide);
   };
+  // (forum 2026-10-30: she gives the other ships on her course a berth too — round them by the nearer turn; with no
+  // turn clear of both, the water alone decides, as before)
+  const hull = (h: number) => {
+    const v = headingVec(h);
+    const ahead = Math.min(look, SHIP_LOOK);
+    return shipOnLane(game, ship, x + v.x * bow, y + v.y * bow, x + v.x * ahead, y + v.y * ahead, wide);
+  };
+  if (!water(desired) && hull(desired)) {
+    for (const off of [0.3, -0.3, 0.6, -0.6, 0.95, -0.95]) if (!water(desired + off) && !hull(desired + off)) return wrapAngle(desired + off);
+  }
+  const foul = water;
   if (!foul(desired)) return desired;
   if (beat > 0 && rel < beat && now - run.tackAt > 8) {
     const from = wrapAngle(wind.dir + Math.PI);

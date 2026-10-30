@@ -4,6 +4,7 @@
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { pointsInTree } from '../../../shared/src/data/talents.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
+import { SEA_HULL_PER_MIN, SEA_SAILS_PER_MIN } from '../../../shared/src/data/dealings.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import type { StatMods } from '../../../shared/src/data/stats.ts';
 import { dist, headingVec } from '../../../shared/src/math.ts';
@@ -15,7 +16,9 @@ import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { flagshipYardMods } from './bridgefx.ts';
-import { ownPortRepairFleet, ownShipLost } from './baseships.ts';
+import { ownPortMends, ownShipLost } from './baseships.ts';
+import { hiresOf } from './seahire.ts';
+import type { EscortMendView } from '../../../shared/src/protocol.ts';
 import { ownParity } from '../../../shared/src/data/baseships.ts';
 
 export type Formation = 'line' | 'wedge' | 'ring';
@@ -145,18 +148,84 @@ export function anchorFleet(game: Game, s: PlayerSession, hullCap = 1): void {
   }
 }
 
-/** In port the yard patches the squadron, if you pay. */
-export function repairFleet(game: Game, s: PlayerSession): void {
+/** A hired escort's or a guard's mend in port: this share of her hull's price for the hull she lacks (the yard's old
+ *  reckoning of the squadron, now for the guards hired at sea too). */
+export const ESCORT_REPAIR_SHARE = 0.15;
+/** At sea, out of a fight, her carpenters mend her this share of the captain's carpenters' pace (searepair.ts) — from
+ *  her own stores (forum 2026-10-30: «как ремонтируются кораблики сопровождения?»). */
+export const ESCORT_SEA_PACE = 0.5;
+/** …and only this long after the last shot at her. */
+export const ESCORT_CALM_SEC = 10;
+
+interface EscortMend extends EscortMendView {
+  pay: () => void;
+}
+
+/** Each ship with her that is hurt, and the yard's price (forum 2026-10-30): her own island ships by their reckoning
+ *  (docs/15 item 4), the hired escorts at anchor, the guards hired at sea lying off the harbour. */
+export function escortMends(game: Game, s: PlayerSession): EscortMend[] {
   const p = s.profile!;
-  ownPortRepairFleet(game, s); // her own ships: by their own reckoning (docs/15 item 4)
+  const out: EscortMend[] = ownPortMends(game, s).map((m) => ({ name: m.name, hull: Math.round(m.e.hull * 100), cost: m.cost, pay: m.pay }));
   for (const e of p.fleet.escorts) {
     if (e.hull >= 0.999 || e.own) continue;
     const price = ESCORT_OFFERS.find((o) => o.classId === e.classId)?.price ?? 1800;
-    const cost = Math.round((1 - e.hull) * price * 0.15);
-    if (p.gold < cost) continue;
-    p.gold -= cost;
-    game.db.ledger(s.accountId, 'escort_repair', -cost, e.name);
-    e.hull = 1;
+    const cost = Math.max(1, Math.round((1 - e.hull) * price * ESCORT_REPAIR_SHARE));
+    out.push({ name: e.name, hull: Math.round(e.hull * 100), cost, pay: () => {
+      p.gold -= cost;
+      game.db.ledger(s.accountId, 'escort_repair', -cost, e.name);
+      e.hull = 1;
+    } });
+  }
+  for (const h of hiresOf(game, s.accountId)) {
+    const n = game.ships.get(h.shipId);
+    if (!n || !n.alive || n.sinkingUntil) continue;
+    const frac = n.hull / Math.max(1, n.stats.hullMax);
+    if (frac >= 0.999) continue;
+    const cost = Math.max(1, Math.round((1 - frac) * SHIP_CLASSES[n.loadout.classId].price * ESCORT_REPAIR_SHARE));
+    out.push({ name: n.name, hull: Math.round(frac * 100), cost, away: true, pay: () => {
+      p.gold -= cost;
+      game.db.ledger(s.accountId, 'escort_repair', -cost, n.name);
+      n.hull = n.stats.hullMax;
+      n.sails = n.stats.sailHpMax;
+    } });
+  }
+  return out;
+}
+
+/** What mending all of them costs. */
+export function escortRepairCost(game: Game, s: PlayerSession): number {
+  return escortMends(game, s).reduce((a, m) => a + m.cost, 0);
+}
+
+/** The yard patches the squadron, as far as her silver goes (the cheapest first); the silver spent. */
+export function repairEscorts(game: Game, s: PlayerSession): number {
+  const p = s.profile!;
+  let spent = 0;
+  for (const m of escortMends(game, s).sort((a, b) => a.cost - b.cost)) {
+    if (p.gold < m.cost) continue;
+    m.pay();
+    spent += m.cost;
+  }
+  return spent;
+}
+
+/** In port the yard patches the squadron, if you pay (forum 2026-10-30: since then with her own ship's repair, its price
+ *  shown — not by itself on making port). */
+export function repairFleet(game: Game, s: PlayerSession): void {
+  repairEscorts(game, s);
+}
+
+/** Every second: the ships with a captain (her island's, the escorts of Command, the guards hired at sea) mend at sea
+ *  out of a fight — ESCORT_SEA_PACE of a captain's carpenters' pace, ESCORT_CALM_SEC after the last shot at her. */
+export function mendEscortsAtSea(game: Game, dt = 1): void {
+  const now = game.now;
+  for (const e of game.ships.values()) {
+    if (e.ownerId === null || e.isPlayer || !e.alive || e.sinkingUntil || e.docked || e.prize) continue;
+    if (!e.fleetId && e.hiredBy === undefined) continue;
+    if (now - e.lastHitAt < ESCORT_CALM_SEC || e.underFire(now)) continue;
+    const st = e.stats;
+    if (e.hull < st.hullMax) e.hull = Math.min(st.hullMax, e.hull + st.hullMax * (SEA_HULL_PER_MIN / 60) * ESCORT_SEA_PACE * dt);
+    if (e.sails < st.sailHpMax) e.sails = Math.min(st.sailHpMax, e.sails + st.sailHpMax * (SEA_SAILS_PER_MIN / 60) * ESCORT_SEA_PACE * dt);
   }
 }
 

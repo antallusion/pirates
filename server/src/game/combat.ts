@@ -6,7 +6,7 @@ import { regattaBlocked } from './regatta.ts';
 import { tributeBroken } from './raiding.ts';
 import { lairImpact } from './wanted.ts';
 import { ladderBetween } from './ladder.ts';
-import { AIM_CHARGE, DASH_COOLDOWN, DASH_EVADE, DASH_EVADE_CHANCE, DASH_TIME, LAY_ARC_DEG, LAY_OVER, SEA_DAMAGE, SEA_RELOAD, aimFocus, windDriftAngle } from '../../../shared/src/data/gunnery.ts';
+import { AIM_CHARGE, BOARD_SNARE, BOARD_SNARE_SEC, DASH_COOLDOWN, DASH_EVADE, DASH_EVADE_CHANCE, DASH_TIME, LAY_ARC_DEG, LAY_OVER, SEA_DAMAGE, SEA_RELOAD, aimFocus, windDriftAngle } from '../../../shared/src/data/gunnery.ts';
 import { ALPHA_OFF_LADDER, ALPHA_OVER, IRON_RAIN_PIERCE, alphaShare, seaCrewPace, seaCritPace, seaGrapePace, seaHullPace, seaReloadBy } from '../../../shared/src/data/seabalance.ts';
 import { forgiveStray } from './stray.ts';
 import { onboardingVolley, PRACTICE_HULL, PUPIL_HULL } from './onboarding.ts';
@@ -807,6 +807,10 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   if (ignite > 0 && felt > 5 && game.rng.chance(ignite * cx)) {
     igniteShip(game, target, 10 + game.rng.float() * 6, shooter);
     crit = 'fire';
+  }
+  // Forum 2026-10-30: chain or grape from a ship running in to board her (her boarding run) fouls a sea ship's rigging.
+  if ((p.ammo === 'chain' || p.ammo === 'grape') && shooter?.hasEffect('board_run') && !target.isPlayer && target.npcRole !== 'beast' && !target.cls.monster && !target.zoneBoss) {
+    target.addEffect({ id: 'board_snare', until: game.now + BOARD_SNARE_SEC, mods: { maxSpeed: -BOARD_SNARE }, source: shooter.id }, game.now);
   }
   if (p.ammo === 'chain' && shooter?.hasFlag('tangled_rigging')) {
     target.addEffect({ id: 'tangled', until: game.now + 6, mods: { turnRate: -0.35 }, source: shooter.id }, game.now);

@@ -8,6 +8,9 @@ import { researchWhy } from './research.ts';
 import { takeGearBack } from './gear.ts';
 import { refitHolds } from './refit.ts';
 import { pointsInTree } from '../../../shared/src/data/talents.ts';
+import { BERTH_PRICE, BERTHS_CAP, BERTHS_FREE } from '../../../shared/src/data/berths.ts';
+import { cargoVolume, computeShipStats } from '../../../shared/src/sim/shipstats.ts';
+import { move as moveDoubloons, sendBalance } from './premium.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { SHIP_CLASSES, defaultGunFor } from '../../../shared/src/data/ships.ts';
@@ -24,7 +27,25 @@ import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { grantDeed } from './progression.ts';
 
-export const MAX_BERTHS = 3;
+/** «Причал» (forum, Нефигугум 2026-10-30: «купив новый корабль старый пропадает навсегда? нет ни какого ангара»): BERTHS_FREE
+ *  berths free (two, the owner 2026-10-30), one more for BERTH_PRICE doubloons each (300), BERTHS_CAP in all. */
+export const MAX_BERTHS = BERTHS_FREE;
+export { BERTHS_CAP, BERTH_PRICE };
+
+/** Her berths: the free ones and those she bought. */
+export function berthCap(p: Pick<Profile, 'berthsBought'> | null | undefined): number {
+  return Math.min(BERTHS_CAP, MAX_BERTHS + Math.max(0, Math.floor(p?.berthsBought ?? 0)));
+}
+
+/** Every berth of hers taken. */
+export function berthsFull(p: { berths?: readonly unknown[]; berthsBought?: number }): boolean {
+  return (p.berths?.length ?? 0) >= berthCap(p);
+}
+
+/** The words when they are. */
+export function berthsFullWhy(p: Pick<Profile, 'berthsBought'>): string {
+  return `You already berth ${berthCap(p)} ships — sell or take one out first`;
+}
 export const LEVEL_FOR_TIER = [0, 1, 10, 22, 35, 50];
 
 export interface BuildOrder {
@@ -157,7 +178,7 @@ export function launchBuild(game: Game, s: PlayerSession, port: Port, orderId: s
   if (!o) return 'No such order';
   if (o.port !== port.id) return `She is being built at ${game.portById(o.port)?.name ?? o.port}`;
   if (o.done > game.now) return `Not finished yet (${Math.ceil((o.done - game.now) / 60)} min)`;
-  if (p.berths.length >= MAX_BERTHS) return `You already berth ${MAX_BERTHS} ships — sell or take one out first`;
+  if (berthsFull(p)) return berthsFullWhy(p);
   p.berths.push({ port: port.id, loadout: ship.loadout, hull: ship.hull / ship.stats.hullMax });
   const cls = SHIP_CLASSES[o.classId];
   const gun = defaultGunFor(cls);
@@ -169,18 +190,52 @@ export function launchBuild(game: Game, s: PlayerSession, port: Port, orderId: s
   return null;
 }
 
-/** Swap the ship you sail for one berthed in this port. */
-export function swapBerth(game: Game, s: PlayerSession, port: Port, index: number): string | null {
+/** What changing into this hull would leave behind: the men over her hammocks, the hold over hers (the army and the cargo
+ *  go across with the captain; forum 2026-10-30). */
+export function berthFit(s: PlayerSession, loadout: ShipLoadout): { menOver: number; holdOver: number; hold: number } {
+  const ship = s.ship!;
+  const st = computeShipStats(loadout, ship.captain, ship.talents, ship.effects, ship.worn, ship.hero);
+  const vol = cargoVolume(ship.cargo, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
+  return { menOver: Math.max(0, ship.crew - st.crewMax), holdOver: Math.max(0, Math.ceil(vol - st.holdVolume)), hold: Math.floor(st.holdVolume) };
+}
+
+/** Words the client asks again with (`force`): men who will not fit are paid off ashore. */
+export const BERTH_MEN_ASK = 'men will not fit';
+
+/** «Пересесть» (forum 2026-10-30): swap the ship she sails for one of her berths — at any harbour with a yard (the berth
+ *  sends her round), not an island's caravan hull (taken out at the island). The ship she leaves takes the berth here, her
+ *  fittings, guns, gear and level with her. Her army and her hold go across with the captain: a hold the new hull cannot
+ *  take is refused (sell or store the rest first); men she has no hammocks for are asked about once (`force`: paid off). */
+export function swapBerth(game: Game, s: PlayerSession, port: Port, index: number, force = false): string | null {
   const p = s.profile!;
   const ship = s.ship!;
   const b = p.berths[index];
   if (!b) return 'No such berth';
-  if (b.port !== port.id) return `She is berthed at ${game.portById(b.port)?.name ?? b.port}`;
+  if (b.port !== port.id && b.port.startsWith('isle:')) return 'She is berthed at your island: take her out at its yard';
+  if (b.port !== port.id && !(port.shipyardTier > 0)) return 'No yard here: change ships at a harbour with a shipyard';
   const refitting = refitHolds(game, p);
   if (refitting) return refitting; // the yard has her on the ways
+  if (ship.loadout.legendary && b.loadout.legendary) return 'Cannot do that now';
+  const fit = berthFit(s, b.loadout);
+  if (fit.holdOver > 0) return `Her hold takes ${fit.hold}: sell or store ${fit.holdOver} more in the warehouse first`;
+  if (fit.menOver > 0 && !force) return `${fit.menOver} ${BERTH_MEN_ASK}`;
   p.berths.splice(index, 1, { port: port.id, loadout: ship.loadout, hull: ship.hull / ship.stats.hullMax });
   setShip(game, s, b.loadout, b.hull);
   game.toastShip(ship, `You take the ${b.loadout.name} out of her berth.`, 'info');
+  return null;
+}
+
+/** One more berth for BERTH_PRICE doubloons, to BERTHS_CAP. */
+export function buyBerth(game: Game, s: PlayerSession): string | null {
+  const p = s.profile!;
+  if (berthCap(p) >= BERTHS_CAP) return `${BERTHS_CAP} berths at most`;
+  const bal = moveDoubloons(game, s.accountId, -BERTH_PRICE, 'doubloons_buy', `berth:${berthCap(p) + 1}`, () => {
+    p.berthsBought = Math.max(0, Math.floor(p.berthsBought ?? 0)) + 1;
+    game.saveSession(s);
+  });
+  if (bal === null) return `A berth costs ${BERTH_PRICE} doubloons`;
+  sendBalance(game, s);
+  game.toastShip(s.ship, `A new berth is yours: ${berthCap(p)} in all.`, 'good');
   return null;
 }
 

@@ -1,5 +1,6 @@
 // Client entry: login → captain selection → the ocean. Wires network, state, input, renderer and UI.
 
+import { LB, menAskText } from './ui/berths.ts'; // forum 2026-10-30: «Причал»
 import './compat.ts'; // first of all: the calls Safari 15 lacks (iOS 15 is the floor)
 import { WayWindow, mountFallen, resRid } from './ui/waystation.ts'; // docs/35
 import { setWayFog, wayName } from './render/waystations.ts'; // docs/35
@@ -2026,6 +2027,10 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'board_risk':
       void askRisk(m.risk);
+      break;
+    case 'berth_ask':
+      // forum 2026-10-30: the new hull has no hammocks for all her men — asked, then sent again with `force`
+      void ask(menAskText(m.men), LB('menYes')).then((ok) => ok && net.send({ ...m.again, force: true }));
       break;
     case 'route':
       onRoute(m);

@@ -5806,3 +5806,24 @@ html.app-paused *, html.app-paused *::before, html.app-paused *::after { animati
 .srctip .st-act { margin-top: 7px; display: flex; }
 .srctip .st-act .btn { flex: 1 1 auto; justify-content: center; }
 @media (max-height: 420px) { .srctip { font-size: 12px; padding: 6px 8px 7px; } .srctip .st-list li { margin: 1px 0; } }
+
+/* «Причал» (forum 2026-10-30, client/src/ui/berths.ts): her stored ships, the trade-in's two ways, the escorts' repair. */
+.bth .card-h { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.bth .bth-more { margin-left: auto; display: inline-flex; align-items: center; font: 600 12px var(--sans); }
+.bth .bth-buy { display: inline-flex; align-items: center; gap: 4px; }
+.bth-text { margin: 0 0 6px; font-size: 12px; line-height: 1.35; }
+.bth-now { margin: 0 0 8px; display: flex; align-items: center; gap: 4px; font-size: 13px; }
+.bth-list { display: grid; gap: 8px; }
+.bth-card { grid-template-columns: 76px minmax(0, 1fr) auto; }
+.bth-card .bth-meta { display: block; font: 600 11px var(--sans); color: var(--bone); margin-top: 2px; }
+.bth-card .bth-where { font-size: 11px; }
+.bth-btns { display: flex; flex-direction: column; gap: 6px; min-width: 104px; }
+.bth-btns .btn { justify-content: center; }
+.bth-choice { display: flex; flex-direction: column; gap: 8px; }
+.bth-choice .k-btn { width: 100%; justify-content: center; white-space: normal; text-align: center; line-height: 1.2; }
+.yd-esc { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(201, 162, 92, 0.25); }
+.yd-esc-h { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.yd-esc-h .btn { margin-left: auto; }
+.yd-esc-l { margin: 4px 0 2px; padding: 0 0 0 16px; font-size: 12px; line-height: 1.4; }
+.yd-esc small { font-size: 11px; line-height: 1.3; display: block; }
+@media (max-height: 420px) { .bth-text { display: none; } .bth-card { grid-template-columns: 60px minmax(0, 1fr) auto; } .bth-btns { min-width: 92px; } }

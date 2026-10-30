@@ -59,6 +59,7 @@ import { holidayCard } from './holidays.ts';
 import { bazaarAct, bazaarCard, bindBazaar } from './bazaar.ts';
 import { departOrAsk, voyageOrder, voyageShip } from './depart.ts';
 import { LF, bindFerry, ferryCard } from './ferry.ts';
+import { LB, berthsCard, chooseTrade, escortRepairHtml } from './berths.ts'; // forum 2026-10-30: «Причал»
 import { VOYAGE_MINUTES, voyageCrew, voyageNeeds } from '../../../shared/src/data/voyage.ts';
 import { showHint } from './kit/hint.ts';
 import { EN as IS_EN, RU as IS_RU } from '../lang/ui/islescene.ts';
@@ -94,7 +95,7 @@ function licenceLeft(n: number): string {
 }
 
 type XTab = 'fwd' | 'orders' | 'bank' | 'opt';
-type Tab = 'market' | 'shipyard' | 'tavern' | 'quests' | 'harbour' | 'ferry' | 'colours' | 'holdings' | 'exchange' | 'auction' | 'dice' | 'rumours' | 'charts' | 'army' | 'pets';
+type Tab = 'market' | 'shipyard' | 'tavern' | 'quests' | 'harbour' | 'ferry' | 'berths' | 'colours' | 'holdings' | 'exchange' | 'auction' | 'dice' | 'rumours' | 'charts' | 'army' | 'pets';
 
 /** The harbour's places by their icons. */
 const TAB_ICON = {
@@ -232,6 +233,8 @@ export class PortScreen {
       // owner, 2026-10-30 (ferry.ts): a hub port's «Переход», first of the row
       ...(view.ferry ? [{ id: 'ferry', icon: 'build_lighthouse', glyph: '⛵', label: LF('tab'), hint: LF('tabHint') }] : []),
       ...(self.homeIsle !== null && self.homeIsle !== undefined ? [{ id: 'isle', icon: 'tab_isles', label: LIS('enter'), hint: LIS('enterTip') }] : []),
+      // «Причал» (forum 2026-10-30): her stored ships, «Пересесть» (berths.ts)
+      { id: 'berths', icon: 'build_shipyard', glyph: '⚓', label: LB('tab'), hint: LB('tabHint'), badge: self.berths.length },
       { id: 'harbour', icon: TAB_ICON.harbour, label: W('port.harbour'), hint: W('port.harbourHint') },
       // docs/24 C1, D1–D2: the colours and «Абордаж: выкл», hoisted only in port.
       { id: 'colours', icon: 'tab_law', glyph: '⚑', label: FLAGS_TAB.label(), hint: FLAGS_TAB.hint() },
@@ -473,6 +476,10 @@ export class PortScreen {
         return this.send({ t: 'officer', action: 'hire', id: d.id! });
       case 'repair':
         return this.send({ t: 'shipyard', action: 'repair' });
+      case 'repair_escorts':
+        return this.send({ t: 'shipyard', action: 'repair_escorts' });
+      case 'berth_buy':
+        return this.send({ t: 'berth', action: 'buy' });
       case 'refit':
         return this.send({ t: 'shipyard', action: 'refit' });
       case 'module':
@@ -488,7 +495,10 @@ export class PortScreen {
       case 'research':
         return this.send({ t: 'research', classId: d.cls as ShipClassId });
       case 'ship':
-        void ask(L('confirm.shipTrade', { ship: SHIP_CLASSES[d.cls as ShipClassId].name })).then((ok) => ok && this.send({ t: 'shipyard', action: 'buy_ship', classId: d.cls as ShipClassId }));
+        // Forum 2026-10-30: the trade-in's two ways — «Обменять (сдать старый)» or «Купить и оставить старый на причале».
+        // (a premium hull is never traded in: she goes to a berth by herself)
+        if (SHIP_CLASSES[state.self!.loadout.classId].premium) void ask(L('confirm.shipTrade', { ship: SHIP_CLASSES[d.cls as ShipClassId].name })).then((ok) => ok && this.send({ t: 'shipyard', action: 'buy_ship', classId: d.cls as ShipClassId }));
+        else if (state.portView) void chooseTrade(state, state.portView, d.cls as ShipClassId).then((how) => how && this.send({ t: 'shipyard', action: 'buy_ship', classId: d.cls as ShipClassId, keep: how === 'keep' }));
         return;
       case 'contract':
         return this.send({ t: 'contract', action: d.mode as never, id: d.id! });
@@ -570,6 +580,8 @@ export class PortScreen {
         return this.harbour(view, state);
       case 'ferry':
         return view.ferry ? ferryCard(state, view.ferry) : '';
+      case 'berths':
+        return berthsCard(view, state);
       case 'colours':
         return coloursCard(state, { head: false });
       case 'holdings':
@@ -668,7 +680,7 @@ export class PortScreen {
     const broken = self.gunsDisabled.port + self.gunsDisabled.starboard;
     // docs/23 item 67: the repair in one tap, the one upgrade worth having as «было → стало», the rest folded.
     const repair = `<div class="card yd-repair"><div class="yd-repair-t">${icon('good_planks', '', 'ico-md')}<span><b>${esc(W('yd.repair'))}</b><small class="muted">${esc(W('yd.state', { h: you?.hull ?? 0, hm: you?.hullMax ?? 0, s: you?.sails ?? 0, sm: you?.sailsMax ?? 0 }))}${broken ? ` · ${esc(W('yd.gunsDown', { n: broken }))}` : ''}</small></span></div>
-      ${quickBtn({ label: sy.repairCost ? W('yd.repair') : W('yd.sound'), sub: sy.repairCost ? money(sy.repairCost) : undefined, primary: sy.repairCost > 0, disabled: !sy.repairCost, data: { act: 'repair' } })}${repairCompare(view)}</div>`;
+      ${quickBtn({ label: sy.repairCost ? W('yd.repair') : W('yd.sound'), sub: sy.repairCost ? money(sy.repairCost) : undefined, primary: sy.repairCost > 0, disabled: !sy.repairCost, data: { act: 'repair' } })}${escortRepairHtml(view)}${repairCompare(view)}</div>`;
     const modules = sy.modules.map((m) => {
       const def = MODULES[m.module];
       const maxed = m.level >= m.max;

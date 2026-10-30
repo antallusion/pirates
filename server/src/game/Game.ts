@@ -71,7 +71,7 @@ import type { FactionId } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { AMMO_IDS, CHASER_RELOAD, GUNS, SHIP_CLASSES, defaultGunFor, emptyAmmo } from '../../../shared/src/data/ships.ts';
-import { BOARD_RUN_FROM, aimedVolley, pursuitInput, pursuitOf, startPursuit, startRoamRun, stepAutoFire, stepPursuit, stopPursuit } from './pursuit.ts';
+import { PURSUIT_SIGHT, aimedVolley, pursuitInput, pursuitOf, startPursuit, startRoamRun, stepAutoFire, stepPursuit, stopPursuit } from './pursuit.ts';
 import { ODDS_BUDGET_MS, ODDS_SIMS, RISK_BUDGET_MS, boardOdds, boardRisk, isRisky } from './boardodds.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { TALENTS_BY_ID, canLearn } from '../../../shared/src/data/talents.ts';
@@ -178,7 +178,7 @@ export const XP_BOARDED = XP_UNITS.boarded;
 export const BOARD_LOSS_PURSE = 0.08;
 export const BOARD_LOSS_SHIELD = 180;
 import { stepBridges } from './bridgefx.ts';
-import { MAX_BERTHS, buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
+import { BERTH_MEN_ASK, berthsFull, buyBerth, buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
 import { ISLE_REACH, NEAR_FIGHT, abandonQuest, acceptQuest, answerOffer, bandRefusal, portBand, jobSanctions, questCargoLost, questEvent, questLandsHere, questHere, questXpOf, shareQuest, skipGuideStep, swearOath, switchPath } from './quests.ts';
 import { dailyRollover } from './dailies.ts';
 import { commonCollect, commonView, stepCommon } from './commongoal.ts';
@@ -186,7 +186,7 @@ import { guildGoalCollect } from './guildgoal.ts';
 import type { SunkHull } from './bridgefx.ts';
 import { drownedKingRises, makeOffering, stepAbyss, stepAbyssShip } from './abyssfx.ts';
 import { hireSunk, hiresAway, hiresEnd, hiresOf, keep as keepHires, restoreHires, seaHireMessage, stepHires } from './seahire.ts'; // owner, 2026-10-25: a ship of the sea hired as a guard
-import { admiralsEye, anchorFleet, escortSlots, escortUpkeep, dismissEscort, escortLost, hireEscort, launchFleet, lashInPort, lineOfBattle, repairFleet, setFormation, stepFleet } from './fleet.ts';
+import { admiralsEye, anchorFleet, escortRepairCost, escortSlots, escortUpkeep, dismissEscort, escortLost, hireEscort, launchFleet, lashInPort, lineOfBattle, mendEscortsAtSea, repairEscorts, setFormation, stepFleet } from './fleet.ts';
 import { PROFESSIONS } from '../../../shared/src/data/crew.ts';
 import type { DeepZone } from './mind.ts';
 import { CURSE_MORALE, cleanse, curseAura, stepCurse } from './curse.ts';
@@ -319,6 +319,9 @@ import { isle18Message, isle18Second, islandFor, isleExtras, landDanger, onHidde
 import { installHeroHooks } from './h5.ts'; // docs/17 H5
 import { mineLandable } from './mines.ts';
 import { crewOnKill, stepCrewLife } from './crewlife.ts';
+
+/** A bump on a ship she struck this lately is a ram she meant (forum 2026-10-30; Game.meantRam). */
+export const RAM_MEANT_SEC = 30;
 
 /** Jetsam (forum 2026-10-30): its crate floats this long, and its thrower cannot take it back this soon. */
 export const JETSAM_TTL = 600;
@@ -960,7 +963,11 @@ export class Game {
         // A newcomer's bump in the starting sea (the first-hour runs: her helmsman brushed a Crown patrol at Saltmarrow's
         // mouth, the patrol took it for a ram and sank her — 846 and 882 hull in the measure, «HOSTILE» patrols 17 m off in
         // the robot's runs): two ships at peace, neither under Ramming Speed, one a sheltered captain — they fend off.
-        const peace = !a.hasEffect('ramming_speed') && !b.hasEffect('ramming_speed') && (sheltered(this, a) || sheltered(this, b)) && !this.isHostile(a, b) && !this.isHostile(b, a);
+        // (forum 2026-10-30, Нефигугум, post 26: «я их тараню, они агрессируют на меня, сопровождение нападает на них» —
+        // past the starting sea too: a bump between ships at peace is no ram anywhere. Only Ramming Speed, a ram on one's
+        // own mark — her «Атаковать», an NPC's prey, a ship she fired on just now — or two ships at war make one; no
+        // infamy, no quarrel, no escort's answer from a brush.)
+        const peace = !this.meantRam(a, b) && !this.meantRam(b, a) && !this.isHostile(a, b) && !this.isHostile(b, a);
         const friends = peace || (a.ownerId !== null && a.ownerId === b.ownerId) || damageBlocked(this, a, b) === 'friendly';
         if (closing > 3 && friends) {
           a.state.speed *= 0.6;
@@ -980,6 +987,18 @@ export class Game {
         }
       });
     }
+  }
+
+  /** A ram she meant (forum 2026-10-30): under Ramming Speed, on her «Атаковать» mark or an NPC's prey, or on a ship she
+   *  struck within RAM_MEANT_SEC. Anything else between ships at peace is a bump: they fend off. */
+  meantRam(a: ShipEntity, b: ShipEntity): boolean {
+    if (a.hasEffect('ramming_speed')) return true;
+    // (Hull to Hull, the boarder's talent: her own hand on the helm driving her into a ship is her grapple)
+    if (a.hasFlag('hull_to_hull') && a.isPlayer && !autosailOf(a)) return true;
+    const run = pursuitOf(a);
+    if (run && run.roam === undefined && run.target === b.id) return true;
+    if (this.npcs.get(a.id)?.target === b.id) return true;
+    return (b.attackers.get(a.id) ?? -Infinity) > this.now - RAM_MEANT_SEC;
   }
 
   /** Two hulls meet at `closing` (m/s of her way into the other): the ram's blow both ways. A share of the hull struck
@@ -1043,6 +1062,7 @@ export class Game {
     this.zoneBosses.second(this); // the great ships of the seas (docs/21)
     stepInvasions(this); // docs/19 E16: the Choir's invasions, the black tides
     stepShoreBosses(this); // the great ones ashore: their calendar (2026-10-03)
+    mendEscortsAtSea(this); // forum 2026-10-30: the ships with a captain mend at sea out of a fight (fleet.ts)
     stepEvents(this);
     stepLiveOps(this); // docs/34: the panel's scheduled events, the funnel's look at each captain
     expeditionsSecond(this);
@@ -2216,6 +2236,13 @@ export class Game {
     if (s.profile) changeRep(s.profile, faction, delta);
   }
 
+  /** A change of hulls that would leave men ashore (shipbuilding.ts BERTH_MEN_ASK): asked of her, not refused. */
+  private menAsk(s: PlayerSession, why: string | null, again: Extract<ServerMsg, { t: 'berth_ask' }>['again']): string | null {
+    if (!why || !why.endsWith(` ${BERTH_MEN_ASK}`)) return why;
+    this.sendTo(s, { t: 'berth_ask', men: Math.max(1, parseInt(why, 10) || 1), again });
+    return null;
+  }
+
   addInfamy(ship: ShipEntity, amount: number, reason: string): void {
     const p = this.profileOf(ship);
     if (!p) return;
@@ -2428,6 +2455,9 @@ export class Game {
       const owner = this.ships.get(killer.ownerId);
       // A guard hired at sea (seahire.ts): her captain's as a group mate's kill — unless she fought that ship herself.
       if (owner && killer.hiredBy !== undefined && (victim.attackers.get(owner.id) ?? -999) < this.now - 60) return this.mateKill(owner, victim, how);
+      // (forum 2026-10-30, Нефигугум: «приплыть … с 2-3 черепами» — a lawful ship her squadron sank in a quarrel of its own,
+      // not one she fought herself, is no crime of hers: a mate's share, no infamy, no standing lost)
+      if (owner && killer.fleetId && victim.faction !== 'player' && FACTIONS[victim.faction]?.lawful && (victim.attackers.get(owner.id) ?? -999) < this.now - 60) return this.mateKill(owner, victim, how);
       if (owner) return this.creditKill(owner, victim, how);
     }
     if (!s || !s.profile) return;
@@ -2701,7 +2731,7 @@ export class Game {
         result.gold = Math.round(result.gold * smul);
         result.ransom = Math.round(result.ransom * smul);
       }
-      result.trophy = crew !== null && !!sa.profile && sa.profile.berths.length < MAX_BERTHS;
+      result.trophy = crew !== null && !!sa.profile && !berthsFull(sa.profile);
       // Her captain in irons: always with the Ransom talent, else one time in two (docs/12 P10 #16: he may be turned).
       result.captive = !a.hasFlag('no_quarter') && !b.isPlayer && b.npcRole !== 'ghost' && !b.cls.monster && (a.hasFlag('ransom') || this.rng.chance(0.5));
       if (result.captive) seizeCaptain(b);
@@ -3698,6 +3728,17 @@ export class Game {
         const why = startPursuit(this, s, Math.trunc(Number(msg.target)), msg.mode === 'guns' ? 'guns' : 'board');
         // «Огонь» on a mark that does not bear lays the guns on her (the phone's «Бортами»): her hand on the guns.
         if (!why && msg.mode === 'guns') onboardingFire(s);
+        // «Атаковать → абордаж» is the intercept (forum 2026-10-30, Нефигугум: «не успеваю сблизиться»): the helmsman cuts
+        // her off at full sail and the grapples fly by themselves alongside — a bad fight's odds asked first, as at the rail.
+        if (!why && msg.mode !== 'guns') {
+          const run = pursuitOf(ship);
+          const t = this.ships.get(Math.trunc(Number(msg.target)));
+          if (run && run.mode === 'board' && t) {
+            const risk = boardRisk(this, ship, t, RISK_BUDGET_MS);
+            if (risk.risky) this.sendTo(s, { t: 'board_risk', risk });
+            else run.grapple = true;
+          }
+        }
         return err(why);
       }
       case 'volley': {
@@ -3829,7 +3870,13 @@ export class Game {
         return;
       }
       case 'berth':
-        return portAction((pt) => (msg.action === 'sell' ? sellBerth(this, s, pt, Math.trunc(Number(msg.index))) : swapBerth(this, s, pt, Math.trunc(Number(msg.index)))));
+        // «Причал» (forum 2026-10-30): one more berth for doubloons, anywhere ashore or afloat.
+        if (msg.action === 'buy') {
+          err(buyBerth(this, s));
+          this.pushSelf(s, true);
+          return;
+        }
+        return portAction((pt) => (msg.action === 'sell' ? sellBerth(this, s, pt, Math.trunc(Number(msg.index))) : this.menAsk(s, swapBerth(this, s, pt, Math.trunc(Number(msg.index)), msg.force === true), { t: 'berth', action: 'swap', index: Math.trunc(Number(msg.index)) })));
       case 'plan_buy':
         return portAction((pt) => buyPlan(this, s, pt, msg.classId));
       case 'figurehead_buy':
@@ -3855,7 +3902,8 @@ export class Game {
           // fly there (owner, 2026-10-18: «на нпс сразу можно было абордажить»), not «too far» and a second press.
           // Not alongside (owner, 2026-10-22: the grapples fly only side by side): the same — her helmsman comes
           // alongside and they fly there; the odds of a risky one asked first, as at the rail.
-          if ((why === BOARD_FAR || why === BOARD_ABEAM || why === BOARD_SPEED) && Math.hypot(target.state.x - ship.state.x, target.state.y - ship.state.y) < BOARD_RUN_FROM) {
+          // (forum 2026-10-30: from as far as she sees her — the intercept cuts her off, not only within a cable or so)
+          if ((why === BOARD_FAR || why === BOARD_ABEAM || why === BOARD_SPEED) && Math.hypot(target.state.x - ship.state.x, target.state.y - ship.state.y) < PURSUIT_SIGHT) {
             if (msg.risk !== true) {
               const risk = boardRisk(this, ship, target, RISK_BUDGET_MS);
               if (risk.risky) return this.sendTo(s, { t: 'board_risk', risk });
@@ -4301,6 +4349,9 @@ export class Game {
               return layKeel(this, s);
             case 'repair':
               return shipyardRepair(this, s);
+            case 'repair_escorts':
+              // «Починить сопровождение» (forum 2026-10-30): the squadron alone.
+              return escortRepairCost(this, s) <= 0 ? 'Your escorts are sound' : repairEscorts(this, s) > 0 ? null : `Repairs cost ${escortRepairCost(this, s)} silver`;
             case 'module':
               return shipyardModule(this, s, pt, msg.module);
             case 'guns': {
@@ -4309,7 +4360,7 @@ export class Game {
               return e;
             }
             case 'buy_ship':
-              return shipyardBuy(this, s, pt, msg.classId);
+              return this.menAsk(s, shipyardBuy(this, s, pt, msg.classId, msg.keep === true, msg.force === true), { t: 'shipyard', action: 'buy_ship', classId: msg.classId, keep: msg.keep === true });
             case 'mount':
               return shipyardMount(this, s, pt, msg.mount);
             case 'refit':
@@ -5068,7 +5119,8 @@ export class Game {
     sellPrizes(this, s, port);
     onDockCrew(this, s, port);
     anchorFleet(this, s);
-    repairFleet(this, s);
+    // (the squadron's repair is no longer silent on making port: it goes with her own ship's at the yard, its price shown
+    // — forum 2026-10-30, ports.ts shipyardRepair)
     lashInPort(this, s);
     onArrival(this, p, port);
     this.tavernWhispers(s);

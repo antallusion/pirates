@@ -1,6 +1,7 @@
 // Port services: market, chandlery (ammo), tavern (crew, rumours), shipyard, contracts board,
 // harbour master (pardons, insurance). Every action is validated against the docked port.
 
+import { escortMends, escortRepairCost, repairEscorts } from './fleet.ts';
 import { ferryView } from './ferry.ts';
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { researchWhy } from './research.ts';
@@ -53,7 +54,7 @@ import { ESCORT_OFFERS } from './fleet.ts';
 import { farVoyage } from './questlocal.ts';
 import { bandRefusal, eventFavor, farOf, payOptions, portBand, questBand, questBandBlocked, questDest, questIsleBlocked, questOffers, questXpOf, shipLevelOfQuest } from './quests.ts';
 import { todaysElite } from './elite.ts';
-import { MAX_BERTHS, woodAvailable } from './shipbuilding.ts';
+import { berthFit, berthsFull, berthsFullWhy, BERTH_MEN_ASK, woodAvailable } from './shipbuilding.ts';
 import { PLAN_REP, WOODS, YARD_FACTIONS_WITH_PLANS, carvedAt } from '../../../shared/src/data/shipbuild.ts';
 import type { WoodId } from '../../../shared/src/data/shipbuild.ts';
 import { CAPTAINS_HOUSES } from '../../../shared/src/data/quests.ts';
@@ -224,7 +225,8 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     escorts: ESCORT_OFFERS.map((o) => ({ classId: o.classId, price: o.price, upkeep: o.upkeep, available: port.shipyardTier >= o.yard })),
     shipyard: {
       tier,
-      repairCost: repairCost(ship),
+      repairCost: repairCost(ship) + escortRepairCost(game, s),
+      escorts: ((m) => ({ cost: m.reduce((a, x) => a + x.cost, 0), ships: m.map(({ pay: _pay, ...v }) => v) }))(escortMends(game, s)),
       ships: SHIP_CLASS_IDS.filter((id) => SHIP_CLASSES[id].purchasable && SHIP_CLASSES[id].tier <= tier + careerYardBonus(p, port.faction) && (!SHIP_CLASSES[id].factions || SHIP_CLASSES[id].factions!.includes(port.faction))).map((id) => ({
         classId: id, price: SHIP_CLASSES[id].price, tradeIn: Math.round(shipValue(ship) * 0.6),
       })),
@@ -425,7 +427,9 @@ export function hireCrew(game: Game, s: PlayerSession, port: Port, qty: number, 
 export function shipyardRepair(game: Game, s: PlayerSession): string | null {
   const ship = s.ship!;
   const cost = repairCost(ship);
-  if (cost <= 0) return 'She is already sound';
+  // Forum 2026-10-30 («как ремонтируются кораблики сопровождения?»): the one button mends the squadron too, at its price
+  // shown beside her own (fleet.ts escortMends) — her own ship first, then the ships with her as far as the silver goes.
+  if (cost <= 0) return escortRepairCost(game, s) > 0 ? (repairEscorts(game, s) > 0 ? null : `Repairs cost ${escortRepairCost(game, s)} silver`) : 'She is already sound';
   const p = s.profile!;
   // docs/30: short of the whole bill, the yard mends the hull as far as her silver goes (it sent a captain of 8 out at a
   // third of her hull with no silver for the yard, and the sharks finished her twice running).
@@ -449,6 +453,7 @@ export function shipyardRepair(game: Game, s: PlayerSession): string | null {
   if (ship.hasEffect('broken_mast')) ship.effects = ship.effects.filter((e) => e.id !== 'broken_mast' && e.id !== 'mast_wreck');
   ship.recompute(game.now);
   game.db.ledger(s.accountId, 'repair', -cost, ship.loadout.classId);
+  repairEscorts(game, s);
   return null;
 }
 
@@ -571,7 +576,10 @@ export function shipyardGuns(game: Game, s: PlayerSession, port: Port, side: Sid
   return null;
 }
 
-export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: ShipClassId): string | null {
+/** A new hull from the yard. `keepOld` («Купить и оставить старый на причале», forum 2026-10-30): the ship she sails goes
+ *  to a berth here with all her fittings instead of being traded in; `force`: the men the new hull has no hammocks for are
+ *  paid off (asked first). */
+export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: ShipClassId, keepOld = false, force = false): string | null {
   const ship = s.ship!;
   const def = SHIP_CLASSES[classId];
   if (!def || !def.purchasable) return 'Not for sale';
@@ -589,15 +597,18 @@ export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: S
   const p = s.profile!;
   // A hull bought for doubloons is never traded in for silver (docs/02 §1.A.9): she goes to a berth at this quay, her
   // gear and her mount with her, and the yard's hull is paid in full.
-  const keep = !!ship.cls.premium;
-  if (keep && p.berths.length >= MAX_BERTHS) return `You already berth ${MAX_BERTHS} ships — sell or take one out first`;
+  const keep = !!ship.cls.premium || keepOld;
+  if (keep && berthsFull(p)) return berthsFullWhy(p);
   const tradeIn = keep ? 0 : Math.round(shipValue(ship) * 0.6);
   const cost = Math.max(0, def.price - tradeIn);
   if (p.gold < cost) return lackMore(`Needs ${cost} silver after trade-in`, cost, p.gold);
-  const back = keep ? null : takeGearBack(p, ship.loadout); // the old hull's gear comes ashore into the locker
-  if (back) return back;
   const gun = defaultGunFor(def);
   const newLoadout: ShipLoadout = { classId, name: ship.loadout.name, guns: { port: gun, starboard: gun }, modules: {}, mount: def.fixedMount };
+  // Her army goes across with her: men past the new hull's hammocks are asked about first (forum 2026-10-30).
+  const fit = berthFit(s, newLoadout);
+  if (fit.menOver > 0 && !force) return `${fit.menOver} ${BERTH_MEN_ASK}`;
+  const back = keep ? null : takeGearBack(p, ship.loadout); // the old hull's gear comes ashore into the locker
+  if (back) return back;
   p.gold -= cost;
   if (keep) p.berths.push({ port: port.id, loadout: ship.loadout, hull: ship.hull / Math.max(1, ship.stats.hullMax) });
   // The old deck mount is sold back to the yard.

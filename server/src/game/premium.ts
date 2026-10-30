@@ -22,7 +22,7 @@ import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import { refitHolds } from './refit.ts';
 import type { ShipEntity } from './ship.ts';
-import { MAX_BERTHS, setShip } from './shipbuilding.ts';
+import { berthsFull, berthsFullWhy, setShip } from './shipbuilding.ts';
 import { beastsName, creatureRoom, joinCreatures } from './tame.ts';
 import { keepsDeep } from './town.ts';
 import { firstGiftOf, notePay, shopMessage, shopView } from './shop.ts';
@@ -206,7 +206,7 @@ export function shipWhy(game: Game, s: PlayerSession, c: ShipClassId, price: num
   if (ship.loadout.classId === c) return 'yours';
   if (refitHolds(game, p)) return 'refit';
   if (p.level < captainLevelFor(levelRange(c)[0])) return 'level';
-  if (p.berths.length >= MAX_BERTHS) return 'berths';
+  if (berthsFull(p)) return 'berths';
   return balance < price ? 'poor' : null;
 }
 
@@ -232,7 +232,7 @@ function whyText(game: Game, s: PlayerSession, why: PremiumWhy, c?: ShipClassId,
     case 'yours': return 'You already sail one';
     case 'refit': return refitHolds(game, s.profile!) ?? 'The yard has her on the ways.';
     case 'level': return `Captain level ${captainLevelFor(levelRange(c!)[0])} is needed to command a ${SHIP_CLASSES[c!].name}`;
-    case 'berths': return `You already berth ${MAX_BERTHS} ships — sell or take one out first`;
+    case 'berths': return berthsFullWhy(s.profile!);
     case 'slot': return s.ship ? lackSlot(s.ship.army.length, s.ship.armySlots) : 'No free slot in the army for a new kind of man.';
     case 'room': return `No hammocks aboard for ${n} more: ${Math.max(0, Math.floor((s.ship?.stats.crewMax ?? 0) - (s.ship?.crew ?? 0)))} free.`;
     case 'fight': return 'Not in the middle of a fight.';
