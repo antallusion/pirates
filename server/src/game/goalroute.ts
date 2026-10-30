@@ -813,7 +813,8 @@ export function resolveGoal(game: Game, s: PlayerSession, key: string): Resolved
       if (!m) return { done: true };
       const at = mapSpot(game, s, m);
       if (!at) return { none: ROUTE_WORDS.none };
-      return { cands: [{ x: at.x, y: at.y, r: 40, kind: 'place', name: m.name, hint: ROUTE_HINTS.dig }] };
+      const isle = m.island !== undefined ? game.world.islands[m.island] : undefined; // (the pill says the island, not «A riddle in verse»)
+      return { cands: [{ x: at.x, y: at.y, r: 40, kind: 'place', name: isle?.name ?? m.name, hint: ROUTE_HINTS.dig }] };
     }
     case 'own': {
       // the island button (owner, 2026-10-19: «кнопка острова… или я еще остров не отрыл»): her own island, or before

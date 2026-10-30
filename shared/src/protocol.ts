@@ -1245,6 +1245,8 @@ export interface MapView {
   /** Where to dig (Нефигугум, forum post 26): marked on the chart at once; «Плыть к кладу» (goal `tm:<id>`) sails there and
    *  the boats dig by themselves. None on a cursed map (its needle) or a legendary piece until the set gives the spot. */
   spot?: [number, number];
+  /** The island the spot lies off (with `spot`): «Клад: <остров>» on the chart. */
+  place?: string;
 }
 
 /** The season (seasons.ts): its theme, your path, the tables, the Pantheon. */

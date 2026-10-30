@@ -349,7 +349,9 @@ export function mapSpot(game: Game, s: PlayerSession, m: TreasureMap): { x: numb
 export function mapView(game: Game, s: PlayerSession, m: TreasureMap): MapView {
   const v = mapViewBase(game, s, m);
   const at = mapSpot(game, s, m);
-  return at ? { ...v, spot: [Math.round(at.x), Math.round(at.y)] } : v;
+  if (!at) return v;
+  const isle = m.island !== undefined ? game.world.islands[m.island] : undefined;
+  return { ...v, spot: [Math.round(at.x), Math.round(at.y)], ...(isle ? { place: isle.name } : {}) };
 }
 
 function mapViewBase(game: Game, s: PlayerSession, m: TreasureMap): MapView {

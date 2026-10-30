@@ -681,7 +681,7 @@ export class PortScreen {
       const matNote = mat && !maxed ? `<p class="muted">${esc(L('yard.matNote', { n: mat.units, good: GOODS[mat.good].name.toLowerCase() }))}</p>` : '';
       return `<div class="card"><h4>${icon(`mod_${m.module}`, '', 'ico-md')}${esc(def.name)} <span class="muted">${m.level}/${m.max}</span>${m.excellent ? ` <span class="gold">${esc(L('yard.excellent'))}</span>` : ''}</h4><p>${esc(def.description)}</p>${matNote}
         <button class="btn btn-small" data-act="module" data-module="${m.module}" ${maxed ? 'disabled' : ''}>${esc(maxed ? L('yard.fullyFitted') : L('yard.fitLevel', { n: m.level + 1, cost: fmt(m.cost) }))}</button>
-        ${m.level > 0 ? `<button class="btn btn-small" data-act="unfit" data-module="${m.module}" data-fee="${m.unfit ?? 0}" data-lv="${m.level}" title="${esc(m.unfit ? L('yard.unfitFee', { n: fmt(m.unfit) }) : L('yard.unfitFree'))}">${esc(L('yard.takeOut'))} · ${m.unfit ? `−${money(m.unfit)}` : esc(L('yard.free'))}</button>` : ''}</div>`;
+        ${m.level > 0 ? `<button class="btn btn-small" data-act="unfit" data-module="${m.module}" data-fee="${m.unfit ?? 0}" data-lv="${m.level}" title="${esc(m.unfit ? L('yard.unfitFee', { n: fmt(m.unfit) }) : L('yard.unfitFree'))}">${esc(L('yard.takeOut'))} · ${m.unfit ? money(m.unfit) : esc(L('yard.free'))}</button>` : ''}</div>`;
     }).join('');
     const guns = (['port', 'starboard'] as const).map((side) => `<div class="card"><h4 class="card-h">${icon(`gun_${self.loadout.guns[side]}`, '', side === 'port' ? 'ico-md flip' : 'ico-md')}${esc(L(side === 'port' ? 'yard.portBattery' : 'yard.starboardBattery', { n: cur.gunPortsPerSide, gun: GUNS[self.loadout.guns[side]].name }))}</h4>
       ${sy.guns.map((gdef) => {

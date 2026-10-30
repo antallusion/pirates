@@ -40,6 +40,7 @@ import { EN as SEN, RU as SRU } from '../lang/ui/livesea.ts';
 import { EN as IEN, RU as IRU } from '../lang/ui/isles.ts';
 import { SEASON_NAMES, TIDAL_NAMES } from '../../../shared/src/data/isles.ts';
 import { mapCard, placeName } from './maps.ts';
+import { EN as MP_EN, RU as MP_RU } from '../lang/ui/maps.ts';
 import { esc } from './dom.ts';
 import { serverText } from '../lang/server.ts';
 import { drawMines } from './minemap.ts';
@@ -82,6 +83,7 @@ function toggleBase(cur: Set<MapLayer>, l: MapLayer): Set<MapLayer> {
 }
 
 const H4L = dict(H4_EN, H4_RU);
+const MP = dict(MP_EN, MP_RU); // the treasure maps' words (ui/maps.ts)
 const L = dict(EN, RU);
 const INV = dict(INV_EN, INV_RU); // docs/19 E16
 const LI = dict(IEN, IRU);
@@ -313,7 +315,7 @@ export class WorldMap {
       { id: 'yards', icon: 'build_shipyard', label: L('layer.yards'), hint: L('layer.yardsHint') },
     ].map((x) => ({ hint: W('map.layersHint'), ...x })), [...this.layers], 'mlayer');
     root.innerHTML = `${winHead(L('title'), { crest: 'menu_map', chips, sub: L(document.body.classList.contains('touch') ? 'subTouch' : 'sub', { islands: `${state.discovered.size} ${plural(state.discovered.size, L('island.one'), L('island.few'), L('island.many'))}` }) })}
-      <div class="map-wrap"><canvas id="worldmap-canvas"></canvas>${this.pickBar(state)}<div class="map-wp-acts">${this.onAutosail ? `<button type="button" class="k-btn k-btn--primary k-btn--lg map-wp-sail${waypoint() ? '' : ' hidden'}" data-hint="${esc(W('map.sailHint'))}" title="${esc(EL('as_goTitle'))}">${icon('stat_sails', '⛵', 'k-btn-ico')}<span class="k-btn-l">${esc(W('map.sail'))}</span><small class="map-wp-name">${esc(this.markLabel())}</small></button>` : ''}<button type="button" class="k-btn k-btn--secondary k-btn--md map-wp-clear${waypoint() ? '' : ' hidden'}" title="${esc(L('wp.clearTitle'))}">${icon('goal', '', 'k-btn-ico')}<span class="k-btn-l">${esc(L('wp.clear'))}</span></button>${this.onPuzzle && ((state.adv?.pieces ?? 0) > 0 || state.adv?.grail === 'held') ? `<button type="button" class="k-btn k-btn--secondary k-btn--md map-pz">${icon('map_treasure', '', 'k-btn-ico')}<span class="k-btn-l">${esc(H4L('puzzle.btn'))}</span></button>` : ''}</div>
+      <div class="map-wrap"><canvas id="worldmap-canvas"></canvas>${this.pickBar(state)}<div class="map-wp-acts">${this.tmSail(state)}${this.onAutosail ? `<button type="button" class="k-btn k-btn--primary k-btn--lg map-wp-sail${waypoint() ? '' : ' hidden'}" data-hint="${esc(W('map.sailHint'))}" title="${esc(EL('as_goTitle'))}">${icon('stat_sails', '⛵', 'k-btn-ico')}<span class="k-btn-l">${esc(W('map.sail'))}</span><small class="map-wp-name">${esc(this.markLabel())}</small></button>` : ''}<button type="button" class="k-btn k-btn--secondary k-btn--md map-wp-clear${waypoint() ? '' : ' hidden'}" title="${esc(L('wp.clearTitle'))}">${icon('goal', '', 'k-btn-ico')}<span class="k-btn-l">${esc(L('wp.clear'))}</span></button>${this.onPuzzle && ((state.adv?.pieces ?? 0) > 0 || state.adv?.grail === 'held') ? `<button type="button" class="k-btn k-btn--secondary k-btn--md map-pz">${icon('map_treasure', '', 'k-btn-ico')}<span class="k-btn-l">${esc(H4L('puzzle.btn'))}</span></button>` : ''}</div>
       <details class="map-legend"${localStorage.getItem(LEGEND_KEY) === '1' ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}<span><b style="color:var(--gold);font-weight:400">⚓</b>&nbsp;${L('lg.sector')}</span>${LEGEND_C.map(([id, key]) => `<span title="${esc(DL('map.demandHint'))}">${icon(id, '', 'ico')}${DL(key)}</span>`).join('')}<span><b style="color:#8fc3e8;font-weight:400">▪▪▪</b>&nbsp;${LS('key.convoy')}</span><span><b style="color:#dfe6f0;font-weight:400">➔</b>&nbsp;${LS('key.front')}</span><span><b style="color:#b0302a;font-weight:400">■</b>&nbsp;${LS('key.lair')}</span><span><b style="color:#cdb98a;font-weight:400">●</b>&nbsp;${LI('tide.legend')}</span><span><b style="color:#d0503a;font-weight:400">▲</b>&nbsp;${LI('look.legend')}</span><span><b style="color:#f5c77a;font-weight:400">✶</b>&nbsp;${LI('light.legend')}</span><span>${icon('map_treasure', '', 'ico')}${LI('cache.chart')}</span><span><b style="color:#e8ce78;font-weight:400">◆</b>&nbsp;${LROAM('lg')}</span><span><b style="color:#cfeef2;font-weight:400">▲</b>&nbsp;${LF('legend')}</span>${socialLegend()}${heroLegend()}${isleLegend()}</div></details></div>
       <div class="map-logs">${zoneHint(state)}${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m, !!this.onGoal)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}
       ${invasionLog(state.self?.invasion)}${dailyLog(state.self?.daily)}${commonLog(state.self?.common)}${worldGoalsLog(state)}${lfgLog(state)}${this.tasksLog(state)}${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => { const share = inGroup && (q.kind === 'job' || q.kind === 'story'); return `<div class="mq-item"><button class="mq-row${q.target ? '' : ' off'}${q.id === tracked ? ' tracked' : ''}${share ? ' shareable' : ''}" data-q="${esc(q.id)}" title="${esc(L('track'))}"><b>${q.id === tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>${this.onGoal ? `<button type="button" class="btn btn-small btn-primary mq-sail" data-qsail="q:${esc(q.id)}" title="${esc(W('map.sailHint'))}">${icon('stat_sails', '', 'ico-sm')}${esc(W('map.sail'))}</button>` : ''}${share ? `<button class="btn btn-small mq-share" data-share="${esc(q.id)}" title="${esc(L('shareTitle'))}">${esc(L('share'))}</button>` : ''}</div>`; }).join('')}</div>` : ''}</div>`;
@@ -518,6 +520,18 @@ export class WorldMap {
   }
 
   /** The bar over the chart while a scout waits for her point: what to do, and «Отмена». */
+  /** «Плыть к кладу» on the chart itself (Нефигугум, forum post 26): the nearest map with a marked spot — the log with
+   *  the cards lies below the chart on a phone. */
+  private tmSail(state: ClientState): string {
+    if (!this.onGoal) return '';
+    const own = state.ownDisplay;
+    const maps = (state.self?.maps ?? []).filter((m) => m.spot);
+    if (!maps.length) return '';
+    const d = (m: (typeof maps)[number]) => (own ? Math.hypot(m.spot![0] - own.x, m.spot![1] - own.y) : 0);
+    const m = maps.sort((a, b) => d(a) - d(b))[0];
+    return `<button type="button" class="k-btn k-btn--primary k-btn--md map-tm-sail" data-tmsail="${esc(m.id)}" title="${esc(MP('sailTip'))}">${icon('map_treasure', '', 'k-btn-ico')}<span class="k-btn-l">${esc(MP('sail'))}</span></button>`;
+  }
+
   private pickBar(state: ClientState): string {
     const sc = this.scoutPick ? state.scouts?.list.find((x) => x.id === this.scoutPick) : null;
     if (!sc || !state.scouts) return '';
@@ -1071,12 +1085,12 @@ export class WorldMap {
     fogged = true;
     // Under her fog (Нефигугум, post 26: «новичку надо хотя бы примерно видеть, куда плыть»): a hub of the «Переход» as
     // a dim ⇄ with «Неизвестный порт-узел» — never its name (post 24: an unknown port is not told; the ferry's list keeps
-    // it shut till she finds it, ferry.ts) — and with «Верфи» on, a key port's yard, dim, its rank and ⚓, no name.
+    // it shut till she finds it, ferry.ts) — and with «Верфи» on, a key port's yard of rank 2 and up, dim, its rank and ⚓, no name.
     if (on('ports') || yards) for (const p of state.ports) {
       if (!underFog(state.seen, p.x, p.y)) continue;
       const hub = on('ports') && isFerryHub(p.id);
       const keyPort = !p.id.includes('_v') && !/_t[0-9]+$/.test(p.id);
-      const span = yards && keyPort && p.shipyardTier > 0 ? yardSpan(p.shipyardTier, p.faction) : null;
+      const span = yards && keyPort && p.shipyardTier >= 2 ? yardSpan(p.shipyardTier, p.faction) : null; // (the bigger yards only: a rank-1 is in every sea)
       if (!hub && !span) continue;
       g.save();
       g.globalAlpha = 0.6;
@@ -1366,7 +1380,8 @@ export class WorldMap {
 }
 
 /** A treasure map's place for «Клад: …»: the island of «Stained map — Isle», else the map's own name. */
-function tmPlace(m: { name: string; kind: string }): string {
+function tmPlace(m: { name: string; kind: string; place?: string }): string {
+  if (m.place) return placeName(m.place);
   const i = m.name.indexOf(' — ');
   return placeName(i >= 0 && (m.kind === 'circle' || m.kind === 'player') ? m.name.slice(i + 3) : m.name);
 }
