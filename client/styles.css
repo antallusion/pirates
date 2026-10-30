@@ -1388,19 +1388,19 @@ body.touch .center-card .btn { min-height: 44px; padding-inline: 18px; }
 .confirm-panel p { margin: 0 0 4px; font-family: var(--serif); font-size: 18px; line-height: 1.35; color: var(--bone); text-align: center; text-wrap: pretty; }
 /* the jettison's sheet (forum 2026-10-30): how many over the side, the hold after, the crate astern */
 .jet { display: grid; gap: 8px; }
-.jet-h { margin: 0; font-family: var(--serif); font-size: 20px; color: var(--gold); text-align: center; }
-.jet-good { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 16px; color: var(--bone); }
+.jet-h { margin: 0; font-family: var(--serif); font-size: 22px; color: var(--gold); text-align: center; }
+.jet-good { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 18px; color: var(--bone); }
 .jet-good .item-ico { width: 32px; height: 32px; }
 .jet-n { display: flex; align-items: center; gap: 10px; }
 .jet-n input[type=range] { flex: 1; min-width: 0; height: 28px; accent-color: #c49a52; }
 .jet-n input[type=number] { width: 76px; height: 34px; box-sizing: border-box; padding: 0 6px; border: 1px solid rgba(176, 141, 87, 0.6); border-radius: 4px; background: #0d0e10; color: var(--bone); font: 600 16px/1 var(--k-font-sans, sans-serif); text-align: center; }
 .jet-q { display: flex; justify-content: center; gap: 8px; }
 .jet-q .btn { min-width: 56px; }
-.confirm-panel p.jet-after { font-size: 16px; color: var(--gold); margin: 0; }
-.confirm-panel p.jet-note { font-size: 13.5px; margin: 0; }
-@media (max-height: 420px) { .jet { gap: 5px; } .jet-h { font-size: 17px; } .confirm-panel p.jet-note { font-size: 12.5px; } .jet-n input[type=range] { height: 24px; } }
+.confirm-panel p.jet-after { font-size: 20px; color: var(--gold); margin: 0; }
+.confirm-panel p.jet-note { font-size: 17px; margin: 0; color: #b9ae96; }
+@media (max-height: 420px) { .jet { gap: 5px; } .jet-h { font-size: 17px; } .confirm-panel p.jet-note { font-size: 17px; } .jet-n input[type=range] { height: 24px; } }
 .ship-over { display: block; color: #f0806b; font-weight: 700; letter-spacing: 0.02em; }
-h3 .ship-over { display: inline; font-size: 13px; }
+h3 .ship-over { display: block; font-size: 13px; margin-top: 2px; }
 .k-sheet-foot > .confirm-row { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
 .k-sheet-foot > .confirm-row.one { grid-template-columns: minmax(0, 240px); justify-content: center; }
 

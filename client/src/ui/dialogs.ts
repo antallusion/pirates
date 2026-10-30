@@ -273,7 +273,7 @@ export function askJettison(g: GoodId, have: number, cargo: Cargo, st: NonNullab
     <div class="jet-n"><input type="range" id="jet-r" min="1" max="${have}" step="1" value="${have}" aria-label="${esc(good.name)}" /><input type="number" id="jet-v" min="1" max="${have}" step="1" value="${have}" inputmode="numeric" aria-label="${esc(good.name)}" /></div>
     <div class="jet-q">${[[0.25, '¼'], [0.5, '½'], [1, L('ship.jetAll')]].map(([f, t]) => `<button type="button" class="btn btn-small" data-jq="${f}">${esc(String(t))}</button>`).join('')}</div>
     <p class="jet-after" id="jet-after">${esc(L('ship.jetHold', { a: now, b: pctAfter(have) }))}</p>
-    <p class="muted jet-note">${esc(L(tx(st, 'quickDump') > 0 ? 'ship.jetMarked' : 'ship.jetCrate'))}</p></div>`;
+    <p class="jet-note">${esc(L(tx(st, 'quickDump') > 0 ? 'ship.jetMarked' : 'ship.jetCrate'))}</p></div>`;
   const done = askHtml(body, L('ship.jetGo', { n }), undefined, 'jet-panel');
   const r = document.getElementById('jet-r') as HTMLInputElement | null, v = document.getElementById('jet-v') as HTMLInputElement | null;
   const set = (k: number) => {
