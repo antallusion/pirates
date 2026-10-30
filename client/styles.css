@@ -5234,6 +5234,60 @@ body:not(.touch):has(#surrender:not(.hidden)) #encounter { visibility: hidden; }
 .rs-ship .rs-next { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 8px; align-items: baseline; margin: 4px 0; font-size: 12.5px; }
 .rs-ship .rs-next .rs-bar { grid-column: 1 / -1; }
 .rs-ship .btn { margin-top: 6px; }
+/* A hull's whole card over the tree (Нефигугум, forum post 28; shared/src/data/hullcard.ts hullCardHtml): tap a hull,
+   read her role, numbers by level, guns, trait, price, where sold, how the tree opens her and the line against her own
+   ship; ✕ or a tap on the shade closes it. Mobile first: 844×390 is two columns, the card scrolls inside. */
+.rs-card[data-rs-hull] { cursor: pointer; }
+.rs-card[data-rs-hull]:hover { border-color: rgba(232, 196, 106, 0.7); }
+.rs-detail { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 8px max(8px, env(safe-area-inset-left)); background: rgba(3, 5, 8, 0.72); }
+.hc { position: relative; width: min(760px, 100%); max-height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 14px 16px 16px; border: 1px solid rgba(232, 196, 106, 0.55); border-radius: 10px; background: linear-gradient(180deg, #171a1f, #0c0e11); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7); font-size: 13px; line-height: 1.4; color: var(--parch, #e8dcc0); }
+.hc-x { position: sticky; top: 0; float: right; z-index: 2; width: 40px; height: 40px; margin: -6px -8px 0 8px; border: 1px solid rgba(111, 90, 56, 0.7); border-radius: 50%; background: #0b0d10; color: #e8c46a; font-size: 18px; line-height: 1; cursor: pointer; }
+.hc-head { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px; align-items: center; }
+.hc-art { height: 96px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 8px; background: radial-gradient(120% 90% at 50% 50%, #15304a, #070b14 75%); }
+.hc-art img { height: 120px; width: auto; transform: rotate(90deg); filter: drop-shadow(0 4px 6px #000); }
+.hc-name { margin: 0 0 4px; font: 400 22px var(--display); color: var(--gold); text-transform: none; letter-spacing: 0.02em; }
+.hc-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
+.hc-chip { padding: 2px 8px; border: 1px solid rgba(111, 90, 56, 0.6); border-radius: 999px; font-size: 11.5px; background: rgba(10, 11, 13, 0.6); }
+.hc-l-combat { border-color: #b5503f; } .hc-l-trade { border-color: #c9a24a; } .hc-l-fast { border-color: #5a9fd0; } .hc-l-hauler { border-color: #8a7a5a; }
+.hc-own-sail, .hc-own-berth { color: #e8c46a; border-color: #e8c46a; }
+.hc-flav { margin: 2px 0; color: #d6ccb4; font-style: italic; }
+.hc-note { margin: 2px 0; color: #e8c46a; }
+.hc-role { margin: 2px 0 0; color: var(--fog, #9aa3ad); font-size: 12px; }
+.hc h4 { margin: 12px 0 6px; font: 400 14px var(--display); color: var(--gold); letter-spacing: 0.03em; }
+.hc h4 small { color: var(--fog, #9aa3ad); font-size: 11px; }
+.hc-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+.hc-stat { padding: 5px 7px; border: 1px solid rgba(111, 90, 56, 0.4); border-radius: 6px; background: rgba(10, 11, 13, 0.55); min-width: 0; }
+.hc-stat span { display: block; font-size: 10.5px; color: var(--fog, #9aa3ad); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hc-stat b { display: block; font-size: 13.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hc-stat.hc-hold { border-color: rgba(201, 162, 74, 0.8); background: rgba(60, 46, 18, 0.45); }
+.hc-p { margin: 0; }
+.hc-traits { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.hc-traits li { padding: 6px 9px; border-left: 3px solid #e8c46a; border-radius: 4px; background: rgba(10, 11, 13, 0.55); }
+.hc-traits i { display: block; font-style: normal; font-size: 10.5px; color: var(--fog, #9aa3ad); text-transform: uppercase; letter-spacing: 0.06em; }
+.hc-traits b { color: #e8c46a; }
+.hc-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.hc-price { color: #e8c46a; }
+.hc-t-known .hc-p, .hc-t-start .hc-p { color: #9fd49a; }
+.hc-t-ready .hc-p { color: #b8e8a8; }
+.hc-bar { height: 6px; margin: 6px 0 0; background: #0b0d10; border: 1px solid rgba(111, 90, 56, 0.5); border-radius: 3px; overflow: hidden; }
+.hc-bar i { display: block; height: 100%; background: linear-gradient(90deg, #4f7aa8, #9fd0ff); }
+.hc-tree .btn { margin-top: 8px; }
+.hc-cmp { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; margin: 10px 0 0; padding: 6px 9px; border: 1px dashed rgba(111, 90, 56, 0.6); border-radius: 6px; font-size: 12px; }
+.hc-cmp-h { flex-basis: 100%; color: var(--fog, #9aa3ad); font-size: 11px; }
+.hc-d { color: #d6ccb4; }
+.hc-d-up b { color: #9fd49a; } .hc-d-down b { color: #e07a6a; } .hc-d-eq b { color: var(--fog, #9aa3ad); }
+.hc .muted { color: var(--fog, #9aa3ad); font-size: 12px; }
+@media (max-width: 699px), (max-height: 520px) {
+  .rs-detail { padding: 4px; }
+  .hc { padding: 10px 12px 12px; font-size: 12px; }
+  .hc-head { grid-template-columns: 84px minmax(0, 1fr); gap: 8px; }
+  .hc-art { height: 66px; }
+  .hc-art img { height: 84px; }
+  .hc-name { font-size: 18px; }
+  .hc h4 { margin: 8px 0 4px; font-size: 13px; }
+  .hc-stats { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+  .hc-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 6px; }
+}
 
 /* A taller screen whose bottom block leaves the toasts' band no room under the middle, the desk's corner taken (the
    adventure map's card, the chat): the band in a clear side column (hud.ts placeDeskStrip). */

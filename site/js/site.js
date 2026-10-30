@@ -176,4 +176,25 @@ window.gtAvatar = ({ src, fit, ring, size, cls = '', attrs = '' }) => {
     input.addEventListener('input', apply);
     if (group) apply();
   }
+
+  // The fleet (forum post 28): a list chip shows one list; a sort chip orders each list's cards by rank, hold or speed.
+  const fleet = [...d.querySelectorAll('.fleet-sec')];
+  if (fleet.length) {
+    const fl = [...d.querySelectorAll('[data-fl]')];
+    const so = [...d.querySelectorAll('[data-sort]')];
+    fl.forEach((ch) => ch.addEventListener('click', () => {
+      fl.forEach((x) => x.classList.toggle('on', x === ch));
+      for (const s of fleet) s.hidden = !!ch.dataset.fl && s.dataset.list !== ch.dataset.fl;
+    }));
+    so.forEach((ch) => ch.addEventListener('click', () => {
+      so.forEach((x) => x.classList.toggle('on', x === ch));
+      const k = ch.dataset.sort;
+      for (const s of fleet) {
+        const box = s.querySelector('.ships');
+        const cards = [...box.children];
+        cards.sort((a, b) => (k === 'rank' ? a.dataset.rank - b.dataset.rank : b.dataset[k] - a.dataset[k]));
+        for (const c of cards) { c.classList.add('in'); box.appendChild(c); }
+      }
+    }));
+  }
 })();
