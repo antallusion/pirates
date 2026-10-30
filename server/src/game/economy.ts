@@ -27,6 +27,9 @@ export interface GoodMarket {
   flat?: boolean;
   /** A captain's own stock (ownstock.ts): never below this — bought down to it, the harbour tops it up, the price stands. */
   floor?: number;
+  /** The price period's season on its price (priceseason.ts; 1 or none: no season), and the last period's. */
+  season?: number;
+  seasonPrev?: number;
 }
 
 export interface Market {
@@ -80,7 +83,7 @@ export function midPrice(good: GoodId, gm: GoodMarket): number {
   const base = GOODS[good].basePrice;
   const ratio = gm.target / Math.max(1, gm.stock);
   const f = Math.max(0.35, Math.min(3.2, Math.pow(ratio, ELASTICITY)));
-  return base * f * gm.shock;
+  return base * f * gm.shock * (gm.season ?? 1);
 }
 
 export interface PriceMods {
@@ -150,7 +153,8 @@ export function marketRows(market: Market, mods: PriceMods): MarketRow[] {
       buy: Math.ceil(mid * (1 + SPREAD) * mods.buyMul * (mods.goodBuy?.[good] ?? 1)),
       sell: gm.flat ? Math.floor(supplyBuyback(good, gm, mods)) : Math.floor(mid * (1 - SPREAD) * mods.sellMul * (mods.goodSell?.[good] ?? 1) * (1 - mods.duty)),
       stock: gm.flat ? INF_STOCK : Math.floor(gm.stock),
-      trend: gm.flat ? 0 : Math.max(-1, Math.min(1, (mid - old) / Math.max(1, old))),
+      // (against the last price period when the seasons run: priceseason.ts; else the last hour's history)
+      trend: gm.season !== undefined && gm.seasonPrev ? Math.max(-1, Math.min(1, gm.season / gm.seasonPrev - 1)) : gm.flat ? 0 : Math.max(-1, Math.min(1, (mid - old) / Math.max(1, old))),
       legal: !GOODS[good].contraband,
     });
   }

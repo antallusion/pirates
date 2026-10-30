@@ -75,6 +75,8 @@ export function makeGame(): { game: Game; db: Database } {
   game.zoneBosses.on = false;
   // The Choir's invasions (docs/19 E16) wait for their own tests (tests/invasions.test.ts).
   game.invasions.on = false;
+  // The ports' price periods (priceseason.ts) keep still: the prices are the stock's alone (tests/priceseason.test.ts).
+  game.prices.on = false;
   return { game, db };
 }
 

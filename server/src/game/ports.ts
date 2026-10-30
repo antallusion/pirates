@@ -57,6 +57,7 @@ import { PLAN_REP, WOODS, YARD_FACTIONS_WITH_PLANS, carvedAt } from '../../../sh
 import type { WoodId } from '../../../shared/src/data/shipbuild.ts';
 import { CAPTAINS_HOUSES } from '../../../shared/src/data/quests.ts';
 import { exoticBonus, noteExoticPurchase } from './bridgefx.ts';
+import { noteBought, periodLeftSec, periodNow, sameportOver } from './priceseason.ts';
 import { poiRumor } from './exploration.ts';
 import { mountOffers } from './mounts.ts';
 import type { PlayerSession, Profile } from './player.ts';
@@ -255,6 +256,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     bank: bankView(p, port, ship),
     insurance: insuranceQuotes(game, s, port),
     duty: mods.duty,
+    priceLeft: game.prices.on ? periodLeftSec(game) : 0, // the price period's end (priceseason.ts)
     dealOfDay: ship.rank('trd_local_contacts') >= 3 ? dealOfDay(game, port) : null,
     fence: portFence(game, ship, port),
     licence: port.faction in FACTION_DUTY ? { cost: feeFor(ship, licenceCost(p.level)), until: p.licences[port.faction as keyof typeof p.licences] ?? 0 } : null,
@@ -283,9 +285,15 @@ export function recordIntel(game: Game, s: PlayerSession, port: Port): void {
   const own = ownMarket(game, s.profile!, port);
   if (!market || !own) return;
   const rows = marketRows(own, priceMods(ship, port, s.profile!, game.now, game));
-  const sell: Partial<Record<GoodId, number>> = {};
-  for (const r of rows) sell[r.good] = r.sell;
-  s.profile!.priceIntel[port.id] = { t: game.now, sell, ...demandOf(market, port.blackMarket) };
+  const sell: Partial<Record<GoodId, number>> = {}, buy: Partial<Record<GoodId, number>> = {}, stock: Partial<Record<GoodId, number>> = {}, trend: Partial<Record<GoodId, number>> = {};
+  for (const r of rows) {
+    sell[r.good] = r.sell;
+    buy[r.good] = r.buy;
+    stock[r.good] = r.stock;
+    if (r.trend) trend[r.good] = Math.round(r.trend * 1000) / 1000;
+  }
+  // (the whole board she saw, for the port card: portinfo.ts)
+  s.profile!.priceIntel[port.id] = { t: game.now, sell, buy, stock, trend, period: periodNow(game), ...demandOf(market, port.blackMarket) };
 }
 
 // ------------------------------------------------------------------ transactions
@@ -323,6 +331,7 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
     ship.cargo[good] = prevQty + qty;
     game.setCostBasis(s, good, (prevBasis * prevQty + price) / (prevQty + qty));
     ownTrade(game, p, port, good, -qty);
+    if (!gm.flat) noteBought(game, p, port.id, good, qty, price / qty); // (sold back here: no more than it cost, priceseason.ts)
     noteExoticPurchase(p, port, good, qty);
     // Forged Papers rank 2: the Brokers stamp what they sell you.
     if (def.contraband && port.faction === 'brokers' && ship.rank('smg_forged_papers') >= 2) p.smuggle.stamped[good] = (p.smuggle.stamped[good] ?? 0) + qty;
@@ -365,10 +374,12 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
   if (p.smuggle.stamped[good]) p.smuggle.stamped[good] = Math.max(0, p.smuggle.stamped[good]! - n);
   const exotic = exoticBonus(ship, p, port, good, n, price);
   const gilded = ship.hasFlag('fh_gilded_scale') && port.faction === 'league' ? Math.floor(price * 0.05) : 0; // the Gilded Scale
-  p.gold += price + exotic + gilded;
+  // bought here lately: never back for more than it cost — no buy low, sell high in one port (priceseason.ts)
+  const over = gm.flat ? 0 : sameportOver(game, p, port.id, good, n, price + exotic + gilded);
+  p.gold += price + exotic + gilded - over;
   taxSale(game, s, price); // the guild's share
   ownTrade(game, p, port, good, n);
-  const profit = price - basis * n;
+  const profit = price - over - basis * n;
   p.stats.tradeProfit += Math.max(0, profit);
   if (profit > 0) game.grantXp(s, silverXp(p.level, profit, s.ship?.shipLevel ?? 1), null); // docs/26: a trader's lesson by her waters' hour
   // Trade builds standing with the port's faction.

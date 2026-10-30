@@ -228,6 +228,8 @@ import { EventHub, eventShipLost, hireBlocked, onDockEvents, onIslandRaised, onU
 import { adminEnabled, mend, runAdmin } from './admin.ts';
 import { BossHub, bossBoardOrder, bossBoarded, bossPositions, bossSinking, bossWind, stepBosses } from './bosses.ts';
 import { ZoneBossHub, stepZoneBosses, zoneBossSinking } from './zonebosses.ts';
+import { PriceSeasonHub, stepPriceSeason } from './priceseason.ts';
+import { sendPortInfo } from './portinfo.ts'; // the ports' price periods (owner, 2026-10-30)
 import { wayMessage, waySecond, waysForChunk } from './waystations.ts'; // docs/35
 import { armyMessage } from './armyops.ts'; // owner, 2026-10-28: the captain's split, merge and dismiss
 import { applyDamage, cutMastWreck, damageBlocked, killMen, dash, fireBroadside, fireChaser, holdAim, reloadTime, seaReload, stepProjectiles } from './combat.ts';
@@ -430,6 +432,8 @@ export class Game {
   bosses = new BossHub();
   /** The zone bosses, one great ship for each sea (zonebosses.ts, docs/21). */
   zoneBosses = new ZoneBossHub();
+  /** The ports' price seasons, a new one every 8 hours (priceseason.ts). */
+  prices = new PriceSeasonHub();
   /** docs/19 E16: the Choir's invasions and the black tides (invasions.ts). */
   invasions = new InvasionHub();
   /** A ship taken by boarding as she goes down (her captain's gear is given; no ship gear on top: docs/21 §5). */
@@ -707,6 +711,7 @@ export class Game {
       this.nextEconTick = now + 10;
       const hist = now >= this.nextHistory;
       if (hist) this.nextHistory = now + 60;
+      stepPriceSeason(this); // a new price period: the seasons on every market, the sea told
       for (const m of this.markets.values()) if (!this.zone || this.zone.regions.has(this.portById(m.portId)?.region ?? 'black_coast')) tickMarket(m, edt, hist);
       for (const p of this.world.ports) this.tavernCrew.set(p.id, Math.min(10 + p.size * 14, (this.tavernCrew.get(p.id) ?? 0) + 0.6 * p.size));
       const before = Object.fromEntries(Object.entries(this.weather).map(([k, w]) => [k, w.kind]));
@@ -4395,6 +4400,8 @@ export class Game {
           if (!e) mendUnderWay(this, s); // hurt, the carpenters at work on the way (searepair.ts)
           return err(e);
         }
+      case 'portInfo':
+        return sendPortInfo(this, s, msg.port); // the port card (owner, 2026-10-30)
       case 'wgoals':
         return sendWorldGoals(this, s);
       case 'gyard': {

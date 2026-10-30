@@ -5,6 +5,7 @@
 // quests; the full lists stay below for those who trade by hand.
 
 import { EN as ISLES_EN, RU as ISLES_RU } from '../lang/ui/isles.ts';
+import { priceClockHtml } from './portcard.ts'; // the price period's countdown (owner, 2026-10-30)
 import { omenLog } from './journal.ts';
 import { regattaCard } from './regatta.ts';
 import { diceCard } from './dice.ts';
@@ -647,7 +648,7 @@ export class PortScreen {
     const used = cargoVolume(self.cargo, st?.contrabandVolumeMul ?? 1, st?.materialVolumeMul ?? 1, st?.provisionVolumeMul ?? 1, st?.cursedVolumeMul ?? 1);
     const mix = `<p class="muted mk-hold">${icon('tab_market', '', 'ico-sm')}${esc(W('port.hold', { vol: used.toFixed(0), max: (st?.holdVolume ?? 0).toFixed(0) }))}: ${esc(holdMixText(holdMix(self.cargo, st)))}</p>`;
     return `${this.quick(view, state, ['sell', 'supplies', 'repair', 'hire'])}${questBuyCards(view)}
-      <div class="mk-head">${sec(W('mk.goods'))}${by}</div>${mix}${note}
+      <div class="mk-head">${sec(W('mk.goods'))}${by}</div>${mix}${note}${priceClockHtml(view.priceLeft)}
       <div class="mk-list">${rows}</div>
       ${sec(W('mk.shot'))}<div class="mk-list">${ammo}</div>
       ${more(W('mk.extra'), `${fence}${intel}`, 'mk-extra')}`;

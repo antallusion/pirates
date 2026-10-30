@@ -164,6 +164,7 @@ import { STORY_FROM, campaignLore, campaignNews, chapterOpener, dropWord } from 
 import { DROP_CARD } from '../../shared/src/data/paintart.ts'; // docs/36: the campaign's next quest comes by itself
 import { FACTIONS } from '../../shared/src/data/factions.ts';
 import { placeName } from './ui/maps.ts';
+import { initPortCard, openPortCard, portCardData } from './ui/portcard.ts'; // the port card (owner, 2026-10-30)
 import { portSplash } from './ui/portsplash.ts';
 import type { Key } from './i18n.ts';
 import { EN as MAIN_EN, RU as MAIN_RU } from './lang/ui/main.ts';
@@ -274,6 +275,20 @@ journal.onTab = (t) => {
 };
 worldMap.send = (m) => net.send(m);
 worldMap.onAutosail = (wp) => autosailTo(wp);
+// The port card (owner, 2026-10-30): a port's crest on the chart, its name at sea — what it sells and buys, its
+// services; «Плыть сюда» is the run there that puts her in on arrival (the chart shuts onto the course).
+worldMap.onPortCard = (id) => openPortCard(state, id);
+initPortCard({
+  send: (m) => net.send(m),
+  sail: (id) => {
+    if (modal === 'map') closeModal();
+    startGoal(`p:${id}`);
+  },
+  openPort: () => {
+    if (modal === 'map') closeModal();
+    openModal('port');
+  },
+});
 /** A course of her own to a point (the chart's, a tap's or a click's): `near`, how near the helmsman brings her. */
 function autosailTo(wp: { x: number; y: number }, near?: number): void {
   touch.course = null; // the helm stick lets go, or it would take the wheel straight back
@@ -907,6 +922,24 @@ function fingerPlace(pl: ReturnType<typeof placeAtScreen>, w: { x: number; y: nu
   const onTown = [...state.islands.values()].some((is) => (is.portId === pl.id || is.town === pl.id) && onLand(is));
   return onTown || (pt && Math.hypot(pt.x - w.x, pt.y - w.y) * renderer.zoom <= FINGER_PORT_PX) ? pl : null;
 }
+/** The harbour whose name lies under a point of the screen (owner, 2026-10-30: the port card): the label over the town
+ *  (renderer.ts drawPorts), a finger's slack about it. A tap on the name opens the card; on the town or the water she
+ *  still sails (seaTapPlan). Not under the fog of war (no name drawn there). */
+const LABEL_SLACK_PX = 14;
+function portLabelAt(px: number, py: number): string | null {
+  const z = renderer.zoom;
+  const fs = Math.round(Math.max(12, Math.min(22, 14 * z)));
+  let best: string | null = null, bd = Infinity;
+  for (const p of state.ports) {
+    if (underFog(state.seen, p.x, p.y)) continue;
+    const cx = renderer.sx(p.x), cy = renderer.sy(p.y) - 40 * z - fs * 0.35; // (the text stands on its baseline)
+    const half = (placeName(p.name).length * fs * 0.55) / 2 + LABEL_SLACK_PX;
+    if (Math.abs(px - cx) > half || Math.abs(py - cy) > fs * 0.5 + LABEL_SLACK_PX) continue;
+    const d = Math.hypot(px - cx, py - cy);
+    if (d < bd) [best, bd] = [p.id, d];
+  }
+  return best;
+}
 /** A finger's tap on the sea (seaTapPlan, deskinput.ts; owner 2026-10-29: «мне нужно тапнуть куда мне надо и начать
  *  плыть. порт или еще куда-то, куда угодно короче»): any tap sails her — at sea, and in a harbour's roads too (the
  *  «В МОРЕ» state: the course is given, then she casts off, no «В море» first). Another ship or a creature stack is the
@@ -926,6 +959,9 @@ function seaTap(px: number, py: number): void {
   const pl = k ? null : fingerPlace(placeAtScreen(px, py), w);
   const t = k || renderer.goalHit(px, py) ? null : tapTarget(state, w.x, w.y, renderer.zoom);
   const blocked = state.voyage ? 'voyage' : state.boardTac || state.boardFight || state.boarding ? 'battle' : null;
+  // a harbour's name: its card, «Плыть сюда» inside (owner, 2026-10-30); its town and its water still sail
+  const named = !k && !modal ? portLabelAt(px, py) : null;
+  if (named) return openPortCard(state, named);
   const plan = seaTapPlan({ mark: k, again, thing: !!t || renderer.goalHit(px, py), place: pl?.kind ?? null, modal: !!modal, blocked: !!blocked });
   selPlace = k === 'ship' && targetId !== null ? { kind: 'ship', id: targetId } : k ? null : pl; // (owner, 2026-10-26)
   if (plan === 'none' || plan === 'target') return;
@@ -2260,6 +2296,9 @@ function onMessage(m: ServerMsg): void {
       if (m.kind === 'help') audio.bell();
       if (modal === 'map') worldMap.draw(state);
       break;
+    case 'portInfo':
+      portCardData(state, m.view);
+      break;
     case 'wgoals':
       // The sea's goals of the week (docs/16 #32).
       if (modal === 'journal') refreshModal();
@@ -3350,6 +3389,12 @@ canvas.addEventListener('mousedown', (e) => {
   if (mk === 'ship' && targetId !== null) selPlace = { kind: 'ship', id: targetId };
   // (owner, 2026-10-26) a harbour, an island, her wreckage: selected — its buttons on the bar («К порту», «Плыть сюда»)
   const pl = mk ? null : placeAtScreen(e.clientX, e.clientY);
+  // a harbour's name: its card (owner, 2026-10-30), the harbour selected as ever
+  const named = mk ? null : portLabelAt(e.clientX, e.clientY);
+  if (named) {
+    selPlace = { kind: 'port', id: named };
+    return openPortCard(state, named);
+  }
   if (pl) {
     selPlace = pl;
     if (pl.kind !== 'wreck') return; // (no broadside into a harbour clicked)
@@ -5391,4 +5436,4 @@ startTelemetry(() => (!inGame ? 'menu' : tactical.open ? 'battle' : isleScene.is
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.
-(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, isle: isleScene, assets: () => ({ ...assetStats(), loads: loadLog.slice(), kinds: assetKinds() }), open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), cos: { shop: (sec?: string) => openShop(false, { tab: 'cos', sec: sec as 'cos_titles' | undefined }), wardrobe: () => openWardrobe() }, promos, dailyGift, hero: (tab?: CaptainOpen) => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud, aim: { under: attackUnder, about: aboutAt, choices: targetChoices, menu: targetMenu }, roamNow: (id: number) => { const v = state.roams.find((x) => x.id === id); return v ? roamNow(state, v) : null; }, goal: (key: string) => startGoal(key), goalRun: () => goalRun?.key ?? null, modal: () => modal, tapGoal: (x: number, y: number) => sailToTap(x, y) };
+(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, isle: isleScene, assets: () => ({ ...assetStats(), loads: loadLog.slice(), kinds: assetKinds() }), open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), cos: { shop: (sec?: string) => openShop(false, { tab: 'cos', sec: sec as 'cos_titles' | undefined }), wardrobe: () => openWardrobe() }, promos, dailyGift, hero: (tab?: CaptainOpen) => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud, aim: { under: attackUnder, about: aboutAt, choices: targetChoices, menu: targetMenu }, roamNow: (id: number) => { const v = state.roams.find((x) => x.id === id); return v ? roamNow(state, v) : null; }, goal: (key: string) => startGoal(key), goalRun: () => goalRun?.key ?? null, modal: () => modal, tapGoal: (x: number, y: number) => sailToTap(x, y), portCard: (id: string) => openPortCard(state, id), portLabelAt: (x: number, y: number) => portLabelAt(x, y) };

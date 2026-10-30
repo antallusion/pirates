@@ -254,6 +254,8 @@ export class WorldMap {
 
   /** Set by the shell: auto-sail to her mark (docs/16 #36). */
   onAutosail: ((wp: { x: number; y: number }) => void) | null = null;
+  /** A tap on a port's crest: its card (owner, 2026-10-30: what it sells and buys; «Плыть сюда» inside — ui/portcard.ts). */
+  onPortCard: ((portId: string) => void) | null = null;
   /** The Grail's chart (docs/17 H4), once an obelisk is read. */
   onPuzzle: (() => void) | null = null;
   /** ux2: «Плыть» on a quest or a task of the sea — the course there and on through a quest's steps (main.ts). */
@@ -486,6 +488,7 @@ export class WorldMap {
     const port = this.layers.has('all') || this.layers.has('ports')
       ? visibleOnChart(state.seen, state.ports).map((p) => ({ p, d: Math.hypot(p.x - x, p.y - y) })).filter((e) => e.d * k <= 24).sort((a, b) => a.d - b.d)[0]?.p
       : undefined;
+    if (port && this.onPortCard) return this.onPortCard(port.id); // (its card; the course is its «Плыть сюда»)
     const off = !!cur && Math.hypot(cur.x - x, cur.y - y) < hit;
     this.markName = off ? '' : port ? placeName(port.name) : '';
     this.markAt = off ? null : port ? { x: port.x, y: port.y } : { x, y };

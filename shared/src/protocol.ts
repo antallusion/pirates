@@ -373,6 +373,8 @@ export type ClientMsg =
    *  by its key (goalroute.ts GOAL_KEYS) — the server finds the nearest place it is done and the helmsman takes her there,
    *  re-targeted as the sea moves, until the goal is met. One per tap; the pill's stop ends it. */
   | { t: 'goto'; key: string }
+  /** The port card (owner, 2026-10-30): what a harbour sells and buys, as far as she knows it. */
+  | { t: 'portInfo'; port: string }
   /** docs/16 #32: the sea's goals of the week. */
   | { t: 'wgoals' }
   /** docs/16 #34: the guild's shipyard on the leader's island. */
@@ -930,6 +932,44 @@ export interface PrivateState {
   pvp: PvpView;
 }
 
+/** The port card (server/src/game/portinfo.ts; owner, 2026-10-30): a harbour seen from afar — its market as far as
+ *  she knows it, its services, the time till its prices change. */
+export interface PortInfoView {
+  portId: string;
+  /** Where the prices come from: `live` she lies here; `seen` her last visit (or a letter); `none` never seen. */
+  source: 'live' | 'seen' | 'none';
+  /** The exact prices known (in port, or Market Sense); else only how dear each good stood (`level`). */
+  exact: boolean;
+  /** Seconds since the prices were seen (`seen`). */
+  ageSec?: number;
+  /** Seen in an earlier price period: the prices have changed since. */
+  stale?: boolean;
+  goods: PortInfoGood[];
+  /** Seconds till the ports' prices change (0: the periods do not run). */
+  priceLeft: number;
+  /** The tavern's hands for hire now. */
+  crew: number;
+  /** The level (⚓) of the waters it stands in. */
+  level: number;
+  /** The hulls its yard builds for her. */
+  hulls: string[];
+  auction: boolean;
+  exchange: boolean;
+}
+export interface PortInfoGood {
+  good: GoodId;
+  /** −1 the port makes it (sells), +1 it eats it (buys), 0 a plain trade. */
+  side: -1 | 0 | 1;
+  buy?: number;
+  sell?: number;
+  stock?: number;
+  /** Against the last price period, −1..1. */
+  trend?: number;
+  /** How dear it stood when seen: −1 cheap, 0 its usual, +1 dear. */
+  level?: -1 | 0 | 1;
+  legal: boolean;
+}
+
 export interface MarketRow {
   good: GoodId;
   buy: number; // price the player pays
@@ -1059,6 +1099,8 @@ export interface PortView {
   materialDiscount: Record<string, { good: GoodId; units: number }>;
   duty: number;
   dealOfDay: GoodId | null;
+  /** Seconds till the ports' prices change (priceseason.ts; 0: the periods do not run). */
+  priceLeft?: number;
   fence: number | null; // a fence buys contraband here at this share of Fogmouth's price
   licence: { cost: number; until: number } | null;
   charts: { sellable: number; sellValue: number; offers: { region: RegionId; name: string; islands: number; price: number }[] };
@@ -2065,6 +2107,7 @@ export type ServerMsg =
   | { t: 'self'; self: PrivateState }
   | { t: 'self_patch'; patch: Partial<PrivateState> } // only the fields that changed
   | { t: 'port'; view: PortView | null }
+  | { t: 'portInfo'; view: PortInfoView }
   | { t: 'boarding'; result: BoardingResult | null }
   /** A ship has struck her colours to you (docs/16 #3): the choice card, or null when the offer is gone. */
   | { t: 'surrender_offer'; offer: SurrenderOffer | null }

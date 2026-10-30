@@ -170,7 +170,10 @@ export interface Profile {
   stats: { sunk: number; boarded: number; tradeProfit: number; distance: number; sold: number; fogContraband: number; harpoonContracts: number; /** captains guided through quests (docs/11 P6) */ mentored?: number; /** men signed on at a tavern or a dwelling (docs/17 H5: the First Watch) */ recruited?: number };
   cooldowns: Record<string, number>;
   insured: boolean;
-  priceIntel: Record<string, { t: number; sell: Partial<Record<GoodId, number>>; dear?: GoodId[]; cheap?: GoodId[]; heard?: boolean }>;
+  priceIntel: Record<string, { t: number; sell: Partial<Record<GoodId, number>>; dear?: GoodId[]; cheap?: GoodId[]; heard?: boolean;
+    /** The rest of the board she saw (the port card, portinfo.ts): her buying price, the stock, the trend, and the price
+     *  period it was seen in (priceseason.ts). */
+    buy?: Partial<Record<GoodId, number>>; stock?: Partial<Record<GoodId, number>>; trend?: Partial<Record<GoodId, number>>; period?: number }>;
   costBasis: Partial<Record<GoodId, number>>;
   sightings: { name: string; kind: string; x: number; y: number; t: number }[];
   chartSales: Record<string, number[]>; // port id -> island ids whose charts that port already bought
@@ -183,6 +186,9 @@ export interface Profile {
   /** Her own stock of the harbours' goods (owner, 2026-10-22; ownstock.ts): `port|good` → [stock in her units, world
    *  time it was set]; only the goods she traded and only while they differ from the port's own (absent: the port's). */
   ownStock?: Record<string, [number, number]>;
+  /** What she bought in a port lately ('port|good' → [units, silver a unit, world time]): sold back there, it fetches
+   *  no more than SAME_PORT_BACK of what she paid — no buy-low-sell-high in one port (priceseason.ts). */
+  boughtHere?: Record<string, [number, number, number]>;
   forwards: Forward[];
   bank: number;
   loan: Loan | null;
