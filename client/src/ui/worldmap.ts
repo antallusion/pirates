@@ -27,6 +27,7 @@ import { setTracked, setWaypoint, trackedQuest, waypoint } from './track.ts';
 import { EN as EASE_EN, RU as EASE_RU } from '../lang/ui/ease.ts';
 import { EN as REN, RU as RRU } from '../lang/ui/render.ts';
 import { dec1 } from './dom.ts';
+import { courseAhead, courseName, courseOf } from './course.ts'; // her course on the chart (Нефигугум, post 24, topic 7)
 import { commonLog, dailyLog } from './daily.ts';
 import { bindInvasion, invasionLog } from './invasion.ts'; // docs/19 E16
 import { bindGoalTaps } from './goaltap.ts'; // route: a goal's line sails to its nearest place
@@ -1059,14 +1060,8 @@ export class WorldMap {
     // her group, her mark, her scouts and her ship stand over it: a quest into the fog still leads there.
     drawFog(g, state.seen, state.seenVer, { x0: this.cx - W / 2 / k, y0: this.cy - H / 2 / k, k, w: W, h: H, time: performance.now() / 1000 });
     fogged = true;
-    // The hubs of the «Переход» (owner, 2026-10-30, ferry.ts) are known to every captain: their badge and name over the
-    // fog too — where a passage can take her.
-    if (on('ports')) for (const p of state.ports) {
-      if (!isFerryHub(p.id) || !underFog(state.seen, p.x, p.y)) continue;
-      drawHubMark(g, tx(p.x), ty(p.y), Math.max(7, ms * 0.32));
-      g.font = `${this.zoom > 2 ? 13 : 11}px "IM Fell English SC", serif`;
-      label(placeName(p.name), tx(p.x), ty(p.y) - ms * 0.45, 'rgba(232,196,106,0.9)', 0);
-    }
+    // (the hubs of the «Переход» under her fog are not marked: an unknown port is not told — Нефигугум, post 24,
+    // topic 7; their badge stands with the port once she has seen it, above)
     drawScouts(g, state.scouts, state.scoutsAt, tx, ty, ms * 0.7);
     // A scout's pick: her reach from the island, a dashed ring.
     if (this.scoutPick && state.scouts?.home) {
@@ -1169,9 +1164,48 @@ export class WorldMap {
     const own = state.ownDisplay;
     // Reached while the chart is open: its button goes too.
     c.parentElement?.querySelector('.map-wp-clear')?.classList.toggle('hidden', !wp);
+    // Her course (Нефигугум, post 24, topic 7: «не хватает моего отображения маршрута … на глобальной карте»): the way
+    // the helmsman planned round the land — a run to her mark, a goal's, a hub's «Переход» — the sea's dashed gold line
+    // from her ship along its turns to its end, a ring there and a pill with where to and how far by that way.
+    const course = own ? courseOf(state) : null;
+    const ahead = course && own ? courseAhead(course, own.x, own.y) : null;
+    let pill: { text: string; x: number; y: number } | null = null;
+    if (course && ahead) {
+      g.save();
+      g.globalAlpha = course.paused ? 0.55 : 1;
+      g.lineCap = 'round';
+      g.lineJoin = 'round';
+      g.setLineDash([7, 6]);
+      g.beginPath();
+      ahead.pts.forEach(([x, y], i) => (i ? g.lineTo(tx(x), ty(y)) : g.moveTo(tx(x), ty(y))));
+      g.strokeStyle = 'rgba(5,8,10,0.7)';
+      g.lineWidth = 4;
+      g.stroke();
+      g.strokeStyle = 'rgba(232,196,106,0.95)';
+      g.lineWidth = 2;
+      g.stroke();
+      g.setLineDash([]);
+      const ex = tx(course.to.x), ey = ty(course.to.y);
+      g.strokeStyle = '#e8c46a';
+      g.lineWidth = 2;
+      g.beginPath();
+      g.arc(ex, ey, Math.max(6, ms * 0.36), 0, Math.PI * 2);
+      g.stroke();
+      g.fillStyle = '#e8c46a';
+      g.beginPath();
+      g.arc(ex, ey, 2.5, 0, Math.PI * 2);
+      g.fill();
+      g.restore();
+      const hub = state.voyage?.ferry ? state.ports.find((p) => p.id === state.voyage!.ferry) : undefined;
+      const rt = state.route?.view;
+      const named = hub?.name ?? (rt?.name || null) ?? courseName(state, course.to);
+      const d = ahead.left;
+      const dist = d >= 1000 ? RL('dist.km', { n: dec1(d / 1000) }) : RL('dist.m', { n: Math.round(d / 10) * 10 });
+      pill = { text: `${named ? placeName(named) : L('course.mark')} · ${dist}`, x: ex, y: ey - Math.max(14, ms * 0.75) };
+    }
     if (wp) {
       const x = tx(wp.x), y = ty(wp.y);
-      if (own) {
+      if (own && !course) {
         g.save();
         g.setLineDash([5, 6]);
         g.strokeStyle = 'rgba(232,196,106,0.75)';
@@ -1206,9 +1240,28 @@ export class WorldMap {
       const d = own ? Math.hypot(wp.x - own.x, wp.y - own.y) : 0;
       g.font = '600 12px Inter, system-ui, sans-serif';
       g.textAlign = 'center';
-      label(L('wp.label', { d: d >= 1000 ? RL('dist.km', { n: dec1(d / 1000) }) : RL('dist.m', { n: Math.round(d / 10) * 10 }) }), x, y + ms * 0.95, '#f0d48e', 0);
+      if (!pill || Math.hypot(wp.x - course!.to.x, wp.y - course!.to.y) > 600) label(L('wp.label', { d: d >= 1000 ? RL('dist.km', { n: dec1(d / 1000) }) : RL('dist.m', { n: Math.round(d / 10) * 10 }) }), x, y + ms * 0.95, '#f0d48e', 0);
     }
     layLabels();
+    // the course's pill over all the names: dark, gold-edged, readable on a phone
+    if (pill) {
+      g.save();
+      g.font = '600 12px Inter, system-ui, sans-serif';
+      const w = g.measureText(pill.text).width + 16, h = 22;
+      const x0 = Math.max(4, Math.min(W - w - 4, pill.x - w / 2)), y0 = Math.max(4, Math.min(H - h - 4, pill.y - h / 2));
+      g.fillStyle = 'rgba(12,10,6,0.86)';
+      g.strokeStyle = 'rgba(232,196,106,0.85)';
+      g.lineWidth = 1;
+      g.beginPath();
+      g.roundRect(x0, y0, w, h, 11);
+      g.fill();
+      g.stroke();
+      g.fillStyle = '#f0d48e';
+      g.textAlign = 'left';
+      g.textBaseline = 'middle';
+      g.fillText(pill.text, x0 + 8, y0 + h / 2 + 0.5);
+      g.restore();
+    }
     // You.
     if (own) {
       // What your lookouts can see: a soft pool of light around you.

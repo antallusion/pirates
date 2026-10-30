@@ -11,7 +11,8 @@ import { REGIONS } from '../shared/src/world/regions.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import { autosailOf } from '../server/src/game/autosail.ts';
-import { FERRY_WORDS, ferryBound, ferryCost, ferryGo, ferryLeft, ferryView } from '../server/src/game/ferry.ts';
+import { FERRY_WORDS, ferryBound, ferryCost, ferryGo, ferryLeft, ferryView, portKnown } from '../server/src/game/ferry.ts';
+import { fogReveal } from '../server/src/game/fog.ts';
 import { untouchable } from '../server/src/game/inbattle.ts';
 import { finishVoyage, voyageOf, voyageSpeed, voyaging } from '../server/src/game/passage.ts';
 import type { FakeConn } from './helpers.ts';
@@ -22,10 +23,16 @@ function captain(name: string, at = 'gravesend'): { game: Game; s: PlayerSession
   const c = join(game, name);
   const s = game.sessionByName(name)!;
   dockAt(game, s, at);
+  knowHubs(s);
   s.profile!.gold = 100_000;
   // (a light hold: a passage takes a ship at most 60% laden)
   s.ship!.cargo = {} as NonNullable<typeof s.ship>["cargo"];
   return { game, s, c };
+}
+
+/** Every hub put in at once (a passage goes only to a hub she has discovered). */
+function knowHubs(s: PlayerSession): void {
+  for (const id of FERRY_HUBS) if (!s.profile!.regionsSeen.includes(`visited:${id}`)) s.profile!.regionsSeen.push(`visited:${id}`);
 }
 
 function dockAt(game: Game, s: PlayerSession, id: string): void {
@@ -150,6 +157,7 @@ test('ferry: every hub-to-hub route has open water from the harbour mouth (the p
     const name = `Ferry ${from.slice(0, 8)}`;
     const c = join(game, name);
     const s = game.sessionByName(name)!;
+    knowHubs(s);
     for (const to of FERRY_HUBS) {
       if (to === from) continue;
       dockAt(game, s, from);
@@ -166,4 +174,38 @@ test('ferry: every hub-to-hub route has open water from the harbour mouth (the p
     }
     void c;
   }
+});
+
+test('ferry: only to a hub she has discovered — the others locked in her list and refused; seen through the fog opens it', () => {
+  const { game } = makeGame();
+  join(game, 'Ferry Green');
+  const s = game.sessionByName('Ferry Green')!;
+  dockAt(game, s, 'gravesend');
+  s.profile!.gold = 100_000;
+  s.ship!.cargo = {} as NonNullable<typeof s.ship>['cargo'];
+  s.profile!.regionsSeen = s.profile!.regionsSeen.filter((r) => !r.startsWith('visited:'));
+  s.profile!.lastPort = 'gravesend';
+  // a new captain: the far hubs lie under her fog
+  assert.ok(portKnown(game, s, 'gravesend'), 'the port she is in');
+  assert.ok(!portKnown(game, s, 'sealhold'), 'the far north-east is under her fog');
+  const view = ferryView(game, s, 'gravesend')!;
+  const sh = view.routes.find((r) => r.to === 'sealhold')!;
+  assert.equal(sh.locked, true, 'greyed in her list');
+  const firstLocked = view.routes.findIndex((r) => r.locked);
+  assert.ok(view.routes.slice(firstLocked).every((r) => r.locked), 'the known first, the locked after');
+  assert.equal(ferryGo(game, s, 'sealhold'), FERRY_WORDS.unknown, 'the server refuses');
+  assert.equal(s.profile!.gold, 100_000, 'nothing paid');
+  assert.equal(s.ship!.docked, 'gravesend');
+  // its water seen (a chart, a scout, her lookouts): open
+  const p = game.portById('sealhold')!;
+  fogReveal(game, s, p.x, p.y, 1500);
+  assert.ok(portKnown(game, s, 'sealhold'));
+  assert.ok(!ferryView(game, s, 'gravesend')!.routes.find((r) => r.to === 'sealhold')!.locked);
+  // or put in there once (a save's «visited:»)
+  const q = FERRY_HUBS.find((id) => id !== 'gravesend' && !portKnown(game, s, id));
+  if (q) {
+    s.profile!.regionsSeen.push(`visited:${q}`);
+    assert.ok(portKnown(game, s, q));
+  }
+  assert.equal(ferryGo(game, s, 'sealhold'), null, 'carried now');
 });

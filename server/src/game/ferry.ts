@@ -11,7 +11,10 @@
 //    an overloaded hold sails as ever;
 //  - the trip: she casts off (Game.undock), the helmsman takes the course to the other hub's anchorage and the passage
 //    (passage.ts) begins at once — ×10, untouchable and unable to act — even with VOYAGE.on off; it ends VOYAGE_TAIL
-//    short, her own way back, the helmsman brings her in and she puts in by herself («Причалить» given for her).
+//    short, her own way back, the helmsman brings her in and she puts in by herself («Причалить» given for her);
+//  - only to a hub she has DISCOVERED (Нефигугум, post 24, topic 7: «не активными переходы в порты которые еще закрыты
+//    … под туманом»): put in there once, or its water out of her fog of war (fog.ts) — the others greyed on her
+//    screens, refused here.
 
 import { FERRY_COOLDOWN_SEC, FERRY_HOLD_MAX, FERRY_HUBS, FERRY_WANTED_MAX, ferryPrice, isFerryHub } from '../../../shared/src/data/ferry.ts';
 import { wantedLevel } from '../../../shared/src/data/factions.ts';
@@ -22,6 +25,8 @@ import { SELF_IN_BATTLE_WHY, inBattle } from './inbattle.ts';
 import { beginFerry, voyaging } from './passage.ts';
 import type { PlayerSession } from './player.ts';
 import { refitHolds } from './refit.ts';
+import { fogSeen } from '../../../shared/src/data/fog.ts';
+import { fogState } from './fog.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { ShipEntity } from './ship.ts';
 
@@ -33,6 +38,7 @@ export const FERRY_WORDS = {
   mutiny: 'Settle the mutiny first.',
   laden: 'No passage with the hold more than 60% full: sell or store the cargo first.',
   noWay: 'No open water leads there now: the passage is off, nothing paid.',
+  unknown: 'Discover that port first.',
 } as const;
 
 /** «The next passage in N min» (translated with its number on the client). */
@@ -45,6 +51,14 @@ export function ferryLeft(game: Game, s: PlayerSession): number {
   const at = s.profile?.ferryAt;
   if (!at) return 0;
   return Math.max(0, Math.ceil(FERRY_COOLDOWN_SEC - (game.wallNow() - at) / 1000));
+}
+
+/** Whether she knows a port: she has put in there, or its water is out of her fog of war. */
+export function portKnown(game: Game, s: PlayerSession, portId: string): boolean {
+  const p = s.profile, port = game.portById(portId);
+  if (!p || !port) return false;
+  if (p.lastPort === portId || p.regionsSeen?.includes(`visited:${portId}`)) return true;
+  return fogSeen(fogState(game, s).bits, port.x, port.y);
 }
 
 /** The straight distance between two hubs, metres. */
@@ -82,9 +96,9 @@ export function ferryView(game: Game, s: PlayerSession, portId: string): FerryVi
     if (to === portId) continue;
     const d = hubDistance(game, portId, to);
     if (d === null) continue;
-    routes.push({ to, km: Math.round(d / 100) / 10, price: ferryPrice(d) });
+    routes.push({ to, km: Math.round(d / 100) / 10, price: ferryPrice(d), ...(portKnown(game, s, to) ? {} : { locked: true }) });
   }
-  routes.sort((a, b) => a.km - b.km);
+  routes.sort((a, b) => Number(!!a.locked) - Number(!!b.locked) || a.km - b.km);
   const ship = s.ship;
   return { routes, left: ferryLeft(game, s), why: ship && ship.docked === portId ? blocked(game, s, ship) : null };
 }
@@ -112,6 +126,7 @@ export function ferryGo(game: Game, s: PlayerSession, to: string): string | null
   const price = ferryCost(game, from, to);
   const dest = game.portById(to);
   if (price === null || !dest) return FERRY_WORDS.badTo;
+  if (!portKnown(game, s, to)) return FERRY_WORDS.unknown;
   const why = blocked(game, s, ship);
   if (why) return why;
   if (p.gold < price) return `The passage costs ${price} silver.`;

@@ -10,6 +10,7 @@ export const SERVER_RU_PASSAGE: Record<string, string> = {
   'Settle the mutiny first.': 'Сначала усмирите бунт.',
   'No passage with the hold more than 60% full: sell or store the cargo first.': 'Переход только если трюм заполнен не больше чем на 60%: сначала продайте груз или сдайте его на склад.',
   'No open water leads there now: the passage is off, nothing paid.': 'Чистой воды туда сейчас нет: переход отменён, серебро не списано.',
+  'Discover that port first.': 'Сначала откройте этот порт.',
   'The next passage in {0} min.': 'Следующий переход через {0} мин.',
   'The passage costs {0} silver.': 'Переход стоит {0} серебра.',
 };

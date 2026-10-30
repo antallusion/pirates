@@ -18,6 +18,7 @@ export const EN = {
   on: 'Passage to {to}: way ×{n} until you arrive',
   done: 'Arrived at {to}: putting in',
   hub: 'Hub of the passage',
+  locked: 'Discover this port first',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -38,4 +39,5 @@ export const RU: Record<keyof typeof EN, string> = {
   on: 'Переход в {to}: ход ×{n} до прибытия',
   done: 'Прибыли в {to}: заходим в порт',
   hub: 'Узел перехода',
+  locked: 'Сначала откройте этот порт',
 };

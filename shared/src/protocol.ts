@@ -939,7 +939,8 @@ export interface PrivateState {
 /** A hub port's «Переход» (owner, 2026-10-30, server ferry.ts): the other hubs with the straight distance and the
  *  price, the seconds of her cooldown left, and why she cannot go now (null: she can, silver permitting). */
 export interface FerryView {
-  routes: { to: string; km: number; price: number }[];
+  /** `locked`: a hub she has not discovered yet (never visited, under her fog): greyed, no passage. */
+  routes: { to: string; km: number; price: number; locked?: boolean }[];
   left: number;
   why: string | null;
 }

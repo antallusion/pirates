@@ -29,6 +29,11 @@ export function ferryHtml(state: ClientState, view: FerryView, here: boolean, le
   const rows = view.routes.map((r) => {
     const p = state.ports.find((q) => q.id === r.to);
     if (!p) return '';
+    // a hub she has not discovered (Нефигугум, post 24, topic 7): greyed, no button — and no faction or sea told
+    if (r.locked) {
+      const lock = here ? `<button type="button" class="btn btn-small fy-go" disabled>${esc(LF('go'))}</button>` : '';
+      return `<div class="fy-row fy-row--locked" title="${esc(LF('locked'))}"><span class="fy-to">${icon('weather_fog', '🌫', 'ico-sm')}<b>${esc(placeName(p.name))}</b><small>${esc(LF('locked'))}</small></span><span class="fy-km">${esc(LF('km', { km: dec1(r.km) }))}</span>${lock}</div>`;
+    }
     const can = here && !why && gold >= r.price;
     const btn = here
       ? `<button type="button" class="btn btn-small${can ? ' btn-primary' : ''} fy-go" data-ferry="${esc(r.to)}" ${can ? '' : 'disabled'} title="${esc(gold < r.price ? LF('short') : '')}">${esc(LF('go'))} ${money(r.price)}</button>`

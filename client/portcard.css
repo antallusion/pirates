@@ -127,6 +127,8 @@
 .fy-to b { white-space: nowrap; }
 .fy-to small { color: var(--k-bone, #cfc3a3); opacity: 0.75; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fy-km { font-variant-numeric: tabular-nums; opacity: 0.85; white-space: nowrap; font-size: 13px; }
+.fy-row--locked { opacity: 0.6; filter: grayscale(0.85); }
+.fy-row--locked small { opacity: 1; font-style: italic; }
 .fy-row .fy-go { min-height: 44px; min-width: 128px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .fy-price { white-space: nowrap; }
 .fy--compact .fy-row { min-height: 40px; }

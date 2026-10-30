@@ -5,7 +5,7 @@ import { drawHubMark, isFerryHub } from './ferry.ts'; // owner, 2026-10-30: «П
 import { artBgAttr, artBgWire } from './artfall.ts';
 import { aimArt } from './artaim.ts';
 import { zoneBossCard } from '../../../shared/src/data/paintart.ts';
-import { drawFog, drawScouts } from '../render/fog.ts'; // the fog of war (owner, 2026-10-17)
+import { drawFog, drawScouts, underFog } from '../render/fog.ts'; // the fog of war (owner, 2026-10-17)
 import { drawIslesMini, isleFill, wireMiniTip } from './islemap.ts'; // docs/18 III
 import { EN as SEAF_EN, RU as SEAF_RU } from '../lang/ui/seafight.ts';
 import { drawLfgFlag, drawSignalFlag, liveSignals, signalBar, worldGoalPlate } from './social.ts';
@@ -1697,7 +1697,7 @@ export class Hud {
       if (Math.abs(p.x - own.x) > range || Math.abs(p.y - own.y) > range) continue;
       g.fillStyle = '#e0b862';
       g.fillRect(tx(p.x) - 3, ty(p.y) - 3, 6, 6);
-      if (isFerryHub(p.id)) drawHubMark(g, tx(p.x) + 6, ty(p.y) - 6, 4.5); // a «Переход» hub (owner, 2026-10-30)
+      if (isFerryHub(p.id) && !underFog(state.seen, p.x, p.y)) drawHubMark(g, tx(p.x) + 6, ty(p.y) - 6, 4.5); // a «Переход» hub (owner, 2026-10-30)
     }
     // The fog of war (owner, 2026-10-17): what she has not seen lies under it — islands, ports, lairs, the sea's things;
     // ships, her marks and her scouts over it.
