@@ -280,7 +280,8 @@ test('boarding gives the captain\'s gear, the guns the ship\'s (docs/21 §5)', (
 test('the squad sim (docs/21 §4; owner 2026-10-26: NPC HP ×0.5): ten sink her in 6–10 min, five in 12–20, one alone never — and sinks', () => {
   const rows: string[] = [];
   // (owner 2026-10-26: NPC HP ×0.5 — her hull halved, the squads' minutes too: was 15–20 and 35–45)
-  const TEN = [6, 10], FIVE = [12, 20], PRESS = 0.15; // (6.3–8.3 and 12.6–16.7 min on the cut's commit; hard pressed was > 0.3)
+  // (owner 2026-10-30: NPC HP ×0.5 → ×0.625, +25 %, and the guns +100 m — the upper bounds ×1.25: were 6–10 and 12–20)
+  const TEN = [6, 12.5], FIVE = [12, 25], PRESS = 0.15; // (6.3–8.3 and 12.6–16.7 min on the cut's commit; hard pressed was > 0.3)
   for (const r of REGION_IDS) {
     const def = ZONE_BOSSES[r];
     const dps = soloDps(r);

@@ -38,6 +38,7 @@ import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { stopAutosail, autosailOf } from './autosail.ts';
 import { BOARD_ABEAM, BOARD_FAR, BOARD_SPEED, boardingRangeBetween, canBoard, captainsShip, crewRefuses, startBoarding } from './boarding.ts';
 import { BOARD_GAP, boardGap, hullOf } from '../../../shared/src/data/reach.ts';
+import { grappleWhy, startGrapple } from './grapple.ts'; // owner 2026-10-30
 import { NO_BOARD_HER, NO_BOARD_OWN, boardingOffVs, noBoardHolds } from './colours.ts';
 import { applyDamage, damageBlocked, effectiveRange, fireBroadside, fireChaser, sideHeading } from './combat.ts';
 import type { Game } from './Game.ts';
@@ -392,9 +393,12 @@ export function stepPursuit(game: Game): void {
         send(game, s, run);
         continue;
       }
-      if (run.grapple && d <= reach * 2.5 && interceptReady(game, s, ship, t)) {
+      // (owner 2026-10-30: the grapples fly within BOARD_OFFER of her hull, 100 m, and haul the two alongside — grapple.ts;
+      // the intercept only sails her in to it)
+      if (run.grapple && grappleWhy(game, ship, t) === null) {
         stopPursuit(game, s, 'board');
-        startBoarding(game, ship, t, 'standard');
+        if (canBoard(game, ship, t) === null) startBoarding(game, ship, t, 'standard'); // (alongside already)
+        else startGrapple(game, ship, t, 'standard');
         continue;
       }
       if (d >= ALONGSIDE_FROM) ship.input.sailTarget = 1;

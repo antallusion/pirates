@@ -94,7 +94,7 @@ export function boardGeomWhy(game: Game, a: ShipEntity, b: ShipEntity): string |
 
 export function canBoard(game: Game, a: ShipEntity, b: ShipEntity): string | null {
   if (!a.alive || !b.alive) return 'Nothing left to board';
-  if (a.boarding || b.boarding || a.boardAlly !== null || b.boardAlly !== null) return 'Already locked in a boarding action';
+  if (a.boarding || b.boarding || a.boardAlly !== null || b.boardAlly !== null || a.grapple || b.grapple) return 'Already locked in a boarding action';
   if (a.docked || b.docked) return 'Not at sea';
   if (a.surrendered) return 'You struck your colours';
   if (inDuel(game, a) || inDuel(game, b)) return 'No boarding in a duel';

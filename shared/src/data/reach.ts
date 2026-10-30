@@ -34,6 +34,17 @@ export const DOCK_SLOW = 4;
 export const BOARD_GAP = 12;
 export const BOARD_ARC_DEG = 35;
 export const BOARD_REL_SPEED = 8;
+/** A captain's «На абордаж» (owner, 2026-10-30: «абордаж должен быть доступен на расстоянии 100м, причем надо показать
+ *  после кнопки сближение кораблей … а не прям сразу фигарить»): offered once her mark's hull lies within this of hers —
+ *  hull edge to hull edge (hullsGap), on any bearing, at any way — and pressed, the grapples fly and the two ships are
+ *  hauled together (server grapple.ts) over GRAPPLE_SECS; alongside, the battle opens. While the lines hold the mark
+ *  cannot sail off: both ships are drawn to their spot alongside whatever their helms. */
+export const BOARD_OFFER = 100;
+/** The approach's seconds by the water between the hulls at the throw: 2 s alongside already, 4 s from the full 100 m. */
+export function grappleSecs(gap: number): number {
+  return Math.max(2, Math.min(4, 2 + Math.max(0, gap) / 50));
+}
+
 /** Bow and Stern (the talent) and Red Hook (the ultimate): grapples from any quarter within this of the beam. */
 export const BOARD_ARC_WIDE_DEG = 70;
 /** A parley across the water (the white flag asked of a ship firing on her): hull to hull, no farther than the guns

@@ -124,7 +124,10 @@ export const NPC_VOLLEYS = 0.7;
 /** Owner 2026-10-26 («мне на 3 уровне убил корабль 2 щас. бред. режь всем нпс прям на 50% хп»): every ship of the sea
  *  the server sails — pirates, patrols, hunters, merchants, the campaign's and the quests' foes, elites, hired escorts,
  *  beasts, bosses — has half the hull and half the canvas (ship.ts recompute). A captain's own ship never. */
-export const NPC_HP_MUL = 0.5;
+export const NPC_HP_MUL = 0.625;
+/** Owner 2026-10-30 («подбавь всем кораблям нпс где-то 25% хп к общему сейчас»): the sea's own ×0.5 → ×0.625 (+25 %); a
+ *  captain's own ship of the sea (her hired guard, her escort, her prize, her island's ship) keeps the old half. */
+export const NPC_OWNED_HP_MUL = 0.5;
 
 /** The table's broadsides: `def` her defence factor, `off` the shooter's offence factor (both 1 when bare). */
 export function seaVolleys(anchor: number, def: number, off: number): number {

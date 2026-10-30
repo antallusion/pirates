@@ -1,5 +1,16 @@
 // Dynamic combat (docs/11 P2): the held broadside and the dash. Shared so the client draws what the server rules.
 
+/** Owner 2026-10-30 («увеличь дальность всего оружия абсолютно всего на 100м»): every weapon at sea reaches this many
+ *  metres farther than its own numbers make it — the broadsides and the chasers whatever the shot (after every ×), the
+ *  deck mounts (ships.ts MOUNTS, their data), the captains' aimed orders (abilities.ts). The players' and the sea's own
+ *  alike; the falloff of a long ball is reckoned on the old reach (combat.ts), the close fight's band keeps its metres. */
+export const REACH_BONUS = 100;
+
+/** A gun's reach in metres: its own × her range × the shot's, and REACH_BONUS on top. */
+export function gunRange(base: number, rangeMul = 1, ammoMul = 1): number {
+  return base * rangeMul * ammoMul + REACH_BONUS;
+}
+
 /** Seconds a broadside's order is held for a full charge; a shorter press fires as before. */
 export const AIM_CHARGE = 1.2;
 /** A press shorter than this is a plain shot (no focus, no penalty). */

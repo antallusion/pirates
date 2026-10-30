@@ -6,9 +6,8 @@ import { WayWindow, mountFallen, resRid } from './ui/waystation.ts'; // docs/35
 import { setWayFog, wayName } from './render/waystations.ts'; // docs/35
 import { fogFarLayer, underFog } from './render/fog.ts'; // the fog of war (owner, 2026-10-17)
 import { WAY_SIZE, wayInReach } from '../../shared/src/world/waystations.ts'; // docs/35
-import { BOARD_ARC_DEG, BOARD_GAP, BOARD_REL_SPEED, DOCK_SLOW, REACH_DOCK, REACH_MOOR, REACH_OBJ, REACH_HINT, REACH_SHORE, alongsideWhy, boardGap, gapTo, shoreGap } from '../../shared/src/data/reach.ts'; // owner, 2026-10-22
+import { BOARD_OFFER, DOCK_SLOW, REACH_DOCK, REACH_MOOR, REACH_OBJ, REACH_HINT, REACH_SHORE, gapTo, hullsGap, shoreGap } from '../../shared/src/data/reach.ts'; // owner, 2026-10-22
 import type { Hull } from '../../shared/src/data/reach.ts';
-import { GRAPPLE_REACH } from '../../shared/src/data/gunnery.ts';
 import { dockGap } from '../../shared/src/world/dock.ts';
 import { onScreen, ownHull, viewHull } from './reachview.ts';
 import type { WayData } from '../../shared/src/wayproto.ts'; // docs/35
@@ -85,7 +84,7 @@ import { riskConfirm } from './ui/kit/risk.ts';
 import { wireSheetSwipe } from './ui/kit/sheet.ts';
 import { holdRedraw, installTapGuard, rescueTaps } from './ui/kit/taps.ts'; // ux2: taps never lost to a redraw
 import { wireHints } from './ui/kit/hint.ts';
-import { DASH_COOLDOWN, LAY_ARC_DEG, closeRange, suggestAmmo } from '../../shared/src/data/gunnery.ts';
+import { DASH_COOLDOWN, LAY_ARC_DEG, closeRange, gunRange, suggestAmmo } from '../../shared/src/data/gunnery.ts';
 import { EN as SEAF_EN, RU as SEAF_RU } from './lang/ui/seafight.ts';
 import { EN as SH_EN, RU as SH_RU } from './lang/ui/seahud.ts';
 import type { BoardRisk } from '../../shared/src/protocol.ts';
@@ -346,17 +345,27 @@ let noBoardWhy: string | null = null;
  *  her way — for the bar's muted line. */
 let boardNear: { name: string; why: 'far' | 'abeam' | 'speed'; gap: number } | null = null;
 
-/** Whether the grapples would fly between her and ship `id` now (reach.ts alongsideWhy, as the server reckons it):
- *  null — alongside; else why not and the water between the hulls. Undefined hulls: not alongside. */
+/** Whether «На абордаж» is offered on ship `id` now (owner 2026-10-30: her hull within BOARD_OFFER, 100 m, of the mark's —
+ *  hull edge to hull edge, any bearing, any way: the server's grapple.ts grappleWhy): null — offered; else 'far' and the
+ *  water between the hulls. Undefined hulls: far. */
 function boardWhy(id: number): { why: 'far' | 'abeam' | 'speed'; gap: number } | null {
-  const s = state.ships.get(id), me = ownHull(state), st = state.ownStats, own = state.ownDisplay;
+  const s = state.ships.get(id), me = ownHull(state);
   const her = s ? viewHull(s) : null;
-  if (!s || !me || !her || !st || !own) return { why: 'far', gap: Infinity };
-  const gap = boardGap(me, her);
-  const base = (34 + st.length * 0.5) * GRAPPLE_REACH;
-  // (a captain's own way matched within half again the lines' hold — boarding.ts boardGeomWhy)
-  const why = alongsideWhy(me, own.speed, her, s.cur.spd, { gapMul: Math.max(1, Math.min(2.5, st.boardingRange / base)), arcDeg: BOARD_ARC_DEG, anySpeed: !!(s.cur.flags & SF.SURRENDERED), relMax: BOARD_REL_SPEED * 1.5 });
-  return why ? { why, gap } : null;
+  if (!s || !me || !her) return { why: 'far', gap: Infinity };
+  const gap = hullsGap(me, her);
+  return gap <= BOARD_OFFER ? null : { why: 'far', gap };
+}
+
+/** The grapples thrown (owner 2026-10-30): her ship and the mark hauled together until `until` (world s). */
+let grappling: { with: number; until: number } | null = null;
+function grapplingNow(): { with: number; left: number } | null {
+  if (!grappling) return null;
+  const left = grappling.until - state.estServerTime();
+  if (left <= -1 || state.you?.flags !== undefined && (state.you.flags & SF.BOARDING)) {
+    grappling = null;
+    return null;
+  }
+  return { with: grappling.with, left: Math.max(0, left) };
 }
 
 /** The island a harbour stands on (its quays: dock.ts), as her chart has it. */
@@ -2601,6 +2610,10 @@ function onMessage(m: ServerMsg): void {
         else if (e.k === 'hit' && e.dmg > 0 && e.ship === state.entityId) buzz('hurt');
         else if (e.k === 'hit' && e.dmg > 0 && (e.ship === state.pursuit?.target || e.ship === targetId)) buzz('hit');
         else if (e.k === 'board_start' && (e.a === state.entityId || e.b === state.entityId)) buzz('board');
+        else if (e.k === 'grapple' && (e.a === state.entityId || e.b === state.entityId)) {
+          grappling = { with: e.a === state.entityId ? e.b : e.a, until: e.until }; // the approach (owner 2026-10-30)
+          buzz('board');
+        }
         else if (e.k === 'fx' && (e.fx === 'deep_call' || e.fx === 'rise' || e.fx === 'maw') && state.ownDisplay && dist(e.x, e.y, state.ownDisplay.x, state.ownDisplay.y) < 600) rumble(activePad(), 0.7, 0, 1200);
         audio.onEvent(e);
         if (e.k === 'region') {
@@ -3804,9 +3817,10 @@ function gatherActs(): { acts: Act[]; info: string[] } {
     // (her own guard, hired at sea or an escort, is nobody's deck to grapple: not even the hint — QA 2026-10-25)
     if (s.info.npcRole === 'escort' && !(c.flags & SF.HOSTILE)) continue;
     const d = dist(own.x, own.y, c.x, c.y);
-    if (d > st.boardingRange + st.length + cls.length) continue;
-    // Alongside only (owner, 2026-10-22): the hulls within the grapples' few metres, side by side, the way matched —
-    // the server's own rule (reach.ts); close but not yet, the bar says what is left (her mark's).
+    if (d > BOARD_OFFER + REACH_HINT * 3 + st.length + cls.length) continue;
+    // Within 100 m of her hull (owner, 2026-10-30; was alongside only, 2026-10-22) — the server's own rule (grapple.ts);
+    // close but not yet, the bar says what is left (her mark's): «Подойдите ближе: N м».
+    if (grapplingNow()) continue; // (the grapples already thrown: the approach, no second button)
     const bw = boardWhy(s.id);
     if (bw !== null) {
       if (s.id === (state.pursuit?.target ?? targetId) && bw.why) boardNear = { name: placeName(s.info.name), ...bw };
@@ -3835,7 +3849,9 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   const info: string[] = [];
   const facts: ActFacts = { grabbed: grabbed() };
   if (best !== null) facts.board = { name: placeName(state.ships.get(best)?.info?.name ?? L('her')) };
-  else if (boardNear && boardNear.gap < REACH_HINT) info.push(esc(boardNear.why === 'far' ? nearWords(LR8('board'), boardNear.gap - BOARD_GAP) : LR8(boardNear.why === 'abeam' ? 'abeam' : 'speed', { name: boardNear.name })));
+  else if (boardNear && boardNear.gap - BOARD_OFFER < REACH_HINT * 3) info.push(esc(LR8('closer', { name: boardNear.name, m: Math.max(1, Math.ceil(boardNear.gap - BOARD_OFFER)) })));
+  const gr = grapplingNow();
+  if (gr) info.unshift(esc(LR8('approach', { name: placeName(state.ships.get(gr.with)?.info?.name ?? L('her')), s: Math.ceil(gr.left) })));
   // A harbour's waters, and her hull within its approach (owner, 2026-10-22: 40 m of its anchorage or quays — dock.ts);
   // in its waters short of it, the bar says how far is left.
   const me = ownHull(state);
@@ -4208,7 +4224,7 @@ function openRoamLook(v: RoamView): void {
 function gunReach(): number {
   const self = state.self, you = state.you;
   if (!self || !you) return 0;
-  return Math.max(GUNS[self.loadout.guns.port].range, GUNS[self.loadout.guns.starboard].range) * (state.ownStats?.rangeMul ?? 1) * (AMMO[you.ammoSel]?.rangeMul ?? 1);
+  return gunRange(Math.max(GUNS[self.loadout.guns.port].range, GUNS[self.loadout.guns.starboard].range), state.ownStats?.rangeMul ?? 1, AMMO[you.ammoSel]?.rangeMul ?? 1);
 }
 
 /** The close fight's «в дальности» (owner, 2026-10-07): her mark within the band her gun captains fire in
@@ -4218,7 +4234,7 @@ function markRange(): 'in' | 'far' | null {
   const s = id !== null ? state.ships.get(id) : undefined, own = state.ownDisplay, self = state.self, you = state.you;
   if (!s?.info || !own || !self || !you || self.dockedAt || s.cur.flags & (SF.SINKING | SF.DOCKED)) return null;
   if (!(s.cur.flags & SF.HOSTILE) && !state.pursuit) return null;
-  const reach = Math.max(GUNS[self.loadout.guns.port].range, GUNS[self.loadout.guns.starboard].range) * (state.ownStats?.rangeMul ?? 1) * (AMMO[you.ammoSel]?.rangeMul ?? 1);
+  const reach = gunRange(Math.max(GUNS[self.loadout.guns.port].range, GUNS[self.loadout.guns.starboard].range), state.ownStats?.rangeMul ?? 1, AMMO[you.ammoSel]?.rangeMul ?? 1);
   return dist(own.x, own.y, s.cur.x, s.cur.y) <= closeRange(reach).far ? 'in' : 'far';
 }
 
@@ -4231,7 +4247,7 @@ function bestShot(): 'round' | 'chain' | 'grape' | null {
   if (!s?.info || !own || !self || self.dockedAt || !(s.cur.flags & SF.HOSTILE || state.pursuit)) return null;
   const range = GUNS[self.loadout.guns.port].range * (state.ownStats?.rangeMul ?? 1);
   return suggestAmmo({
-    board: state.pursuit?.mode !== 'guns', d: dist(own.x, own.y, s.cur.x, s.cur.y), grapeRange: range * AMMO.grape.rangeMul, chainRange: range * AMMO.chain.rangeMul,
+    board: state.pursuit?.mode !== 'guns', d: dist(own.x, own.y, s.cur.x, s.cur.y), grapeRange: gunRange(range, 1, AMMO.grape.rangeMul), chainRange: gunRange(range, 1, AMMO.chain.rangeMul),
     crewShare: s.cur.crew, sailShare: s.cur.sails, faster: s.cur.spd > own.speed + 1,
   });
 }
@@ -4248,7 +4264,7 @@ function fireVolley(): void {
 function targetBears(id: number): boolean {
   const s = state.ships.get(id), own = state.ownDisplay, self = state.self, you = state.you;
   if (!s || !own || !self || !you) return false;
-  const range = GUNS[self.loadout.guns.port].range * (state.ownStats?.rangeMul ?? 1) * (AMMO[you.ammoSel]?.rangeMul ?? 1);
+  const range = gunRange(GUNS[self.loadout.guns.port].range, state.ownStats?.rangeMul ?? 1, AMMO[you.ammoSel]?.rangeMul ?? 1);
   if (dist(own.x, own.y, s.cur.x, s.cur.y) > range) return false;
   const bearing = Math.atan2(s.cur.x - own.x, -(s.cur.y - own.y));
   return Math.abs(Math.abs(angleDiff(bearing, own.heading)) - Math.PI / 2) <= (LAY_ARC_DEG * Math.PI) / 180;
@@ -5087,7 +5103,7 @@ function touchFire(side: 'port' | 'starboard'): void {
 function touchAim(side: 'port' | 'starboard'): boolean {
   const own = state.ownDisplay;
   if (!own || !state.self) return false;
-  const range = GUNS[state.self.loadout.guns[side]].range * (state.ownStats?.rangeMul ?? 1);
+  const range = gunRange(GUNS[state.self.loadout.guns[side]].range, state.ownStats?.rangeMul ?? 1);
   const tgt = touchTarget(range * 1.05, (l) => (l.x < 0) === (side === 'port') && Math.abs(l.x) > Math.abs(l.y) * 0.5);
   const p = tgt ?? padAimPoint(own.x, own.y, own.heading, side, range * 0.66, 0);
   aimAt(p.x, p.y);
@@ -5213,7 +5229,7 @@ function pollPad(dt: number): void {
   }
   // Aim: the right stick sets range (up = further) and lead; a locked ship draws the aim onto her.
   if (padAim && own) {
-    padAim.range = clamp(padAim.range - ry * 225 * dt, 30, 450); // (to the mortar's 450 m, the longest reach afloat)
+    padAim.range = clamp(padAim.range - ry * 225 * dt, 30, 550); // (to the mortar's 550 m, the longest reach afloat — +100 m, owner 2026-10-30)
     padAim.lead = clamp(padAim.lead + rx * 250 * dt, -250, 250);
     const tgt = padTarget !== null ? state.ships.get(padTarget) : undefined;
     if (tgt) aimAt(tgt.cur.x, tgt.cur.y);

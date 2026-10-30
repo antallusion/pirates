@@ -113,7 +113,7 @@ export const EN = {
   'term.chain.tip': "Two balls on a chain: shreds sails and rigging, slows the enemy.",
   'term.grape': "grapeshot",
   'term.grape.plain': "shot for the crew",
-  'term.grape.tip': "A bag of musket balls: clears the deck before a boarding.",
+  'term.grape.tip': "A bag of musket balls: clears the deck before a boarding and tears the sails.",
   'term.broadside': "broadside",
   'term.broadside.plain': "all guns of one side",
   'term.broadside.tip': "Every gun on one side fired together.",

@@ -1,7 +1,7 @@
 // Server-side ship entity: the authoritative state of every vessel (player or NPC) at sea.
 
 import { regattaSail } from '../../../shared/src/data/regatta.ts';
-import { NPC_HP_MUL, NPC_VOLLEYS } from '../../../shared/src/data/seabalance.ts';
+import { NPC_HP_MUL, NPC_OWNED_HP_MUL, NPC_VOLLEYS } from '../../../shared/src/data/seabalance.ts';
 import { TORN_RIGGING, tornRiggingMul } from '../../../shared/src/data/seaskill.ts';
 import type { NemesisCause } from '../../../shared/src/data/nemesis.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
@@ -250,6 +250,8 @@ export class ShipEntity {
   fuseAt = 0; // fireship charges
   spoilAcc: Partial<Record<GoodId, number>> = {};
   tether: Tether | null = null;
+  /** The grapples thrown (owner 2026-10-30, grapple.ts): the two ships hauled alongside until `until`, then the battle. */
+  grapple: { with: number; attacker: boolean; from: number; until: number; side: 1 | -1; aggression: 'careful' | 'standard' | 'brutal' } | null = null;
   unsinkableReadyAt = 0;
   lastStandUntil = 0;
   doubleShotArmed = false;
@@ -515,9 +517,11 @@ export class ShipEntity {
     if (this.seaScale) this.stats.hullMax = Math.round(this.stats.hullMax * this.seaScale.hull * (this.ownerId !== null && !this.elite ? 1 / NPC_VOLLEYS : 1));
     // Owner 2026-10-26 («режь всем нпс прям на 50% хп»): every ship the server sails — of every role, the beasts, the
     // bosses and their parts, a hired escort and a captain's own island ship too — half her hull and half her canvas.
+    // (owner 2026-10-30: +25 % to the sea's own, ×0.625; a captain's own ship keeps ×0.5)
     if (this.npcRole !== null && !this.isPlayer && this.npcHalved) {
-      this.stats.hullMax = Math.max(1, Math.round(this.stats.hullMax * NPC_HP_MUL));
-      this.stats.sailHpMax = Math.max(1, Math.round(this.stats.sailHpMax * NPC_HP_MUL));
+      const mul = this.ownerId !== null ? NPC_OWNED_HP_MUL : NPC_HP_MUL;
+      this.stats.hullMax = Math.max(1, Math.round(this.stats.hullMax * mul));
+      this.stats.sailHpMax = Math.max(1, Math.round(this.stats.sailHpMax * mul));
     }
     if (this.hull > this.stats.hullMax) this.hull = this.stats.hullMax;
     if (this.sails > this.stats.sailHpMax) this.sails = this.stats.sailHpMax;
