@@ -41,6 +41,7 @@ import { TIER_SHIP_LEVEL, TIER_UNIT, dwellingOf } from '../../../shared/src/data
 import { UNITS } from '../../../shared/src/data/army.ts';
 import { shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
 import { unitIcon, unitName } from './army.ts';
+import { srcAttr } from './srctip.ts'; // «Где взять» (owner, 2026-10-30)
 
 const L = dict(EN, RU);
 const PM = dict(PM_EN, PM_RU);
@@ -549,6 +550,16 @@ export class IsleScene {
     this.select({ town: id }, true);
   }
 
+  /** «Где взять» (owner, 2026-10-30): a building asked first — a town building's card, a building of the base's own on
+   *  its plot (or the free plots' list to raise it on), else the hall's. */
+  openThing(id: string): void {
+    if (isTreeTown(id) || id === 'grail' || id === 'pen') return this.showTown(id as TownId);
+    const v = this.state?.base;
+    const c = v?.cells.find((x) => x.what === id) ?? v?.cells.find((x) => !x.what);
+    if (c) return this.select({ plot: c.plot }, true);
+    this.showTown('hall');
+  }
+
   /** «Плыть к острову»: the scene's way out to sail her home (main.ts: leave the island, the route `own`). */
   onSailHome: () => void = () => {};
 
@@ -730,7 +741,7 @@ export class IsleScene {
     switch (st.state) {
       case 'ready': return `<p class="pr-st ok">${esc(L('st_ready'))}</p>`;
       case 'lack': {
-        const goods = st.lack.map((x) => `<span class="bcost lack" title="${esc(GOODS[x.good].name)}">${icon(`good_${x.good}`, '', 'ico-sm')}${fmt(x.n)}</span>`).join('');
+        const goods = st.lack.map((x) => `<span class="bcost lack"${srcAttr(`g:${x.good}`, st.goods[x.good] ?? x.n, Math.max(0, (st.goods[x.good] ?? x.n) - x.n))}>${icon(`good_${x.good}`, '', 'ico-sm')}${fmt(x.n)}</span>`).join('');
         return `${goods ? `<p class="pr-st">${esc(L('st_lack'))} <span class="bcosts">${goods}</span></p>` : ''}${st.silverLack > 0 ? `<p class="pr-st">${esc(L('st_silver', { n: fmt(st.silverLack) }))}</p>` : ''}${goods ? `<p class="pr-st muted pr-where">${esc(L('st_lackWhere'))}</p>` : ''}`;
       }
       case 'busy': return `<p class="pr-st">${esc(L('st_busy'))}</p>`;
@@ -749,7 +760,7 @@ export class IsleScene {
     if (!plan || !plan.steps.length) return '';
     const gold = (state.self?.gold ?? 0) + Math.max(0, v.claim?.treasury ?? 0); // (the treasury pays first)
     const cost = (st: IslePlanStepView) => `<span class="bcosts"><span class="bcost${gold < st.silver ? ' lack' : ''}">${money(st.silver)}</span>${(Object.entries(st.goods) as [GoodId, number][]).map(([g, n]) =>
-      `<span class="bcost${st.lack.some((x) => x.good === g) ? ' lack' : ''}" title="${esc(GOODS[g].name)}">${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}</span>`).join('')}<span class="bcost btimec">⏱ ${esc(spanText(st.secs))}</span></span>`;
+      `<span class="bcost${st.lack.some((x) => x.good === g) ? ' lack' : ''}"${srcAttr(`g:${g}`, n, n - (st.lack.find((x) => x.good === g)?.n ?? 0))}>${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}</span>`).join('')}<span class="bcost btimec">⏱ ${esc(spanText(st.secs))}</span></span>`;
     const rows = plan.steps.map((st, i) => {
       const key = recKey(st);
       const art = key ? this.picOf(key) : null;

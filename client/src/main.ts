@@ -23,7 +23,8 @@ import { FishFightPanel } from './ui/fishfight.ts';
 import { NetHaulPanel } from './ui/nethaul.ts';
 import { departHooks, departOrAsk } from './ui/depart.ts';
 import { adviceFor, showAdvice } from './ui/buyadvice.ts';
-import { RouteRun } from './ui/goalrun.ts'; // ux2 / route: the run to a goal's nearest place
+import { RouteRun } from './ui/goalrun.ts';
+import { mountSrcTip } from './ui/srctip.ts'; // «Где взять» (owner, 2026-10-30) // ux2 / route: the run to a goal's nearest place
 import { EN as UX2_EN, RU as UX2_RU } from './lang/ui/ux2.ts';
 import type { AutosailStop } from '../../shared/src/data/autosail.ts';
 import { EncounterCard } from './ui/encounter.ts';
@@ -684,6 +685,17 @@ isleScene.onSailHome = () => {
   leaveIsle(false);
   startGoal('own');
 };
+// «Где взять» (owner, 2026-10-30): a cost's tooltip — «Плыть» to the nearest seller, a building asked first opens its card
+mountSrcTip({
+  go: (key) => {
+    leaveIsle(false);
+    startGoal(key);
+  },
+  open: (id) => {
+    if (!isleScene.isOpen) openBase();
+    if (isleScene.isOpen) isleScene.openThing(id);
+  },
+});
 // The premium shop (owner, 2026-10-03): from the micro menu and the cabin; `topup` opens it at the packs.
 const premiumWindow = new PremiumWindow((m) => net.send(m));
 premiumWindow.toast = (msg, kind) => hud.toast(msg, kind);

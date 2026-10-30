@@ -23,6 +23,7 @@ import { askHtml } from './confirm.ts';
 import { dec1, esc, fmt } from './dom.ts';
 import { placeName } from './maps.ts';
 import { unitName } from './army.ts';
+import { srcAttr } from './srctip.ts'; // «Где взять» (owner, 2026-10-30): a building asked first opens its card
 
 export const T29 = dict(EN, RU);
 const ru = () => (lang() === 'ru' ? 1 : 0);
@@ -48,7 +49,7 @@ export function needsHtml(needs: { id: string; level: number; have: number }[] |
   if (!needs?.length) return `<p class="muted tr-none">${esc(T29('asksNone'))}</p>`;
   return `<div class="tr-asks"><span class="muted">${esc(T29('asks'))}</span><ul class="tr-needs">${needs.map((n) => {
     const ok = n.have >= n.level;
-    return `<li class="${ok ? 'ok' : 'no'}"><b aria-hidden="true">${ok ? '✓' : '✗'}</b> ${esc(n.id === 'hall' ? TOWN.hall.names[0][ru()] : treeLabel(n.id, n.level))} ${n.level}${ok ? '' : ` <span class="muted">(${n.have})</span>`}</li>`;
+    return `<li class="${ok ? 'ok' : 'no'}"${ok ? '' : srcAttr(`b:${n.id}`, n.level, n.have)}><b aria-hidden="true">${ok ? '✓' : '✗'}</b> ${esc(n.id === 'hall' ? TOWN.hall.names[0][ru()] : treeLabel(n.id, n.level))} ${n.level}${ok ? '' : ` <span class="muted">(${n.have})</span>`}</li>`;
   }).join('')}</ul></div>`;
 }
 

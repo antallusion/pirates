@@ -5772,3 +5772,22 @@ html.app-paused *, html.app-paused *::before, html.app-paused *::after { animati
 .ih-good { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-top: 1px solid rgba(201, 164, 106, 0.18); font-size: 12.5px; }
 .ih-gn { flex: 1; min-width: 0; }
 .tw-why.bad { color: #e8a08a; }
+
+/* «Где взять» (owner, 2026-10-30): a cost's good, land resource or building asked first answers with where it is had
+   (client/src/ui/srctip.ts) — the minimap tooltip's dark plate and brass edge, its own buttons. */
+[data-src] { cursor: help; }
+.bcost[data-src] { text-decoration: underline dotted rgba(224, 184, 98, 0.55); text-underline-offset: 3px; }
+.tr-needs li[data-src] { text-decoration: underline dotted rgba(224, 184, 98, 0.45); text-underline-offset: 3px; }
+[data-src].st-on { outline: 1px solid var(--gold); outline-offset: 1px; }
+.srctip { position: fixed; z-index: 400; max-width: 300px; padding: 8px 10px 9px; border-radius: 6px; background: rgba(10, 12, 14, 0.96); border: 1px solid rgba(176, 141, 87, 0.7); color: #e8dcc0; font: 400 12.5px/1.35 Inter, sans-serif; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6); }
+.srctip.hidden { display: none; }
+.srctip p { margin: 3px 0 0; }
+.srctip .st-h { display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--gold); }
+.srctip .st-have { color: #cfc3a6; }
+.srctip .st-have.bad { color: var(--bad, #d77a5f); }
+.srctip .st-where { margin-top: 6px; font: 700 11px/1.2 Inter, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; color: #b08d57; }
+.srctip .st-list { margin: 3px 0 0; padding: 0 0 0 14px; }
+.srctip .st-list li { margin: 2px 0; }
+.srctip .st-act { margin-top: 7px; display: flex; }
+.srctip .st-act .btn { flex: 1 1 auto; justify-content: center; }
+@media (max-height: 420px) { .srctip { font-size: 12px; padding: 6px 8px 7px; } .srctip .st-list li { margin: 1px 0; } }
