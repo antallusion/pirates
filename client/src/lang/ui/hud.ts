@@ -225,9 +225,26 @@ export const EN = {
   "i1.wait": "the barracks rise in {t}",
   "i1.waitDw1": "the bunkhouse rises in {t}",
   "i1.first": "the Bunkhouse first — next to free",
+  // forum 2026-10-30 (Нефигугум): the hold's bar, the overload, the escorts' bars
+  holdOver: 'OVERLOAD',
+  holdT: 'Hold: {used} of {max} m³ ({pct}%). Overloaded from {at}%.',
+  holdOverT: 'Overloaded: speed −{n}%. From {at}% of the hold this hull slows. Sell or jettison cargo.',
+  holdToast: 'OVERLOAD: the hold is {pct}% full, speed −{n}%. Jettison or sell cargo to lighten her.',
+  escT: '{name}: hull {hull}%{crew}. Tap: look at her.',
+  escCrew: ', crew {n}%',
+  escMore: '+{n}',
+  escMoreT: 'More escorts: {n}',
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
+  holdOver: 'ПЕРЕГРУЗ',
+  holdT: 'Трюм: {used} из {max} м³ ({pct}%). Перегруз с {at}%.',
+  holdOverT: 'Перегруз: скорость −{n}%. С {at}% трюма этот корпус теряет ход. Продайте или сбросьте груз.',
+  holdToast: 'ПЕРЕГРУЗ: трюм заполнен на {pct}%, скорость −{n}%. Сбросьте или продайте груз, чтобы облегчить корабль.',
+  escT: '{name}: корпус {hull}%{crew}. Нажмите, чтобы посмотреть на него.',
+  escCrew: ', команда {n}%',
+  escMore: '+{n}',
+  escMoreT: 'Ещё сопровождение: {n}',
   lv: 'Ур. {n}',
   unknownToLaw: 'Закону не известен',
   talentPts: '[T] очков таланта: {n}',

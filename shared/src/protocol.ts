@@ -8,6 +8,7 @@ import type { ArmyAdvice } from './data/armyadvice.ts';
 import type { BuyFail, BuySeller } from './data/buyfail.ts';
 import type { CeasefireView } from './data/ceasefire.ts';
 import type { HireOffer, HireView } from './data/seahire.ts';
+import type { HoldView } from './data/overload.ts';
 import type { QuestKind } from './data/questclass.ts';
 import type { RequestKind } from './data/fates.ts';
 import type { OmenId } from './data/omens.ts';
@@ -845,7 +846,9 @@ export interface PrivateState {
   streak?: { n: number; mul: number } | null;
   figureheads: FigureheadId[];
   /** Hired escorts (Command) and the formation signal. */
-  fleet: { escorts: { id: string; name: string; classId: ShipClassId; hull: number; atSea: boolean; own?: boolean }[]; slots: number; formation: 'line' | 'wedge' | 'ring'; upkeep: number };
+  fleet: { escorts: { id: string; name: string; classId: ShipClassId; hull: number; atSea: boolean; own?: boolean; /** her ship's entity at sea (the HUD's escort bars) */ eid?: number; /** her crew, per cent */ crew?: number }[]; slots: number; formation: 'line' | 'wedge' | 'ring'; upkeep: number };
+  /** The hold as the HUD's fourth bar shows it, and the overload (shared/src/data/overload.ts; forum 2026-10-30). */
+  hold?: HoldView | null;
   /** Admiral's Eye: what you can read of ships near you. */
   inspect: { id: number; hull: number; crew: number; morale: number; port: boolean; starboard: boolean }[];
   /** Eyes of the Choir: monsters and ghost ships far beyond sight. */

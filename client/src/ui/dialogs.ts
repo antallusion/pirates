@@ -3,7 +3,8 @@
 import { mountFallen } from './waystation.ts'; // docs/35
 import { bindCompanion, bottleCard, chestCard, companionCard, petsCard } from './companion.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
-import { ask } from './confirm.ts';
+import { ask, askHtml } from './confirm.ts';
+import { holdFill } from '../../../shared/src/data/overload.ts'; // forum 2026-10-30: the overload, the jettison's hold after
 import { placeName } from './maps.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { AMMO_IDS, AMMO, KEYED_AMMO, SHIP_CLASSES, GUNS, FLEET_LISTS } from '../../../shared/src/data/ships.ts';
@@ -16,7 +17,7 @@ import { serverText } from '../lang/server.ts';
 import { keyLabel, settings } from '../settings.ts';
 import type { Action } from '../settings.ts';
 import { logbookHtml } from './onboarding.ts';
-import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
+import { cargoVolume, tx } from '../../../shared/src/sim/shipstats.ts';
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import type { ClientState } from '../state.ts';
 import { assetUrl } from '../assets.ts';
@@ -212,7 +213,7 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
   const used = cargoVolume(self.cargo, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
   root.innerHTML = `<div class="modal-head ship-head"><div class="ship-hero">${art ? `<img src="${art}" alt="" draggable="false" />` : ''}</div><div><h2>${esc(self.loadout.trophy ? placeName(self.loadout.name) : self.loadout.name)}</h2><div class="sub">${esc(cls.name)} — ${esc(cls.role)}</div><div class="sub ship-passive">${icon('xp', '', 'ico-sm')}${esc(L('ship.passive', { name: cls.passive.name, text: cls.passive.description }))}</div>${giftLine(cls.id)}</div><div class="ship-head-r">${openGear ? `<button class="btn btn-small btn-primary" data-open-gear>${icon('menu_cabin', '', 'ico-sm')}${esc(L('ship.gear'))}</button>` : ''}${openLook ? `<button class="btn btn-small" data-open-look>${icon('faction_free', '', 'ico-sm')}${esc(L('ship.look'))}</button>` : ''}${scuttle && !self.dockedAt ? `<button class="btn btn-small btn-danger" data-scuttle title="${esc(LA('ship.scuttleT'))}">${icon('map_wreck', '', 'ico-sm')}${esc(LA('ship.scuttle'))}</button>` : ''}<div class="muted">${esc(L('ship.close', { key: kb('ship') }))}</div></div></div>
     <div class="modal-body"><div class="stat-grid">
-      ${tile('stat_sails', L('ship.speed'), esc(L('ship.speedVal', { v: dec1(st.maxSpeed) })))}
+      ${tile('stat_sails', L('ship.speed'), `${esc(L('ship.speedVal', { v: dec1(st.maxSpeed) }))}${self.hold?.over ? `<small class="ship-over">${esc(L('ship.over', { n: self.hold.slow, v: dec1(st.maxSpeed * (1 - self.hold.slow / 100)) }))}</small>` : ''}`)}
       ${tile('menu_ship', L('ship.turn'), esc(L('ship.turnVal', { v: dec1((st.turnRate * 180) / Math.PI) })))}
       ${tile('anchor', L('ship.draft'), `${esc(L('ship.draftVal', { v: dec1(cls.draft) }))}<small>${esc(cls.passive.id === 'shallow_runner' ? L('ship.draftShallow', { name: cls.passive.name }) : L('ship.draftDeep'))}</small>`)}
       ${tile('wind', L('ship.noGo'), esc(L('ship.noGoVal', { deg: st.noGoDeg.toFixed(0), rig: L(`rig.${cls.rig}`) })))}
@@ -228,7 +229,7 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
       ${tile('insurance', L('ship.insurance'), esc(self.insured ? L('ship.insured') : L('ship.none')))}
     </div>
     <div class="cols" style="margin-top:12px"><div>
-      <h3 class="title-sm" style="font-size:20px">${esc(L('ship.hold'))} <small class="muted">${dec1(used)} / ${st.holdVolume.toFixed(0)}</small></h3>
+      <h3 class="title-sm" style="font-size:20px">${esc(L('ship.hold'))} <small class="muted">${dec1(used)} / ${st.holdVolume.toFixed(0)}</small>${self.hold?.over ? ` <small class="ship-over">${esc(L('ship.overHold', { at: self.hold.at, n: self.hold.slow }))}</small>` : ''}</h3>
       <div class="hold-fill" title="${esc(holdMixText(holdMix(self.cargo, st), 99))}">${holdMix(self.cargo, st).map((p) => `<i class="hf-${p.good}" style="width:${Math.max(0.5, (p.vol / Math.max(1, st.holdVolume)) * 100).toFixed(1)}%" title="${esc(GOODS[p.good].name)}"></i>`).join('')}</div>
       <div class="cargo-list${hasSale ? ' has-sale' : ''}${self.dockedAt ? '' : ' has-dump'}">${cargo.map(([g, n, v]) => {
         const a = self.appraisal?.[g as GoodId];
@@ -256,8 +257,40 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
   root.querySelectorAll<HTMLElement>('[data-dump]').forEach((el) => (el.onclick = () => {
     const g = el.dataset.dump as GoodId;
     const n = Math.floor(self.cargo[g] ?? 0);
-    if (send) void ask(L('ship.jettison', { n, good: lang() === 'ru' ? GOODS[g].name.toLowerCase() : GOODS[g].name })).then((ok) => ok && send({ t: 'jettison', good: g, qty: n }));
+    if (send && n > 0) void askJettison(g, n, self.cargo, st).then((k) => k > 0 && send({ t: 'jettison', good: g, qty: k }));
   }));
+}
+
+/** The jettison's sheet (forum 2026-10-30): how many over the side, the hold after, and where it goes — a crate astern
+ *  any captain may fish up (server Game.ts dumpNow). Resolves the count, 0 for «no». */
+export function askJettison(g: GoodId, have: number, cargo: Cargo, st: NonNullable<ClientState['ownStats']>): Promise<number> {
+  const good = GOODS[g];
+  const pctAfter = (k: number) => Math.floor(holdFill({ ...cargo, [g]: Math.max(0, (cargo[g] ?? 0) - k) }, st) * 100 + 1e-6);
+  const now = Math.floor(holdFill(cargo, st) * 100 + 1e-6);
+  let n = have;
+  const body = `<div class="jet"><h3 class="jet-h" id="confirm-text">${esc(L('ship.jetTitle'))}</h3>
+    <div class="jet-good">${icon(`good_${g}`, '', 'item-ico')}<b>${esc(good.name)}</b><span class="muted">${esc(L('ship.jetHave', { n: have }))}</span></div>
+    <div class="jet-n"><input type="range" id="jet-r" min="1" max="${have}" step="1" value="${have}" aria-label="${esc(good.name)}" /><input type="number" id="jet-v" min="1" max="${have}" step="1" value="${have}" inputmode="numeric" aria-label="${esc(good.name)}" /></div>
+    <div class="jet-q">${[[0.25, '¼'], [0.5, '½'], [1, L('ship.jetAll')]].map(([f, t]) => `<button type="button" class="btn btn-small" data-jq="${f}">${esc(String(t))}</button>`).join('')}</div>
+    <p class="jet-after" id="jet-after">${esc(L('ship.jetHold', { a: now, b: pctAfter(have) }))}</p>
+    <p class="jet-note">${esc(L(tx(st, 'quickDump') > 0 ? 'ship.jetMarked' : 'ship.jetCrate'))}</p></div>`;
+  const done = askHtml(body, L('ship.jetGo', { n }), undefined, 'jet-panel');
+  const r = document.getElementById('jet-r') as HTMLInputElement | null, v = document.getElementById('jet-v') as HTMLInputElement | null;
+  const set = (k: number) => {
+    n = Math.max(1, Math.min(have, Math.round(k) || 1));
+    if (r) r.value = String(n);
+    if (v && document.activeElement !== v) v.value = String(n);
+    const after = document.getElementById('jet-after');
+    if (after) after.textContent = L('ship.jetHold', { a: now, b: pctAfter(n) });
+    const yes = document.querySelector<HTMLElement>('#confirm [data-yes]');
+    const lbl = yes?.querySelector<HTMLElement>('.k-btn-l') ?? yes;
+    if (lbl) lbl.textContent = L('ship.jetGo', { n });
+  };
+  r?.addEventListener('input', () => set(Number(r.value)));
+  v?.addEventListener('input', () => set(Number(v.value)));
+  v?.addEventListener('change', () => { v.value = String(n); });
+  document.querySelectorAll<HTMLElement>('#confirm [data-jq]').forEach((b) => (b.onclick = () => set(Math.ceil(have * Number(b.dataset.jq)))));
+  return done.then((ok) => (ok ? n : 0));
 }
 
 export function renderHelp(root: HTMLElement, onboarding: OnboardingView | null = null): void {

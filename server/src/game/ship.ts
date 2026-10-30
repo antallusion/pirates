@@ -32,6 +32,7 @@ import type { SanityState } from './mind.ts';
 import type { Formation } from './fleet.ts';
 import type { TacBattle } from './tacbattle.ts';
 import type { Rng } from '../../../shared/src/rng.ts';
+import { holdFill, overloadMul } from '../../../shared/src/data/overload.ts'; // forum 2026-10-30: «ПЕРЕГРУЗ»
 
 /** A captain's sea abilities at work on her ship (docs/25 items 13–41): what the next broadsides carry and when. */
 export interface KitState {
@@ -557,7 +558,7 @@ export class ShipEntity {
       crewFactor: crewFactor(st, this.crew),
       loadFactor: loadFactor(this.loadout, st, this.cargo, this.ammo) * (1 - 0.4 * Math.min(1, this.water / (st.holdWeight * 0.5 + st.length * 2))),
       // (torn rigging, the Reaver's ram: a multiplier on top of every buff of her speed — owner, 2026-10-29)
-      speedMul: (night ? 1 + st.nightSpeed : 1) * (this.hull < st.hullMax * 0.3 ? 0.85 : 1) * tornRiggingMul(this.effects, now),
+      speedMul: (night ? 1 + st.nightSpeed : 1) * (this.hull < st.hullMax * 0.3 ? 0.85 : 1) * tornRiggingMul(this.effects, now) * this.overloadMul(),
       personalWind: st.flags.has('personal_wind'),
       weatherly: this.cls.passive.id === 'weatherly',
       sweeps: this.cls.passive.id === 'sweeps',
@@ -565,6 +566,11 @@ export class ShipEntity {
     };
     // Equal waters (docs/12 P10 #5): a racer sails with the handling the regatta lends everyone.
     return st.flags.has('regatta_equal') ? regattaSail(p) : p;
+  }
+
+  /** A captain's hold filled to her hull's line slows her (shared/src/data/overload.ts); the sea's own ships sail as loaded. */
+  overloadMul(): number {
+    return this.isPlayer ? overloadMul(this.loadout.classId, holdFill(this.cargo, this.stats)) : 1;
   }
 
   inCombat(now: number): boolean {

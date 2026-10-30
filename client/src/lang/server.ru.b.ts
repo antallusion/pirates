@@ -763,6 +763,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "{0} will not sail with you": "{0} не пойдёт с вами",
   "{0} {1} from your order wait in your warehouse here.": "{1} × {0} из вашей заявки ждут на вашем складе здесь.",
   "{0} {1} over the side in marked casks.": "За борт в меченых бочках: {1} × {0}.",
+  "{0} {1} over the side: the crate floats astern for ten minutes.": "За борт: {1} × {0}. Ящик плавает за кормой десять минут, подобрать может любой.",
   "{0} {1} silver for lost cargo": "{0} {1} серебра за утраченный груз",
   "{0} {1} silver for {2}{3}.": "{0} {1} серебра за {2}{3}.",
   "{0} {1} spoiled in the damp hold.": "В сыром трюме испортилось: {1} × {0}.",
