@@ -11,10 +11,13 @@ import { chapterOfSlot } from '../../../shared/src/data/campaign/progress.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { cosItem } from '../../../shared/src/data/cosmetics.ts';
 import { arenaTable } from './arena.ts';
+import { monthOf } from '../../../shared/src/data/pvprank.ts';
+import { monthTally, pastSeasons } from './pvprank.ts';
 import type { Game } from './Game.ts';
 
-export type Board = 'level' | 'glory' | 'boarded' | 'arena' | 'campaign' | 'guilds';
-export const BOARDS: Board[] = ['level', 'glory', 'boarded', 'arena', 'campaign', 'guilds'];
+export type Board = 'level' | 'glory' | 'boarded' | 'arena' | 'pvp' | 'campaign' | 'guilds';
+/** «pvp»: this month's PvP points (owner, 2026-10-30; pvprank.ts), with the month's kills and deaths. */
+export const BOARDS: Board[] = ['level', 'glory', 'boarded', 'arena', 'pvp', 'campaign', 'guilds'];
 export const TOP = 100;
 export const RATING_TTL = 60_000;
 /** Who is in the game now is read afresh at most this often (owner, 2026-10-29: «"в сети" должны показываться люди кто
@@ -40,6 +43,9 @@ export interface RatingRow {
   value: number;
   /** A second number where the board has one: glory rank on «level», wins on «arena», the campaign done (1). */
   sub?: number;
+  /** «pvp»: the month's captains sunk or taken, and her deaths to captains. */
+  kills?: number;
+  deaths?: number;
   guild: string | null;
   title: string | null;
   plate: string | null;
@@ -82,6 +88,9 @@ interface Cap {
   arena: number;
   arenaN: number;
   arenaW: number;
+  pvp: number;
+  pvpK: number;
+  pvpD: number;
   guild: string | null;
   title: string | null;
   plate: string | null;
@@ -95,6 +104,7 @@ interface ProfileLike {
   throne?: { rank?: number; xp?: number };
   stats?: { boarded?: number };
   campaign?: { at?: number };
+  pvpr?: unknown;
 }
 
 /** The accounts the load-test and the testers sail (tools/bot.ts «Bot xxxxxx», «QA …», «Test …»). */
@@ -145,6 +155,7 @@ export class SiteRating {
     if (this.snap && at - this.snap.at < (this.opts.ttl ?? RATING_TTL)) return this.snap;
     const game = this.game;
     const arena = new Map(arenaTable(game).map((r) => [r.acc, r]));
+    const month = monthOf(game.wallNow());
     const caps: Cap[] = [];
     for (const row of game.db.allCaptains()) {
       if (!row.name || this.hidden(row.account_id, row.name)) continue;
@@ -162,6 +173,7 @@ export class SiteRating {
         acc: row.account_id, name: row.name, captain: p.captain, level: Math.max(1, num(p.level, 1)), xp: num(p.xp),
         glory: num(p.throne?.rank), gloryXp: num(p.throne?.xp), boarded: num(p.stats?.boarded), campaign: Math.min(CAMPAIGN_SIZE, num(p.campaign?.at)),
         arena: a && a.n > 0 ? num(a.r) : 0, arenaN: a ? num(a.n) : 0, arenaW: a ? num(a.w) : 0,
+        ...((t) => ({ pvp: t?.pts ?? 0, pvpK: t?.kills ?? 0, pvpD: t?.deaths ?? 0 }))(monthTally(p.pvpr, month)),
         guild: game.guilds.of(game, row.account_id)?.tag ?? null, ...this.wardrobe(row.account_id),
       });
     }
@@ -191,11 +203,13 @@ export class SiteRating {
       case 'glory': return by((c) => [c.glory, c.gloryXp, c.level]).filter((c) => c.level >= MAX_LEVEL);
       case 'boarded': return by((c) => [c.boarded, c.level]).filter((c) => c.boarded > 0);
       case 'arena': return by((c) => [c.arena, c.arenaW, c.level]).filter((c) => c.arenaN > 0);
+      case 'pvp': return by((c) => [c.pvp, c.pvpK, -c.pvpD]).filter((c) => c.pvp > 0);
       case 'campaign': return by((c) => [c.campaign, c.level]).filter((c) => c.campaign > 0);
     }
   }
 
   private row(b: Exclude<Board, 'guilds'>, c: Cap, rank: number): RatingRow {
+    if (b === 'pvp') return { rank, name: c.name, captain: c.captain, level: c.level, value: c.pvp, kills: c.pvpK, deaths: c.pvpD, guild: c.guild, title: c.title, plate: c.plate, frame: c.frame };
     const value = b === 'level' ? c.level : b === 'glory' ? c.glory : b === 'boarded' ? c.boarded : b === 'arena' ? c.arena : chapterOfSlot(c.campaign >= CAMPAIGN_SIZE ? CAMPAIGN_SIZE - 1 : c.campaign).ch;
     const sub = b === 'level' && c.glory > 0 ? c.glory : b === 'arena' ? c.arenaW : b === 'campaign' && c.campaign >= CAMPAIGN_SIZE ? 1 : undefined;
     return { rank, name: c.name, captain: c.captain, level: c.level, value, ...(sub !== undefined ? { sub } : {}), guild: c.guild, title: c.title, plate: c.plate, frame: c.frame };
@@ -264,6 +278,17 @@ export class SiteRating {
     }
     const rows = [...(snap.lists.get(b) ?? new Map<Cap, number>())].filter(([c]) => on.accs.has(c.acc)).sort((x, y) => x[1] - y[1]).slice(0, TOP).map(([c, rank]) => this.row(b, c, rank));
     return { board: b, at: on.at, rows };
+  }
+
+  /** The PvP seasons closed (newest first): each month's top ten, the hidden left out, no account ids. */
+  pvpSeasons(): ReturnType<typeof pastSeasons> {
+    return pastSeasons(this.game, (acc, name) => this.hidden(acc, name));
+  }
+
+  /** A public captain's PvP tally this month (the site's profile): null for none. */
+  pvpOf(acc: number): { pts: number; kills: number; deaths: number } | null {
+    const c = this.read().caps.find((x) => x.acc === acc);
+    return c && c.pvp > 0 ? { pts: c.pvp, kills: c.pvpK, deaths: c.pvpD } : null;
   }
 
   /** A captain by her name (case aside): her card and her places; null when there is no such public captain. */

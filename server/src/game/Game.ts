@@ -294,6 +294,7 @@ import { citView, stepCitadels } from './citadels.ts'; // docs/19 E4–E8
 import { admView, contractPointer, stepContracts } from './admiralty.ts'; // docs/19 E15
 import { registerAdmiralty } from '../../../shared/src/data/admiralty.ts';
 import { arenaView, stepArena } from './arena.ts'; // docs/19 E14
+import { pvpRankKill, pvpRankMessage, stepPvpRank } from './pvprank.ts'; // the PvP points (owner, 2026-10-30)
 import { shoreBossPrompt, stepShoreBosses } from './shorebosses.ts'; // the great ones ashore (owner, 2026-10-03)
 import { installLandHooks } from './landecon.ts'; // docs/18 V
 import { driftMessage, stepDrifts } from './drifts.ts'; // docs/18 IV
@@ -1170,6 +1171,7 @@ export class Game {
     stepSocial(this);
     stepPost(this);
     stepPvp(this);
+    stepPvpRank(this); // the PvP season's turn, the season's titles (pvprank.ts)
     stepHoldings(this);
     stepGuilds(this);
     stepSieges(this);
@@ -2553,6 +2555,7 @@ export class Game {
       if (victim.wantedCache >= 3) grantDeed(this, s, 'deed_wanted_legend');
       // Crown and captains' bounties, repeat kills, the Shame, the right of revenge; war score.
       onPlayerKill(this, killer, victim, how);
+      pvpRankKill(this, killer, victim, how, paid); // the PvP points and the month's table (pvprank.ts)
       onWarKill(this, killer, victim, how);
     }
     // Contracts: a ship counts on one bounty only, and a grey one on none (docs/26: no prize paid twice).
@@ -3667,6 +3670,7 @@ export class Game {
     if (msg.t === 'premium' && (msg.action === 'checkout' || msg.action === 'checkout_check')) return gameCheckout(this, s, msg);
     if (msg.t === 'premium') return premiumMessage(this, s, msg); // the premium shop (owner, 2026-10-03)
     if (msg.t === 'cos') return cosMessage(this, s, msg); // docs/32 §12: the cosmetics
+    if (msg.t === 'pvprank') return pvpRankMessage(this, s, msg); // the PvP points (owner, 2026-10-30)
     if (msg.t === 'scout') return scoutMessage(this, s, msg); // the island's scouts (owner, 2026-10-17)
     if (msg.t === 'way') return wayMessage(this, s, msg); // docs/35: the floating waystations, the resurrection
     if (msg.t === 'army') return armyMessage(this, s, msg); // owner, 2026-10-28: split, merge, dismiss a stack

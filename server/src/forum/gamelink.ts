@@ -55,6 +55,7 @@ export function gameLink(game: Game, db: Db, presence?: () => Presence): GameLin
     online: (id) => (presence ? presence().isOnline(id) : !!game.sessionByAccount(id)),
     inGame: () => (presence ? presence().onlineAccounts().length : game.sessions.size),
     letter: (acc, n) => void forumLetter(game, acc, n),
+    lastPlayed: (id) => db.seenOf?.(id)?.seen || null,
     onlineIds: () => (presence ? presence().onlineAccounts() : [...game.sessions].filter((s) => s.authed && s.disconnectedAt === null).map((s) => s.accountId)),
   };
 }

@@ -72,6 +72,7 @@ import type { RoamClientMsg, RoamServerMsg } from './roamproto.ts'; // docs/19 D
 import type { PremiumClientMsg, PremiumServerMsg } from './premiumproto.ts'; // the premium shop (owner, 2026-10-03)
 import type { WayClientMsg, WayData, WayServerMsg } from './wayproto.ts'; // docs/35: the floating waystations, the resurrection
 import type { CosClientMsg, CosServerMsg } from './cosproto.ts'; // docs/32 §12: the cosmetics
+import type { PvpRankClientMsg, PvpRankServerMsg } from './pvprankproto.ts'; // the PvP points (owner, 2026-10-30)
 import type { IsleType } from './world/archipelago.ts';
 import type { CommonKind } from './data/commongoal.ts';
 import type { InvasionView } from './data/invasions.ts';
@@ -401,6 +402,7 @@ export type ClientMsg =
   /** The premium shop (owner, 2026-10-03): its view, a hull or a kind bought for doubloons. */
   | PremiumClientMsg
   | CosClientMsg
+  | PvpRankClientMsg
   /** docs/35: the floating waystations and the resurrection of the fallen. */
   | WayClientMsg
   /** The dense sea's marks (driftwood, wrecks, buoys…): work the one within reach, or leave off. */
@@ -2240,6 +2242,7 @@ export type ServerMsg =
   /** The premium shop (owner, 2026-10-03): its view, and her account's doubloons. */
   | PremiumServerMsg
   | CosServerMsg
+  | PvpRankServerMsg
   /** docs/35: the waystation's window, her fallen and their price. */
   | WayServerMsg
   /** The marks she has worked (no more today) and the one her boats are at now (world seconds). */

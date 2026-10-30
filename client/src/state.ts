@@ -45,6 +45,7 @@ import { placeName } from './ui/maps.ts';
 import type { RegionId } from '../../shared/src/world/regions.ts';
 import type { PremiumView } from '../../shared/src/premiumproto.ts';
 import type { CosView } from '../../shared/src/cosproto.ts';
+import type { PvpRankView } from '../../shared/src/pvprankproto.ts';
 import { holdFill, overloadMul } from '../../shared/src/data/overload.ts'; // forum 2026-10-30: «ПЕРЕГРУЗ», as the server reckons it
 
 export interface ShipSample {
@@ -221,6 +222,8 @@ export class ClientState {
   premium: PremiumView | null = null;
   /** docs/32 §12: her wardrobe — what she owns and wears of the cosmetics. */
   cos: CosView | null = null;
+  /** Her PvP page (the Captain window's «ПвП»; owner, 2026-10-30). */
+  pvprank: PvpRankView | null = null;
   puzzle: PuzzleView | null = null;
   puzzleAt = 0;
   /** One's own caravans (docs/12 P8). */
@@ -617,6 +620,9 @@ export class ClientState {
         break;
       case 'cos':
         this.cos = m.view;
+        break;
+      case 'pvprank':
+        this.pvprank = m.view;
         break;
       case 'premium':
         this.premium = m.view;

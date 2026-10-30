@@ -50,6 +50,7 @@
   const sub = (b, r) => {
     if (b === 'level' && r.sub) return `<i>${esc(t.glory)} ${nf.format(r.sub)}</i>`;
     if (b === 'arena' && r.sub !== undefined) return `<i>${nf.format(r.sub)} ${esc(t.wins)}</i>`;
+    if (b === 'pvp') return `<i>${nf.format(r.kills || 0)} ${esc(t.kills)} · ${nf.format(r.deaths || 0)} ${esc(t.deaths)}</i>`;
     if (b !== 'level') return `<i>${esc(t.lvl)} ${r.level}</i>`;
     return '';
   };
@@ -70,7 +71,60 @@
     empty.textContent = onlineOnly ? t.onEmpty : t.empty;
     atEl.textContent = v.at ? `${t.at}: ${new Date(v.at).toLocaleTimeString(data.lang === 'ru' ? 'ru-RU' : 'en-GB', { hour: '2-digit', minute: '2-digit' })}` : '';
   };
+  // ---- the PvP board (owner, 2026-10-30): its rules under the tabs, and «Прошлые сезоны» — each closed month's top ten
+  const onRow = root.querySelector('.rt-onrow');
+  const pastBtn = d.createElement('button');
+  pastBtn.type = 'button';
+  pastBtn.className = 'chip rt-past';
+  pastBtn.setAttribute('role', 'switch');
+  pastBtn.title = t.pvpPastTip;
+  pastBtn.innerHTML = `<span>${esc(t.pvpPast)}</span>`;
+  onRow.appendChild(pastBtn);
+  const note = d.createElement('p');
+  note.className = 'rt-note muted';
+  note.textContent = t.pvpRules;
+  onRow.after(note);
+  let pastOn = new URLSearchParams(location.search).get('past') === '1';
+  const MONTHS = String(t.months).split(',');
+  const monthName = (m) => `${MONTHS[m % 12] || ''} ${Math.floor(m / 12)}`;
+  const pvpDress = (b) => {
+    const pvp = b === 'pvp';
+    pastBtn.hidden = !pvp;
+    note.hidden = !pvp;
+    pastBtn.classList.toggle('on', pastOn);
+    pastBtn.setAttribute('aria-checked', String(pastOn));
+    onBtn.hidden = pvp && pastOn;
+  };
+  const showPast = async () => {
+    unitEl.textContent = meta('pvp').unit;
+    root.querySelector('.rt-col').textContent = t.colCap;
+    root.querySelector('.rt-board').setAttribute('aria-busy', 'true');
+    try {
+      const hit = cache.get('pvp|past');
+      let v = hit && Date.now() - hit.got < 60_000 ? hit.v : null;
+      if (!v) {
+        const r = await fetch(`${data.api}/pvp-seasons`, { headers: { Accept: 'application/json' } });
+        if (!r.ok) throw new Error(String(r.status));
+        v = await r.json();
+        cache.set('pvp|past', { v, got: Date.now() });
+      }
+      if (board() !== 'pvp' || !pastOn) return;
+      const seasons = v.seasons || [];
+      list.innerHTML = seasons.map((se) => `<li class="rt-season"><h3>${esc(monthName(se.month))}</h3></li>${se.top.map((r) => rowHtml('pvp', { ...r, value: r.pts })).join('')}`).join('');
+      empty.hidden = seasons.length > 0;
+      empty.textContent = t.pvpNone;
+      atEl.textContent = '';
+    } catch {
+      list.innerHTML = '';
+      empty.hidden = false;
+      empty.textContent = t.err;
+    } finally {
+      root.querySelector('.rt-board').removeAttribute('aria-busy');
+    }
+  };
   const load = async (b) => {
+    pvpDress(b);
+    if (b === 'pvp' && pastOn) return void showPast();
     const on = onlineOnly, key = `${b}|${on ? 1 : 0}`;
     const hit = cache.get(key);
     if (hit && Date.now() - hit.got < (on ? ONLINE_MS : 60_000)) return show(b, hit.v);
@@ -98,6 +152,8 @@
     u.searchParams.set('board', b);
     if (onlineOnly) u.searchParams.set('online', '1');
     else u.searchParams.delete('online');
+    if (b === 'pvp' && pastOn) u.searchParams.set('past', '1');
+    else u.searchParams.delete('past');
     history.replaceState(null, '', u);
     void load(b);
   };
@@ -113,6 +169,10 @@
     pick(board());
   });
   setSwitch();
+  pastBtn.addEventListener('click', () => {
+    pastOn = !pastOn;
+    pick(board());
+  });
   /** Who is in the game now: the count on the switch, the dots in the list (redrawn when the set has changed). */
   const pollOnline = async () => {
     try {
@@ -295,6 +355,9 @@
       tile(CI.level, ct.lvl, fmt(v.level), v.glory ? `${esc(ct.glory)} ${fmt(v.glory)}` : ''),
       v.army.stacks.length ? tile(CI.power, ct.power, short(v.army.power), `${fmt(v.army.men)} ${esc(ct.men)}`) : '',
       v.ship ? tile(CI.ship, ct.tShip, esc(tr(v.ship.clsName)), `⚓${v.ship.level}`) : '',
+      p.season && (p.season.pts > 0 || p.all.pts > 0) ? tile(CI.pvpPts, ct.pvpPts, fmt(p.season.pts), p.season.rank ? esc(ct.place.replace('{n}', fmt(p.season.rank))) : '') : '',
+      p.all && p.all.pts > 0 ? tile(CI.pvpPts, ct.pvpAll, fmt(p.all.pts), `${esc(ct.pvpKd)} ${fmt(p.all.kills)}/${fmt(p.all.deaths)}`) : '',
+      p.all && p.all.kills > 0 ? tile(CI.sunk, ct.pvpKills, fmt(p.all.kills), p.all.best > 1 ? `${esc(ct.pvpBest)} ${fmt(p.all.best)}` : '') : '',
       tile(CI.pvp, ct.pvp, fmt(p.rating), p.duels ? `${fmt(p.wins)}/${fmt(p.duels)}` : ''),
       p.arena !== null ? tile(CI.arena, ct.arena, fmt(p.arena), `${fmt(p.arenaWins)} ${esc(ct.wins)}`) : '',
       p.wanted > 0 ? tile(CI.wanted, ct.wanted, esc(tr(p.wantedName))) : '',

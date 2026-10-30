@@ -180,6 +180,7 @@ import { RES_GOODS } from '../../../shared/src/data/mines.ts';
 import { OMEN_IDS } from '../../../shared/src/data/omens.ts';
 import { SEA_SKILLS, captainSkills, facetKey, skillRank } from '../../../shared/src/data/seaskill.ts';
 import { adminCos } from './cosmetics.ts'; // docs/32 §12
+import { adminPvpRank } from './pvprank.ts'; // the PvP points (owner, 2026-10-30)
 
 export function adminEnabled(): boolean {
   return process.env.GRAVETIDE_ADMIN === '1';
@@ -265,6 +266,9 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
     // docs/32 §12: the cosmetics — all of them hers, one worn, all forgotten.
     case 'cos':
       return adminCos(game, s, args);
+    // the PvP points (pvprank.ts): her record, points added, the season closed now
+    case 'pvprank':
+      return adminPvpRank(game, s, args);
     // the campaign's place for the QA of its middle chapters (QA 2026-10-22): a chapter's first quest, a slot, a step done
     case 'camp':
       return adminCamp(game, s, args);

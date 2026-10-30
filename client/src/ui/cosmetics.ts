@@ -208,6 +208,7 @@ function foot(x: CosItem, v: CosView, sv: ShopView, offerId: string): string {
   if (s === 'own') return x.kind === 'emote' ? `<span class="cos-own">${esc(L('own'))}</span>` : `<button type="button" class="btn btn-small btn-primary" data-coswear="${slot}" data-id="${esc(x.id)}">${esc(L('wear'))}</button>`;
   if (s === 'earn') return `<span class="cos-earn" title="${esc(earnText(x.earn!, v))}"><small>${esc(earnText(x.earn!, v))}</small><i class="cos-bar"><b style="width:${earnPct(x.earn!, v)}%"></b></i></span>`;
   if (s === 'only') {
+    if (x.only === 'pvp_season') return `<span class="cos-only">${esc(L('onlyPvp'))}</span>`; // pvprank.ts
     const b = BUNDLES.find((y) => y.id === x.only);
     return `<span class="cos-only">${esc(L('only', { b: b ? T(b.name) : '' }))}</span>`;
   }

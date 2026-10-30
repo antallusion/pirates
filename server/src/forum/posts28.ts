@@ -297,3 +297,23 @@ export function postReplies29(store: ForumStore, now: number): number {
   });
   return n;
 }
+
+/** An official topic from the administration (the game's own news: the PvP season's results, pvprank.ts) in a section,
+ *  written once by its title. True: written. */
+export function postOfficial(store: ForumStore, section: string, title: string, body: string, now: number): boolean {
+  const s = store.sectionBySlug(section);
+  if (!s || store.sectionTopics(s.id, true, 0, 500).some((x) => x.title === title)) return false;
+  store.tx(() => {
+    const tid = store.addTopic(s.id, SYSTEM_ID, title, now);
+    const p = store.addPost(tid, SYSTEM_ID, body, null, now);
+    store.touchTopic(tid, p.id, SYSTEM_ID, now, true);
+    store.setTopic(tid, { official: 1 });
+    store.setPost(p.id, { official: 1 });
+    store.index('t', tid, title);
+    store.index('p', p.id, plainText(body));
+    store.bump(SYSTEM_ID, 'posts', 1);
+    store.bump(SYSTEM_ID, 'topics', 1);
+    store.bump(SYSTEM_ID, 'official', 1);
+  });
+  return true;
+}

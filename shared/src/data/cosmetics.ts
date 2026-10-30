@@ -107,6 +107,10 @@ export const TITLES: CosItem[] = [
   item({ id: 'admiral', kind: 'title', tier: 4, earn: { k: 'level', n: 60 }, name: T('Admiral of the Seas', 'Адмирал морей') }),
   item({ id: 'phantom', kind: 'title', tier: 3, only: 'cos_halloween', name: T('Phantom Captain', 'Призрачный капитан') }),
   item({ id: 'frost', kind: 'title', tier: 3, only: 'cos_winter', name: T('Frost Corsair', 'Ледяной корсар') }),
+  // the PvP season's top three (shared/src/data/pvprank.ts): worn through the month after it, then taken back
+  item({ id: 'pvp1', kind: 'title', tier: 4, only: 'pvp_season', name: T('Terror of the Seas', 'Гроза морей') }),
+  item({ id: 'pvp2', kind: 'title', tier: 4, only: 'pvp_season', name: T('Sea Hawk', 'Морской ястреб') }),
+  item({ id: 'pvp3', kind: 'title', tier: 3, only: 'pvp_season', name: T('The Boarder', 'Абордажник') }),
 ];
 
 // ------------------------------------------------------------------------------------------------ plates
@@ -177,6 +181,8 @@ export const CLOTHS: ClothDef[] = [
   cloth('teal', T('Deep Teal', 'Бирюза глубин'), '#164a4c', '#e3f2ea', 290),
   cloth('ember', T('Ember', 'Тлеющий уголь'), '#8a3b12', '#f6e2c0', 290),
   cloth('slate', T('Slate', 'Сланец'), '#3d454f', '#eef0ee', 290),
+  // the PvP season's banner (pvprank.ts): the top three's for good
+  { id: 'pvp', kind: 'cloth', tier: 3, name: T('Season Banner', 'Знамя сезона'), rgb: '#3e0d1a', ink: '#e9c46a', only: 'pvp_season' },
 ];
 
 // ------------------------------------------------------------------------------------------------ trails

@@ -5827,3 +5827,52 @@ html.app-paused *, html.app-paused *::before, html.app-paused *::after { animati
 .yd-esc-l { margin: 4px 0 2px; padding: 0 0 0 16px; font-size: 12px; line-height: 1.4; }
 .yd-esc small { font-size: 11px; line-height: 1.3; display: block; }
 @media (max-height: 420px) { .bth-text { display: none; } .bth-card { grid-template-columns: 60px minmax(0, 1fr) auto; } .bth-btns { min-width: 92px; } }
+/* ---- the Captain window's «ПвП» page (owner, 2026-10-30; client/src/ui/pvprank.ts) */
+.pv { display: flex; flex-direction: column; gap: 8px; }
+.pv b { font-variant-numeric: lining-nums tabular-nums; }
+.pv .card { margin-bottom: 0; }
+.pv-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border-color: var(--gold); box-shadow: 0 0 12px rgba(224, 184, 98, 0.18); }
+.pv-season { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 160px; }
+.pv-season > span { display: flex; flex-direction: column; }
+.pv-season b { font-family: var(--display); font-weight: 400; font-size: 20px; color: var(--bone); line-height: 1.1; }
+.pv-season small { color: var(--fog); font-size: 12px; }
+.pv-big { display: flex; gap: 18px; }
+.pv-big > span { display: flex; flex-direction: column; align-items: center; min-width: 70px; }
+.pv-big b { font-family: var(--sans); font-weight: 700; font-size: 26px; color: var(--gold); line-height: 1; font-variant-numeric: tabular-nums; }
+.pv-big i { font-style: normal; font-size: 11px; color: var(--fog); text-align: center; }
+.pv-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.pv-stat { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid rgba(176, 141, 87, 0.45); border-radius: 6px; background: rgba(20, 16, 10, 0.55); min-width: 0; }
+.pv-stat .ico-md { width: 30px; height: 30px; flex: none; }
+.pv-stat > span { display: flex; flex-direction: column; min-width: 0; }
+.pv-stat b { font-family: var(--sans); font-weight: 700; font-size: 17px; color: var(--bone); line-height: 1.05; white-space: nowrap; }
+.pv-stat b .pv-of { font-size: 14px; color: var(--fog); }
+.pv-hd { border-bottom-color: rgba(255, 255, 255, 0.1); padding-top: 0; }
+.pv-hd .pv-kd, .pv-hd .pv-pt { font: 400 10px/1.2 var(--sans); color: var(--fog); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+.pv-stat i { font-style: normal; font-size: 11px; color: var(--fog); line-height: 1.15; overflow-wrap: anywhere; }
+.pv-stat small { font-size: 10px; color: #b9a77e; line-height: 1.15; overflow-wrap: anywhere; }
+.pv-legend { margin: -2px 0 0; font-size: 11px; text-align: right; }
+.pv-list { list-style: none; margin: 6px 0 0; padding: 0; }
+.pv-row { display: grid; grid-template-columns: 26px 30px minmax(0, 1fr) auto 54px; gap: 8px; align-items: center; padding: 3px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+.pv-row .pv-face { width: 30px; height: 30px; }
+.pv-rk { font-family: var(--sans); font-weight: 700; font-size: 14px; color: var(--fog); text-align: center; }
+.pv-row.top1 .pv-rk { color: #f2cf6b; } .pv-row.top2 .pv-rk { color: #d6dde4; } .pv-row.top3 .pv-rk { color: #d89a5e; }
+.pv-nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pv-nm b { color: var(--bone); }
+.pv-nm em { font-style: normal; font-size: 11px; color: var(--gold); }
+.pv-nm small { margin-left: 6px; color: var(--fog); font-size: 11px; }
+.pv-kd { font-size: 12px; color: var(--fog); font-variant-numeric: tabular-nums; }
+.pv-pt { font-family: var(--sans); font-weight: 700; font-size: 15px; color: var(--gold); text-align: right; font-variant-numeric: tabular-nums; }
+.pv-row.me { background: rgba(224, 184, 98, 0.12); border-radius: 4px; }
+.pv-gap { text-align: center; color: var(--fog); line-height: 1; }
+.pv-last { margin: 0; font-size: 12px; }
+.pv-rw { list-style: none; margin: 6px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 14px; font-size: 12px; }
+.pv-rw li { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; min-width: 0; }
+.pv-rw li > b { flex: none; min-width: 56px; color: var(--bone); }
+.pv-rw .money { white-space: nowrap; }
+.pv-title { font-style: normal; color: #e9c46a; }
+.pv-rules ul { margin: 6px 0 0; padding-left: 18px; font-size: 12px; line-height: 1.4; color: var(--fog); }
+@media (max-width: 700px), (max-height: 500px) {
+  .pv-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pv-rw { grid-template-columns: minmax(0, 1fr); }
+  .pv-big b { font-size: 22px; }
+}

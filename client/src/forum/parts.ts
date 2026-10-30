@@ -212,4 +212,8 @@ export function loginCta(): string {
 export const crumbs = (items: [string, string | null][]): string =>
   `<nav class="f-crumbs" aria-label="breadcrumbs">${items.map(([label, h]) => (h ? `<a href="${h}">${esc(label)}</a>` : `<span>${esc(label)}</span>`)).join('<i aria-hidden="true">›</i>')}</nav>`;
 
-export const memberCard = (a: Author): string => `<a class="f-member reveal" href="${userHref(a)}" style="--tint:${tint(a)}">${avatar(a, 'm')}<span class="f-member-t"><span class="f-nick">${esc(a.name)}</span>${roleBadge(a.role)}<span class="f-rank">${rankBadge(a.rank, 18)}${esc(rankName(a.rank))}</span>${charLine(a)}</span><span class="f-member-n"><b>${fmtNum(a.posts)}</b>${esc(noun(a.posts, 'posts'))}</span></a>`;
+/** A member's card; a captain in the game with no forum profile (the «Кто в сети» list: `forum: false`) is linked to her
+ *  public card in the site's rating instead. */
+export const memberCard = (a: Author & { forum?: boolean }): string => a.forum === false
+  ? `<a class="f-member reveal" href="${esc(`${LANG === 'en' ? '/site/en/' : '/site/'}rating/?captain=${encodeURIComponent(a.name)}`)}" style="--tint:${tint(a)}">${avatar(a, 'm')}<span class="f-member-t"><span class="f-nick">${esc(a.name)}</span>${charLine(a)}</span></a>`
+  : `<a class="f-member reveal" href="${userHref(a)}" style="--tint:${tint(a)}">${avatar(a, 'm')}<span class="f-member-t"><span class="f-nick">${esc(a.name)}</span>${roleBadge(a.role)}<span class="f-rank">${rankBadge(a.rank, 18)}${esc(rankName(a.rank))}</span>${charLine(a)}</span><span class="f-member-n"><b>${fmtNum(a.posts)}</b>${esc(noun(a.posts, 'posts'))}</span></a>`;

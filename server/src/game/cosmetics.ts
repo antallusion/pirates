@@ -154,6 +154,35 @@ export function dressShip(game: Game, s: PlayerSession): void {
   game.refreshInfo(ship);
 }
 
+/** Things given and taken back by the game itself (the PvP season's title through its month, its banner: pvprank.ts),
+ *  in the zone she sails in: a thing taken back comes off her too (a title gives way to the free words). True: changed. */
+export function cosSync(game: Game, s: PlayerSession, add: readonly string[], drop: readonly string[]): boolean {
+  const st = cosState(game, s.accountId);
+  let changed = false;
+  for (const k of drop) {
+    const i = st.own.indexOf(k);
+    if (i < 0) continue;
+    st.own.splice(i, 1);
+    changed = true;
+    const [kind, id] = k.split(':') as [keyof CosEquip, string];
+    if ((EQUIP_SLOTS as string[]).includes(kind) && st.eq[kind] === id) {
+      if (kind === 'title') st.eq.title = st.eq.plate ? 'seawolf' : null;
+      else if (kind === 'cloth') st.eq.cloth = st.eq.emblem ? 'black' : null;
+      else st.eq[kind] = null;
+    }
+  }
+  for (const k of add) {
+    if (!cosItem(k) || st.own.includes(k) || FREE_KEYS.includes(k)) continue;
+    st.own.push(k);
+    changed = true;
+  }
+  if (!changed) return false;
+  save(game, s.accountId, st);
+  dressShip(game, s);
+  sendCos(game, s);
+  return true;
+}
+
 const equipTimes = new WeakMap<PlayerSession, number[]>();
 
 /** Whether a change of dress is within her pace (each one re-sends her ship's card to everyone in sight): EQUIP_BURST
