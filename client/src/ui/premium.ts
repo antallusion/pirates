@@ -7,7 +7,7 @@
 // asks, and names each purchase with an id of its own so a message sent twice buys once.
 
 import { sendCheckout } from '../checkout.ts'; // the receipt's e-mail asked first (owner, 2026-10-21)
-import { AUTO_SCROLL_ICON, DOUBLOON_PACKS } from '../../../shared/src/data/premium.ts';
+import { AUTO_SCROLL_ICON, DOUBLOON_PACKS, EXCHANGE_MAX, EXCHANGE_PRESETS, EXCHANGE_SILVER_PER_DOUBLOON, exchangeSilver } from '../../../shared/src/data/premium.ts';
 import { DEAL_OFF, OFFERS, SHOP, TAB_SECS, offerBonus } from '../../../shared/src/data/shop.ts';
 import type { ShopFamily, ShopOffer, ShopSec, ShopTab } from '../../../shared/src/data/shop.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
@@ -20,6 +20,7 @@ import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import type { UnitId } from '../../../shared/src/data/army.ts';
 import { assetUrl } from '../assets.ts';
 import { dict, lang, plural } from '../i18n.ts';
+import { serverText } from '../lang/server.ts';
 import { EN as AEN, RU as ARU } from '../lang/ui/army.ts';
 import { EN, RU } from '../lang/ui/premium.ts';
 import { EN as FEN, RU as FRU } from '../lang/ui/fleet.ts';
@@ -260,6 +261,27 @@ export function topUp(v: PremiumView, state: ClientState): string {
     ${pay ? `<p class="pm-paynote">${cur === 'votes' ? `${doubloonIcon('ico-sm')}${esc(vkPayNote())}` : yk ? `${doubloonIcon('ico-sm')}${esc(L('yk.note'))}` : `${starIcon()}${esc(tgPayNote())}`}</p>` : `<p class="pm-soon">${icon('tab_letters', '', 'ico-sm')}${esc(L('top.note'))}</p>`}${webShopLink(state)}</div>`;
 }
 
+/** The exchange (owner, 2026-10-30: «реализуй обмен дублонов на серебро»): the doubloons to give — a field, a slider and
+ *  the quick picks — the silver they bring, live, and the confirm; after it, what was given and got. */
+export function exchangePage(balance: number, silver: number, n: number, st: { busy: boolean; done: { d: number; s: number } | null; why: string | null }): string {
+  const cap = Math.min(balance, EXCHANGE_MAX);
+  const picks = [...EXCHANGE_PRESETS.map((k) => ({ k, all: false })), { k: cap, all: true }]
+    .map((p) => `<button type="button" class="w-chip ex-pick${p.k === n && n > 0 ? ' on' : ''}" data-expick="${p.all ? 'all' : p.k}"${p.k > cap || p.k < 1 ? ' disabled' : ''}>${p.all ? `${esc(L('ex.all'))}${cap > 0 ? ` <small>${fmt(cap)}</small>` : ''}` : `${doubloonIcon('ico-xs')}${fmt(p.k)}`}</button>`).join('');
+  const done = st.done ? `<div class="ex-done" role="status">${icon('coin', '⛁', 'ico-sm')}<b>${esc(L('ex.done', { d: fmt(st.done.d), s: fmt(st.done.s) }))}</b><span>${esc(L('ex.purse', { s: fmt(silver) }))}</span></div>` : '';
+  const why = st.why ? `<p class="ex-why" role="alert">${esc(st.why)}</p>` : '';
+  const body = cap < 1
+    ? `<p class="ex-none">${doubloonIcon('ico-sm')}${esc(L('ex.none'))}</p><button type="button" class="btn btn-primary" data-pmtop>${esc(L('topup'))}</button>`
+    : `<label class="ex-field"><span>${esc(L('ex.field'))}</span><span class="ex-inrow">${doubloonIcon('ico-sm')}<input type="number" inputmode="numeric" min="1" max="${cap}" step="1" value="${n || ''}" data-exn></span></label>
+      <input type="range" class="ex-range" min="1" max="${cap}" step="1" value="${Math.max(1, Math.min(cap, n || 1))}" data-exrange aria-label="${esc(L('ex.field'))}">
+      <div class="ex-picks">${picks}</div>
+      <div class="ex-get"><span class="muted">${esc(L('ex.get'))}</span><b data-exget>${icon('coin', '⛁', 'ico-sm')}${fmt(exchangeSilver(n))}</b><span class="muted">${esc(L('ex.silver'))}</span></div>
+      <button type="button" class="btn btn-primary ex-go" data-exgo${st.busy || !exchangeSilver(n) || n > cap ? ' disabled' : ''}>${esc(st.busy ? L('ex.wait') : L('ex.go'))}</button>`;
+  return `<div class="pm-top ex-page"><div class="pm-top-h"><div><h3 class="title-sm">${esc(L('ex.title'))}</h3><p class="muted">${esc(L('ex.sub'))}</p></div>
+      <button class="btn btn-small" data-pmback>${esc(L('top.back'))}</button></div>
+    <div class="card ex-card"><p class="ex-rate">${doubloonIcon('ico-sm')}<b>${esc(L('ex.rate', { n: fmt(EXCHANGE_SILVER_PER_DOUBLOON) }))}</b></p>
+      <p class="muted ex-have">${esc(L('ex.have', { d: fmt(balance), s: fmt(silver) }))}</p>${done}${why}${body}</div></div>`;
+}
+
 const TAB_ICON: Record<ShopTab, string> = { sea: 'menu_ship', board: 'ui_cutlasses', isle: 'tab_isles', cos: 'cos_titles' };
 const SEC_ICON: Record<ShopSec, string> = {
   deals: 'tattoo_star', ships: 'menu_ship', supply: 'ammo_round', voyage: 'sp_fair_wind', units: 'build_kennel', recruit: 'build_barracks', battle: AUTO_SCROLL_ICON, build: 'ui_brigade', res: 'good_timber', isle: 'build_fort',
@@ -280,6 +302,12 @@ export class PremiumWindow {
   topup = false;
   /** docs/32 §12: the wardrobe in place of the «Косметика» shelves. */
   wardrobe = false;
+  /** The exchange of doubloons into silver in place of the shelves (owner, 2026-10-30), and its state. */
+  exchange = false;
+  private exN = 0;
+  private exPid = '';
+  private exDone: { d: number; s: number } | null = null;
+  private exWhy: string | null = null;
   private send: (m: ClientMsg) => void;
   private timer = 0;
   /** A word to the captain (main.ts: the HUD's toast) — VK's order box's answer. */
@@ -290,10 +318,14 @@ export class PremiumWindow {
   }
 
   /** Open at the top-up, or at a tab's shelf (the island's builders, the battle's scrolls, …). */
-  open(topup = false, at?: { tab: ShopTab; sec?: ShopSec; wardrobe?: boolean }): void {
+  open(topup = false, at?: { tab: ShopTab; sec?: ShopSec; wardrobe?: boolean } | { exchange: true }): void {
     this.topup = topup;
-    this.wardrobe = !!at?.wardrobe;
-    if (at) {
+    this.exchange = !topup && !!at && 'exchange' in at;
+    this.exDone = null;
+    this.exWhy = null;
+    this.exPid = '';
+    this.wardrobe = !!at && 'wardrobe' in at && !!at.wardrobe;
+    if (at && 'tab' in at) {
       this.tab = at.tab;
       this.sec = at.sec ?? (at.tab === 'cos' ? 'cos_titles' : 'deals');
     }
@@ -324,10 +356,11 @@ export class PremiumWindow {
     const v = state.premium;
     const sv = v?.shop;
     const balance = v?.balance ?? state.doubloons;
-    const purse = `<span class="w-fig gold sh-bal" title="${esc(L('balance'))}">${doubloonIcon('w-fig-ico')}<b>${fmt(balance)}</b></span><button type="button" class="btn btn-small btn-primary sh-top" data-pmtop>${esc(L('topup'))}</button>`;
+    const purse = `<span class="w-fig gold sh-bal" title="${esc(L('balance'))}">${doubloonIcon('w-fig-ico')}<b>${fmt(balance)}</b></span><button type="button" class="btn btn-small sh-top sh-ex${this.exchange ? ' on' : ''}" data-pmex title="${esc(L('ex.openTip'))}">${icon('coin', '⛁', 'ico-xs')}${esc(L('ex.open'))}</button><button type="button" class="btn btn-small btn-primary sh-top" data-pmtop>${esc(L('topup'))}</button>`;
     const head = winHead(this.wardrobe && this.tab === 'cos' ? cosL('wardrobe') : L('title'), { crest: 'doubloon', figures: purse });
     if (!v || !sv) root.innerHTML = `${head}<div class="modal-body sh-body"></div>`;
     else if (this.topup) root.innerHTML = `${head}<div class="modal-body sh-body sh-topup">${topUp(v, state)}</div>`;
+    else if (this.exchange) root.innerHTML = `${head}<div class="modal-body sh-body sh-topup sh-exchange" data-page="exchange">${exchangePage(balance, state.self?.gold ?? 0, this.exN, { busy: !!this.exPid, done: this.exDone, why: this.exWhy })}</div>`;
     else {
       if (this.sec !== 'deals' && !TAB_SECS[this.tab].includes(this.sec)) this.sec = 'deals';
       // docs/32 §12: the «Косметика» tab has no «Акции» row — its first shelf is the titles
@@ -340,6 +373,51 @@ export class PremiumWindow {
     }
     this.tick(root, sv?.now ?? Date.now());
     this.wire(root, state, v);
+  }
+
+  /** The exchange's field, slider, quick picks and confirm: the silver redrawn live as the number changes. */
+  private wireExchange(root: HTMLElement, balance: number, redraw: () => void): void {
+    const cap = Math.min(balance, EXCHANGE_MAX);
+    const field = root.querySelector<HTMLInputElement>('[data-exn]');
+    const range = root.querySelector<HTMLInputElement>('[data-exrange]');
+    const go = root.querySelector<HTMLButtonElement>('[data-exgo]');
+    const get = root.querySelector<HTMLElement>('[data-exget]');
+    const set = (raw: number, from?: HTMLInputElement) => {
+      const n = Number.isFinite(raw) ? Math.max(0, Math.min(cap, Math.floor(raw))) : 0;
+      this.exN = n;
+      this.exWhy = null;
+      if (field && from !== field) field.value = n ? String(n) : '';
+      if (range && from !== range) range.value = String(Math.max(1, n));
+      if (get) get.innerHTML = `${icon('coin', '⛁', 'ico-sm')}${fmt(exchangeSilver(n))}`;
+      if (go) go.disabled = !!this.exPid || !exchangeSilver(n);
+      root.querySelectorAll<HTMLElement>('[data-expick]').forEach((b) => b.classList.toggle('on', n > 0 && (b.dataset.expick === 'all' ? n === cap : Number(b.dataset.expick) === n)));
+    };
+    field?.addEventListener('input', () => set(Number(field.value), field));
+    range?.addEventListener('input', () => set(Number(range.value), range));
+    root.querySelectorAll<HTMLButtonElement>('[data-expick]').forEach((b) => (b.onclick = () => set(b.dataset.expick === 'all' ? cap : Number(b.dataset.expick))));
+    go?.addEventListener('click', () => {
+      const n = this.exN;
+      if (!exchangeSilver(n) || n > cap || this.exPid) return;
+      void ask(L('ex.ask', { d: fmt(n), s: fmt(exchangeSilver(n)) })).then((ok) => {
+        if (!ok || this.exPid) return;
+        this.exPid = pid();
+        this.exWhy = null;
+        this.exDone = null;
+        this.send({ t: 'premium', action: 'exchange', doubloons: n, pid: this.exPid });
+        redraw();
+      });
+    });
+  }
+
+  /** The server's answer to the exchange: what was given and got, or why not (main.ts calls it, then redraws). */
+  exchangeHeard(m: { pid: string; doubloons: number; silver: number; why?: string }): void {
+    if (!this.exPid || m.pid !== this.exPid) return;
+    this.exPid = '';
+    if (m.why) this.exWhy = serverText(m.why);
+    else {
+      this.exDone = { d: m.doubloons, s: m.silver };
+      this.exN = 0;
+    }
   }
 
   /** The page of a shelf. */
@@ -382,12 +460,22 @@ export class PremiumWindow {
     };
     root.querySelectorAll<HTMLElement>('[data-pmtop]').forEach((b) => (b.onclick = () => {
       this.topup = !this.topup;
+      this.exchange = false;
       redraw();
     }));
     root.querySelector<HTMLElement>('[data-pmback]')?.addEventListener('click', () => {
       this.topup = false;
+      this.exchange = false;
       redraw();
     });
+    root.querySelector<HTMLElement>('[data-pmex]')?.addEventListener('click', () => {
+      this.exchange = !this.exchange;
+      this.topup = false;
+      this.exDone = null;
+      this.exWhy = null;
+      redraw();
+    });
+    if (this.exchange) this.wireExchange(root, balance, redraw);
     // A pack for Stars: the server makes the invoice and sends its link (src/tg.ts opens it).
     root.querySelectorAll<HTMLButtonElement>('[data-pmpack]').forEach((b) => (b.onclick = () => {
       b.disabled = true;

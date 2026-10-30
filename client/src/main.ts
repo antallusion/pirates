@@ -752,9 +752,11 @@ addEventListener('gravetide:shop', (e) => {
   const d = (e as CustomEvent).detail;
   // (a personal offer's «Подробнее» names its tab and shelf, promo.ts; the top-up: 'topup')
   if (d === 'topup') return openShop(true);
+  if (d === 'exchange') return openShop(false, { exchange: true }); // doubloons into silver (owner, 2026-10-30)
   openShop(false, typeof d === 'object' && d ? d : SHOP_AT[String(d ?? '')]);
 });
 hud.onShop = () => openShop();
+hud.onExchange = () => openShop(false, { exchange: true }); // the silver's «+» (owner, 2026-10-30)
 // Her personal offers (owner, 2026-10-15): the entry carousel, the sea's chip, the island's card, the harbour's strip.
 // The daily login gift (owner, 2026-10-16): its calendar comes first on entry, the offers' carousel after it.
 // (both wait out the campaign's opening, its five lessons: «Награда за вход» came up between «Борт о борт» and «Твари на
@@ -2482,6 +2484,10 @@ function onMessage(m: ServerMsg): void {
     case 'cos': // docs/32 §12: her wardrobe — the shop's tab, her frame on the HUD
       if (modal === 'shop') refreshModal();
       hud.redrawCaptain();
+      break;
+    case 'premium_exchange': // the exchange's answer (owner, 2026-10-30)
+      premiumWindow.exchangeHeard(m);
+      if (modal === 'shop') refreshModal();
       break;
     case 'premium':
     case 'doubloons':

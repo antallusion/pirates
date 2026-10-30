@@ -20,8 +20,8 @@ export const TG_TEXTS = {
     'Поддержка по оплатам: напишите сюда, что случилось — имя капитана, дату и пакет. Дублоны зачисляются, как только Telegram подтвердит оплату; если оплата прошла, а дублоны не пришли, мы вернём звёзды или зачислим пакет в течение 3 дней.',
   ],
   terms: [
-    'Terms: doubloons are the game\'s premium currency, bought with Telegram Stars only and never earned at sea. They belong to your account, buy premium ships and creatures in the game\'s shop, and cannot be exchanged back for Stars or money. A purchase can be refunded through /paysupport while its doubloons are unspent.',
-    'Условия: дублоны — премиальная валюта игры, покупаются только за звёзды Telegram и не добываются в море. Они принадлежат вашему аккаунту, покупают премиальные корабли и существ в лавке игры и не обмениваются обратно на звёзды или деньги. Покупку можно вернуть через /paysupport, пока её дублоны не потрачены.',
+    'Terms: doubloons are the game\'s premium currency, bought with Telegram Stars only and never earned at sea. They belong to your account, buy premium ships, creatures and silver in the game\'s shop, and cannot be exchanged back for Stars or money. A purchase can be refunded through /paysupport while its doubloons are unspent.',
+    'Условия: дублоны — премиальная валюта игры, покупаются только за звёзды Telegram и не добываются в море. Они принадлежат вашему аккаунту, покупают премиальные корабли, существ и серебро в лавке игры и не обмениваются обратно на звёзды или деньги. Покупку можно вернуть через /paysupport, пока её дублоны не потрачены.',
   ],
   help: ['/start — play · /paysupport — payment support · /terms — terms of purchase · /notify — notices on or off', '/start — играть · /paysupport — поддержка по оплатам · /terms — условия покупки · /notify — уведомления вкл. или выкл.'],
   paid: ['{n} doubloons credited to captain {name}. Fair winds!', 'Капитану {name} зачислено дублонов: {n}. Попутного ветра!'],

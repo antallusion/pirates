@@ -273,7 +273,7 @@ export function levelGifts(game: Game, s: PlayerSession, say = false): void {
 
 // ------------------------------------------------------------------------------------------------ what stands in the way
 
-const inFight = (game: Game, s: PlayerSession): boolean => {
+export const inFight = (game: Game, s: PlayerSession): boolean => {
   const ship = s.ship;
   return !ship || !ship.alive || !!ship.boarding || ship.underFire(game.now) || landFighting(game, s);
 };
