@@ -338,6 +338,8 @@ export class Hud {
   private overWarned = false;
   /** The premium shop (owner, 2026-10-15): the doubloons' chip by her silver. */
   onShop: () => void = () => {};
+  /** The exchange of doubloons into silver (owner, 2026-10-30): the «+» by her silver. */
+  onExchange: () => void = () => {};
   /** The simple HUD's captain on a desk: a click opens her sheet (main.ts). */
   onCaptain: () => void = () => {};
   /** Owner, 2026-10-28 (armyadvice.ts): the weak army's hint — the island, or the hire window here (main.ts). */
@@ -412,6 +414,7 @@ export class Hud {
     // It drops open under the frame's lowest edge (portrait, bars and the line under them), measured as it opens.
     $('hud-captain').onclick = (e) => {
       if ((e.target as HTMLElement).closest('[data-hudshop]')) return this.onShop();
+      if ((e.target as HTMLElement).closest('[data-hudexch]')) return this.onExchange();
       // glory, always on the plate (owner, 2026-10-19): the Throne of the Sea
       if ((e.target as HTMLElement).closest('[data-throne]')) return this.onThrone();
       const escort = (e.target as HTMLElement).closest<HTMLElement>('[data-esc]'); // an escort's bars: look at her
@@ -883,7 +886,7 @@ export class Hud {
       $('hud-captain').innerHTML = `
         <div class="uf-portrait">${avatar({ face: cap.portrait, url, frame: state.cos?.eq.frame ?? null, ring: 'portrait', cls: 'uf-av' })}<b class="uf-level" title="${esc(L('lv', { n: self.level }))}">${self.level}</b>${streak ? streakBadge(streak) : ''}${pod ? podBadge(pod) : ''}${moodMark(self.company.mood, (self.company.shantyUntil ?? 0) - state.estServerTime())}</div>
         <div class="uf-body">
-          <div class="uf-top"><span class="uf-name">${esc(self.name)}${self.title ? `<small class="uf-title">${esc(sv(self.title))}</small>` : ''}</span><span class="gold val uf-silver">${icon('coin', '⛁', 'ico-sm')}${fmt(self.gold)}</span>${shopChip(state.doubloons, 'uf-dbl')}</div>
+          <div class="uf-top"><span class="uf-name">${esc(self.name)}${self.title ? `<small class="uf-title">${esc(sv(self.title))}</small>` : ''}</span><span class="gold val uf-silver">${icon('coin', '⛁', 'ico-sm')}${fmt(self.gold)}${exchPlus()}</span>${shopChip(state.doubloons, 'uf-dbl')}</div>
           ${fbar('hull', you.hull, you.hullMax, L('hull'), 'stat_hull')}${fbar('sails', you.sails, you.sailsMax, L('sails'), 'stat_sails')}${fbar('crew', you.crew, you.crewMax, L('crew'), 'stat_crew')}
           <div class="fbar xp" title="${esc(self.rested > 0 ? `${xpLine(self)} · ${L('rested', { n: fmt(self.rested) })}` : xpLine(self))}"><i style="width:${pct(self.xp / Math.max(1, self.xpNext))}"></i>${self.rested > 0 ? `<b class="xp-rest" style="left:${pct(self.xp / Math.max(1, self.xpNext))};width:${pct(Math.min(self.rested, Math.max(0, self.xpNext - self.xp)) / Math.max(1, self.xpNext))}"></b>` : ''}</div>
           <div class="uf-sub"><span class="wanted" title="${esc(wantedTitle(self.wanted))}">${self.wanted ? icon('wanted', '☠', 'ico-sm') + '☠'.repeat(self.wanted) + ' ' + esc(wantedTitle(self.wanted)) : `<span class="muted">${esc(L('unknownToLaw'))}</span>`}</span>${self.talentPoints > 0 ? `<span class="gold uf-pts" title="${esc(keyless(L('talentPts', { n: self.talentPoints })))}">${keyChip('talents')}${icon('xp', '', 'ico-sm')}${self.talentPoints}</span>` : ''}${gloryChip(self.glory)}</div>
@@ -1169,7 +1172,7 @@ export class Hud {
     el.innerHTML = `<div class="cs">
       <div class="cs-frame">${avatar({ face: cap.portrait, url, frame: fr || null, cls: 'cs-face' })}<b class="cs-lv" style="--xp:${xpPct}%" title="${esc(`${L('lv', { n: self.level })} · ${xpLine(self)}`)}">${self.level}</b>${dot ? `<i class="cs-pts" title="${esc(keyless(L('talentPts', { n: self.talentPoints })))}"></i>` : ''}${gloryChip(g, 'cs-glory')}</div>
       <div class="cs-body">${row('hull', you.hull, you.hullMax, 'stat_hull', fmt(you.hull))}${row('crew', you.crew, you.crewMax, 'stat_crew', `${you.crew}/${you.crewMax}`)}${row('sails', you.sails, you.sailsMax, 'stat_sails', fmt(you.sails))}${self.hold ? holdRowHtml(self.hold, icon('mod_hold_expansion', '', 'cs-ico'), L) : ''}
-        <span class="cs-purse"><span class="cs-silver">${icon('coin', '⛁', 'cs-coin')}${fmt(self.gold)}</span>${shopChip(state.doubloons, 'cs-dbl')}</span>${escortRowHtml(escorts, icon('ab_call_escort', '', 'cs-eico'), L)}</div>
+        <span class="cs-purse"><span class="cs-silver">${icon('coin', '⛁', 'cs-coin')}${fmt(self.gold)}${exchPlus()}</span>${shopChip(state.doubloons, 'cs-dbl')}</span>${escortRowHtml(escorts, icon('ab_call_escort', '', 'cs-eico'), L)}</div>
     </div>`;
     el.setAttribute('aria-label', `${self.name}: ${L('lv', { n: self.level })}, ${xpLine(self)}`);
     el.title = self.name;
@@ -2726,6 +2729,12 @@ export function streakBadge(st: { n: number; mul: number }): string {
   const mul = lang() === 'ru' ? String(st.mul).replace('.', ',') : String(st.mul);
   const title = on ? LC('streak.title', { n: st.n, mul }) : LC('streak.titleSoon', { n: st.n });
   return `<b class="uf-streak${on ? ' on' : ''}" title="${esc(title)}">${icon('fire', '', 'ico-sm')}${esc(on ? LC('streak.badge', { mul }) : String(st.n))}</b>`;
+}
+
+/** The silver's «+» (owner, 2026-10-30): the exchange of doubloons into silver. */
+function exchPlus(): string {
+  const P = dict(PM_EN, PM_RU);
+  return `<button type="button" class="hud-exch" data-hudexch title="${esc(P('ex.openTip'))}" aria-label="${esc(P('ex.openTip'))}">${glyphSvg('plus')}</button>`;
 }
 
 /** The premium shop's button by her silver (owner, 2026-10-15): the doubloon, the balance and a «+». */

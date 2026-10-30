@@ -30,6 +30,7 @@ import { promoMessage, sendPromo } from './promo.ts';
 import { giftMessage } from './dailygift.ts';
 import { tgnMessage } from './tgnotify.ts';
 import { unitPacks } from '../../../shared/src/data/shop.ts';
+import { exchangeMessage } from './exchange.ts';
 import { trackEvent } from './liveops.ts'; // docs/34: the funnel's purchases
 
 /** A pack of `k` stacks of a kind at this stack price (null: no such pack — the shop's packs start at its least price). */
@@ -401,6 +402,11 @@ export function premiumMessage(game: Game, s: PlayerSession, msg: PremiumClientM
   if (msg.action === 'gift_view' || msg.action === 'gift_claim') return giftMessage(game, s, msg.action);
   if (msg.action === 'tgn_set' || msg.action === 'tgn_view' || msg.action === 'tgn_click') return tgnMessage(game, s, msg);
   if (msg.action === 'promo_view' || msg.action === 'promo_carousel' || msg.action === 'promo_buy' || msg.action === 'promo_close' || msg.action === 'promo_seen') return promoMessage(game, s, msg as { action: string; id?: string; pid?: string; where?: string });
+  // Doubloons into silver (owner, 2026-10-30): exchange.ts.
+  if (msg.action === 'exchange') return exchangeMessage(game, s, msg, () => {
+    sendBalance(game, s);
+    sendPremium(game, s);
+  });
   if (msg.action === 'shop' || msg.action === 'speed' || msg.action === 'finish' || msg.action === 'kit' || msg.action === 'gift') return shopMessage(game, s, msg.action, msg as { offer?: string; pid?: string; job?: number });
   const why = msg.action === 'buy_ship' ? buyShip(game, s, msg.id) : msg.action === 'buy_unit' ? buyUnit(game, s, msg.id, Math.trunc(Number(msg.k ?? 0)), msg.pid) : msg.action === 'buy_scrolls' ? buyScrolls(game, s, msg.pack) : null;
   if (why) game.sendTo(s, { t: 'toast', msg: why, kind: 'bad' });

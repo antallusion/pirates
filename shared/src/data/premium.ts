@@ -1,7 +1,8 @@
 // The premium shop (owner, 2026-10-03; docs/01 P7 as it now stands): doubloons are bought with real money only and are
 // never earned at sea. They buy the hulls and the creatures their own tables mark `premium` (ShipClassDef.premium,
 // UnitDef.premium) — and nothing else in the game hands those out: no yard sells such a hull for silver, and no tamer,
-// lair, drift, roaming stack, capture nor egg gives such a creature. The balance is the account's, not a captain's.
+// lair, drift, roaming stack, capture nor egg gives such a creature. The balance is the account's, not a captain's. They also buy silver at the
+// exchange (owner, 2026-10-30: EXCHANGE_SILVER_PER_DOUBLOON), one way only.
 
 import { UNITS } from './army.ts';
 import type { PremiumUnit, UnitId } from './army.ts';
@@ -92,6 +93,16 @@ export const PAYMENTS_OPEN = false;
 
 /** The most one credit may bring (a slip in a webhook or the console cannot mint a fortune). */
 export const CREDIT_MAX = 1_000_000;
+
+/** The exchange (owner, 2026-10-30: «реализуй обмен дублонов на серебро»): doubloons into the captain's silver at this
+ *  rate, one way only — nothing in the game turns silver back into doubloons (server/src/game/exchange.ts). */
+export const EXCHANGE_SILVER_PER_DOUBLOON = 200;
+/** The most doubloons one exchange may take (a slip of a finger or a forged message cannot empty an account at once). */
+export const EXCHANGE_MAX = 100_000;
+/** The window's quick picks (and «все» — the whole balance, up to EXCHANGE_MAX). */
+export const EXCHANGE_PRESETS = [10, 50, 100, 500] as const;
+/** The silver that many doubloons buy (0: not a whole number of them from 1 to EXCHANGE_MAX). */
+export const exchangeSilver = (n: number): number => (Number.isInteger(n) && n >= 1 && n <= EXCHANGE_MAX ? n * EXCHANGE_SILVER_PER_DOUBLOON : 0);
 
 const byPrice = <T>(price: (x: T) => number) => (a: T, b: T) => price(a) - price(b);
 

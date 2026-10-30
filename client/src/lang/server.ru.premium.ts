@@ -54,4 +54,8 @@ export const SERVER_RU_PREMIUM: Record<string, string> = {
   'Your first top-up comes double: {0} doubloons wait for you in the shop.': 'Первое пополнение — вдвойне: {0} дубл. ждут вас в лавке.',
   'Its captain holds a charter of protection: no landing on that island.': 'У капитана этого острова охранная грамота: высадиться нельзя.',
   'The shop': 'Лавка',
+  // The exchange of doubloons into silver (owner, 2026-10-30; server/src/game/exchange.ts).
+  'Name a whole number of doubloons.': 'Укажите целое число дублонов.',
+  'No more than {0} doubloons at one exchange.': 'За один обмен — не больше {0} дубл.',
+  'Exchanged {0} doubloons for {1} silver.': 'Обменяно {0} дубл. на {1} серебра.',
 };

@@ -114,6 +114,8 @@ export type PremiumClientMsg =
   /** The shop's offers (owner, 2026-10-15): bought by its id and a purchase id of the client's own (a second message
    *  with the same id buys nothing more). */
   | { t: 'premium'; action: 'shop'; offer: string; pid: string }
+  /** Doubloons into silver (owner, 2026-10-30; EXCHANGE_SILVER_PER_DOUBLOON): this many, once by the purchase id. */
+  | { t: 'premium'; action: 'exchange'; doubloons: number; pid: string }
   /** A premium creature by threes and fives (UNIT_PACKS). */
   | { t: 'premium'; action: 'buy_unit'; id: UnitId; k?: number; pid?: string }
   /** Her stores used: minutes of speed-ups on a job (-1: the refit), doubloons to finish one now, a repair kit. */
@@ -155,6 +157,9 @@ export type PremiumServerMsg =
   /** The Telegram Stars invoice for a pack (server/src/telegram.ts): opened in the Mini App by openInvoice, on the
    *  website as a link (it opens Telegram). Null link: it could not be made (a toast says why). */
   | { t: 'premium_invoice'; pack: string; link: string | null }
+  /** The exchange's answer (owner, 2026-10-30): the doubloons taken and the silver given for this purchase id — or the
+   *  refusal in the server's words (nothing moved). */
+  | { t: 'premium_exchange'; pid: string; doubloons: number; silver: number; why?: string }
   /** The web game's YooKassa checkout: its page to open (null: none — a toast says why), its order; or, asked again, how
    *  the order stands (`pending` | `paid` | `done` | `canceled` | `failed`). */
   | { t: 'premium_checkout'; pack: string; url: string | null; order?: string; status?: string; /** the receipt needs her e-mail: ask it and order again */ needEmail?: boolean }
