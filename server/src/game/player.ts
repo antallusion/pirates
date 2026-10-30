@@ -1,5 +1,6 @@
 // Player session and persistent captain profile, plus progression, reputation and wanted rules.
 
+import { holdView } from '../../../shared/src/data/overload.ts';
 import { SnapState } from '../../../shared/src/codec.ts';
 import { streakView } from './streak.ts';
 import { seaRepairView } from './searepair.ts';
@@ -729,6 +730,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     fishing: fishingView(p),
     beasts: p.beasts ?? {},
     cargo: ship ? ship.cargo : p.cargo,
+    hold: ship ? holdView(ship.loadout.classId, ship.cargo, ship.stats) : null, // forum 2026-10-30: the fourth bar, «ПЕРЕГРУЗ»
     ammo: ship ? ship.ammo : p.ammo,
     ammoSel: ship ? ship.ammoSel : p.ammoSel,
     crew: ship ? ship.crew : p.crew,

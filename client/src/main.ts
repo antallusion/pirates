@@ -660,6 +660,22 @@ setInterval(() => {
 }, 400);
 let lastDoubloons = -1;
 hud.onThrone = () => openThrone();
+// An escort's chip under her bars (forum 2026-10-30, Нефигугум: the ships lag behind, hard to watch): the camera looks at
+// her for ESCORT_PEEK_MS, then comes home on its own (a drag of the view meanwhile keeps the free look).
+const ESCORT_PEEK_MS = 2600;
+let escortPeek: { x: number; y: number } | null = null;
+let escortPeekTimer: ReturnType<typeof setTimeout> | undefined;
+hud.onEscort = (eid) => {
+  const r = state.ships.get(eid);
+  if (!r || state.self?.dockedAt) return;
+  escortPeek = { x: r.cur.x, y: r.cur.y };
+  renderer.free = escortPeek;
+  clearTimeout(escortPeekTimer);
+  escortPeekTimer = setTimeout(() => {
+    if (renderer.free === escortPeek) renderer.recentre();
+    escortPeek = null;
+  }, ESCORT_PEEK_MS);
+};
 // Owner, 2026-10-28 (armyadvice.ts): the weak army's hint — the hire window where she is (a port, a waystation), or the island.
 hud.onAdvice = (to) => {
   if (to === 'hire' && state.self?.dockedAt) return openRecruit('port');

@@ -75,6 +75,7 @@ import { holdMix, holdMixHtml } from './holdmix.ts';
 import { gloryChip } from './throne.ts'; // docs/19 E1
 import { Toasts } from './kit/toast.ts'; // docs/23 phase 1
 import { TOAST } from './kit/tokens.ts';
+import { escortBars, escortKey, escortRowHtml, holdKey, holdRowHtml } from './escortbars.ts'; // forum 2026-10-30: the hold's bar, the escorts' bars
 import { avatar } from './kit/avatar.ts'; // her face in its ring (docs/32 §12: her frame), shared/src/data/portraitfit.ts
 import { captainDot } from './capmenu.ts'; // seaux: the bead is news not yet seen
 import { drawWrecksMini } from '../render/castaways.ts'; // seaux: her wreckage and castaways on the chart
@@ -330,6 +331,10 @@ export class Hud {
   private lastCaptainKey = '';
   /** The glory chip on the plate opens the Throne (docs/19 E1). */
   onThrone: () => void = () => {};
+  /** An escort's chip on the plate (forum 2026-10-30): the camera looks at her a moment (main.ts). */
+  onEscort: (eid: number) => void = () => {};
+  /** The overload's toast once per overload (forum 2026-10-30). */
+  private overWarned = false;
   /** The premium shop (owner, 2026-10-15): the doubloons' chip by her silver. */
   onShop: () => void = () => {};
   /** The simple HUD's captain on a desk: a click opens her sheet (main.ts). */
@@ -408,11 +413,13 @@ export class Hud {
       if ((e.target as HTMLElement).closest('[data-hudshop]')) return this.onShop();
       // glory, always on the plate (owner, 2026-10-19): the Throne of the Sea
       if ((e.target as HTMLElement).closest('[data-throne]')) return this.onThrone();
+      const escort = (e.target as HTMLElement).closest<HTMLElement>('[data-esc]'); // an escort's bars: look at her
+      if (escort) return this.onEscort(Number(escort.dataset.esc));
       if (simpleHud()) return this.onCaptain();
       if (document.body.classList.toggle('ship-open')) placeShipPanel();
     };
     $('hud-captain').addEventListener('keydown', (e) => {
-      if (!simpleHud() || (e.key !== 'Enter' && e.key !== ' ')) return;
+      if (!simpleHud() || (e.key !== 'Enter' && e.key !== ' ') || (e.target as HTMLElement).closest('[data-esc]')) return;
       e.preventDefault();
       e.stopPropagation();
       this.onCaptain();
@@ -861,6 +868,12 @@ export class Hud {
     const url = assetUrl(cap.portrait);
     const streak = self.streak && self.streak.n >= 2 ? self.streak : null;
     const pod = podEffect(self.effects, state.estServerTime());
+    // ПЕРЕГРУЗ (forum 2026-10-30): one small toast as the hold crosses her hull's line; again only after she lightens.
+    const hold = self.hold;
+    if (hold && hold.over && !self.dockedAt && !this.overWarned) {
+      this.overWarned = true;
+      this.toast(L('holdToast', { pct: hold.pct, n: hold.slow }), 'bad');
+    } else if (!hold?.over) this.overWarned = false;
     if (simpleHud()) this.drawStatus(state);
     else {
     const ckey = `${state.cos?.eq.frame ?? ''}|${lang()}|${streak ? `${streak.n}:${streak.mul}` : ''}|${pod ? `${pod.kind}:${Math.ceil(pod.left / 10)}` : ''}|${self.level}|${Math.round((self.xp / Math.max(1, self.xpNext)) * 200)}|${Math.round((self.rested / Math.max(1, self.xpNext)) * 200)}|${self.gold}|${self.wanted}|${self.talentPoints}|${you.hull}|${you.hullMax}|${you.sails}|${you.sailsMax}|${you.crew}|${you.crewMax}|${url ? 1 : 0}|${self.company.mood ?? ''}:${self.company.shantyUntil ?? 0}|${self.title ?? ''}|${self.glory ? `${self.glory.open}:${self.glory.rank}:${self.glory.pending}:${self.glory.points - self.glory.spent}` : ''}|${state.doubloons}`;
@@ -905,7 +918,7 @@ export class Hud {
         ${self.abyss && (self.abyss.inside || self.abyss.pressure > 0) ? `<div class="row" title="${esc(L('pressureTip'))}"><span class="lbl" style="color:${self.abyss.pressure < 60 ? 'var(--fog)' : 'var(--bad)'}">${esc(L('pressure'))}</span><span class="val">${self.abyss.pressure}${self.abyss.shards ? ` · ${esc(L('shards', { n: self.abyss.shards }))}` : ''}</span></div>${bar('sanity', self.abyss.pressure / 100)}` : ''}${you.sanity < 99.5 ? `<div class="row" title="${esc(L('sanityTip'))}"><span class="lbl" style="color:${you.sanity > 50 ? 'var(--fog)' : 'var(--bad)'}">${esc(L('sanity'))}</span><span class="val">${Math.round(you.sanity)} · ${esc(sanityWord(you.sanity))}</span></div>${bar('sanity', you.sanity / 100)}` : ''}
         ${self.company.unrest ? `<div class="row" title="${esc(L('unrestTip'))}"><span class="lbl" style="color:var(--bad)">${esc(L('crew'))}</span><span class="val" style="color:var(--bad)">${esc(sv(self.company.unrest))}</span></div>` : ''}
         ${self.captain === 'drowned' ? `<div class="row" title="${esc(L('dreadTip'))}"><span class="lbl" style="color:var(--turq)">${esc(L('dread'))}</span><span class="val" style="color:var(--turq)">${Math.round(you.dread)}${you.dread >= 80 ? ` · ${esc(L('theCall'))}` : ''}</span></div>${bar('dread', you.dread / 100)}` : ''}
-        <div class="row"><span class="lbl">${icon('tab_market', '', 'ico-xs')}${esc(L('hold'))}</span><span class="val">${vol.toFixed(0)} / ${holdMax.toFixed(0)}${self.cargo.provisions ? ` · ${esc(L('food', { n: Math.floor(self.cargo.provisions) }))}` : ` · <span style="color:var(--bad)">${esc(L('noFood'))}</span>`}</span></div>${bar('hold', vol / Math.max(1, holdMax))}${holdMixHtml(holdMix(self.cargo, state.ownStats), vol, holdMax)}
+        <div class="row"><span class="lbl">${icon('tab_market', '', 'ico-xs')}${esc(L('hold'))}</span><span class="val">${vol.toFixed(0)} / ${holdMax.toFixed(0)}${self.cargo.provisions ? ` · ${esc(L('food', { n: Math.floor(self.cargo.provisions) }))}` : ` · <span style="color:var(--bad)">${esc(L('noFood'))}</span>`}${self.hold?.over ? ` · <b style="color:var(--bad)" title="${esc(L('holdOverT', { n: self.hold.slow, at: self.hold.at }))}">${esc(L('holdOver'))} −${self.hold.slow}%</b>` : ''}</span></div>${bar('hold', vol / Math.max(1, holdMax))}${holdMixHtml(holdMix(self.cargo, state.ownStats), vol, holdMax)}
         ${self.curse >= 25 ? `<div class="row"><span class="lbl" style="color:var(--turq)">${esc(L('curse'))}</span><span class="val" style="color:var(--turq)">${esc(L('curseStage', { n: self.curse >= 80 ? 3 : self.curse >= 50 ? 2 : 1 }))} · ${self.curse}</span></div>` : ''}
         <div class="row" style="margin-top:4px"><span class="lbl">${icon('wind', '', 'ico-xs')}${esc(keyless(L('sail')))}</span><span class="val">${knots(you.spd)} ${esc(L('kn'))}${you.flags & SF.REPAIRING ? ` · ${esc(L('repairing'))}` : ''}</span></div>
         <div class="sail-steps">${steps}</div>`;
@@ -1145,7 +1158,8 @@ export class Hud {
     const dot = captainDot(self.talentPoints, self.level);
     const g = self.glory;
     const fr = state.cos?.eq.frame ?? ''; // docs/32 §12: her avatar frame
-    const key = `simple|${fr}|${lang()}|${url ? 1 : 0}|${self.level}|${xpPct}|${self.gold}|${state.doubloons}|${you.hull}|${you.hullMax}|${you.crew}|${you.crewMax}|${you.sails}|${you.sailsMax}|${dot}|${g ? `${g.open}:${g.rank}:${g.pending}:${g.points - g.spent}` : ''}`;
+    const escorts = self.dockedAt ? [] : escortBars(state); // forum 2026-10-30: the ships with her, under her bars
+    const key = `simple|${fr}|${lang()}|${url ? 1 : 0}|${self.level}|${xpPct}|${self.gold}|${state.doubloons}|${you.hull}|${you.hullMax}|${you.crew}|${you.crewMax}|${you.sails}|${you.sailsMax}|${dot}|${g ? `${g.open}:${g.rank}:${g.pending}:${g.points - g.spent}` : ''}|${holdKey(self.hold)}|${escortKey(escorts)}`;
     if (key === this.lastCaptainKey) return;
     this.lastCaptainKey = key;
     const el = $('hud-captain');
@@ -1153,8 +1167,8 @@ export class Hud {
       `<div class="cs-row cs-${k}" title="${esc(`${L(k)}: ${fmt(v)} / ${fmt(max)}`)}">${icon(art, '', 'cs-ico')}<span class="cs-bar"><i style="width:${pct(clamp(v / Math.max(1, max), 0, 1))}"></i></span><span class="cs-v">${esc(val)}</span></div>`;
     el.innerHTML = `<div class="cs">
       <div class="cs-frame">${avatar({ face: cap.portrait, url, frame: fr || null, cls: 'cs-face' })}<b class="cs-lv" style="--xp:${xpPct}%" title="${esc(`${L('lv', { n: self.level })} · ${xpLine(self)}`)}">${self.level}</b>${dot ? `<i class="cs-pts" title="${esc(keyless(L('talentPts', { n: self.talentPoints })))}"></i>` : ''}${gloryChip(g, 'cs-glory')}</div>
-      <div class="cs-body">${row('hull', you.hull, you.hullMax, 'stat_hull', fmt(you.hull))}${row('crew', you.crew, you.crewMax, 'stat_crew', `${you.crew}/${you.crewMax}`)}${row('sails', you.sails, you.sailsMax, 'stat_sails', fmt(you.sails))}
-        <span class="cs-purse"><span class="cs-silver">${icon('coin', '⛁', 'cs-coin')}${fmt(self.gold)}</span>${shopChip(state.doubloons, 'cs-dbl')}</span></div>
+      <div class="cs-body">${row('hull', you.hull, you.hullMax, 'stat_hull', fmt(you.hull))}${row('crew', you.crew, you.crewMax, 'stat_crew', `${you.crew}/${you.crewMax}`)}${row('sails', you.sails, you.sailsMax, 'stat_sails', fmt(you.sails))}${self.hold ? holdRowHtml(self.hold, icon('mod_hold_expansion', '', 'cs-ico'), L) : ''}
+        <span class="cs-purse"><span class="cs-silver">${icon('coin', '⛁', 'cs-coin')}${fmt(self.gold)}</span>${shopChip(state.doubloons, 'cs-dbl')}</span>${escortRowHtml(escorts, icon('ab_call_escort', '', 'cs-eico'), L)}</div>
     </div>`;
     el.setAttribute('aria-label', `${self.name}: ${L('lv', { n: self.level })}, ${xpLine(self)}`);
     el.title = self.name;

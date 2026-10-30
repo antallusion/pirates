@@ -317,6 +317,10 @@ import { installHeroHooks } from './h5.ts'; // docs/17 H5
 import { mineLandable } from './mines.ts';
 import { crewOnKill, stepCrewLife } from './crewlife.ts';
 
+/** Jetsam (forum 2026-10-30): its crate floats this long, and its thrower cannot take it back this soon. */
+export const JETSAM_TTL = 600;
+export const JETSAM_OWN_SEC = 20;
+
 export interface Loot {
   id: number;
   x: number;
@@ -333,6 +337,9 @@ export interface Loot {
   task?: number; // a crate of a wreck field, a task of the sea (docs/11 P6)
   items?: Item[]; // gear a sunk ship left in the water (docs/12 P1)
   placed?: boolean; // seaux: its spot checked for open water a hull can reach (lootSpot)
+  /** Cargo thrown over the side (forum 2026-10-30): a crate any captain may fish up, never broken up for silver; its
+   *  thrower's own hull clears it first (JETSAM_OWN_SEC). */
+  jetsam?: { account: number; until: number };
 }
 
 interface Rumor {
@@ -1154,6 +1161,7 @@ export class Game {
         if (s.hasEffect('submerged') || s.hasEffect('ghost_return')) return; // a ghost cannot haul casks aboard
         if (l.ownerOnly !== undefined && s.accountId !== l.ownerOnly) return;
         if (l.claim && l.claim.until > now && s.accountId !== l.claim.account && !sameGroupAccounts(this, s.accountId, l.claim.account)) return;
+        if (l.jetsam && l.jetsam.until > now && s.accountId === l.jetsam.account) return; // her own jetsam: not straight back aboard
         if (dist(s.state.x, s.state.y, l.x, l.y) > s.stats.length / 2 + 30) return;
         this.pickupLoot(s, l);
       });
@@ -2043,7 +2051,7 @@ export class Game {
       fleet: ship ? {
         escorts: p.fleet.escorts.map((e) => {
           const at = [...this.ships.values()].find((x) => x.fleetId === e.id && x.alive);
-          return { id: e.id, name: e.name, classId: e.classId, hull: Math.round((at ? at.hull / at.stats.hullMax : e.hull) * 100), atSea: !!at, own: !!e.own };
+          return { id: e.id, name: e.name, classId: e.classId, hull: Math.round((at ? at.hull / at.stats.hullMax : e.hull) * 100), atSea: !!at, own: !!e.own, ...(at ? { eid: at.id, crew: Math.round((at.crew / Math.max(1, at.stats.crewMax)) * 100) } : {}) };
         }),
         // Her own ships take the berths first; they need no commander (docs/15 item 4).
         slots: Math.max(escortSlots(p, ship), squadronOf(s).own), formation: p.fleet.formation, upkeep: Math.round(escortUpkeep(p, ship)),
@@ -2138,7 +2146,15 @@ export class Game {
       const id = this.allocId();
       this.loot.set(id, { id, x: ship.state.x + back.x * 40, y: ship.state.y + back.y * 40, cargo: { [good]: n }, gold: 0, expires: this.now + (quick >= 2 ? 1200 : 600), ownerOnly: s.accountId });
       this.toastShip(ship, `${n} ${GOODS[good].name.toLowerCase()} over the side in marked casks.`, 'info');
-    } else this.toastShip(ship, `${n} ${GOODS[good].name.toLowerCase()} went to the bottom.`, 'info');
+    } else {
+      // Forum 2026-10-30 (Нефигугум): the cargo floats astern in a crate for JETSAM_TTL — anyone may fish it up, she too
+      // once her hull is clear of it.
+      const back = headingVec(ship.state.heading + Math.PI);
+      const id = this.allocId();
+      this.loot.set(id, { id, x: ship.state.x + back.x * (ship.stats.length / 2 + 25), y: ship.state.y + back.y * (ship.stats.length / 2 + 25), cargo: { [good]: n }, gold: 0, expires: this.now + JETSAM_TTL, jetsam: { account: s.accountId, until: this.now + JETSAM_OWN_SEC } });
+      this.toastShip(ship, `${n} ${GOODS[good].name.toLowerCase()} over the side: the crate floats astern for ten minutes.`, 'info');
+    }
+    this.pushSelf(s);
     makeOffering(this, ship, good, n);
   }
 
@@ -3067,6 +3083,11 @@ export class Game {
   }
 
   private pickupLoot(ship: ShipEntity, l: Loot): void {
+    // Jetsam into a full hold: it floats on for another (no flotsam broken up for silver, no bubble burst every tick).
+    if (l.jetsam) {
+      const free = ship.stats.holdVolume - cargoVolume(ship.cargo, ship.stats.contrabandVolumeMul, ship.stats.materialVolumeMul, ship.stats.provisionVolumeMul, ship.stats.cursedVolumeMul);
+      if (!Object.keys(l.cargo).some((g) => GOODS[g as GoodId].volume * (GOODS[g as GoodId].contraband ? ship.stats.contrabandVolumeMul : 1) <= free + 1e-6)) return;
+    }
     bubbleOnLoot(this, ship, l.ownerOnly === ship.accountId);
     const s = this.sessionOf(ship);
     if (!s || !s.profile) return;
@@ -3118,7 +3139,7 @@ export class Game {
     if (got.length) this.toastShip(ship, `Salvaged: ${got.join(', ')}.`, 'gold');
     // seaux: a full hold still takes it — what will not fit is broken up for half its worth (no piece left afloat that
     // she can never take)
-    if (Object.keys(l.cargo).length && !l.decoy) {
+    if (Object.keys(l.cargo).length && !l.decoy && !l.jetsam) {
       const v = Math.round(cargoValue(l.cargo) * 0.5);
       l.cargo = {};
       if (v > 0) {

@@ -45,6 +45,7 @@ import { placeName } from './ui/maps.ts';
 import type { RegionId } from '../../shared/src/world/regions.ts';
 import type { PremiumView } from '../../shared/src/premiumproto.ts';
 import type { CosView } from '../../shared/src/cosproto.ts';
+import { holdFill, overloadMul } from '../../shared/src/data/overload.ts'; // forum 2026-10-30: «ПЕРЕГРУЗ», as the server reckons it
 
 export interface ShipSample {
   t: number;
@@ -856,7 +857,7 @@ export class ClientState {
     const params = {
       rig: st.rig, maxSpeed: st.maxSpeed, accel: st.accel, turnRate: st.turnRate, noGoDeg: st.noGoDeg, sailChangeRate: st.sailChangeRate,
       currentMul: st.currentMul, sailHealth: you.sails / Math.max(1, you.sailsMax), rudderHealth: you.rudderHp, crewFactor: crewFactor(st, you.crew),
-      loadFactor: loadFactor(this.self.loadout, st, this.self.cargo, this.self.ammo), speedMul: (this.night() ? 1 + st.nightSpeed : 1) * tornRiggingMul(this.self.effects, this.estServerTime()),
+      loadFactor: loadFactor(this.self.loadout, st, this.self.cargo, this.self.ammo), speedMul: (this.night() ? 1 + st.nightSpeed : 1) * tornRiggingMul(this.self.effects, this.estServerTime()) * overloadMul(this.self.loadout.classId, holdFill(this.self.cargo, st)),
       personalWind: st.flags.has('personal_wind'), weatherly: SHIP_CLASSES[this.self.loadout.classId]?.passive.id === 'weatherly', sweeps: SHIP_CLASSES[this.self.loadout.classId]?.passive.id === 'sweeps',
       talent: sailTalents(st),
     };
