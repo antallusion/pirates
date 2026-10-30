@@ -296,6 +296,7 @@ import { admView, contractPointer, stepContracts } from './admiralty.ts'; // doc
 import { registerAdmiralty } from '../../../shared/src/data/admiralty.ts';
 import { arenaView, stepArena } from './arena.ts'; // docs/19 E14
 import { pvpRankKill, pvpRankMessage, stepPvpRank } from './pvprank.ts'; // the PvP points (owner, 2026-10-30)
+import { powerMessage } from './power.ts'; // «Мощь» (owner, 2026-10-31)
 import { shoreBossPrompt, stepShoreBosses } from './shorebosses.ts'; // the great ones ashore (owner, 2026-10-03)
 import { installLandHooks } from './landecon.ts'; // docs/18 V
 import { driftMessage, stepDrifts } from './drifts.ts'; // docs/18 IV
@@ -498,6 +499,8 @@ export class Game {
   guildMember?: (guildId: number, accountId: number) => boolean;
   guildNotify?: (guildId: number, subject: string, body: string) => void;
   islandHostile?: (h: Holding, ship: ShipEntity) => boolean;
+  /** «Мощь» (owner, 2026-10-31): a captain's places on the site's power boards and the top ten (main.ts: SiteRating). */
+  powerBoard?: (acc: number) => Pick<import('../../../shared/src/powerproto.ts').PowerRankView, 'ranks' | 'ranked' | 'top'> | null;
   /** How far the wall clock has run ahead of the real one under admin /speed (ms; 0 on a normal server, where
    *  timeScale is always 1). The QA playthrough (docs/30, owner 2026-10-12: «врубить скорость х100»): the build
    *  queue, the 48 h respawns, the weeks follow the world clock there, so the speed is honest. */
@@ -3681,6 +3684,7 @@ export class Game {
     if (msg.t === 'premium') return premiumMessage(this, s, msg); // the premium shop (owner, 2026-10-03)
     if (msg.t === 'cos') return cosMessage(this, s, msg); // docs/32 §12: the cosmetics
     if (msg.t === 'pvprank') return pvpRankMessage(this, s, msg); // the PvP points (owner, 2026-10-30)
+    if (msg.t === 'power') return powerMessage(this, s, msg); // «Мощь» (owner, 2026-10-31)
     if (msg.t === 'spass') return passMessage(this, s, msg); // «Сезонная карта» (owner, 2026-10-30)
     if (msg.t === 'scout') return scoutMessage(this, s, msg); // the island's scouts (owner, 2026-10-17)
     if (msg.t === 'way') return wayMessage(this, s, msg); // docs/35: the floating waystations, the resurrection

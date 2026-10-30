@@ -107,6 +107,7 @@ const webShop = new WebShop(game, {
   hidden: (acc, name) => rating.hidden(acc, name),
 });
 console.log(`[${GAME_NAME}] web shop: ${webShop.mode === 'live' ? 'YooKassa' : `TEST MODE${process.env.GRAVETIDE_PAY_TEST === '1' ? ' (open to all)' : ' (admins only)'}`}`);
+game.powerBoard = (acc) => rating.powerBoard(acc); // «Мощь» in the Captain window (owner, 2026-10-31)
 const handleSite = siteRoutes({ rating, profile: new SiteProfile(game, rating), shop: webShop, publicUrl: PUBLIC_URL });
 
 const server = createServer(async (req, res) => {

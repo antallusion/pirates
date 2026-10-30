@@ -94,6 +94,7 @@ import type { Profile } from './player.ts';
 import { manifestArt } from './webshop.ts';
 import type { Game } from './Game.ts';
 import type { Board, SiteRating } from './siterating.ts';
+import type { PowerScore } from '../../../shared/src/data/power.ts';
 import { buildingTip, deedTip, featTip, figureheadTip, gunTip, itemTip, moduleTip, mountTip, orderTip, petTip, producerTip, relicTip, setTip, skillTip, talentTip, tattooTip, townTip, unitTip } from '../../../shared/src/data/sitetips.ts';
 import type { Tip } from '../../../shared/src/data/sitetips.ts';
 
@@ -137,6 +138,8 @@ export interface CaptainProfile {
   seen: number | null;
   created: number | null;
   ranks: Partial<Record<Board, number | null>>;
+  /** «Мощь» (owner, 2026-10-31; shared/src/data/power.ts): her four parts and the total, as the rating's power board has them. */
+  power: PowerScore;
   pvp: {
     rating: number; duels: number; wins: number; arena: number | null; arenaWins: number; arenaN: number; wanted: number; wantedName: Tr; infamy: number;
     /** The PvP points (pvprank.ts): this month's (its rank on the «pvp» board), all time, the best streak. */
@@ -479,14 +482,14 @@ export class SiteProfile {
     if (hit && now - hit.at < (this.opts.ttl ?? PROFILE_TTL)) return hit.v;
     const who = this.rating.account(name);
     if (!who) return null;
-    const v = this.build(who.acc, who.name, who.found.ranks);
+    const v = this.build(who.acc, who.name, who.found.ranks, who.found.captain.pw ?? { total: 0, army: 0, ship: 0, isle: 0, gear: 0 });
     if (!v) return null;
     if (this.cache.size > 500) this.cache.clear();
     this.cache.set(key, { at: now, v });
     return v;
   }
 
-  private build(acc: number, name: string, ranks: CaptainProfile['ranks']): CaptainProfile | null {
+  private build(acc: number, name: string, ranks: CaptainProfile['ranks'], power: PowerScore): CaptainProfile | null {
     const game = this.game;
     const s = game.sessionByAccount(acc);
     let p: Profile | null = s?.profile ?? null;
@@ -525,7 +528,7 @@ export class SiteProfile {
       level, maxLevel: MAX_LEVEL, xp: level >= MAX_LEVEL ? 0 : num(p.xp), xpNext: level >= MAX_LEVEL ? 0 : xpForLevel(level),
       glory: num(p.throne?.rank), guild: g ? { tag: g.tag, name: g.name } : null,
       online, sea: online && ship ? regionName(ship.region) : null, seen: online ? null : seen ? Math.max(seen.seen, 0) || null : null,
-      created: seen?.created || null, ranks,
+      created: seen?.created || null, ranks, power,
       pvp: { rating: Math.round(p.pvp?.rating ?? 1000), duels: num((p.pvp as { duels?: number })?.duels), wins: num((p.pvp as { duelWins?: number })?.duelWins),
         arena: arena && arena.n > 0 ? num(arena.r) : null, arenaWins: num(arena?.w), arenaN: num(arena?.n), wanted: wl, wantedName: [HUD_EN[`wanted.${wl}` as 'wanted.0'] ?? WANTED_TITLES[0], HUD_RU[`wanted.${wl}` as 'wanted.0'] ?? WANTED_TITLES[0]], infamy,
         ...((m, a) => ({

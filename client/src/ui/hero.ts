@@ -37,6 +37,10 @@ import { EN as SK_EN, RU as SK_RU } from '../lang/ui/seaskill.ts';
 import type { SheetHandle } from './kit/sheet.ts';
 import { pvpPage } from './pvprank.ts'; // the PvP points (owner, 2026-10-30)
 import { EN as PV_EN, RU as PV_RU } from '../lang/ui/pvprank.ts';
+import { powerPage } from './power.ts'; // «Мощь» (owner, 2026-10-31)
+import { EN as PW_EN, RU as PW_RU } from '../lang/ui/power.ts';
+
+const PW = dict(PW_EN, PW_RU);
 
 const PV = dict(PV_EN, PV_RU);
 
@@ -54,7 +58,7 @@ type Tab = 'hero' | 'skills' | 'book' | 'gear';
 /** The book's pages (the second row): the orders by school, the path's pages, a port's guild and merchant. */
 type BookPage = 'orders' | 'path' | 'guild';
 /** What the old callers ask for: a tab, or one of the book's pages by its old name. */
-export type CaptainOpen = Tab | 'path' | 'port' | 'pvp';
+export type CaptainOpen = Tab | 'path' | 'port' | 'pvp' | 'power';
 
 /** A primary's tile: its mark, its name, her value and what artifacts add. */
 function primTile(h: HeroView, p: (typeof PRIMS)[number]): string {
@@ -96,8 +100,8 @@ function willBar(h: HeroView): string {
 
 export class HeroWindow {
   tab: Tab = 'hero';
-  /** The hero tab's own page: her sheet, or her PvP record (the chip «ПвП»). */
-  heroPage: 'hero' | 'pvp' = 'hero';
+  /** The hero tab's own page: her sheet, her PvP record (the chip «ПвП») or her might (the chip «Мощь»). */
+  heroPage: 'hero' | 'pvp' | 'power' = 'hero';
   page: BookPage = 'orders';
   school: School = 'fire';
   port: HeroPortView | null = null;
@@ -109,15 +113,16 @@ export class HeroWindow {
 
   /** Opened: ask the port what it offers (its guild, its merchant). */
   open(tab?: CaptainOpen): void {
-    if (tab === 'pvp') {
+    if (tab === 'pvp' || tab === 'power') {
       this.tab = 'hero';
-      this.heroPage = 'pvp';
+      this.heroPage = tab;
     } else if (tab === 'path' || tab === 'port') {
       this.tab = 'book';
       this.page = tab === 'path' ? 'path' : 'guild';
     } else if (tab) this.tab = tab;
     this.send({ t: 'hero', action: 'view' });
     if (this.tab === 'hero' && this.heroPage === 'pvp') this.send({ t: 'pvprank', action: 'view' });
+    if (this.tab === 'hero' && this.heroPage === 'power') this.send({ t: 'power', action: 'view' });
   }
 
   /** The talent trees (a chip of the hero's row): main.ts opens their window. */
@@ -143,14 +148,14 @@ export class HeroWindow {
     ];
     let chips = '';
     // (docs/32 §12: her wardrobe — the cosmetics others see on her — beside the talents)
-    if (this.tab === 'hero') chips = chipRow([{ id: 'talents', icon: 'menu_talents', label: W('cap.talents'), hint: W('cap.talentsHint') }, { id: 'wardrobe', icon: 'cos_frames', label: W('cap.wardrobe'), hint: W('cap.wardrobeHint') }, { id: 'pvp', icon: 'ui_cutlasses', label: PV('chip'), hint: PV('chipHint') }], this.heroPage === 'pvp' ? 'pvp' : '', 'cchip');
+    if (this.tab === 'hero') chips = chipRow([{ id: 'talents', icon: 'menu_talents', label: W('cap.talents'), hint: W('cap.talentsHint') }, { id: 'wardrobe', icon: 'cos_frames', label: W('cap.wardrobe'), hint: W('cap.wardrobeHint') }, { id: 'power', icon: 'act_attack', label: PW('chip'), hint: PW('chipHint') }, { id: 'pvp', icon: 'ui_cutlasses', label: PV('chip'), hint: PV('chipHint') }], this.heroPage === 'hero' ? '' : this.heroPage, 'cchip');
     else if (this.tab === 'book') {
       const pages: WinTab[] = [{ id: 'orders', icon: 'bt_order', label: W('cap.orders') }, { id: 'path', icon: `school_${self.captain}`, label: W('cap.path') }];
       if (docked) pages.push({ id: 'guild', icon: 'tab_guild', label: W('cap.guild'), hint: W('cap.guildHint') });
       chips = chipRow(pages, this.page, 'cchip');
     } else chips = chipRow(gearChips(state), gearTab(), 'cchip');
     let body = '';
-    if (this.tab === 'hero') body = this.heroPage === 'pvp' ? pvpPage(state.pvprank, self.name) : captainRecord(state) + this.heroTab(h, self.level, url, !!self.glory?.open);
+    if (this.tab === 'hero') body = this.heroPage === 'pvp' ? pvpPage(state.pvprank, self.name) : this.heroPage === 'power' ? powerPage(state.power, self.name) : captainRecord(state) + this.heroTab(h, self.level, url, !!self.glory?.open);
     else if (this.tab === 'skills') body = seaSkillsTab(state);
     else if (this.tab === 'book') body = this.page === 'path' ? pathTab(h, self.captain, self.level, self.talents ?? {}) : this.page === 'guild' ? this.portTab(h, self.gold) : this.bookTab(h, docked, state.estServerTime());
     root.innerHTML = `${winHead(W('cap.title'), { crest: 'bt_captain', sub: L('sub', { name: self.name, n: self.level, path: cap.archetype }), chips })}
@@ -166,9 +171,10 @@ export class HeroWindow {
     }));
     root.querySelectorAll<HTMLElement>('[data-cchip]').forEach((b) => (b.onclick = () => {
       const id = b.dataset.cchip!;
-      if (this.tab === 'hero' && id === 'pvp') {
-        this.heroPage = this.heroPage === 'pvp' ? 'hero' : 'pvp';
+      if (this.tab === 'hero' && (id === 'pvp' || id === 'power')) {
+        this.heroPage = this.heroPage === id ? 'hero' : id;
         if (this.heroPage === 'pvp') this.send({ t: 'pvprank', action: 'view' });
+        if (this.heroPage === 'power') this.send({ t: 'power', action: 'view' });
         return void redo();
       }
       if (this.tab === 'hero') return void (id === 'talents' ? this.onTalents() : id === 'wardrobe' && this.onWardrobe());

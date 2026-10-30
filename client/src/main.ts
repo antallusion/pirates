@@ -2532,6 +2532,7 @@ function onMessage(m: ServerMsg): void {
       captainShopHeard(m);
       break;
     case 'pvprank': // her PvP page (owner, 2026-10-30)
+    case 'power': // her might (owner, 2026-10-31)
       if (modal === 'hero') refreshModal();
       break;
     case 'cos': // docs/32 §12: her wardrobe — the shop's tab, her frame on the HUD

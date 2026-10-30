@@ -4,6 +4,7 @@
 // And its other side, the unheard: a captain one will not hear — their chat lines, whispers, invitations to a
 // group, a barter or a duel do not reach one (letters still do: the packet boat reads no lists).
 
+import { powerOfSession } from './power.ts'; // «Мощь» (owner, 2026-10-31)
 import { wornItems } from './gear.ts';
 import { FRESH_LEVEL, FRIENDS_MAX, WHO_MAX } from '../../../shared/src/protocol.ts';
 import type { FriendView, InspectView, WhoView } from '../../../shared/src/protocol.ts';
@@ -163,6 +164,7 @@ export function inspectView(game: Game, s: PlayerSession, name: string): Inspect
     questsDone: p.quests.done.length, contracts: p.quests.done.filter((id) => id.startsWith('elite_')).length, mentored: p.stats.mentored ?? 0,
     rating: Math.round(p.pvp.rating ?? 0), wanted: wantedLevel(p.infamy),
     gear: wornItems(p),
+    ...((pw) => (pw ? { power: { ...pw, rank: game.powerBoard?.(o.accountId)?.ranks.power ?? null } } : {}))(powerOfSession(game, o)),
     ...cardCos(game, o.accountId), // docs/32 §12: her frame and her title on its plate
   };
 }

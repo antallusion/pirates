@@ -1,5 +1,6 @@
 // The website's API (owner, 2026-10-20: «рейтинг капитанов и магазин»): JSON under /api/site/….
-//   GET  /api/site/rating?board=level|glory|boarded|arena|pvp|campaign|guilds a board's top 100 (cached a minute)
+//   GET  /api/site/rating?board=power|army|ship|isle|gear|level|glory|boarded|arena|pvp|campaign|guilds a board's top 100
+//                                                                           (cached a minute; none given: «power»)
 //   GET  /api/site/rating/pvp-seasons                                       the PvP seasons closed: each month's top ten
 //   GET  /api/site/rating?board=…&online=1                                  only the captains in the game now, at their real places
 //   GET  /api/site/online                                                   «в сети»: the captains in the game now {count,names}
@@ -20,7 +21,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Limiter } from '../forum/service.ts';
 import type { SiteRating } from '../game/siterating.ts';
-import { BOARDS } from '../game/siterating.ts';
+import { BOARDS, DEFAULT_BOARD } from '../game/siterating.ts';
 import type { Board } from '../game/siterating.ts';
 import type { SiteProfile } from '../game/siteprofile.ts';
 import type { WebShop } from '../game/webshop.ts';
@@ -154,7 +155,7 @@ export function siteRoutes(d: SiteDeps) {
 
       if (method === 'GET') {
         if (path === 'rating') {
-          const b = (url.searchParams.get('board') ?? 'level') as Board;
+          const b = (url.searchParams.get('board') ?? DEFAULT_BOARD) as Board;
           if (!BOARDS.includes(b)) throw new HttpError('bad_board');
           if (url.searchParams.get('online') === '1') return json(res, 200, d.rating.board(b, true), ONLINE_CACHE);
           return json(res, 200, d.rating.board(b), MINUTE_CACHE);

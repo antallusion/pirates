@@ -453,6 +453,13 @@ function cosData(lang: Lang) {
 const dataTag = (id: string, v: unknown) => `<script type="application/json" id="${id}">${JSON.stringify(v).replace(/</g, '\\u003c')}</script>`;
 
 const BOARD_UI: { id: string; icon: string; name: Tr; unit: Tr }[] = [
+  // «Мощь» first and the default (owner, 2026-10-31: «рейтинг должен строиться на мощи … выводи в рейтинг именно по этой
+  // мощи»; shared/src/data/power.ts), then its four parts
+  { id: 'power', icon: 'ico/hot', name: ['Might', 'Мощь'], unit: ['might', 'мощь'] },
+  { id: 'army', icon: 'ico/creatures', name: ['Army', 'Армия'], unit: ['army might', 'мощь армии'] },
+  { id: 'ship', icon: 'ico/ships', name: ['Ship', 'Корабль'], unit: ['ship might', 'мощь корабля'] },
+  { id: 'isle', icon: 'ico/island', name: ['Island', 'Остров'], unit: ['island might', 'мощь острова'] },
+  { id: 'gear', icon: 'ico/chest', name: ['Gear', 'Снаряжение'], unit: ['gear might', 'мощь снаряжения'] },
   { id: 'level', icon: 'ico/star', name: ['Level', 'Уровень'], unit: ['level', 'уровень'] },
   { id: 'glory', icon: 'ico/achievements', name: ['Glory', 'Слава'], unit: ['glory rank', 'ранг славы'] },
   { id: 'boarded', icon: 'ico/boarding', name: ['Boardings', 'Абордажи'], unit: ['boardings won', 'абордажей'] },
@@ -476,6 +483,8 @@ const RATING_T: Record<string, Tr> = {
   kills: ['kills', 'убито'], deaths: ['deaths', 'смертей'], pvpPast: ['Past seasons', 'Прошлые сезоны'], pvpPastTip: ['The top ten of each month gone', 'Десятка лучших каждого прошедшего месяца'],
   pvpNow: ['This month', 'Этот месяц'], pvpNone: ['No season has ended yet: the first closes at the end of the month.', 'Ещё ни один сезон не завершён: первый закроется в конце месяца.'],
   pvpRules: ['Points for victories over captains only: a ship sunk 10, taken by boarding 14, a duel won 5 — more against the stronger, nothing against the far weaker or the same captain beaten again and again. The table starts anew on the 1st (Moscow time); the top ten and everyone of 50 points are rewarded.', 'Очки — только за победы над капитанами: потопил корабль — 10, взял на абордаж — 14, выиграл дуэль — 5. За сильного соперника больше, за намного более слабого и за одного и того же раз за разом — ничего. Таблица обнуляется 1-го числа (по Москве); награды — десятке лучших и всем, кто набрал 50 очков.'],
+  might: ['might', 'мощь'], pwArmy: ['Army', 'Армия'], pwShip: ['Ship', 'Корабль'], pwIsle: ['Island', 'Остров'], pwGear: ['Gear', 'Снаряжение'],
+  pwRules: ['Might = 35% army + 25% ship + 20% island + 20% gear. Each part is out of about 10 000 for a full top build: the army by the might of its stacks (tiers and upgrades), the active ship by her broadside, hull, armour, level and fittings, the island by every level of its town and buildings, the gear by the level, rarity, tempering and sets of what is worn.', 'Мощь = 35% армии + 25% корабля + 20% острова + 20% снаряжения. Каждая часть — примерно из 10 000 у полностью прокачанного капитана: армия — по мощи отрядов (уровни и улучшения), активный корабль — по залпу, корпусу, броне, уровню и оснащению, остров — по каждому уровню города и построек, снаряжение — по уровню, редкости, закалке и комплектам надетого.'],
   months: ['January,February,March,April,May,June,July,August,September,October,November,December', 'Январь,Февраль,Март,Апрель,Май,Июнь,Июль,Август,Сентябрь,Октябрь,Ноябрь,Декабрь'],
 };
 
@@ -486,9 +495,10 @@ const CP_T: Record<string, Tr> = {
   open: ['Open the captain’s card', 'Открыть карточку капитана'], loading: ['Loading the captain…', 'Загружаем капитана…'], gone: ['This captain is not in the rating.', 'Этого капитана нет в рейтинге.'],
   tOverview: ['Overview', 'Обзор'], tArmy: ['Army', 'Армия'], tShip: ['Ship', 'Корабль'], tHero: ['Captain', 'Капитан'], tIsland: ['Island', 'Остров'], tFeats: ['Achievements', 'Достижения'],
   online: ['At sea now', 'В море сейчас'], seen: ['Last seen {t}', 'Был(а) {t}'], since: ['Sailing since {d}', 'В море с {d}'], lvl: ['Level', 'Уровень'], xp: ['Experience', 'Опыт'], maxed: ['The highest level', 'Высший уровень'],
-  glory: ['Glory rank', 'Ранг славы'], power: ['Army might', 'Мощь армии'], men: ['men', 'бойцов'], stacks: ['Stacks', 'Отряды'], tier: ['Tier', 'Уровень'], up: ['upgraded', 'улучшен'],
+  glory: ['Glory rank', 'Ранг славы'], power: ['Combat strength', 'Боевая сила'], men: ['men', 'бойцов'], stacks: ['Stacks', 'Отряды'], tier: ['Tier', 'Уровень'], up: ['upgraded', 'улучшен'],
   atk: ['Attack', 'Атака'], def: ['Defence', 'Защита'], dmg: ['Damage', 'Урон'], hp: ['Health', 'Здоровье'], count: ['Count', 'Численность'],
   pvp: ['Duel rating', 'Рейтинг дуэлей'], pvpPts: ['PvP points this month', 'Очки ПвП за месяц'], pvpAll: ['PvP points in all', 'Очки ПвП за всё время'], pvpKills: ['Captains defeated', 'Побеждено капитанов'], pvpKd: ['K/D', 'У/С'], pvpBest: ['Best streak', 'Лучшая серия'], place: ['place {n}', '{n} место'], arena: ['Colosseum', 'Колизей'], wins: ['wins', 'побед'], wanted: ['Wanted', 'Розыск'], places: ['Places on the boards', 'Места в рейтингах'],
+  might: ['Might', 'Мощь'], mightArmy: ['Army', 'Армия'], mightShip: ['Ship', 'Корабль'], mightIsle: ['Island', 'Остров'], mightGear: ['Gear', 'Снаряжение'], mightSub: ['35% army · 25% ship · 20% island · 20% gear', '35% армия · 25% корабль · 20% остров · 20% снаряжение'],
   rep: ['Reputation', 'Репутация'], careers: ['Careers', 'Карьера'], titles: ['Titles', 'Титулы'], none: ['—', '—'],
   sunk: ['Ships sunk', 'Потоплено кораблей'], boarded: ['Boardings won', 'Абордажей'], distance: ['Sailed, km', 'Пройдено, км'], recruited: ['Men signed on', 'Нанято бойцов'], quests: ['Quests done', 'Заданий выполнено'], roamWins: ['Sea stacks beaten', 'Отрядов в море побеждено'], mentored: ['Captains guided', 'Наставничество'], season: ['Season level', 'Уровень сезона'], fish: ['Fish caught', 'Поймано рыбы'],
   hull: ['Hull', 'Корпус'], sails: ['Sails', 'Паруса'], speed: ['Speed', 'Скорость'], gunsSide: ['Guns a side', 'Пушек на борт'], crew: ['Crew', 'Экипаж'], armor: ['Armour', 'Броня'],
@@ -506,6 +516,7 @@ const CP_ICO = {
   power: asset('icon.act_attack'), men: asset('icon.stat_crew'), hull: asset('icon.stat_hull'), sails: asset('icon.sail_up'), speed: asset('icon.wind'), guns: asset('icon.gun_long_9'), crew: asset('icon.stat_crew'),
   armor: asset('icon.mod_hull_plating'), xp: asset('icon.xp'), glory: K('ico/achievements'), pvp: K('ico/cutlasses'), pvpPts: K('ico/cannon'), arena: K('ico/cutlasses'), wanted: asset('icon.wanted'), sunk: asset('icon.map_wreck'),
   boarded: K('ico/boarding'), distance: K('ico/compass'), recruited: asset('icon.prof_marine'), quests: K('ico/quest'), roamWins: asset('icon.map_monster'), mentored: K('ico/captains'), season: K('ico/star'),
+  might: K('ico/hot'), mightArmy: K('ico/creatures'), mightShip: K('ico/ships'), mightIsle: K('ico/island'), mightGear: K('ico/chest'),
   fish: asset('icon.build_fishing_village'), island: K('ico/island'), ship: K('ico/ships'), anchor: K('ico/anchor'), will: asset('icon.ab_brine_mend'), clock: K('ico/clock'), level: K('ico/star'),
 };
 
@@ -521,8 +532,8 @@ function rating(lang: Lang): string {
 ${dataTag('rt-data', { lang, api: '/api/site/rating', onlineApi: '/api/site/online', t: tr(RATING_T), boards: BOARD_UI.map((b) => ({ id: b.id, name: L(lang, b.name), unit: L(lang, b.unit), icon: K(b.icon) })), cos: cosData(lang), cp: { api: '/api/site/captain/', t: tr(CP_T), ico: CP_ICO } })}`;
   return page(lang, {
     path: 'rating/', active: 'rating', title: lang === 'ru' ? 'Рейтинг капитанов GRAVETIDE' : 'GRAVETIDE Captains’ rating',
-    desc: lang === 'ru' ? 'Лучшие капитаны моря: уровень, слава, абордажи, Колизей, кампания и гильдии.' : 'The best captains of the sea: level, glory, boardings, the Colosseum, the campaign and the guilds.',
-    hero: { img: K('hero/battle'), kicker: lang === 'ru' ? 'Таблицы славы' : 'The tables of glory', title: lang === 'ru' ? 'Рейтинг капитанов' : 'Captains’ rating', lead: lang === 'ru' ? 'Кто выше всех поднялся по уровням, сколько абордажей взято, кто держит Колизей и чья гильдия сильнее. Обновляется раз в минуту.' : 'Who has climbed highest, how many boardings were won, who holds the Colosseum and whose guild is strongest. Updated every minute.', mini: true },
+    desc: lang === 'ru' ? 'Лучшие капитаны моря по мощи — армия, корабль, остров и снаряжение, — а ещё уровень, слава, абордажи, Колизей, кампания и гильдии.' : 'The mightiest captains of the sea — army, ship, island and gear — and the boards of level, glory, boardings, the Colosseum, the campaign and the guilds.',
+    hero: { img: K('hero/battle'), kicker: lang === 'ru' ? 'Таблицы славы' : 'The tables of glory', title: lang === 'ru' ? 'Рейтинг капитанов' : 'Captains’ rating', lead: lang === 'ru' ? 'Чья мощь больше всех — армия, корабль, остров и снаряжение, кто выше поднялся по уровням, кто держит Колизей и чья гильдия сильнее. Обновляется раз в минуту.' : 'Whose might is greatest — army, ship, island and gear — who has climbed highest, who holds the Colosseum and whose guild is strongest. Updated every minute.', mini: true },
     body, css: '/site/css/rating.css', script: '/site/js/rating.js',
   });
 }

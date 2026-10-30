@@ -74,6 +74,7 @@ import type { PassClientMsg, PassServerMsg } from './spassproto.ts'; // «Сез
 import type { WayClientMsg, WayData, WayServerMsg } from './wayproto.ts'; // docs/35: the floating waystations, the resurrection
 import type { CosClientMsg, CosServerMsg } from './cosproto.ts'; // docs/32 §12: the cosmetics
 import type { PvpRankClientMsg, PvpRankServerMsg } from './pvprankproto.ts'; // the PvP points (owner, 2026-10-30)
+import type { PowerClientMsg, PowerServerMsg } from './powerproto.ts'; // «Мощь» (owner, 2026-10-31)
 import type { IsleType } from './world/archipelago.ts';
 import type { CommonKind } from './data/commongoal.ts';
 import type { InvasionView } from './data/invasions.ts';
@@ -405,6 +406,7 @@ export type ClientMsg =
   | PassClientMsg
   | CosClientMsg
   | PvpRankClientMsg
+  | PowerClientMsg
   /** docs/35: the floating waystations and the resurrection of the fallen. */
   | WayClientMsg
   /** The dense sea's marks (driftwood, wrecks, buoys…): work the one within reach, or leave off. */
@@ -2248,6 +2250,7 @@ export type ServerMsg =
   | PassServerMsg
   | CosServerMsg
   | PvpRankServerMsg
+  | PowerServerMsg
   /** docs/35: the waystation's window, her fallen and their price. */
   | WayServerMsg
   /** The marks she has worked (no more today) and the one her boats are at now (world seconds). */
@@ -3324,6 +3327,8 @@ export interface InspectView {
   wanted: number;
   /** What they wear, ship and captain (docs/12 P1). */
   gear?: Item[];
+  /** «Мощь» (owner, 2026-10-31; shared/src/data/power.ts): her total and parts now, and her place on the power board. */
+  power?: import('./data/power.ts').PowerScore & { rank: number | null };
 }
 
 export interface BarterSide {

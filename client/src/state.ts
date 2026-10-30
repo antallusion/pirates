@@ -46,6 +46,7 @@ import type { RegionId } from '../../shared/src/world/regions.ts';
 import type { PremiumView } from '../../shared/src/premiumproto.ts';
 import type { CosView } from '../../shared/src/cosproto.ts';
 import type { PvpRankView } from '../../shared/src/pvprankproto.ts';
+import type { PowerRankView } from '../../shared/src/powerproto.ts';
 import { holdFill, overloadMul } from '../../shared/src/data/overload.ts'; // forum 2026-10-30: «ПЕРЕГРУЗ», as the server reckons it
 
 export interface ShipSample {
@@ -224,6 +225,8 @@ export class ClientState {
   cos: CosView | null = null;
   /** Her PvP page (the Captain window's «ПвП»; owner, 2026-10-30). */
   pvprank: PvpRankView | null = null;
+  /** «Мощь» (owner, 2026-10-31): the Captain window's page. */
+  power: PowerRankView | null = null;
   puzzle: PuzzleView | null = null;
   puzzleAt = 0;
   /** One's own caravans (docs/12 P8). */
@@ -623,6 +626,9 @@ export class ClientState {
         break;
       case 'pvprank':
         this.pvprank = m.view;
+        break;
+      case 'power':
+        this.power = m.view;
         break;
       case 'premium':
         this.premium = m.view;

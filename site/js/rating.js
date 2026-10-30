@@ -40,7 +40,15 @@
     const pad = Math.max(1.2, k * words.length * 0.56).toFixed(2);
     return `<span class="rt-plate" style="${p && p.url ? `background-image:url(${esc(p.url)});` : ''}color:${esc(p ? p.ink : '#f3e6c8')};--halo:${esc(p ? p.halo : '#000')};padding:1px ${pad}em 0">${esc(words)}</span>`;
   };
-  const board = () => tabs.find((b) => b.classList.contains('on'))?.dataset.board || 'level';
+  const board = () => tabs.find((b) => b.classList.contains('on'))?.dataset.board || 'power';
+  // «Мощь» (owner, 2026-10-31: «рейтинг должен строиться на мощи … и вещей»): the total and its four parts, each row with
+  // the breakdown (server/src/game/siterating.ts, shared/src/data/power.ts).
+  const POWER = ['power', 'army', 'ship', 'isle', 'gear'];
+  const PARTS = [['army', 'pwArmy'], ['ship', 'pwShip'], ['isle', 'pwIsle'], ['gear', 'pwGear']];
+  const icoOf = (id) => (data.boards.find((x) => x.id === id) || {}).icon || '';
+  const nfk = new Intl.NumberFormat(data.lang === 'ru' ? 'ru-RU' : 'en-GB', { maximumFractionDigits: 1 });
+  const kfmt = (n) => (n < 10000 ? nf.format(n) : `${nfk.format(n / 1000)}k`);
+  const pwParts = (pw, hl) => `<i class="rt-pw">${PARTS.map(([k, w]) => `<span class="${k === hl ? 'on' : ''}" title="${esc(t[w])}"><img src="${esc(icoOf(k))}" alt="${esc(t[w])}" width="14" height="14">${kfmt(pw[k] || 0)}</span>`).join('')}</i>`;
   const meta = (b) => data.boards.find((x) => x.id === b) || data.boards[0];
 
   const value = (b, r) => {
@@ -48,6 +56,7 @@
     return `<b>${nf.format(r.value)}</b>`;
   };
   const sub = (b, r) => {
+    if (POWER.includes(b) && r.pw) return b === 'power' ? pwParts(r.pw, '') : `<i>${esc(t.might)} ${nf.format(r.pw.total)}</i>`;
     if (b === 'level' && r.sub) return `<i>${esc(t.glory)} ${nf.format(r.sub)}</i>`;
     if (b === 'arena' && r.sub !== undefined) return `<i>${nf.format(r.sub)} ${esc(t.wins)}</i>`;
     if (b === 'pvp') return `<i>${nf.format(r.kills || 0)} ${esc(t.kills)} · ${nf.format(r.deaths || 0)} ${esc(t.deaths)}</i>`;
@@ -55,7 +64,7 @@
     return '';
   };
   const dot = (name) => (live.has(name) ? `<i class="rt-live" title="${esc(t.live)}"></i>` : '');
-  const rowHtml = (b, r) => `<li class="rt-row cp-go${r.rank <= 3 ? ` top top${r.rank}` : ''}" data-cap="${esc(r.name)}" tabindex="0" role="button" aria-haspopup="dialog" aria-label="${esc(`${r.name}${live.has(r.name) ? ` (${t.live})` : ''} — ${data.cp.t.open}`)}"><span class="rt-rank">${r.rank}</span>${face(r.captain, r.frame, 60)}
+  const rowHtml = (b, r) => `<li class="rt-row cp-go${b === 'power' && r.pw ? ' pw' : ''}${r.rank <= 3 ? ` top top${r.rank}` : ''}" data-cap="${esc(r.name)}" tabindex="0" role="button" aria-haspopup="dialog" aria-label="${esc(`${r.name}${live.has(r.name) ? ` (${t.live})` : ''} — ${data.cp.t.open}`)}"><span class="rt-rank">${r.rank}</span>${face(r.captain, r.frame, 60)}
 <span class="rt-who"><b class="rt-name">${dot(r.name)}${esc(r.name)}${r.guild ? ` <span class="rt-tag">[${esc(r.guild)}]</span>` : ''}</b>${plate(r.title, r.plate)}<span class="rt-cap">${esc(cos.names[r.captain] || '')}</span></span>
 <span class="rt-val">${value(b, r)}${sub(b, r)}</span></li>`;
   const guildHtml = (r) => `<li class="rt-row guild${r.rank <= 3 ? ` top top${r.rank}` : ''}"><span class="rt-rank">${r.rank}</span><span class="rt-gtag">${esc(r.tag)}</span>
@@ -84,6 +93,10 @@
   note.className = 'rt-note muted';
   note.textContent = t.pvpRules;
   onRow.after(note);
+  const pnote = d.createElement('p');
+  pnote.className = 'rt-note muted';
+  pnote.textContent = t.pwRules;
+  note.after(pnote);
   let pastOn = new URLSearchParams(location.search).get('past') === '1';
   const MONTHS = String(t.months).split(',');
   const monthName = (m) => `${MONTHS[m % 12] || ''} ${Math.floor(m / 12)}`;
@@ -91,6 +104,7 @@
     const pvp = b === 'pvp';
     pastBtn.hidden = !pvp;
     note.hidden = !pvp;
+    pnote.hidden = !POWER.includes(b);
     pastBtn.classList.toggle('on', pastOn);
     pastBtn.setAttribute('aria-checked', String(pastOn));
     onBtn.hidden = pvp && pastOn;
@@ -212,7 +226,7 @@
         return `<li><button type="button" data-go="${b.id}"><span>${esc(b.name)}</span><b>${n ? `#${nf.format(n)}` : esc(t.out)}</b></button></li>`;
       }).join('');
       found.innerHTML = `<div class="rt-card panel">${face(c.captain, c.frame, 108)}<div class="rt-card-txt"><p class="kicker">${esc(t.you)}</p><h3>${esc(c.name)}${c.guild ? ` <span class="rt-tag">[${esc(c.guild)}]</span>` : ''}</h3>${plate(c.title, c.plate)}
-<p class="muted">${esc(cos.names[c.captain] || '')} · ${esc(t.lvl)} ${c.level}</p><button type="button" class="btn-gold sm rt-open" data-cap="${esc(c.name)}" aria-haspopup="dialog">${esc(data.cp.t.open)}</button></div><button type="button" class="rt-x" aria-label="${esc(t.close)}">×</button>
+<p class="muted">${esc(cos.names[c.captain] || '')} · ${esc(t.lvl)} ${c.level}${c.pw ? ` · ${esc(t.might)} <b class="rt-fpw">${nf.format(c.pw.total)}</b>` : ''}</p><button type="button" class="btn-gold sm rt-open" data-cap="${esc(c.name)}" aria-haspopup="dialog">${esc(data.cp.t.open)}</button></div><button type="button" class="rt-x" aria-label="${esc(t.close)}">×</button>
 <div class="rt-places"><p class="kicker">${esc(t.ranks)}</p><ul>${places}</ul></div></div>`;
       found.querySelector('.rt-x').addEventListener('click', () => { found.hidden = true; found.innerHTML = ''; });
       found.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => pick(b.dataset.go)));
@@ -222,7 +236,7 @@
   });
 
   const q = new URLSearchParams(location.search);
-  const first = data.boards.some((b) => b.id === q.get('board')) ? q.get('board') : 'level';
+  const first = data.boards.some((b) => b.id === q.get('board')) ? q.get('board') : 'power';
   pick(first);
   if (q.get('name')) { form.querySelector('input').value = q.get('name'); form.requestSubmit(); }
   // ================================================================================================ the captain's card
@@ -353,7 +367,8 @@
     const st = v.stats, p = v.pvp;
     const tiles = [
       tile(CI.level, ct.lvl, fmt(v.level), v.glory ? `${esc(ct.glory)} ${fmt(v.glory)}` : ''),
-      v.army.stacks.length ? tile(CI.power, ct.power, short(v.army.power), `${fmt(v.army.men)} ${esc(ct.men)}`) : '',
+      // (the army's might is «Мощь»'s «Армия» above; here its men)
+      v.army.stacks.length ? tile(CI.men, ct.count, fmt(v.army.men), esc(ct.men)) : '',
       v.ship ? tile(CI.ship, ct.tShip, esc(tr(v.ship.clsName)), `⚓${v.ship.level}`) : '',
       p.season && (p.season.pts > 0 || p.all.pts > 0) ? tile(CI.pvpPts, ct.pvpPts, fmt(p.season.pts), p.season.rank ? esc(ct.place.replace('{n}', fmt(p.season.rank))) : '') : '',
       p.all && p.all.pts > 0 ? tile(CI.pvpPts, ct.pvpAll, fmt(p.all.pts), `${esc(ct.pvpKd)} ${fmt(p.all.kills)}/${fmt(p.all.deaths)}`) : '',
@@ -363,6 +378,10 @@
       p.wanted > 0 ? tile(CI.wanted, ct.wanted, esc(tr(p.wantedName))) : '',
       ...['boarded', 'sunk', 'distance', 'recruited', 'quests', 'roamWins', 'mentored', 'season', 'fish'].filter((k) => st[k] > 0).map((k) => tile(CI[k], ct[k], fmt(st[k]))),
     ].join('');
+    const pw = v.power;
+    const rk = (id) => (v.ranks[id] ? esc(ct.place.replace('{n}', fmt(v.ranks[id]))) : '');
+    const might = pw ? `${h3(ct.might, `${esc(ct.mightSub)}`)}<div class="cp-might"><div class="cp-tile cp-mtot">${im(CI.might, '', '', 34)}<span class="cp-tx"><b>${fmt(pw.total)}</b><i>${esc(ct.might)}</i>${rk('power') ? `<em>${rk('power')}</em>` : ''}</span></div>
+<div class="cp-tiles four">${[['army', 'mightArmy'], ['ship', 'mightShip'], ['isle', 'mightIsle'], ['gear', 'mightGear']].map(([k, w]) => tile(CI[w], ct[w], fmt(pw[k]), rk(k))).join('')}</div></div>` : '';
     const places = data.boards.filter((b) => b.id !== 'guilds' && v.ranks[b.id]).map((b) => `<li><button type="button" data-go="${b.id}">${im(b.icon, '', '', 18)}<span>${esc(b.name)}</span><b>#${fmt(v.ranks[b.id])}</b></button></li>`).join('');
     const rep = v.rep.map((r) => {
       const w = Math.min(100, Math.abs(r.v));
@@ -370,7 +389,7 @@
     }).join('');
     const careers = v.careers.length ? `${h3(ct.careers)}<ul class="cp-chips">${v.careers.map((c) => `<li class="cp-chip gold"><span>${esc(tr(c.name))}: <b>${esc(tr(c.rankName))}</b></span></li>`).join('')}</ul>` : '';
     const titles = v.titles.length ? `${h3(ct.titles, String(v.titles.length))}<ul class="cp-chips">${v.titles.map((x) => `<li class="cp-chip${v.title && tr(v.title) === tr(x) ? ' gold' : ''}"><span>${esc(tr(x))}</span></li>`).join('')}</ul>` : '';
-    return `<div class="cp-tiles">${tiles}</div>${places ? `${h3(ct.places)}<ul class="cp-places">${places}</ul>` : ''}${careers}${titles}${h3(ct.rep)}<ul class="cp-reps">${rep}</ul>`;
+    return `${might}<div class="cp-tiles">${tiles}</div>${places ? `${h3(ct.places)}<ul class="cp-places">${places}</ul>` : ''}${careers}${titles}${h3(ct.rep)}<ul class="cp-reps">${rep}</ul>`;
   };
 
   const army = (v) => {
@@ -434,7 +453,7 @@ ${grid(ct.town, i.town)}${grid(ct.producers, i.producers)}${grid(ct.buildings, i
     const state = v.online ? `<span class="cp-on"><i></i>${esc(ct.online)}${v.sea ? ` · ${esc(tr(v.sea))}` : ''}</span>` : v.seen ? `<span class="cp-off">${esc(ct.seen.replace('{t}', ago(v.seen)))}</span>` : '';
     return `<header class="cp-head">${face(v.captain, v.frame, 132)}<div class="cp-who"><p class="kicker">${esc(tr(v.capName))} · ${esc(tr(v.archetype))}</p>
 <h2 id="cp-name">${esc(v.name)}${v.guild ? ` <span class="rt-tag" title="${esc(v.guild.name)}">[${esc(v.guild.tag)}]</span>` : ''}</h2>${plate(v.cosTitle, v.plate)}${!v.cosTitle && v.title ? `<p class="cp-title">${esc(tr(v.title))}</p>` : ''}
-<div class="cp-lv"><b>${esc(ct.lvl)} ${v.level}</b>${v.glory ? `<span class="cp-glory">${im(CI.glory, '', '', 16)}${esc(ct.glory)} ${fmt(v.glory)}</span>` : ''}${state}</div>
+<div class="cp-lv"><b>${esc(ct.lvl)} ${v.level}</b>${v.power ? `<span class="cp-glory cp-hpw">${im(CI.might, '', '', 16)}${esc(ct.might)} ${fmt(v.power.total)}${v.ranks.power ? ` · #${fmt(v.ranks.power)}` : ''}</span>` : ''}${v.glory ? `<span class="cp-glory">${im(CI.glory, '', '', 16)}${esc(ct.glory)} ${fmt(v.glory)}</span>` : ''}${state}</div>
 <div class="cp-xpw" title="${esc(ct.xp)}"><span class="cp-xp"><i style="width:${xpPct.toFixed(1)}%"></i></span><em>${v.xpNext ? `${fmt(v.xp)} / ${fmt(v.xpNext)}` : esc(ct.maxed)}</em></div>
 ${v.created ? `<p class="cp-since">${esc(ct.since.replace('{d}', date(v.created)))}</p>` : ''}</div></header>`;
   };

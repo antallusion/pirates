@@ -11,7 +11,7 @@ import { assetUrl } from '../assets.ts';
 import { dict, lang } from '../i18n.ts';
 import { serverText } from '../lang/server.ts';
 import { askHtml } from './confirm.ts';
-import { esc } from './dom.ts';
+import { esc, fmt } from './dom.ts';
 import { placeName } from './maps.ts';
 import { drawPlatesIn, framedFace, plateHtml } from './cosmetics.ts'; // docs/32 §12
 
@@ -31,6 +31,9 @@ const EN = {
   invite: 'Call aboard',
   befriend: 'Befriend',
   gear: 'Gear',
+  might: 'Might',
+  mightOf: 'army {a} · ship {s} · island {i} · gear {g}',
+  place: 'place {n}',
 };
 const RU: typeof EN = {
   level: 'Уровень {n} · {path}',
@@ -48,6 +51,9 @@ const RU: typeof EN = {
   invite: 'Позвать',
   befriend: 'В друзья',
   gear: 'Снаряжение',
+  might: 'Мощь',
+  mightOf: 'армия {a} · корабль {s} · остров {i} · снаряжение {g}',
+  place: '{n} место',
 };
 const L = dict(EN, RU);
 
@@ -73,6 +79,7 @@ export function inspectDialog(v: InspectView, acts: InspectActs, opts: { friend:
         <p class="insp-line">${esc(L('ship', { ship: placeName(v.ship.name), cls: SHIP_CLASSES[v.ship.classId]?.name ?? v.ship.classId, lvl: v.ship.level ? ` · ⚓${v.ship.level}` : '' }))}</p>
         <p class="insp-line muted">${esc(L('waters', { region: placeName(REGIONS[v.region]?.name ?? v.region) }))}</p>
       </div></div>
+    ${v.power ? `<div class="insp-might"><div class="insp-stat"><span class="muted">${esc(L('might'))}</span><b>${esc(fmt(v.power.total))}${v.power.rank ? ` <small>· ${esc(L('place', { n: v.power.rank }))}</small>` : ''}</b></div><p class="muted insp-line">${esc(L('mightOf', { a: fmt(v.power.army), s: fmt(v.power.ship), i: fmt(v.power.isle), g: fmt(v.power.gear) }))}</p></div>` : ''}
     <div class="insp-stats">${stat('deeds', v.deeds)}${stat('season', v.seasonLevel)}${stat('quests', v.questsDone)}${stat('contracts', v.contracts)}${stat('mentored', v.mentored)}${stat('rating', v.rating)}${v.wanted ? stat('wanted', '☠'.repeat(v.wanted)) : ''}</div>
     ${v.gear?.length ? `<div class="insp-gear"><div class="muted insp-gear-h">${esc(L('gear'))}</div>${v.gear.map((it) => `<span class="insp-item"${itemDetailAttr(it)} style="color:${RARITY_COLOR[it.rarity]}" title="${esc(SLOT_NAMES[itemSlot(it)][lang() === 'ru' ? 1 : 0])} · ⚓${it.ilvl}">${esc(itemName(it, lang() === 'ru'))}</span>`).join('')}</div>` : ''}
     <div class="insp-acts">${opts.canInvite ? `<button class="btn btn-small" data-insp-invite>${esc(L('invite'))}</button>` : ''}${opts.friend ? '' : `<button class="btn btn-small" data-insp-friend>${esc(L('befriend'))}</button>`}</div>`;

@@ -1725,6 +1725,11 @@ h3 .ship-over { display: block; font-size: 13px; margin-top: 2px; }
 .insp-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px; margin: 12px 0 8px; }
 .insp-stat { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 8px; border: 1px solid rgba(111, 90, 56, 0.35); background: rgba(255, 255, 255, 0.03); font-size: 13px; }
 .insp-stat b { color: var(--bone); font-variant-numeric: tabular-nums; }
+.insp-might { margin: 12px 0 0; } /* «Мощь» (owner, 2026-10-31) */
+.insp-might .insp-stat { border-color: rgba(224, 184, 98, 0.55); }
+.insp-might .insp-stat b { color: var(--gold); font-size: 15px; }
+.insp-might .insp-stat small { color: var(--fog); font-weight: 400; font-size: 12px; }
+.insp-might .insp-line { margin: 4px 0 0; font-size: 12px; }
 .insp-acts { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
 .who-here { display: inline-flex; gap: 6px; align-items: center; margin-top: 8px; font-size: 13px; color: var(--fog); cursor: pointer; }
 @media (max-width: 480px) { #modal-panel .fr-form > input { flex: 1 1 100%; } #modal-panel .fr-form > .btn { flex: 1 1 0; } }
@@ -5895,6 +5900,7 @@ html.app-paused *, html.app-paused *::before, html.app-paused *::after { animati
 .pv-big b { font-family: var(--sans); font-weight: 700; font-size: 26px; color: var(--gold); line-height: 1; font-variant-numeric: tabular-nums; }
 .pv-big i { font-style: normal; font-size: 11px; color: var(--fog); text-align: center; }
 .pv-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.pv-stats.pw-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); } /* «Мощь» (owner, 2026-10-31) */
 .pv-stat { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid rgba(176, 141, 87, 0.45); border-radius: 6px; background: rgba(20, 16, 10, 0.55); min-width: 0; }
 .pv-stat .ico-md { width: 30px; height: 30px; flex: none; }
 .pv-stat > span { display: flex; flex-direction: column; min-width: 0; }
@@ -5927,6 +5933,7 @@ html.app-paused *, html.app-paused *::before, html.app-paused *::after { animati
 .pv-rules ul { margin: 6px 0 0; padding-left: 18px; font-size: 12px; line-height: 1.4; color: var(--fog); }
 @media (max-width: 700px), (max-height: 500px) {
   .pv-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pv-stats.pw-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pv-rw { grid-template-columns: minmax(0, 1fr); }
   .pv-big b { font-size: 22px; }
 }

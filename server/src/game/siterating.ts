@@ -14,10 +14,20 @@ import { arenaTable } from './arena.ts';
 import { monthOf } from '../../../shared/src/data/pvprank.ts';
 import { monthTally, pastSeasons } from './pvprank.ts';
 import type { Game } from './Game.ts';
+import { powerOfSave } from './power.ts';
+import type { PowerSave } from './power.ts';
+import type { PowerScore } from '../../../shared/src/data/power.ts';
+import type { PowerBoard, PowerRankView } from '../../../shared/src/powerproto.ts';
 
-export type Board = 'level' | 'glory' | 'boarded' | 'arena' | 'pvp' | 'campaign' | 'guilds';
-/** «pvp»: this month's PvP points (owner, 2026-10-30; pvprank.ts), with the month's kills and deaths. */
-export const BOARDS: Board[] = ['level', 'glory', 'boarded', 'arena', 'pvp', 'campaign', 'guilds'];
+export type Board = PowerBoard | 'level' | 'glory' | 'boarded' | 'arena' | 'pvp' | 'campaign' | 'guilds';
+/** «pvp»: this month's PvP points (owner, 2026-10-30; pvprank.ts), with the month's kills and deaths.
+ *  «power» and its parts «army», «ship», «isle», «gear» (owner, 2026-10-31: «рейтинг должен строиться на мощи … выводи в
+ *  рейтинг именно по этой мощи»; shared/src/data/power.ts): the total is the main board — the first, the default, and the
+ *  place a captain is told everywhere. */
+export const BOARDS: Board[] = ['power', 'army', 'ship', 'isle', 'gear', 'level', 'glory', 'boarded', 'arena', 'pvp', 'campaign', 'guilds'];
+export const POWER_BOARDS: PowerBoard[] = ['power', 'army', 'ship', 'isle', 'gear'];
+/** The board when none is asked for. */
+export const DEFAULT_BOARD: Board = 'power';
 export const TOP = 100;
 export const RATING_TTL = 60_000;
 /** Who is in the game now is read afresh at most this often (owner, 2026-10-29: «"в сети" должны показываться люди кто
@@ -46,6 +56,8 @@ export interface RatingRow {
   /** «pvp»: the month's captains sunk or taken, and her deaths to captains. */
   kills?: number;
   deaths?: number;
+  /** «power» and its parts: her four parts and the total (each row shows the breakdown). */
+  pw?: PowerScore;
   guild: string | null;
   title: string | null;
   plate: string | null;
@@ -91,13 +103,14 @@ interface Cap {
   pvp: number;
   pvpK: number;
   pvpD: number;
+  pw: PowerScore;
   guild: string | null;
   title: string | null;
   plate: string | null;
   frame: string | null;
 }
 
-interface ProfileLike {
+interface ProfileLike extends PowerSave {
   captain?: string;
   level?: number;
   xp?: number;
@@ -174,6 +187,7 @@ export class SiteRating {
         glory: num(p.throne?.rank), gloryXp: num(p.throne?.xp), boarded: num(p.stats?.boarded), campaign: Math.min(CAMPAIGN_SIZE, num(p.campaign?.at)),
         arena: a && a.n > 0 ? num(a.r) : 0, arenaN: a ? num(a.n) : 0, arenaW: a ? num(a.w) : 0,
         ...((t) => ({ pvp: t?.pts ?? 0, pvpK: t?.kills ?? 0, pvpD: t?.deaths ?? 0 }))(monthTally(p.pvpr, month)),
+        pw: this.power(row.account_id, p),
         guild: game.guilds.of(game, row.account_id)?.tag ?? null, ...this.wardrobe(row.account_id),
       });
     }
@@ -199,6 +213,11 @@ export class SiteRating {
       return x.name.localeCompare(y.name);
     });
     switch (b) {
+      case 'power': return by((c) => [c.pw.total, c.level, c.xp]);
+      case 'army': return by((c) => [c.pw.army, c.pw.total]).filter((c) => c.pw.army > 0);
+      case 'ship': return by((c) => [c.pw.ship, c.pw.total]).filter((c) => c.pw.ship > 0);
+      case 'isle': return by((c) => [c.pw.isle, c.pw.total]).filter((c) => c.pw.isle > 0);
+      case 'gear': return by((c) => [c.pw.gear, c.pw.total]).filter((c) => c.pw.gear > 0);
       case 'level': return by((c) => [c.level, c.glory, c.gloryXp, c.xp]);
       case 'glory': return by((c) => [c.glory, c.gloryXp, c.level]).filter((c) => c.level >= MAX_LEVEL);
       case 'boarded': return by((c) => [c.boarded, c.level]).filter((c) => c.boarded > 0);
@@ -209,6 +228,9 @@ export class SiteRating {
   }
 
   private row(b: Exclude<Board, 'guilds'>, c: Cap, rank: number): RatingRow {
+    if (b === 'power' || b === 'army' || b === 'ship' || b === 'isle' || b === 'gear') {
+      return { rank, name: c.name, captain: c.captain, level: c.level, value: b === 'power' ? c.pw.total : c.pw[b], pw: c.pw, guild: c.guild, title: c.title, plate: c.plate, frame: c.frame };
+    }
     if (b === 'pvp') return { rank, name: c.name, captain: c.captain, level: c.level, value: c.pvp, kills: c.pvpK, deaths: c.pvpD, guild: c.guild, title: c.title, plate: c.plate, frame: c.frame };
     const value = b === 'level' ? c.level : b === 'glory' ? c.glory : b === 'boarded' ? c.boarded : b === 'arena' ? c.arena : chapterOfSlot(c.campaign >= CAMPAIGN_SIZE ? CAMPAIGN_SIZE - 1 : c.campaign).ch;
     const sub = b === 'level' && c.glory > 0 ? c.glory : b === 'arena' ? c.arenaW : b === 'campaign' && c.campaign >= CAMPAIGN_SIZE ? 1 : undefined;
@@ -280,6 +302,26 @@ export class SiteRating {
     return { board: b, at: on.at, rows };
   }
 
+  /** Her power from her save (her live army aboard); an unreadable save counts nought. */
+  private power(acc: number, p: ProfileLike): PowerScore {
+    try {
+      const s = this.game.sessionByAccount(acc);
+      return powerOfSave(this.game, acc, p, s?.ship?.army);
+    } catch {
+      return { total: 0, army: 0, ship: 0, isle: 0, gear: 0 };
+    }
+  }
+
+  /** The Captain window's «Мощь» page: her places on the five power boards (null: not on one), how many are on the
+   *  board, and its top ten (a minute's snapshot, as the site's). */
+  powerBoard(acc: number): Pick<PowerRankView, 'ranks' | 'ranked' | 'top'> {
+    const snap = this.read();
+    const c = snap.caps.find((x) => x.acc === acc);
+    const ranks = Object.fromEntries(POWER_BOARDS.map((b) => [b, c ? snap.lists.get(b)?.get(c) ?? null : null])) as PowerRankView['ranks'];
+    const top = (snap.boards.get('power')?.rows as RatingRow[] | undefined ?? []).slice(0, 10).map((r) => ({ rank: r.rank, name: r.name, captain: r.captain, level: r.level, pw: r.pw! }));
+    return { ranks, ranked: snap.lists.get('power')?.size ?? 0, top };
+  }
+
   /** The PvP seasons closed (newest first): each month's top ten, the hidden left out, no account ids. */
   pvpSeasons(): ReturnType<typeof pastSeasons> {
     return pastSeasons(this.game, (acc, name) => this.hidden(acc, name));
@@ -301,7 +343,8 @@ export class SiteRating {
       if (b === 'guilds') continue;
       ranks[b] = snap.lists.get(b)?.get(c) ?? null;
     }
-    return { captain: this.row('level', c, ranks.level ?? 0), ranks };
+    // (her card is the power board's: her total and parts, and her place there — the place she is told everywhere)
+    return { captain: this.row('power', c, ranks.power ?? 0), ranks };
   }
 
   /** A public captain's account by her name (case aside), for the site's profile (siteprofile.ts): never a hidden one. */
