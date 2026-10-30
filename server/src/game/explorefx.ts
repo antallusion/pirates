@@ -23,6 +23,7 @@ import { digOutcome, legendCircle, legendFragment } from './treasure.ts';
 import { seasonStat } from './seasons.ts';
 import type { ShipEntity } from './ship.ts';
 import { maybeArtifact } from './hero.ts';
+import { seasonXp as passXp } from './seasonpass.ts'; // «Сезонная карта» (owner, 2026-10-30)
 
 export const MAX_MAPS = 6;
 /** The true spot is dug from her hull within REACH_OBJ of it (a spot of LANDING_R on the water) — owner, 2026-10-22: 250 m
@@ -250,6 +251,7 @@ export function hoard(game: Game, s: PlayerSession, grade: number, share: number
     }
   };
   seasonStat(game, s, 'treasure', 1);
+  passXp(game, s, 'treasure'); // «Сезонная карта» (owner, 2026-10-30)
   const silver = Math.round([0, rng.int(300, 700), rng.int(1000, 2500), rng.int(4000, 8000), rng.int(9000, 14000)][Math.min(4, grade)] * share);
   if (grade === 1) give('spices', rng.int(5, 10));
   if (grade === 2) {

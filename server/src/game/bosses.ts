@@ -40,6 +40,8 @@ import { artifactFind } from './hero.ts';
 import { maybeScroll } from './pathbook.ts';
 import { riseTen, tenEnd, tenHint, tenIncoming, tenPart, tenSecond, tenSinking, tenTick, tenWhere, tenZones } from './bosses10.ts';
 import type { TenState } from './bosses10.ts';
+import { seasonXp as passXp } from './seasonpass.ts'; // «Сезонная карта» (owner, 2026-10-30)
+import { passBossXp } from '../../../shared/src/data/seasonpass.ts';
 
 /** A fight's entities: the body; the Kraken's arms, the Whale's heart, the Mother's cores, the Admiral's line, the
  *  adds; and the six of 2026-10-03's (bosses10.ts): the Changeling's false shapes, the Prelate's bell spires, the
@@ -1505,6 +1507,7 @@ export function reward(game: Game, f: Fight, x: number, y: number): void {
     // Leviathan Slain (canon): a tenth of its death is one's own.
     if ((def.id === 'leviathan' || def.id === 'ancient_leviathan') && share >= 0.1) grantDeed(game, s, 'deed_leviathan_slain');
     seasonStat(game, s, 'monsters', Math.round(share * 100));
+    passXp(game, s, 'boss', passBossXp('boss', share)); // «Сезонная карта» (owner, 2026-10-30)
     if (def.id === 'ancient_leviathan' || def.id === 'abyss_eye') seasonStat(game, s, 'abyss', Math.round(share * 100));
     // The Abyss's own: ritual shards for everyone who truly fought, and a chapter of the story.
     if (def.id === 'ancient_leviathan' || def.id === 'abyss_eye') {

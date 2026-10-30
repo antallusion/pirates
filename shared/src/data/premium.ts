@@ -106,9 +106,9 @@ export const exchangeSilver = (n: number): number => (Number.isInteger(n) && n >
 
 const byPrice = <T>(price: (x: T) => number) => (a: T, b: T) => price(a) - price(b);
 
-/** Every hull the shop sells, the cheapest first. */
+/** Every hull the shop sells, the cheapest first (a hull of the season pass's alone is not: ShipClassDef.premium.pass). */
 export function premiumShips(): ShipClassId[] {
-  return SHIP_CLASS_IDS.filter((c) => SHIP_CLASSES[c].premium).sort(byPrice((c) => SHIP_CLASSES[c].premium!.price));
+  return SHIP_CLASS_IDS.filter((c) => SHIP_CLASSES[c].premium && !SHIP_CLASSES[c].premium!.pass).sort(byPrice((c) => SHIP_CLASSES[c].premium!.price));
 }
 
 /** Every kind the shop sells, the cheapest first. A premium hull's own kind (shared/src/data/shipbeasts.ts) is premium

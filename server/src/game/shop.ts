@@ -697,6 +697,32 @@ function buyCore(game: Game, s: PlayerSession, aboard: boolean, offerId: string,
   return null;
 }
 
+/** Goods handed over as the shop hands them, with no doubloons (the season card's rewards: server/src/game/seasonpass.ts):
+ *  every check the shop makes first — aboard through her session, else by the account for the account's goods only —
+ *  then the goods and her stores saved together. Null: handed over; else why not (nothing moved). */
+export function grantGoods(game: Game, s: PlayerSession, grants: ShopGrant[], tag: string): ShopWhy | null {
+  if (!grants.length) return null;
+  const aboard = !!s.profile;
+  const st = shopState(game, s.accountId);
+  const offer: ShopOffer = { id: tag, price: 0, grants };
+  const count = new Map<string, number>();
+  for (const g of grants) {
+    if (!aboard && !ACCOUNT_GRANTS.has(g.k)) return 'fight';
+    const why = grantWhy(game, s, st, g, offer, count);
+    if (why) return why;
+  }
+  game.db.transaction(() => {
+    for (const g of grants) grant(game, s, st, g, tag);
+    save(game, s.accountId, st);
+    if (aboard) game.saveSession(s);
+  });
+  if (aboard) afterBuy(game, s, offer);
+  return null;
+}
+
+/** The account in a session's stead (the season card's deliveries to a captain who is not aboard). */
+export const accountStandIn = (accountId: number): PlayerSession => standIn(accountId);
+
 /** After a purchase: her balance, her ship, her island's window, the battle's screen (the scrolls). */
 function afterBuy(game: Game, s: PlayerSession, offer?: ShopOffer): void {
   sendBalance(game, s);

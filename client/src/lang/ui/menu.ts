@@ -16,6 +16,7 @@ export const EN = {
   chat: 'Chat',
   base: 'My Island',
   research: 'Tree of hulls',
+  pass: 'Season card',
   close: 'Back to the helm',
 } as const;
 
@@ -35,5 +36,6 @@ export const RU: Record<keyof typeof EN, string> = {
   chat: 'Чат',
   base: 'Мой остров',
   research: 'Дерево кораблей',
+  pass: 'Сезонная карта',
   close: 'К штурвалу',
 };

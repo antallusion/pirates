@@ -680,3 +680,13 @@ html.pd-lock, html.pd-lock body { overflow: hidden; }
 /* a narrow tile with both: the discount drops to the tile's foot, under the brass tag's corner */
 .sc-opt { container-type: inline-size; }
 @container (max-width: 104px) { .sc-tag + .sc-off { top: auto; bottom: -8px; } }
+
+/* «Сезонная карта» (owner, 2026-10-30; tools/site/build.ts): its banner over the shop, to its page */
+.shop-pass { display: flex; align-items: center; gap: 18px; margin: 0 0 22px; padding: 14px 20px; border-color: rgba(245, 196, 81, 0.4); color: var(--text); }
+.shop-pass:hover { color: var(--text); border-color: rgba(245, 196, 81, 0.7); box-shadow: 0 0 30px rgba(245, 196, 81, 0.12); }
+.shop-pass img { width: 56px; height: 190px; object-fit: contain; flex: none; margin: -67px 67px; transform: rotate(-90deg); filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.7)); }
+.shop-pass span { display: flex; flex-direction: column; gap: 4px; flex: 1 1 auto; min-width: 0; }
+.shop-pass b { font: 700 22px/1.15 var(--display); color: #efe4c8; }
+.shop-pass small { font-size: 14px; color: var(--muted); }
+.shop-pass i { font-style: normal; flex: none; }
+@media (max-width: 640px) { .shop-pass { flex-wrap: wrap; } .shop-pass img { width: 40px; height: 136px; margin: -48px 48px; } .shop-pass i { margin-left: auto; } }

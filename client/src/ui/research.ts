@@ -72,7 +72,7 @@ export class ResearchWindow {
       line = L('st.berth');
     } else if (c.premium) {
       state = 'premium';
-      line = L('st.premium');
+      line = c.premium.pass ? L('st.pass') : L('st.premium'); // the season card's own hull (owner, 2026-10-30)
     } else if (isResearched(r, id, owned)) {
       state = 'known';
       line = needsResearch(id) ? L('st.known') : L('st.start');

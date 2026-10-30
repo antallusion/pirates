@@ -180,6 +180,7 @@ import { mountQuickEmotes, ownEmotes } from './ui/cosmetics.ts'; // docs/32 §12
 import { heardDoubloons, stashPending } from './ui/price.ts'; // a purchase waiting for its top-up (owner, 2026-10-18)
 import { Promos } from './ui/promo.ts'; // her personal offers (owner, 2026-10-15)
 import { DailyGift } from './ui/dailygift.ts'; // the daily login gift (owner, 2026-10-16)
+import { SeasonPass } from './ui/seasonpass.ts'; // «Сезонная карта» (owner, 2026-10-30)
 import { initTgNotices } from './ui/tgnotices.ts'; // «Уведомления в Телеграме» (owner, 2026-10-16)
 import { webCheckouts } from './checkout.ts';
 import { vkIdLoginButton, vkIdReturn } from './vkid.ts'; // «Войти через VK ID» on the website (docs/36 §8)
@@ -763,6 +764,8 @@ hud.onExchange = () => openShop(false, { exchange: true }); // the silver's «+�
 // отмели» over the bar's «Плыть» — the newcomer's run of 2026-10-23)
 const dailyGift = new DailyGift({ send: (m) => net.send(m), on: (f) => net.on(f), state, modal: () => modal, busy: () => hostileNear() || !!state.boardTac || !!state.boardFight || openingFrame() !== null });
 initTgNotices((m) => net.send(m), (f) => net.on(f));
+// «Сезонная карта» (owner, 2026-10-30): its window, its button in the «⋯» tray with the rewards ready
+const seasonPass = new SeasonPass({ send: (m) => net.send(m), on: (f) => net.on(f), state, toast: (msg, kind) => hud.toast(msg, kind), modal: () => modal });
 const promos = new Promos({ send: (m) => net.send(m), on: (f) => net.on(f), state, modal: () => modal, busy: () => hostileNear() || !!state.boardTac || !!state.boardFight || openingFrame() !== null, held: () => dailyGift.holding() });
 const puzzleWindow = new PuzzleWindow((m) => net.send(m));
 function openPuzzle(): void {
@@ -2846,7 +2849,7 @@ function renderModal(root: HTMLElement): void {
       if (state.barter) keepInputs(root, () => renderBarter(root, state, (m) => net.send(m)));
       break;
     case 'menu':
-      renderMenu(root, openMenuItem, [...(state.self?.homeIsle !== null && state.self?.homeIsle !== undefined ? ['base' as const] : []), ...(state.self?.glory?.open ? ['throne' as const] : []), 'research' as const]);
+      renderMenu(root, openMenuItem, [...(state.self?.homeIsle !== null && state.self?.homeIsle !== undefined ? ['base' as const] : []), ...(state.self?.glory?.open ? ['throne' as const] : []), 'research' as const, 'pass' as const]);
       break;
     case 'tattoos':
       renderTattoos(root, state, (m) => net.send(m));
@@ -3010,7 +3013,10 @@ function openMenuItem(m: MenuItem): void {
   else if (m === 'hero') openHero();
   else if (m === 'throne') openThrone();
   else if (m === 'shop') openShop();
-  else openModal(m);
+  else if (m === 'pass') {
+    if (modal) closeModal();
+    seasonPass.open();
+  } else openModal(m);
 }
 
 /** The desktop micro menu: every screen one click away, in icons (glyphs until the art loads). */
@@ -5450,4 +5456,4 @@ startTelemetry(() => (!inGame ? 'menu' : tactical.open ? 'battle' : isleScene.is
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.
-(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, isle: isleScene, assets: () => ({ ...assetStats(), loads: loadLog.slice(), kinds: assetKinds() }), open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), cos: { shop: (sec?: string) => openShop(false, { tab: 'cos', sec: sec as 'cos_titles' | undefined }), wardrobe: () => openWardrobe() }, promos, dailyGift, hero: (tab?: CaptainOpen) => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud, aim: { under: attackUnder, about: aboutAt, choices: targetChoices, menu: targetMenu }, roamNow: (id: number) => { const v = state.roams.find((x) => x.id === id); return v ? roamNow(state, v) : null; }, goal: (key: string) => startGoal(key), goalRun: () => goalRun?.key ?? null, modal: () => modal, tapGoal: (x: number, y: number) => sailToTap(x, y), portCard: (id: string) => openPortCard(state, id), portLabelAt: (x: number, y: number) => portLabelAt(x, y) };
+(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, isle: isleScene, assets: () => ({ ...assetStats(), loads: loadLog.slice(), kinds: assetKinds() }), open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), cos: { shop: (sec?: string) => openShop(false, { tab: 'cos', sec: sec as 'cos_titles' | undefined }), wardrobe: () => openWardrobe() }, promos, dailyGift, seasonPass, hero: (tab?: CaptainOpen) => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud, aim: { under: attackUnder, about: aboutAt, choices: targetChoices, menu: targetMenu }, roamNow: (id: number) => { const v = state.roams.find((x) => x.id === id); return v ? roamNow(state, v) : null; }, goal: (key: string) => startGoal(key), goalRun: () => goalRun?.key ?? null, modal: () => modal, tapGoal: (x: number, y: number) => sailToTap(x, y), portCard: (id: string) => openPortCard(state, id), portLabelAt: (x: number, y: number) => portLabelAt(x, y) };

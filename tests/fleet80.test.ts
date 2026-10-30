@@ -53,6 +53,9 @@ const painterOf = (u: string): { tier: number; body: string } | undefined =>
   sheets[`anim_${u}`]?.creature ?? Object.values(sheets).flatMap((sh) => sh.creatures ?? []).find((c) => c.id === u);
 
 const PREMIUM = SHIP_CLASS_IDS.filter((c) => SHIP_CLASSES[c].premium);
+/** What the shop sells for doubloons: every premium hull but the season card's own (owner, 2026-10-30: the Thunderer,
+ *  seasonpass.ts PASS_SHIP — marked premium for her worth and her own creatures, had from the card's 100th tier alone). */
+const SOLD = PREMIUM.filter((c) => !SHIP_CLASSES[c].premium!.pass);
 const NEW = FLEET_HULLS.filter((c) => !OLD_HULLS.includes(c)) as FleetClassId[];
 /** The eight silver hulls that make the lines whole (owner, 2026-10-04; docs/20 §6), beside the fleet of eighty. */
 const LINES: FleetClassId[] = ['sloop_of_war', 'armed_fluyt', 'polacre', 'dunkirk_frigate', 'great_xebec', 'race_galleon', 'great_indiaman', 'manila_galleon'];
@@ -76,7 +79,8 @@ test('eighty hulls a captain sails, in four lists of twenty, ten of each sold fo
   }
   assert.deepEqual(FLEET_LISTS.map((l) => FLEET[l].length), [23, 24, 26, 23], 'the warships, the traders, the runners, the haulers');
   assert.equal(PREMIUM.length, 40 + B3.length);
-  assert.deepEqual([...premiumShips()].sort(), [...PREMIUM].sort(), 'the shop sells every one of them');
+  assert.deepEqual([...premiumShips()].sort(), [...SOLD].sort(), 'the shop sells every one of them but the season card’s own');
+  assert.equal(SOLD.length, PREMIUM.length - 1);
   // The fourteen old hulls stand in the lists; the Dutchman's ship, the deep's monsters and the zone bosses (docs/21:
   // never sold, not premium) in none.
   for (const c of OLD_HULLS) assert.ok(SHIP_CLASSES[c].list && !SHIP_CLASSES[c].premium, c);
@@ -374,7 +378,7 @@ test('a premium purchase delivers the hull and her own creatures — hands paid 
   assert.equal(game.db.doubloons(s.accountId), before - SHIP_CLASSES.black_corsair.premium!.price);
   assert.equal(ship.stats.hullMax, SHIP_CLASSES.black_corsair.hull, 'her own stats');
   // Every one of the forty, delivered with her own (her level asked of the captain, and nothing else in the way).
-  for (const [i, c] of PREMIUM.entries()) {
+  for (const [i, c] of SOLD.entries()) {
     const x = captain(`Buyer ${i + 1}`, game); // one sea, forty captains
     x.ship.setArmy([{ u: 'deckhand', n: 8 }]);
     assert.ok(x.s.profile!.level >= captainLevelFor(levelRange(c)[0]));

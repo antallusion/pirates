@@ -36,6 +36,9 @@ import type { DocId } from './legal.ts';
 import { EN as ARMY_EN, RU as ARMY_RU } from '../../client/src/lang/ui/army.ts';
 import { DATA_RU } from '../../client/src/lang/data.ts';
 import { typo } from './typo.ts';
+import { CHALLENGES, MILESTONES, PASS_PRICES, PASS_SHIP, SUPER_TIERS, passBounds, passFullHours, passModel, passSeason, passSeasonAt } from '../../shared/src/data/seasonpass.ts';
+import type { PassReward, PassProductId } from '../../shared/src/data/seasonpass.ts';
+import { passLine } from '../../shared/src/data/passlines.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SITE = join(ROOT, 'site');
@@ -139,7 +142,7 @@ const UI: Record<string, Tr> = {
   footer: ['A dark Pirate Gothic sea: a ship is an army, a captain is a hero, boarding is a battle.', 'Мрачное море Pirate Gothic: корабль — армия, капитан — герой, абордаж — битва.'],
   silver: ['silver', 'серебра'], doubloons: ['doubloons', 'дублонов'], guns: ['Guns a side', 'Пушек на борт'], hull: ['Hull', 'Корпус'],
   crew: ['Crew', 'Команда'], rank: ['Rank', 'Ранг'], premium: ['Premium', 'Премиум'],
-  rating: ['Rating', 'Рейтинг'], shop: ['Shop', 'Магазин'],
+  rating: ['Rating', 'Рейтинг'], shop: ['Shop', 'Магазин'], pass: ['Season card', 'Сезонная карта'],
 };
 const u = (k: string, lang: Lang) => L(lang, UI[k]);
 const root = (lang: Lang) => (lang === 'ru' ? '/site/' : '/site/en/');
@@ -204,7 +207,7 @@ ${h.cta ? `<div class="hero-cta"><a class="btn-gold lg" href="/play">${u('playFr
 const ORIGIN = 'https://gravetidegame.com';
 /** A page's public address: the Russian home is the domain's root, every other page lives under /site/. */
 const pageUrl = (lang: Lang, path: string) => (lang === 'ru' && path === '' ? `${ORIGIN}/` : `${ORIGIN}${root(lang)}${path}`);
-const SECTION: Record<string, Tr> = { creatures: ['Bestiary', 'Бестиарий'], captains: ['Captains', 'Капитаны'], ships: ['Fleet', 'Флот'], forum: ['Forum', 'Форум'], rating: ['Rating', 'Рейтинг'], shop: ['Shop', 'Магазин'], terms: ['Terms', 'Оферта'], refunds: ['Refunds', 'Возврат'] };
+const SECTION: Record<string, Tr> = { creatures: ['Bestiary', 'Бестиарий'], captains: ['Captains', 'Капитаны'], ships: ['Fleet', 'Флот'], forum: ['Forum', 'Форум'], rating: ['Rating', 'Рейтинг'], shop: ['Shop', 'Магазин'], pass: ['Season card', 'Сезонная карта'], terms: ['Terms', 'Оферта'], refunds: ['Refunds', 'Возврат'] };
 
 /** The head every page shares for the search engines and the social cards (owner, 2026-10-20: «настрой крутую сеошку»):
  *  canonical and hreflang pairs, Open Graph and Twitter cards, the webmasters' verification, schema.org JSON-LD. */
@@ -569,7 +572,7 @@ const SHOP_T: Record<string, Tr> = {
  *  the game's own (the cosmetics' icons of the game's shop). */
 const CAT_ICON: Record<string, string | null> = {
   all: K('ico/chest'), dbl: K('ico/doubloon'), cap: K('ico/captains'), ship: K('ico/ships'), unit: K('ico/creatures'),
-  boost: asset('icon.ui_hourglass') ?? K('ico/hourglass'), set: asset('icon.ui_chest') ?? K('ico/chest'), cos: asset('icon.cos_bundle') ?? K('ico/star'), deal: K('ico/hot'),
+  pass: asset('icon.map_treasure') ?? K('ico/star'), boost: asset('icon.ui_hourglass') ?? K('ico/hourglass'), set: asset('icon.ui_chest') ?? K('ico/chest'), cos: asset('icon.cos_bundle') ?? K('ico/star'), deal: K('ico/hot'),
   cos_titles: asset('icon.cos_titles'), cos_frames: asset('icon.cos_frames'), cos_flags: asset('icon.cos_flags'), cos_trails: asset('icon.cos_trails'), cos_emotes: asset('icon.cos_emotes'), cos_sets: asset('icon.cos_bundle'),
 };
 const COS_SUBS = ['cos_titles', 'cos_frames', 'cos_flags', 'cos_trails', 'cos_emotes', 'cos_sets'];
@@ -605,7 +608,11 @@ ${WEB_TABS.map((id) => cat(id, L(lang, WEB_TAB_NAMES[id])) + (id === 'cos' ? `<d
   const legalLine = ru
     ? `Нажимая «Оплатить», вы принимаете <a href="${r}offer/" target="_blank">публичную оферту</a>, <a href="${r}terms/" target="_blank">пользовательское соглашение</a> и <a href="${r}refunds/" target="_blank">условия возврата</a> и даёте <a href="${r}consent/" target="_blank">согласие на обработку персональных данных</a> по <a href="${r}privacy/" target="_blank">политике конфиденциальности</a>.`
     : `By pressing «Pay» you accept the <a href="${r}offer/" target="_blank">public offer</a>, the <a href="${r}terms/" target="_blank">terms of use</a> and the <a href="${r}refunds/" target="_blank">refund terms</a> and give your <a href="${r}consent/" target="_blank">consent to data processing</a> under the <a href="${r}privacy/" target="_blank">privacy policy</a>.`;
+  // «Сезонная карта» (owner, 2026-10-30): its banner over the shop, to its page and its own shelf
+  const sp = passSeason(passSeasonAt(Date.now()));
+  const spBanner = `<a class="shop-pass panel" href="${r}pass/"><img src="${asset('ship.' + PASS_SHIP) ?? ''}" alt="" width="160" height="90" loading="lazy"><span><b>${ru ? 'Сезонная карта' : 'Season card'} · «${esc(L(lang, sp.name))}»</b><small>${ru ? `100 ступеней наград · Премиум-пропуск ${nb(PASS_PRICES.pass_premium.rub)} ₽ · Суперпропуск ${nb(PASS_PRICES.pass_super.rub)} ₽` : `100 tiers of rewards · Premium Pass ${nb(PASS_PRICES.pass_premium.rub)} ₽ · Super Pass ${nb(PASS_PRICES.pass_super.rub)} ₽`}</small></span><i class="btn-oak sm">${ru ? 'Подробнее' : 'Learn more'}</i></a>`;
   const body = `<section class="wrap sec shop" id="shop">
+${spBanner}
 <p class="shop-mode" role="note" hidden></p>
 <div class="shop-order panel" role="status" aria-live="polite" hidden></div>
 <div class="st-who panel" id="step1"><div class="st-who-in"><div class="st-who-l"><h2>${t('step1')}</h2><p class="muted">${T(t('hint1'), lang)}</p></div>
@@ -655,6 +662,91 @@ ${dataTag('shop-data', { lang, t: tr(SHOP_T), art, tabs: WEB_TABS.map((id) => ({
 const DOC_ICON: Record<DocId, string> = { offer: 'ico/scroll', terms: 'ico/official', privacy: 'ico/locked', consent: 'ico/quest', cookies: 'ico/tools', refunds: 'ico/silver', contacts: 'ico/messages' };
 
 /** The legal documents (tools/site/legal.ts): every one in both languages, the seller's details, dated 2026-10-20. */
+// ------------------------------------------------------------------------------------------------ the season card
+
+/** «Сезонная карта» (owner, 2026-10-30; shared/src/data/seasonpass.ts): what it is, where its experience comes from, the
+ *  two tracks, the five great rewards, the hull of the 100th tier and the Super Pass's frame large, the prices on every
+ *  desk — and the way to the shop's «Сезонная карта» shelf and to the game. */
+const PASS_SRC: { icon: string; name: Tr }[] = [
+  { icon: 'icon.tab_contracts', name: ['Port contracts', 'Контракты портов'] },
+  { icon: 'icon.tab_board', name: ['Quests and the campaign', 'Задания и кампания'] },
+  { icon: 'icon.ui_scroll', name: ['The daily orders', 'Ежедневные поручения'] },
+  { icon: 'icon.ui_cutlasses', name: ['Captains beaten', 'Победы над капитанами'] },
+  { icon: 'icon.act_attack', name: ['Boardings won', 'Абордажи'] },
+  { icon: 'icon.map_monster', name: ['Lairs and creature fights', 'Логова и бои с существами'] },
+  { icon: 'icon.tattoo_crown', name: ['Bosses and zone bosses', 'Боссы и боссы зон'] },
+  { icon: 'icon.map_wreck', name: ['World events', 'События мира'] },
+  { icon: 'icon.build_residents_house', name: ['Your island’s buildings', 'Постройки острова'] },
+  { icon: 'icon.map_treasure', name: ['Treasures dug up', 'Откопанные клады'] },
+];
+function passPage(lang: Lang): string {
+  const ru = lang === 'ru';
+  const r = root(lang);
+  const n = passSeasonAt(Date.now());
+  const s = passSeason(n);
+  const until = new Date(passBounds(n).until - 60_000 + 3 * 3_600_000);
+  const endDate = until.toLocaleDateString(ru ? 'ru-RU' : 'en-GB', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+  const full = Math.round(passFullHours().hours / 10) * 10;
+  const casual = passModel(1).tier;
+  const line = (rw: PassReward) => {
+    const l = passLine(rw);
+    const src = asset(l.icon);
+    return `<li class="pp-rw${l.big ? ' big' : ''}">${src ? `<img src="${src}" alt="" loading="lazy" decoding="async">` : ''}<span><b>${esc(L(lang, l.name))}</b><small>${esc(L(lang, l.qty))}</small></span></li>`;
+  };
+  const sample = (track: 'free' | 'premium') => {
+    const seen = new Set<string>();
+    const out: PassReward[] = [];
+    for (const x of s.tiers) for (const rw of x[track]) {
+      const k = rw.k === 'res' ? `res_${rw.good}` : rw.k === 'cos' ? rw.key : rw.k;
+      if (!seen.has(k) && rw.k !== 'ship' && rw.k !== 'units' && rw.k !== 'art') { seen.add(k); out.push(rw); }
+    }
+    return out.slice(0, 9);
+  };
+  const ship = SHIP_CLASSES[PASS_SHIP];
+  const shipName = ru ? DATA_RU[`ships.SHIP_CLASSES.${PASS_SHIP}.name`] ?? ship.name : ship.name;
+  const callers = ship.premium?.beasts?.[0]?.n ?? 0;
+  const deck = asset(`bg.deck_${PASS_SHIP}`);
+  const frame = avatarHtml({ face: 'corsair', url: asset('portrait.corsair'), ring: 'frame.abyss', ringUrl: asset('cos.frame_abyss'), stock: 'site', size: '180px', attrs: `role="img" aria-label="${esc(ru ? 'Рамка «Бездна»' : 'The Abyssal frame')}"` });
+  const price = (id: PassProductId, lines: string[], best = false) => {
+    const p = PASS_PRICES[id];
+    return `<article class="pp-price panel reveal${best ? ' best' : ''}">${best ? `<span class="pp-tag">${ru ? 'Выгоднее всего' : 'Best value'}</span>` : ''}<h3>${esc(L(lang, p.name))}</h3>
+<p class="pp-rub"><b>${nb(p.rub)}</b> ₽</p><p class="pp-alt muted">${ru ? `В Telegram — ${nb(p.stars)} ⭐ · во ВКонтакте — ${plural(p.votes, 'голос', 'голоса', 'голосов')}` : `In Telegram ${nb(p.stars)} ⭐ · in VK ${p.votes} votes`}</p>
+<ul>${lines.map((x) => `<li>${T(x, lang)}</li>`).join('')}</ul>
+<div class="pp-buy"><a class="btn-gold sm" href="${r}shop/?cat=pass">${ru ? 'Купить на сайте' : 'Buy on the site'}</a><a class="btn-oak sm" href="/play">${ru ? 'Купить в игре' : 'Buy in the game'}</a></div></article>`;
+  };
+  const miles = MILESTONES.map((t) => `<article class="pp-mile panel reveal${t === 100 ? ' top' : ''}"><p class="pp-mile-t"><span>${t}</span>${ru ? 'ступень' : 'tier'}</p><ul>${s.tiers[t - 1].premium.map((rw) => line(rw)).join('')}</ul></article>`).join('');
+  const srcs = PASS_SRC.map((x) => { const src = asset(x.icon); return `<li>${src ? `<img src="${src}" alt="" loading="lazy">` : ''}<span>${esc(L(lang, x.name))}</span></li>`; }).join('');
+  const chs = CHALLENGES.filter((c) => c.period === 'day').slice(0, 3).concat(CHALLENGES.filter((c) => c.period === 'week').slice(0, 3));
+  const body = `
+<section class="wrap sec pp">${sectionHead(ru ? `Сезон ${n} · до ${endDate}` : `Season ${n} · until ${endDate}`, `«${L(lang, s.name)}»`, lang, ru ? 'Сто ступеней наград за два месяца: бесплатная дорожка — для всех, премиум — с пропуском.' : 'A hundred tiers of rewards in two months: the free track for everyone, the premium with a pass.')}
+<div class="pp-how">
+<article class="panel reveal"><h3>${ru ? '100 ступеней за два месяца' : '100 tiers in two months'}</h3><p>${T(ru ? `Сезон длится два календарных месяца, потом награды меняются. Вся карта закрывается примерно за ${full} часов игры; час в день — это около ${casual}-й ступени. Первые ступени даются быстрее.` : `A season lasts two calendar months; then the rewards change. The whole card takes about ${full} hours of play; an hour a day reaches about tier ${casual}. The first tiers come quicker.`, lang)}</p></article>
+<article class="panel reveal"><h3>${ru ? 'Опыт сезона — за важные дела' : 'Season XP for the things that matter'}</h3><ul class="pp-src">${srcs}</ul><p class="muted">${T(ru ? 'Ничего не капает за секунды в море: у каждого источника свой дневной предел.' : 'Nothing drips by the second at sea: each source has its own daily cap.', lang)}</p></article>
+<article class="panel reveal"><h3>${ru ? 'Испытания сезона' : 'Season challenges'}</h3><p>${T(ru ? 'Каждый день — три испытания, каждую неделю — четыре: они дают большие порции опыта.' : 'Three challenges a day and four a week: each gives a big chunk of XP.', lang)}</p><ul class="pp-ch">${chs.map((c) => `<li><span>${T(L(lang, c.text).replace('{n}', String(c.need)), lang)}</span><b>+${c.xp}</b></li>`).join('')}</ul></article>
+<article class="panel reveal"><h3>${ru ? 'Ничего не пропадёт' : 'Nothing is lost'}</h3><p>${T(ru ? 'Награды, которые вы заработали, но не забрали до конца сезона, придут письмом: серебро — в письме, остальное — на счёт или при следующем входе.' : 'The rewards you earned and did not take by the season’s end come by letter: silver in it, the rest on your account or when you next come aboard.', lang)}</p></article>
+</div></section>
+<section class="sec band"><div class="wrap">${sectionHead(ru ? 'Две дорожки' : 'Two tracks', ru ? 'Бесплатная и премиум' : 'Free and premium', lang)}
+<div class="pp-tracks"><article class="panel reveal"><h3>${ru ? 'Бесплатная — для всех' : 'Free — for everyone'}</h3><p class="muted">${T(ru ? 'Почти на каждой ступени: то, что не меняет баланс.' : 'On almost every tier: what does not move the balance.', lang)}</p><ul class="pp-rws">${sample('free').map((x) => line(x)).join('')}</ul></article>
+<article class="panel reveal prem"><h3>${ru ? 'Премиум — с пропуском' : 'Premium — with the pass'}</h3><p class="muted">${T(ru ? 'Всё из бесплатной и ещё награды на большинстве ступеней, а каждые 20 ступеней — большая награда.' : 'Everything of the free track and more on most tiers, and a great reward every 20 tiers.', lang)}</p><ul class="pp-rws">${sample('premium').map((x) => line(x)).join('')}</ul></article></div></div></section>
+<section class="wrap sec">${sectionHead(ru ? 'Каждые 20 ступеней' : 'Every 20 tiers', ru ? 'Большие награды премиум-дорожки' : 'The great rewards of the premium track', lang, ru ? 'Бойцы 4–5 уровня приходят подарочным отрядом: они сражаются и учатся, но павших не восполнить — сила, а не победа за деньги.' : 'Men of tier 4–5 come as a gift stack: they fight and learn, but their losses are never made good — strength, not a win bought.')}
+<div class="pp-miles">${miles}</div></section>
+<section class="sec band"><div class="wrap pp-show">
+<figure class="pp-ship panel reveal">${deck ? `<img class="pp-deck" src="${deck}" alt="" loading="lazy">` : ''}${img(asset(ship.sprite), shipName, 'pp-hull')}<figcaption><p class="kicker">${ru ? '100-я ступень' : 'Tier 100'}</p><h3>${esc(shipName)}</h3><p>${T(ru ? `Штормовой фрегат ⚓7: ранг ${ship.tier}, ${ship.gunPortsPerSide} пушек на борт, свои ${callers} заклинателей бурь. За дублоны его больше не купить — только сезонная карта.` : `A ⚓7 storm frigate: rank ${ship.tier}, ${ship.gunPortsPerSide} guns a side, her own ${callers} storm callers. No longer sold for doubloons — the season card alone.`, lang)}</p></figcaption></figure>
+<figure class="pp-frame panel reveal">${frame}<figcaption><p class="kicker">${ru ? 'Только в Суперпропуске' : 'Super Pass only'}</p><h3>${ru ? 'Рамка «Бездна»' : 'The Abyssal frame'}</h3><p>${T(ru ? 'Легендарная рамка вокруг портрета — в чате, в карточке и в рейтингах. Больше нигде не продаётся.' : 'A legendary frame round your portrait — in the chat, on your card and on the boards. Sold nowhere else.', lang)}</p></figcaption></figure>
+</div></section>
+<section class="wrap sec">${sectionHead(ru ? 'Цены' : 'Prices', ru ? 'Пропуск на сезон' : 'A pass for the season', lang)}
+<div class="pp-prices">${price('pass_premium', ru ? ['Премиум-дорожка на весь сезон', 'Каждые 20 ступеней — бойцы, артефакты, след и звания', `100-я ступень — «${shipName}» ⚓7`] : ['The premium track for the season', 'Every 20 tiers: men, artifacts, a wake and titles', `Tier 100: the ${shipName} ⚓7`])}
+${price('pass_super', ru ? ['Всё из Премиум-пропуска', `+${SUPER_TIERS} ступеней сразу`, 'Рамка «Бездна» — только здесь'] : ['Everything of the Premium Pass', `+${SUPER_TIERS} tiers at once`, 'The Abyssal frame — only here'], true)}
+${price('pass_upgrade', ru ? ['Для тех, у кого уже есть Премиум-пропуск', `+${SUPER_TIERS} ступеней и рамка «Бездна» за разницу`] : ['For a captain with the Premium Pass', `+${SUPER_TIERS} tiers and the Abyssal frame for the difference`])}</div>
+<p class="center muted pp-legal">${T(ru ? 'Оплата на сайте — картой или через СБП на странице ЮKassa; в игре — тем же способом, в Telegram — звёздами, во ВКонтакте — голосами. Пропуск действует до конца текущего сезона.' : 'On the site by card or the SBP on YooKassa’s page; in the game the same way, in Telegram by Stars, in VK by votes. A pass lasts to the end of the current season.', lang)}</p></section>`;
+  return page(lang, {
+    path: 'pass/', active: 'pass', title: ru ? `Сезонная карта GRAVETIDE — «${s.name[1]}»` : `GRAVETIDE Season card — ${s.name[0]}`,
+    desc: ru ? 'Сезонная карта: 100 ступеней наград за два месяца, бесплатная и премиум-дорожки, корабль ⚓7 на 100-й ступени и рамка «Бездна» в Суперпропуске.' : 'The season card: 100 tiers of rewards in two months, the free and the premium tracks, a ⚓7 ship at tier 100 and the Abyssal frame with the Super Pass.',
+    hero: { img: deck ?? K('hero/sea'), kicker: ru ? `Сезон ${n}` : `Season ${n}`, title: ru ? 'Сезонная карта' : 'Season card', lead: L(lang, s.theme) },
+    body, css: '/site/css/pass.css',
+  });
+}
+
 function legal(lang: Lang, id: DocId): string {
   const ru = lang === 'ru';
   const r = root(lang);
@@ -706,9 +798,10 @@ for (const lang of ['ru', 'en'] as Lang[]) {
   write(`${base}forum/index.html`, forum(lang));
   write(`${base}rating/index.html`, rating(lang));
   write(`${base}shop/index.html`, shop(lang));
+  write(`${base}pass/index.html`, passPage(lang)); // «Сезонная карта» (owner, 2026-10-30)
   for (const d of DOC_IDS) write(`${base}${d}/index.html`, legal(lang, d));
   for (const c of CREATURES) write(`${base}creatures/${c.id}.html`, creaturePage(c, lang));
-  n += 6 + DOC_IDS.length + CREATURES.length;
+  n += 7 + DOC_IDS.length + CREATURES.length;
 }
 // The sitemap (each page with its other tongue as an hreflang pair) and robots.txt; static.ts serves both at the root.
 {

@@ -65,6 +65,7 @@ import { captureOffer, captureTake, creaturesWon } from './tame.ts';
 import type { CaptureOffer } from '../../../shared/src/driftproto.ts';
 import type { FittingId } from '../../../shared/src/data/landecon.ts';
 import type { Yard } from './base.ts';
+import { seasonXp as passXp } from './seasonpass.ts'; // «Сезонная карта» (owner, 2026-10-30)
 
 /** What a captain keeps of the lairs (docs/18 II). */
 export interface LairProfile {
@@ -853,6 +854,7 @@ function settle(game: Game, s: PlayerSession, f: LandFight): void {
       const xp = battleXp(s.profile!.level, f.ext.level, killedHp(bt, 0), startHp(bt, 1), XP_UNITS.creatures * (f.ext.xpMul ?? 1));
       f.xp = xp;
       if (xp > 0) game.grantXp(s, xp, `Won the fight with the ${f.ext.place}`, true);
+      if (xp > 0) passXp(game, s, 'lair'); // «Сезонная карта» (owner, 2026-10-30): a creature fight of substance (one that taught her)
       ship.morale = Math.min(100, ship.morale + 5);
     }
     f.loot = f.ext.onEnd(game, s, won, bt);
@@ -883,6 +885,7 @@ function settle(game: Game, s: PlayerSession, f: LandFight): void {
   const xp = battleXp(s.profile!.level, l.level, killedHp(bt, 0), startHp(bt, 1), XP_UNITS.creatures);
   f.xp = xp;
   if (xp > 0) game.grantXp(s, xp, `Won the fight ashore with the ${lairName(l)}`, true);
+  if (xp > 0) passXp(game, s, 'lair'); // «Сезонная карта» (owner, 2026-10-30)
   f.loot = lootLair(game, s, l);
   // docs/18 #36: some of the beaten may follow her (a grotto's and a guardian's never; the Choir's only their own).
   f.capture = captureOffer(game, s, lossesOf(bt, 1), lairRatio(game, s, l), LAIRS[l.kind].join);

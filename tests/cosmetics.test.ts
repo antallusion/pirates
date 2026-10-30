@@ -81,8 +81,10 @@ test('the catalogue: the owner\'s sets (24+ titles, 8 plates, 9 frames, 15 emble
   assert.equal(FRAMES.length, 9);
   assert.equal(EMBLEMS.length, 15, 'sixteen painted, the shark\'s jaws not kept (a bone)');
   assert.ok(!EMBLEMS.some((e) => /jaw|shark/i.test(e.id)));
-  assert.ok(CLOTHS.length >= 8 && CLOTHS.length <= 10);
-  assert.deepEqual(TRAILS.map((t) => t.id).sort(), ['fire', 'frost', 'gold', 'ink', 'mist', 'plankton']);
+  // (the season card's own, owner 2026-10-30: two cloths and two wakes more, `only: 'spass'`)
+  assert.ok(CLOTHS.filter((c) => c.only !== 'spass').length >= 8 && CLOTHS.filter((c) => c.only !== 'spass').length <= 10);
+  assert.deepEqual(TRAILS.filter((t) => t.only !== 'spass').map((t) => t.id).sort(), ['fire', 'frost', 'gold', 'ink', 'mist', 'plankton']);
+  assert.deepEqual(TRAILS.filter((t) => t.only === 'spass').map((t) => t.id).sort(), ['aurora', 'storm']);
   assert.equal(COS_EMOTES.length, 16);
   for (const k of COS_KINDS) {
     const ids = COS_TABLES[k].map((x) => x.id);
@@ -208,9 +210,11 @@ test('a purchase: the shop\'s path (its price, its ledger row, the purchase id o
   assert.ok(ownsCos(game, s.accountId, 'plate:driftwood') && ownsCos(game, s.accountId, 'emote:parrot'));
   // too poor: a refusal, nothing charged
   const { s: poor } = captain(game, 'Pauper', 300);
-  assert.match(buyOffer(game, poor, 'cos_frame_abyss', pid()) ?? '', /Not enough doubloons/);
+  assert.match(buyOffer(game, poor, 'cos_plate_abyss', pid()) ?? '', /Not enough doubloons/);
   assert.equal(game.db.doubloons(poor.accountId), 300);
-  assert.ok(!ownsCos(game, poor.accountId, 'frame:abyss'));
+  assert.ok(!ownsCos(game, poor.accountId, 'plate:abyss'));
+  // the Abyssal frame is the Super Pass's alone since 2026-10-30 (seasonpass.ts SUPER_FRAME): off the shelves
+  assert.equal(buyOffer(game, captain(game, 'Croesus', 9000).s, 'cos_frame_abyss', pid()), 'Not for sale');
   // a bundle she has all of: refused; part of it: bought, the rest handed over
   const { s: rich } = captain(game, 'Midas', 9000);
   assert.equal(buyOffer(game, rich, 'cos_plate_silver', pid()), null);

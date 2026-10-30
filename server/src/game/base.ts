@@ -45,6 +45,7 @@ import { HARVEST, extraCrews, harvestUntil, shopState } from './shop.ts';
 import { finishPrice } from '../../../shared/src/data/shop.ts';
 import { razeView } from './raze.ts';
 import { planView } from './isleplan.ts'; // docs/29 §8: what to build next (owner, 2026-10-17) // the premium shop's brigades and harvest (owner, 2026-10-15)
+import { addPassXp } from './seasonpass.ts'; // «Сезонная карта» (owner, 2026-10-30)
 
 const HOUR = 3_600_000;
 /** Production is reckoned for three days at most at once (the yard is full long before). */
@@ -220,6 +221,7 @@ function finish(game: Game, h: Holding, y: Yard, isl: Island, j: BaseJob): void 
     name = BUILDINGS[id].name;
   }
   game.holdings.touch();
+  if (h.owner.kind === 'player') addPassXp(game, h.owner.id, 'isle'); // «Сезонная карта» (owner, 2026-10-30): an island milestone
   const s = h.owner.kind === 'player' ? game.sessionByAccount(h.owner.id) : undefined;
   if (!s) {
     if (h.owner.kind === 'player') notifyAway(game, h.owner.id, 'build'); // the bot tells her (owner, 2026-10-16)

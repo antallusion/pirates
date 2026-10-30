@@ -107,6 +107,13 @@ export const TITLES: CosItem[] = [
   item({ id: 'admiral', kind: 'title', tier: 4, earn: { k: 'level', n: 60 }, name: T('Admiral of the Seas', 'Адмирал морей') }),
   item({ id: 'phantom', kind: 'title', tier: 3, only: 'cos_halloween', name: T('Phantom Captain', 'Призрачный капитан') }),
   item({ id: 'frost', kind: 'title', tier: 3, only: 'cos_winter', name: T('Frost Corsair', 'Ледяной корсар') }),
+  // The season pass's own (owner, 2026-10-30; shared/src/data/seasonpass.ts): had from its tiers alone, `only: 'spass'`.
+  item({ id: 'stormborn', kind: 'title', tier: 1, only: 'spass', name: T('Stormborn', 'Дитя бури') }),
+  item({ id: 'stormwolf', kind: 'title', tier: 2, only: 'spass', name: T('Storm Wolf', 'Штормовой волк') }),
+  item({ id: 'stormlord', kind: 'title', tier: 3, only: 'spass', name: T('Lord of the Storm', 'Повелитель бури') }),
+  item({ id: 'frostborn', kind: 'title', tier: 1, only: 'spass', name: T('Frostborn', 'Дитя стужи') }),
+  item({ id: 'icewolf', kind: 'title', tier: 2, only: 'spass', name: T('Ice Wolf', 'Ледяной волк') }),
+  item({ id: 'icelord', kind: 'title', tier: 3, only: 'spass', name: T('Admiral of the Ice', 'Ледяной адмирал') }),
 ];
 
 // ------------------------------------------------------------------------------------------------ plates
@@ -138,7 +145,9 @@ export const FRAMES: FrameDef[] = [
   frame('ghost', 3, T('Ghost Ship', 'Корабль-призрак'), 0.165, { price: 990 }),
   frame('kraken', 3, T('Kraken', 'Кракен'), 0.204, { earn: { k: 'arena', rating: 1200 } }),
   frame('admiral', 3, T('Admiral', 'Адмиральская'), 0.202, { earn: { k: 'campaign' } }),
-  frame('abyss', 4, T('Abyssal', 'Бездна'), 0.169, { price: 4990 }),
+  // the Super Pass's own (owner, 2026-10-30: «одну рамку можешь так же вывести из продажи и давать только за покупку»):
+  // off the shop since — a captain who bought her keeps her (shared/src/data/seasonpass.ts SUPER_FRAME)
+  frame('abyss', 4, T('Abyssal', 'Бездна'), 0.169, { only: 'spass_super' }),
 ];
 
 // ------------------------------------------------------------------------------------------------ flags
@@ -177,6 +186,9 @@ export const CLOTHS: ClothDef[] = [
   cloth('teal', T('Deep Teal', 'Бирюза глубин'), '#164a4c', '#e3f2ea', 290),
   cloth('ember', T('Ember', 'Тлеющий уголь'), '#8a3b12', '#f6e2c0', 290),
   cloth('slate', T('Slate', 'Сланец'), '#3d454f', '#eef0ee', 290),
+  // the season pass's own (its free tracks): `only: 'spass'`
+  { id: 'thunder', kind: 'cloth', tier: 1, name: T('Thundercloud', 'Грозовая туча'), rgb: '#2b2f4a', ink: '#d9e6ff', only: 'spass' },
+  { id: 'glacier', kind: 'cloth', tier: 1, name: T('Glacier', 'Ледник'), rgb: '#3f6475', ink: '#f0fbff', only: 'spass' },
 ];
 
 // ------------------------------------------------------------------------------------------------ trails
@@ -191,6 +203,9 @@ export const TRAILS: TrailDef[] = [
   trail('mist', 3, T('Ghost Mist', 'Призрачный туман'), 990, { c: ['#d9fff4', '#4fd6b3'], size: 6, life: 2.8, rise: 0.6, glow: true }),
   trail('fire', 3, T('Fire', 'Пламя'), 990, { c: ['#ffe28a', '#ff5a1a'], size: 3.4, life: 1.4, rise: 1.4, glow: true }),
   trail('gold', 3, T('Golden Sparks', 'Золотые искры'), 990, { c: ['#fff6c8', '#e0a526'], size: 2, life: 1.8, rise: 0.8, glow: true }),
+  // the season pass's own (its premium tracks' 60th tier): `only: 'spass'`
+  { id: 'storm', kind: 'trail', tier: 3, name: T('Storm Wake', 'Грозовой след'), only: 'spass', c: ['#e8f4ff', '#5a7dff'], size: 2.4, life: 1.6, rise: 0.3, glow: true },
+  { id: 'aurora', kind: 'trail', tier: 3, name: T('Aurora', 'Северное сияние'), only: 'spass', c: ['#c8ffe6', '#7a4dff'], size: 4.2, life: 2.6, rise: 0.9, glow: true },
 ];
 
 // ------------------------------------------------------------------------------------------------ emotes

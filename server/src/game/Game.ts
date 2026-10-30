@@ -310,6 +310,7 @@ import { levelGifts, stepShop, xpBoost } from './shop.ts';
 import { sendPromo, stepPromo } from './promo.ts'; // the shop's goods (owner, 2026-10-15)
 import { opsSilverMul, opsXpMul, stepLiveOps, trackEvent } from './liveops.ts'; // the live ops' panel and funnel (docs/34)
 import { sendGift, stepGift } from './dailygift.ts'; // the daily login gift (owner, 2026-10-16)
+import { passMessage, passOnLogin, passPvp, seasonXp as passXp, stepPass } from './seasonpass.ts'; // «Сезонная карта» (owner, 2026-10-30)
 import { noticesAboard, noticesAway, stepNotices } from './tgnotify.ts'; // the Telegram notices (owner, 2026-10-16)
 import { adviceOnLogin, stepAdvice } from './advice.ts'; // the advice mailer (owner, 2026-10-28: «подсказки рассылать по почте»)
 import { creaturesAboard, feedCreatures, stepTame } from './tame.ts'; // docs/18 IV
@@ -1095,6 +1096,7 @@ export class Game {
       stepCosmetics(this, s); // docs/32 §12: the earned cosmetics
       stepPromo(this, s); // her personal offers rotated (owner, 2026-10-15)
       stepGift(this, s); // a new day: her daily gift ready (owner, 2026-10-16)
+      stepPass(this, s); // «Сезонная карта»: a new day's challenges, a new season (owner, 2026-10-30)
     }
     stepNotices(this); // the Telegram notices to captains away (owner, 2026-10-16): once a minute, only with a bot
     stepAdvice(this); // the advice mailer: aboard every ten minutes (letters), away once a day (letters, e-mail, VK, Telegram)
@@ -2475,6 +2477,11 @@ export class Game {
     if (how === 'boarded' || (victim.faction !== 'player' && !victim.cls.monster && FACTIONS[victim.faction].lawful)) seasonStat(this, s, 'plunder', how === 'boarded' ? 2 : 1);
     if (victim.name.startsWith('Echo of')) seasonStat(this, s, 'abyss', 3);
     warKill(this, victim);
+    // «Сезонная карта» (owner, 2026-10-30): a captain beaten; a boarding won against a ship not grey to her; a ship of a
+    // world event's squadron (seasonpass.ts — its caps; never a plain sinking of the sea's ships)
+    if (victim.isPlayer) passPvp(this, s, victim.accountId, this.profileOf(victim)?.level ?? victim.level);
+    else if (how === 'boarded' && !paid && xpGap(p.level, vLevel) > 0) passXp(this, s, 'board');
+    if (!victim.isPlayer && [...this.worldEvents.fleets.values()].some((f) => f.includes(victim.id))) passXp(this, s, 'event');
     onGhostSunk(this, s, victim);
     onAbyssKill(this, s, victim);
     let escorts = 0;
@@ -3430,6 +3437,7 @@ export class Game {
     this.sendTo(s, { t: 'toast', msg: `Contract complete: ${c.title}. +${c.reward} silver.`, kind: 'gold' });
     this.grantXp(s, contractPay(p.level, c), null);
     this.db.ledger(s.accountId, 'contract', c.reward, c.title);
+    passXp(this, s, 'contract'); // «Сезонная карта» (owner, 2026-10-30)
   }
 
   // ================================================================= sessions & messages
@@ -3637,6 +3645,7 @@ export class Game {
     if (msg.t === 'premium' && (msg.action === 'checkout' || msg.action === 'checkout_check')) return gameCheckout(this, s, msg);
     if (msg.t === 'premium') return premiumMessage(this, s, msg); // the premium shop (owner, 2026-10-03)
     if (msg.t === 'cos') return cosMessage(this, s, msg); // docs/32 §12: the cosmetics
+    if (msg.t === 'spass') return passMessage(this, s, msg); // «Сезонная карта» (owner, 2026-10-30)
     if (msg.t === 'scout') return scoutMessage(this, s, msg); // the island's scouts (owner, 2026-10-17)
     if (msg.t === 'way') return wayMessage(this, s, msg); // docs/35: the floating waystations, the resurrection
     if (msg.t === 'army') return armyMessage(this, s, msg); // owner, 2026-10-28: split, merge, dismiss a stack
@@ -4950,6 +4959,7 @@ export class Game {
     sendWorldGoals(this, s); // the sea's goals of the week (docs/16 #32)
     sendBalance(this, s); // her account's doubloons (the premium shop)
     sendGift(this, s); // her daily login calendar (owner, 2026-10-16): first, the offers' carousel waits for it
+    passOnLogin(this, s); // «Сезонная карта» (owner, 2026-10-30): a season gone closed, last season's rewards that waited
     sendPromo(this, s); // her personal offers and the entry carousel (owner, 2026-10-15)
     // docs/32 §12: her wardrobe read afresh (another zone may have changed it), her ship dressed, the view sent
     forgetCos(this, s.accountId);

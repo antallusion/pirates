@@ -61,6 +61,7 @@ import { campaignDone, campaignTick } from './campaign.ts'; // docs/36, the main
 import { LOCAL_R, farVoyage, localTick, questHome } from './questlocal.ts';
 import { ownIsland } from './estate.ts';
 import { xpThreat } from '../../../shared/src/data/xpcurve.ts';
+import { seasonXp as passXp } from './seasonpass.ts'; // «Сезонная карта» (owner, 2026-10-30)
 
 /** No cap on the quests under way (owner, 2026-10-16: «надо снять ограничение, можно брать сколько угодно, главное своего
  *  диапазона уровня»): what limits her is the level band of each (questBandBlocked). This is only a ceiling against a
@@ -1069,6 +1070,7 @@ export function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
     p.quests.active = p.quests.active.filter((a) => a.id !== q.id);
     p.quests.done.push(q.id);
     contractDone(game, s, q);
+    passXp(game, s, 'contract'); // «Сезонная карта» (owner, 2026-10-30): an Admiralty's contract
     return;
   }
   const st = p.quests.active.find((a) => a.id === q.id);
@@ -1087,6 +1089,7 @@ export function completeQuest(game: Game, s: PlayerSession, q: QuestDef): void {
   game.db.ledger(s.accountId, 'quest', silver, q.id);
   game.grantXp(s, xp, null);
   seasonStat(game, s, 'quests', 1); // the season's table of quests done
+  passXp(game, s, q.kind === 'job' ? 'quest' : 'story'); // «Сезонная карта» (owner, 2026-10-30)
   guildGoalEvent(game, s, 'quest_done');
   // The port whose people gave the work remembers who did it (docs/11 P6): standing with its faction.
   let rep: { faction: FactionId; n: number } | undefined;

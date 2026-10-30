@@ -70,6 +70,7 @@ import type { CastawayView, WreckView } from './data/wrecks.ts'; // seaux: her o
 import type { AdriftView } from './data/adrift.ts'; // owner 2026-10-20: torn sails, the jury rig, scuttling home
 import type { RoamClientMsg, RoamServerMsg } from './roamproto.ts'; // docs/19 D7
 import type { PremiumClientMsg, PremiumServerMsg } from './premiumproto.ts'; // the premium shop (owner, 2026-10-03)
+import type { PassClientMsg, PassServerMsg } from './spassproto.ts'; // «Сезонная карта» (owner, 2026-10-30)
 import type { WayClientMsg, WayData, WayServerMsg } from './wayproto.ts'; // docs/35: the floating waystations, the resurrection
 import type { CosClientMsg, CosServerMsg } from './cosproto.ts'; // docs/32 §12: the cosmetics
 import type { IsleType } from './world/archipelago.ts';
@@ -398,6 +399,7 @@ export type ClientMsg =
   | RoamClientMsg
   /** The premium shop (owner, 2026-10-03): its view, a hull or a kind bought for doubloons. */
   | PremiumClientMsg
+  | PassClientMsg
   | CosClientMsg
   /** docs/35: the floating waystations and the resurrection of the fallen. */
   | WayClientMsg
@@ -2214,6 +2216,7 @@ export type ServerMsg =
   | RoamServerMsg
   /** The premium shop (owner, 2026-10-03): its view, and her account's doubloons. */
   | PremiumServerMsg
+  | PassServerMsg
   | CosServerMsg
   /** docs/35: the waystation's window, her fallen and their price. */
   | WayServerMsg
