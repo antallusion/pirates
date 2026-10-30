@@ -60,6 +60,7 @@ import { CURSOR_ART } from './ui/cursor.ts';
 import { tideVeil } from './ui/invasion.ts'; // docs/19 E16
 import { AudioEngine, turnCreakLoad } from './audio.ts';
 import { LP, PassagePill } from './ui/passage.ts';
+import { LF } from './ui/ferry.ts'; // owner, 2026-10-30: «Переход» between hub ports
 import { VOYAGE_MUL } from '../../shared/src/data/passage.ts';
 import { AutosailPill, FirstTips, autosailRequest, autosailStopText, routeLabel, tipForMsg, tipForState } from './ui/ease.ts';
 import { claimNear, claimSpot, tapTarget } from './ui/sailto.ts'; // seaux: sail-to on tap
@@ -2032,8 +2033,15 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'voyage':
       // Owner, 2026-10-28: the small word on entering a long passage, and on coming out of it at the mark.
-      if (m.on && !voyageSaid) hud.toast(LP('on', { n: VOYAGE_MUL }), 'voyage');
-      else if (!m.on && m.why === 'arrived') hud.toast(LP('done'), 'voyage');
+      // (owner, 2026-10-30, ferry.ts: a hub's «Переход» says where to)
+      {
+        const to = m.ferry ? state.ports.find((p) => p.id === m.ferry) : undefined;
+        const name = to ? placeName(to.name) : '';
+        // (a ferry's word a moment later: the harbour window closing in the same breath took its toast strip with it)
+        if (m.on && !voyageSaid && to) setTimeout(() => hud.toast(LF('on', { to: name, n: VOYAGE_MUL }), 'voyage'), 700);
+        else if (m.on && !voyageSaid) hud.toast(LP('on', { n: VOYAGE_MUL }), 'voyage');
+        else if (!m.on && m.why === 'arrived') hud.toast(to ? LF('done', { to: name }) : LP('done'), 'voyage');
+      }
       voyageSaid = m.on;
       break;
     case 'autosail': {

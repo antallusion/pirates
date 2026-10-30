@@ -1,6 +1,7 @@
 // In-game HUD: captain, ship condition, combat (ammo, reloads, abilities), navigation (wind, sails),
 // minimap, prompts, toasts, banners and chat.
 
+import { drawHubMark, isFerryHub } from './ferry.ts'; // owner, 2026-10-30: «Переход» hubs
 import { artBgAttr, artBgWire } from './artfall.ts';
 import { aimArt } from './artaim.ts';
 import { zoneBossCard } from '../../../shared/src/data/paintart.ts';
@@ -1693,6 +1694,7 @@ export class Hud {
       if (Math.abs(p.x - own.x) > range || Math.abs(p.y - own.y) > range) continue;
       g.fillStyle = '#e0b862';
       g.fillRect(tx(p.x) - 3, ty(p.y) - 3, 6, 6);
+      if (isFerryHub(p.id)) drawHubMark(g, tx(p.x) + 6, ty(p.y) - 6, 4.5); // a «Переход» hub (owner, 2026-10-30)
     }
     // The fog of war (owner, 2026-10-17): what she has not seen lies under it — islands, ports, lairs, the sea's things;
     // ships, her marks and her scouts over it.

@@ -68,6 +68,8 @@ interface Voyage {
   lx: number;
   ly: number;
   lookAt: number;
+  /** A ferry's trip between hub ports (ferry.ts): the destination port's id. */
+  ferry?: string;
 }
 
 interface Spin {
@@ -141,7 +143,7 @@ export function wayClear(game: Game, ship: ShipEntity, path: [number, number][])
 }
 
 /** The passage begins: the way planned and sounded afresh, or null with why not. */
-function begin(game: Game, s: PlayerSession, ship: ShipEntity, end: [number, number]): string | null {
+function begin(game: Game, s: PlayerSession, ship: ShipEntity, end: [number, number], ferry?: string): string | null {
   const run = autosailOf(ship);
   if (!run) return 'no run';
   const path = planFrom(game, ship, ship.state.x, ship.state.y, end[0], end[1]);
@@ -150,14 +152,14 @@ function begin(game: Game, s: PlayerSession, ship: ShipEntity, end: [number, num
   const len = lengthFrom(ship.state.x, ship.state.y, path, 1);
   if (len - VOYAGE_TAIL < 600) return 'near';
   const v = voyageSpeed(ship);
-  voyages.set(ship, { path, i: 1, v, since: game.now, lx: ship.state.x, ly: ship.state.y, lookAt: game.now });
+  voyages.set(ship, { path, i: 1, v, since: game.now, lx: ship.state.x, ly: ship.state.y, lookAt: game.now, ...(ferry ? { ferry } : {}) });
   adoptPlan(game, s, ship, path);
   ship.input = { rudder: 0, sailTarget: 1 };
   ship.state.sail = 1;
   ship.state.rudder = 0;
   ship.state.speed = v / SPEED_SCALE;
-  game.sendTo(s, { t: 'voyage', on: true, v: Math.round(v * 10) / 10, x: Math.round(end[0]), y: Math.round(end[1]), left: Math.round(len), tail: VOYAGE_TAIL });
-  game.log(`[voyage] ${s.name} ${Math.round(len)} m at ${Math.round(v)} m/s`);
+  game.sendTo(s, { t: 'voyage', on: true, v: Math.round(v * 10) / 10, x: Math.round(end[0]), y: Math.round(end[1]), left: Math.round(len), tail: VOYAGE_TAIL, ...(ferry ? { ferry } : {}) });
+  game.log(`[voyage${ferry ? ` ferry→${ferry}` : ''}] ${s.name} ${Math.round(len)} m at ${Math.round(v)} m/s`);
   return null;
 }
 
@@ -189,7 +191,19 @@ function end(game: Game, ship: ShipEntity, why: VoyageEnd): void {
     ship.input = { rudder: 0, sailTarget: 0 };
     return;
   }
-  game.sendTo(s, { t: 'voyage', on: false, why });
+  game.sendTo(s, { t: 'voyage', on: false, why, ...(v.ferry ? { ferry: v.ferry } : {}) });
+}
+
+/** A ferry's trip (ferry.ts): the passage begun at once from the hub's harbour mouth, the spin-up and VOYAGE.on not
+ *  asked — only hub-to-hub trips are fast while the generic auto-voyage is off. Null, or why not. */
+export function beginFerry(game: Game, s: PlayerSession, ship: ShipEntity, end: [number, number], to: string): string | null {
+  if (voyages.has(ship)) return 'busy';
+  return begin(game, s, ship, end, to);
+}
+
+/** The destination of her ferry trip under way, if she is on one. */
+export function ferryOf(ship: ShipEntity | null | undefined): string | null {
+  return (ship && voyages.get(ship)?.ferry) || null;
 }
 
 /** The point VOYAGE_TAIL short of the way's end along it, with the leg's heading. */
@@ -231,7 +245,7 @@ export function voyageResend(game: Game, s: PlayerSession): void {
   if (!ship || !v) return;
   resendAutosail(game, s);
   const e = v.path[v.path.length - 1];
-  game.sendTo(s, { t: 'voyage', on: true, v: Math.round(v.v * 10) / 10, x: Math.round(e[0]), y: Math.round(e[1]), left: Math.round(leftOf(ship, v)), tail: VOYAGE_TAIL });
+  game.sendTo(s, { t: 'voyage', on: true, v: Math.round(v.v * 10) / 10, x: Math.round(e[0]), y: Math.round(e[1]), left: Math.round(leftOf(ship, v)), tail: VOYAGE_TAIL, ...(v.ferry ? { ferry: v.ferry } : {}) });
 }
 
 /** Each tick, after the helmsmen: the spin-ups counted and begun, and the passages carried on. */

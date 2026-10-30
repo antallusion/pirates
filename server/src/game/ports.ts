@@ -1,6 +1,7 @@
 // Port services: market, chandlery (ammo), tavern (crew, rumours), shipyard, contracts board,
 // harbour master (pardons, insurance). Every action is validated against the docked port.
 
+import { ferryView } from './ferry.ts';
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { researchWhy } from './research.ts';
 import { worldGoalSale } from './worldgoals.ts';
@@ -265,6 +266,8 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
   // the goods her quests still want brought and she has not aboard (owner, 2026-10-21): the market's card for each
   const qb = questBuys(game, s, port);
   if (qb.length) view.questBuys = qb;
+  const fv = ferryView(game, s, port.id); // owner, 2026-10-30: a hub port's «Переход» (ferry.ts)
+  if (fv) view.ferry = fv;
   if (ship.hasFlag('market_sense')) {
     const intel: NonNullable<PortView['priceIntel']> = [];
     for (const pid in p.priceIntel) {

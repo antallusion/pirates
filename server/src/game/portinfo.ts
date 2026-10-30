@@ -14,6 +14,7 @@ import { hasAuction } from '../../../shared/src/data/dealings.ts';
 import type { PortInfoGood, PortInfoView } from '../../../shared/src/protocol.ts';
 import { sectorAt } from '../../../shared/src/world/sectors.ts';
 import { marketRows } from './economy.ts';
+import { ferryView } from './ferry.ts';
 import { hasExchange } from './finance.ts';
 import type { Game } from './Game.ts';
 import { ownMarket } from './ownstock.ts';
@@ -91,6 +92,10 @@ export function portInfoView(game: Game, s: PlayerSession, portId: string): Port
     hulls,
     auction: hasAuction(port),
     exchange: hasExchange(port),
+    ...(() => {
+      const f = ferryView(game, s, port.id); // owner, 2026-10-30: a hub port's «Переход» (ferry.ts)
+      return f ? { ferry: f } : {};
+    })(),
   };
 }
 

@@ -116,3 +116,18 @@
 .mk-clock { display: flex; align-items: center; gap: 5px; margin: 2px 0 6px; font-size: 13px; }
 .mk-clock .ico-sm { width: 16px; height: 16px; }
 .pcd-lv.none { border-color: transparent; opacity: 0.45; }
+
+/* «Переход» between hub ports (owner, 2026-10-30; client/src/ui/ferry.ts): the harbour's page and the card's section. */
+.fy-text { margin: 0 0 6px; font-size: 13px; }
+.fy-st { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; font-size: 13px; }
+.fy-list { display: flex; flex-direction: column; }
+.fy-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; min-height: 48px; padding: 4px 0; border-bottom: 1px solid rgba(224, 184, 98, 0.16); }
+.fy-row:last-child { border-bottom: 0; }
+.fy-to { display: flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
+.fy-to b { white-space: nowrap; }
+.fy-to small { color: var(--k-bone, #cfc3a3); opacity: 0.75; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fy-km { font-variant-numeric: tabular-nums; opacity: 0.85; white-space: nowrap; font-size: 13px; }
+.fy-row .fy-go { min-height: 44px; min-width: 128px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.fy-price { white-space: nowrap; }
+.fy--compact .fy-row { min-height: 40px; }
+.pcd-ferry h3 { display: flex; align-items: center; gap: 6px; }

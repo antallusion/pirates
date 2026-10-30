@@ -1,0 +1,41 @@
+// «Переход» between hub ports (owner, 2026-10-30; client/src/ui/ferry.ts, server/src/game/ferry.ts).
+
+export const EN = {
+  tab: 'Passage',
+  tabHint: 'Passage to another hub port: way ×10, for silver, once in 45 min',
+  title: 'Passage',
+  text: 'A hub port: from here the ships of the passage take you to another hub at ×10 way. Nobody touches you on the way; you cannot act until you arrive. Once in 45 min.',
+  go: 'Go',
+  min: '{n} min',
+  hmin: '{h} h {m} min',
+  km: '{km} km',
+  wait: 'The next passage in {t}',
+  ready: 'Ready: one passage, then 45 min of waiting',
+  short: 'Not enough silver',
+  card: 'Passage (hub)',
+  cardNote: '{n} routes · {lo}–{hi} silver',
+  cardOff: 'No passage from here: hubs are marked ⛵ on the chart',
+  on: 'Passage to {to}: way ×{n} until you arrive',
+  done: 'Arrived at {to}: putting in',
+  hub: 'Hub of the passage',
+};
+
+export const RU: Record<keyof typeof EN, string> = {
+  tab: 'Переход',
+  tabHint: 'Переход в другой порт-узел: ход ×10, за серебро, раз в 45 мин',
+  title: 'Переход',
+  text: 'Порт-узел: отсюда корабль уходит в другой узел ходом ×10. В пути вас не тронуть, но и сами вы ничего не сделаете до прибытия. Раз в 45 минут.',
+  go: 'Переход',
+  min: '{n} мин',
+  hmin: '{h} ч {m} мин',
+  km: '{km} км',
+  wait: 'Следующий переход через {t}',
+  ready: 'Готово: один переход, потом 45 мин ожидания',
+  short: 'Не хватает серебра',
+  card: 'Переход (узел)',
+  cardNote: '{n} направлений · {lo}–{hi} серебра',
+  cardOff: 'Отсюда перехода нет: узлы отмечены ⛵ на карте',
+  on: 'Переход в {to}: ход ×{n} до прибытия',
+  done: 'Прибыли в {to}: заходим в порт',
+  hub: 'Узел перехода',
+};

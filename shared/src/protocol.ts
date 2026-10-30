@@ -375,6 +375,8 @@ export type ClientMsg =
   | { t: 'goto'; key: string }
   /** The port card (owner, 2026-10-30): what a harbour sells and buys, as far as she knows it. */
   | { t: 'portInfo'; port: string }
+  /** Owner, 2026-10-30 (server ferry.ts): «Переход» from the hub port she lies in to another hub. */
+  | { t: 'ferry'; to: string }
   /** docs/16 #32: the sea's goals of the week. */
   | { t: 'wgoals' }
   /** docs/16 #34: the guild's shipyard on the leader's island. */
@@ -934,8 +936,18 @@ export interface PrivateState {
 
 /** The port card (server/src/game/portinfo.ts; owner, 2026-10-30): a harbour seen from afar — its market as far as
  *  she knows it, its services, the time till its prices change. */
+/** A hub port's «Переход» (owner, 2026-10-30, server ferry.ts): the other hubs with the straight distance and the
+ *  price, the seconds of her cooldown left, and why she cannot go now (null: she can, silver permitting). */
+export interface FerryView {
+  routes: { to: string; km: number; price: number }[];
+  left: number;
+  why: string | null;
+}
+
 export interface PortInfoView {
   portId: string;
+  /** A hub port's «Переход» (owner, 2026-10-30). */
+  ferry?: FerryView;
   /** Where the prices come from: `live` she lies here; `seen` her last visit (or a letter); `none` never seen. */
   source: 'live' | 'seen' | 'none';
   /** The exact prices known (in port, or Market Sense); else only how dear each good stood (`level`). */
@@ -1105,6 +1117,8 @@ export interface PortView {
   licence: { cost: number; until: number } | null;
   charts: { sellable: number; sellValue: number; offers: { region: RegionId; name: string; islands: number; price: number }[] };
   pardonCost: number | null;
+  /** Owner, 2026-10-30 (server ferry.ts): a hub port's «Переход» — its routes and her cooldown; absent elsewhere. */
+  ferry?: FerryView;
   exchange: { forwards: ForwardView[]; orders: BuyOrderView[] } | null;
   bank: BankView;
   insurance: InsuranceQuote[];
@@ -2151,7 +2165,7 @@ export type ServerMsg =
   /** Owner, 2026-10-28 (server passage.ts): a long passage under ×10 begins (`on`) — her way `v` (m/s), the run's end
    *  (`x`, `y`), the way left along the route at its start (`left`, m) and the stretch she sails as ever at its end
    *  (`tail`, m) — or ends, and why. */
-  | { t: 'voyage'; on: boolean; v?: number; x?: number; y?: number; left?: number; tail?: number; why?: VoyageEnd }
+  | { t: 'voyage'; on: boolean; v?: number; x?: number; y?: number; left?: number; tail?: number; why?: VoyageEnd; /** a ferry's trip between hub ports (owner, 2026-10-30, server ferry.ts): its destination port */ ferry?: string }
   | { t: 'autosail'; on: boolean; x?: number; y?: number; sail?: number; why?: AutosailStop;
       /** The planned way round the land (owner, 2026-10-18: «всегда должно быть показано направление линией и путь»): her
        *  place when it was planned, its turns, the end; whole metres. Sent again on every new plan. */ path?: [number, number][] }

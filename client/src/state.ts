@@ -293,7 +293,7 @@ export class ClientState {
   autosail: { x: number; y: number; path?: [number, number][] } | null = null;
   /** Owner, 2026-10-28 (server passage.ts): a long passage under ×10 — her way (m/s), the run's end, the way left at its
    *  start, its last stretch sailed as ever. She is carried, not sailed: her own ship is reckoned on straight (updateOwn). */
-  voyage: { v: number; x: number; y: number; left: number; tail: number; at: number } | null = null;
+  voyage: { v: number; x: number; y: number; left: number; tail: number; at: number; /** a hub's «Переход» (2026-10-30): its port */ ferry?: string } | null = null;
   /** A course broken off by a fight or a storm, kept to be taken up again (autosail.ts stepResume): its line stays on
    *  the sea, dimmed (owner, 2026-10-18: «всегда должно быть показано направление линией и путь»). */
   pausedCourse: { x: number; y: number; path?: [number, number][] } | null = null;
@@ -470,7 +470,7 @@ export class ClientState {
         this.signals = [...this.signals.filter((x) => now - x.at < SIGNAL_TTL && x.from !== m.from), { from: m.from, kind: m.kind, x: m.x, y: m.y, at: now }];
         break;
       case 'voyage':
-        this.voyage = m.on ? { v: m.v ?? 0, x: m.x ?? 0, y: m.y ?? 0, left: m.left ?? 0, tail: m.tail ?? 0, at: now } : null;
+        this.voyage = m.on ? { v: m.v ?? 0, x: m.x ?? 0, y: m.y ?? 0, left: m.left ?? 0, tail: m.tail ?? 0, at: now, ...(m.ferry ? { ferry: m.ferry } : {}) } : null;
         break;
       case 'autosail':
         // The helmsman has the wheel for a mark, or has given it back (docs/16 #36).

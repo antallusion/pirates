@@ -58,6 +58,7 @@ import { captivesCard } from './turncoats.ts';
 import { holidayCard } from './holidays.ts';
 import { bazaarAct, bazaarCard, bindBazaar } from './bazaar.ts';
 import { departOrAsk, voyageOrder, voyageShip } from './depart.ts';
+import { LF, bindFerry, ferryCard } from './ferry.ts';
 import { VOYAGE_MINUTES, voyageCrew, voyageNeeds } from '../../../shared/src/data/voyage.ts';
 import { showHint } from './kit/hint.ts';
 import { EN as IS_EN, RU as IS_RU } from '../lang/ui/islescene.ts';
@@ -93,7 +94,7 @@ function licenceLeft(n: number): string {
 }
 
 type XTab = 'fwd' | 'orders' | 'bank' | 'opt';
-type Tab = 'market' | 'shipyard' | 'tavern' | 'quests' | 'harbour' | 'colours' | 'holdings' | 'exchange' | 'auction' | 'dice' | 'rumours' | 'charts' | 'army' | 'pets';
+type Tab = 'market' | 'shipyard' | 'tavern' | 'quests' | 'harbour' | 'ferry' | 'colours' | 'holdings' | 'exchange' | 'auction' | 'dice' | 'rumours' | 'charts' | 'army' | 'pets';
 
 /** The harbour's places by their icons. */
 const TAB_ICON = {
@@ -228,6 +229,8 @@ export class PortScreen {
     ];
     const tv = view.tavern;
     const second: WinTab[] = [
+      // owner, 2026-10-30 (ferry.ts): a hub port's «Переход», first of the row
+      ...(view.ferry ? [{ id: 'ferry', icon: 'build_lighthouse', glyph: '⛵', label: LF('tab'), hint: LF('tabHint') }] : []),
       ...(self.homeIsle !== null && self.homeIsle !== undefined ? [{ id: 'isle', icon: 'tab_isles', label: LIS('enter'), hint: LIS('enterTip') }] : []),
       { id: 'harbour', icon: TAB_ICON.harbour, label: W('port.harbour'), hint: W('port.harbourHint') },
       // docs/24 C1, D1–D2: the colours and «Абордаж: выкл», hoisted only in port.
@@ -290,6 +293,7 @@ export class PortScreen {
       bindGoalTaps(root, (k) => this.onGoal?.(k)); // the day's orders, the sea's goals: a tap sails there
     }
     bindColours(root, this.send);
+    bindFerry(root, this.send); // owner, 2026-10-30: «Переход» (ferry.ts)
     bindContracts(root, this.send, () => {}); // docs/19 E15: the Admiralty's board
     bindBazaar(root);
     bindDealings(root);
@@ -564,6 +568,8 @@ export class PortScreen {
         return this.quests(view, state);
       case 'harbour':
         return this.harbour(view, state);
+      case 'ferry':
+        return view.ferry ? ferryCard(state, view.ferry) : '';
       case 'colours':
         return coloursCard(state, { head: false });
       case 'holdings':
@@ -907,7 +913,7 @@ ${orders}${berths}</div>` : ''}`;
     //  and flag over a gentle gradient at its foot; the painting is the band's, --bg-port)
     const hero = `<div class="ph-hero" role="img" aria-label="${esc(placeName(port.name))}"><div class="ph-hero-t"><b>${esc(placeName(port.name))}</b><span>${esc(FACTIONS[port.faction].name)} · ${esc(REGIONS[port.region].name)}</span></div></div>`;
     const reps = Object.entries(self.reputation).map(([f, v]) => ledgerRow({ ico: icon(`faction_${f}`), title: esc(FACTIONS[f as never as keyof typeof FACTIONS].name), acts: `<b class="lr-num ${(v ?? 0) < 0 ? 'up' : 'down'}">${v}</b>`, cls: 'lr-rep' })).join('');
-    return `${hero}${regatta}<div class="cols"><div>
+    return `${hero}${view.ferry ? ferryCard(state, view.ferry) : ''}${regatta}<div class="cols"><div>
         <div class="card"><h4 class="card-h">${icon('wanted', '', 'ico-md')}${esc(L('pardon.title'))}</h4>${view.pardonCost !== null ? `<p>${esc(L('pardon.text', { n: self.infamy }))}</p><button class="btn" data-act="pardon" ${self.infamy >= 20 ? '' : 'disabled'}>${esc(L('pardon.buy', { cost: fmt(view.pardonCost) }))}</button>` : `<p class="muted">${esc(L('pardon.none'))}</p>`}</div>
         ${view.licence ? `<div class="card"><h4 class="card-h">${icon('map_contract', '', 'ico-md')}${esc(L('licence.title'))}</h4><p>${esc(view.licence.until > state.estServerTime() ? L('licence.textActive', { faction: FACTIONS[port.faction].short }) : L('licence.textDuty', { pct: Math.round(view.duty * 100) || '', faction: FACTIONS[port.faction].short }))}</p>
           ${port.faction === 'harpoon' ? `<p class="muted">${esc(L('licence.whaling'))}</p>` : ''}

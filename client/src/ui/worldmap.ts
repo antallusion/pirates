@@ -1,5 +1,6 @@
 // World map: a dark nautical chart. Only what the captain has charted is drawn — information is a resource.
 
+import { drawHubMark, isFerryHub } from './ferry.ts'; // owner, 2026-10-30: «Переход» hubs
 import { EN as HIRE_EN, RU as HIRE_RU } from '../lang/ui/seahire.ts';
 import { portMark } from '../../../shared/src/data/paintart.ts';
 import { drawFog, drawScouts, underFog, visibleOnChart } from '../render/fog.ts'; // the fog of war (owner, 2026-10-17)
@@ -775,6 +776,8 @@ export class WorldMap {
         g.fillStyle = FACTIONS[p.faction].lantern;
         g.fillRect(tx(p.x) - 4, ty(p.y) - 4, 8, 8);
       }
+      // a hub of the «Переход» (owner, 2026-10-30, ferry.ts): the brass route badge by its top-right
+      if (isFerryHub(p.id)) drawHubMark(g, tx(p.x) - ms * 0.4, ty(p.y) - ms * 0.32, Math.max(6, ms * 0.26));
       g.font = `${this.zoom > 2 ? 13 : 11}px "IM Fell English SC", serif`;
       label(placeName(p.name), tx(p.x), ty(p.y) - ms * 0.55, undefined, 0);
     }
@@ -1056,6 +1059,14 @@ export class WorldMap {
     // her group, her mark, her scouts and her ship stand over it: a quest into the fog still leads there.
     drawFog(g, state.seen, state.seenVer, { x0: this.cx - W / 2 / k, y0: this.cy - H / 2 / k, k, w: W, h: H, time: performance.now() / 1000 });
     fogged = true;
+    // The hubs of the «Переход» (owner, 2026-10-30, ferry.ts) are known to every captain: their badge and name over the
+    // fog too — where a passage can take her.
+    if (on('ports')) for (const p of state.ports) {
+      if (!isFerryHub(p.id) || !underFog(state.seen, p.x, p.y)) continue;
+      drawHubMark(g, tx(p.x), ty(p.y), Math.max(7, ms * 0.32));
+      g.font = `${this.zoom > 2 ? 13 : 11}px "IM Fell English SC", serif`;
+      label(placeName(p.name), tx(p.x), ty(p.y) - ms * 0.45, 'rgba(232,196,106,0.9)', 0);
+    }
     drawScouts(g, state.scouts, state.scoutsAt, tx, ty, ms * 0.7);
     // A scout's pick: her reach from the island, a dashed ring.
     if (this.scoutPick && state.scouts?.home) {

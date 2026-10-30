@@ -213,6 +213,7 @@ import { sendWorldGoals, stepWorldGoals, worldGoalKill, worldGoalsCollect } from
 import { sendSignal } from './signals.ts';
 import { autosailInput, autosailOf, dropPaused, startAutosail, stepAutosail, stopAutosail } from './autosail.ts';
 import { VOYAGE_BUSY, finishVoyage, stepVoyage, voyageBlocks, voyageResend, voyaging } from './passage.ts'; // owner, 2026-10-28: «дальний переход»
+import { ferryGo, stepFerry } from './ferry.ts'; // owner, 2026-10-30: «Переход» between hub ports
 import { approach, approachInput, approachOf, cancelApproach, stepApproach } from './approach.ts'; // seaux: sail-to on tap
 import { cancelRoute, gotoGoal, stepRoutes } from './goalroute.ts'; // route: tap a goal, sail to its nearest place
 import { LootMap, stepWrecks } from './wrecks.ts'; // seaux: wreckage per captain
@@ -751,6 +752,7 @@ export class Game {
     stepRoutes(this); // route: the runs to the goals' nearest places, re-targeted (goalroute.ts)
     stepAutosail(this); // the helmsmen at their captains' wheels (docs/16 #36)
     stepVoyage(this, dt); // and the long passages under ×5 (owner, 2026-10-28, passage.ts)
+    stepFerry(this); // a hub's «Переход» brought in at its end (owner, 2026-10-30, ferry.ts)
     stepPursuit(this); // and under «Атаковать» (docs/23 item 33)
     stepAutoFire(this); // the captains' gun crews laying on the mark (docs/23 items 34–35)
     prof.lap('npcAi');
@@ -3952,6 +3954,9 @@ export class Game {
         });
       case 'undock':
         return err(this.undock(s));
+      case 'ferry':
+        // owner, 2026-10-30 (ferry.ts): «Переход» from a hub port to another, ×10, for silver, once in 45 min
+        return err(ferryGo(this, s, msg.to));
       case 'halt':
         return this.halt(s);
       case 'trade':

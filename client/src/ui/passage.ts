@@ -12,6 +12,8 @@ import { EN, RU } from '../lang/ui/passage.ts';
 import type { ClientState } from '../state.ts';
 import { courseAhead, courseOf } from './course.ts';
 import { dec1, esc } from './dom.ts';
+import { LF } from './ferry.ts';
+import { placeName } from './maps.ts';
 
 export const LP = dict(EN, RU);
 
@@ -104,11 +106,13 @@ export class PassagePill {
     const c = courseOf(state);
     const left = c && own ? courseAhead(c, own.x, own.y).left : own ? Math.hypot(v.x - own.x, v.y - own.y) : v.left;
     const t = clock(etaOf(left, v.v, v.tail)), d = wayLeft(left);
-    const text = `${lang()}|${t}|${d}`;
+    const text = `${lang()}|${t}|${d}|${v.ferry ?? ''}`;
     if (text === this.text) return;
     this.text = text;
     el.classList.remove('hidden');
-    el.title = LP('pill', { t, d });
+    // (a hub's «Переход», owner 2026-10-30: the port it is for)
+    const to = v.ferry ? state.ports.find((p) => p.id === v.ferry) : undefined;
+    el.title = to ? `${LF('on', { to: placeName(to.name), n: VOYAGE_MUL })} · ${t} · ${d}` : LP('pill', { t, d });
     el.setAttribute('aria-label', el.title);
     el.innerHTML = `<i class="vy-ico" aria-hidden="true"></i><b class="vy-t">${esc(t)}</b><span class="vy-sep" aria-hidden="true">·</span><span class="vy-d">${esc(d)}</span>`;
   }

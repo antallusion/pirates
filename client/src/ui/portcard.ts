@@ -26,6 +26,7 @@ import { dec1, esc, fmt, icon, money } from './dom.ts';
 import { openSheet } from './kit/sheet.ts';
 import type { SheetHandle } from './kit/sheet.ts';
 import { placeName } from './maps.ts';
+import { LF, ferryHtml } from './ferry.ts';
 
 const L = dict(EN, RU);
 
@@ -157,7 +158,10 @@ function body(state: ClientState, port: PortPublic, v: PortInfoView | null): str
   const wh = state.self?.warehouses?.[port.id];
   const whGoods = wh ? (Object.entries(wh) as [GoodId, number][]).filter(([, n]) => n >= 1) : [];
   const whBlock = whGoods.length ? `<div class="pcd-sec"><h3>${esc(L('pc.yourWh'))}</h3><div class="pcd-wh">${whGoods.map(([g, n]) => `<span>${icon(`good_${g}`, '', 'ico-sm')}${esc(GOODS[g].name)} <b>${fmt(n)}</b></span>`).join('')}</div></div>` : '';
-  return `${head}${events}<div class="pcd-sec"><h3>${esc(L('pc.market'))}</h3>${market(v)}</div><div class="pcd-sec"><h3>${esc(L('pc.services'))}</h3>${services(state, port, v)}</div>${whBlock}`;
+  // owner, 2026-10-30 (ferry.ts): a hub's «Переход» — its routes and prices; the buttons when she lies here
+  const fleft = v?.ferry && cur ? Math.max(0, v.ferry.left - (performance.now() - cur.at) / 1000) : 0;
+  const ferry = v?.ferry ? `<div class="pcd-sec pcd-ferry"><h3>${icon('build_lighthouse', '⛵', 'ico-sm')}${esc(LF('title'))}</h3>${ferryHtml(state, v.ferry, here, fleft, true)}</div>` : '';
+  return `${head}${events}${ferry}<div class="pcd-sec"><h3>${esc(L('pc.market'))}</h3>${market(v)}</div><div class="pcd-sec"><h3>${esc(L('pc.services'))}</h3>${services(state, port, v)}</div>${whBlock}`;
 }
 
 function foot(state: ClientState, port: PortPublic): string {
@@ -209,6 +213,13 @@ export function openPortCard(state: ClientState, portId: string): void {
         sheet?.close('button');
         deps?.openPort();
       }
+    });
+    // «Переход» from the card (owner, 2026-10-30): she lies in the hub — the trip begins, the card goes
+    sheet.body.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-ferry]');
+      if (!b || b.disabled) return;
+      deps?.send({ t: 'ferry', to: b.dataset.ferry! });
+      sheet?.close('button');
     });
     timer = setInterval(render, 5000); // the way and the countdown as she sails
   } else {
