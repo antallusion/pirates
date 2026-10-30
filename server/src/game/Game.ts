@@ -3955,7 +3955,7 @@ export class Game {
       case 'undock':
         return err(this.undock(s));
       case 'ferry':
-        // owner, 2026-10-30 (ferry.ts): «Переход» from a hub port to another, ×10, for silver, once in 45 min
+        // owner, 2026-10-30 (ferry.ts): «Переход» from a hub port to another, ×10, for silver, once an hour
         return err(ferryGo(this, s, msg.to));
       case 'halt':
         return this.halt(s);

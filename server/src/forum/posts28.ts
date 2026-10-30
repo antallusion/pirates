@@ -244,8 +244,9 @@ export const REPLIES_29: Reply[] = [
 
 В таком порту откройте вкладку «Переход», выберите другой узел и нажмите кнопку. Корабль выходит из гавани и идёт ходом ×10: в пути его никто не тронет, но и вы ничего не сделаете до прибытия. Метров за 400 до цели ход становится обычным, и корабль сам заходит в порт.
 
-- **Цена:** 30 серебра плюс 2,5 за километр, не больше 200 — соседний узел стоит 70–130, через всю карту 200.
-- **Откат:** 45 минут на капитана.
+- **Цена:** растёт с расстоянием — до соседнего узла около 1 700 серебра, через всю карту 50 000.
+- **Откат:** 1 час на капитана.
+- **Только с полупустым трюмом:** если трюм заполнен больше чем на 60%, переход не возьмёт — торговцам с полным трюмом по-прежнему плыть своим ходом.
 - Не возим тех, кто в бою, и разыскиваемых (★3 и выше).
 
 Обычный автопереход к любой точке остаётся выключенным, так что рейды и дальняя торговля не теряют смысла.`,
@@ -263,7 +264,16 @@ export function postReplies29(store: ForumStore, now: number): number {
       const asked = r.to !== null ? store.post(r.to) : undefined;
       const topic = sec ? store.sectionTopics(sec.id, true, 0, 500).find((x) => x.title === r.topic) : asked && store.topic(asked.topic_id)?.title === r.topic ? store.topic(asked.topic_id) : undefined;
       if (!topic) return;
-      if (store.topicPosts(topic.id, 0, 1000).some((p) => p.author_id === SYSTEM_ID && p.body_md === r.body)) return;
+      const mine = store.topicPosts(topic.id, 0, 1000).filter((p) => p.author_id === SYSTEM_ID);
+      if (mine.some((p) => p.body_md === r.body)) return;
+      // (the owner changed the facts after the answer went up: the answer to that post is rewritten, not doubled)
+      const was = r.to !== null ? mine.find((p) => p.reply_to === r.to) : undefined;
+      if (was) {
+        store.editPost(was.id, r.body, SYSTEM_ID, now);
+        store.index('p', was.id, plainText(r.body));
+        n++;
+        return;
+      }
       const to = r.to !== null ? store.post(r.to) : undefined;
       const replyTo = to && to.topic_id === topic.id ? to.id : null;
       const at = now + i * 1000;

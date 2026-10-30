@@ -254,7 +254,7 @@ export interface Profile {
   piracy?: PiracyProfile;
   /** One's own island (docs/12 P7): when home was last sailed for; souls waiting aboard to settle there. */
   homeAt?: number;
-  /** Her last «Переход» between hub ports (ferry.ts), wall ms: the next one 45 min after. */
+  /** Her last «Переход» between hub ports (ferry.ts), wall ms: the next one an hour after. */
   ferryAt?: number;
   refugees?: number;
   /** Free speed-up tokens for the island's builders (docs/15 item 2): the daily welcome and the daily orders. */

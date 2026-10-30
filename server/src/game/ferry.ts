@@ -5,7 +5,7 @@
 // The rules (server-authoritative; tests/ferry.test.ts):
 //  - only from a hub port she lies in (shared/src/data/ferry.ts FERRY_HUBS) to another hub;
 //  - the price by the straight distance (ferryPrice: 30 + 2.5 a km, to 5, at most 200), paid when the trip begins;
-//  - one trip per captain in FERRY_COOLDOWN_SEC (45 min, the wall clock, kept in her save: profile.ferryAt);
+//  - one trip per captain in FERRY_COOLDOWN_SEC (1 h, the wall clock, kept in her save: profile.ferryAt);
 //  - refused in a fight (her party ashore, her group's boarding), with a boarding's spoils waiting, in a mutiny, wanted
 //    at ★FERRY_WANTED_MAX or more (the hunters keep their prey), and whatever keeps her in port (a refit at the yard);
 //    an overloaded hold sails as ever;
@@ -13,7 +13,7 @@
 //    (passage.ts) begins at once — ×10, untouchable and unable to act — even with VOYAGE.on off; it ends VOYAGE_TAIL
 //    short, her own way back, the helmsman brings her in and she puts in by herself («Причалить» given for her).
 
-import { FERRY_COOLDOWN_SEC, FERRY_HUBS, FERRY_WANTED_MAX, ferryPrice, isFerryHub } from '../../../shared/src/data/ferry.ts';
+import { FERRY_COOLDOWN_SEC, FERRY_HOLD_MAX, FERRY_HUBS, FERRY_WANTED_MAX, ferryPrice, isFerryHub } from '../../../shared/src/data/ferry.ts';
 import { wantedLevel } from '../../../shared/src/data/factions.ts';
 import type { FerryView } from '../../../shared/src/protocol.ts';
 import { autosailOf, startAutosail, stopAutosail } from './autosail.ts';
@@ -22,6 +22,7 @@ import { SELF_IN_BATTLE_WHY, inBattle } from './inbattle.ts';
 import { beginFerry, voyaging } from './passage.ts';
 import type { PlayerSession } from './player.ts';
 import { refitHolds } from './refit.ts';
+import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { ShipEntity } from './ship.ts';
 
 /** The words she is told (client/src/lang/server.ru.passage.ts). */
@@ -30,6 +31,7 @@ export const FERRY_WORDS = {
   badTo: 'No passage to that port.',
   wanted: 'The ferry masters will not carry a wanted captain.',
   mutiny: 'Settle the mutiny first.',
+  laden: 'No passage with the hold more than 60% full: sell or store the cargo first.',
   noWay: 'No open water leads there now: the passage is off, nothing paid.',
 } as const;
 
@@ -67,6 +69,8 @@ function blocked(game: Game, s: PlayerSession, ship: ShipEntity): string | null 
   if (s.pendingBoarding) return SELF_IN_BATTLE_WHY;
   if (p.company?.mutiny) return FERRY_WORDS.mutiny;
   if (wantedLevel(p.infamy) >= FERRY_WANTED_MAX) return FERRY_WORDS.wanted;
+  const st = ship.stats;
+  if (st.holdVolume > 0 && cargoVolume(ship.cargo, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul) > st.holdVolume * FERRY_HOLD_MAX + 1e-9) return FERRY_WORDS.laden;
   return refitHolds(game, p);
 }
 

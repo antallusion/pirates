@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { TICK_RATE } from '../shared/src/constants.ts';
-import { FERRY_CAP, FERRY_COOLDOWN_SEC, FERRY_HUBS, ferryPrice } from '../shared/src/data/ferry.ts';
+import { FERRY_COOLDOWN_SEC, FERRY_HOLD_MAX, FERRY_HUBS, FERRY_MIN, FERRY_TOP, ferryPrice } from '../shared/src/data/ferry.ts';
 import { VOYAGE, VOYAGE_MUL } from '../shared/src/data/passage.ts';
 import { REGIONS } from '../shared/src/world/regions.ts';
 import type { Game } from '../server/src/game/Game.ts';
@@ -22,7 +22,9 @@ function captain(name: string, at = 'gravesend'): { game: Game; s: PlayerSession
   const c = join(game, name);
   const s = game.sessionByName(name)!;
   dockAt(game, s, at);
-  s.profile!.gold = 1000;
+  s.profile!.gold = 100_000;
+  // (a light hold: a passage takes a ship at most 60% laden)
+  s.ship!.cargo = {} as NonNullable<typeof s.ship>["cargo"];
   return { game, s, c };
 }
 
@@ -54,10 +56,10 @@ test('ferry: 6–8 hubs, in the law\'s and the trade\'s seas only, spread over t
   assert.ok(regions.size >= 4, 'every sea of the law and the trade has one');
 });
 
-test('ferry: the price — 30 + 2.5 a km, low for a newcomer, capped', () => {
-  assert.equal(ferryPrice(0), 30);
-  assert.equal(ferryPrice(20_000), 80);
-  assert.equal(ferryPrice(1_000_000), FERRY_CAP);
+test('ferry: the price — steep with distance: the nearest hubs about 1 700, across the whole sea 50 000', () => {
+  assert.equal(ferryPrice(0), FERRY_MIN);
+  assert.equal(ferryPrice(1_000_000), FERRY_TOP);
+  assert.ok(ferryPrice(40_000) > ferryPrice(20_000), 'rises with the way');
   const { game } = makeGame();
   let lo = Infinity, hi = 0;
   for (const a of FERRY_HUBS) for (const b of FERRY_HUBS) {
@@ -67,8 +69,8 @@ test('ferry: the price — 30 + 2.5 a km, low for a newcomer, capped', () => {
     hi = Math.max(hi, c);
     assert.equal(c, ferryCost(game, b, a), 'the same both ways');
   }
-  assert.ok(lo >= 30 && lo <= 100, `the nearest ${lo}`);
-  assert.ok(hi <= 200, `the farthest ${hi}`);
+  assert.ok(lo >= 1_500 && lo <= 2_000, `the nearest ${lo}`);
+  assert.ok(hi >= 49_000 && hi <= FERRY_TOP, `the farthest ${hi}`);
   assert.equal(ferryCost(game, 'gravesend', 'gravesend'), null);
   assert.equal(ferryCost(game, 'gravesend', 'cinderhold'), null, 'not a hub');
 });
@@ -82,15 +84,20 @@ test('ferry: refused outside a hub, to a port not a hub, without the silver, in 
   assert.equal(ferryGo(game, s, 'gravesend'), FERRY_WORDS.badTo);
   s.profile!.gold = 10;
   assert.match(ferryGo(game, s, 'hollowmere')!, /costs \d+ silver/);
-  s.profile!.gold = 1000;
+  s.profile!.gold = 100_000;
   s.profile!.infamy = 500;
   assert.equal(ferryGo(game, s, 'hollowmere'), FERRY_WORDS.wanted);
   s.profile!.infamy = 0;
+  // a laden hold (more than 60% full) is refused (owner, 2026-10-30)
+  const keep = s.ship!.cargo;
+  s.ship!.cargo = { timber: Math.ceil(s.ship!.stats.holdVolume * (FERRY_HOLD_MAX + 0.1)) } as typeof keep;
+  assert.equal(ferryGo(game, s, 'hollowmere'), FERRY_WORDS.laden);
+  s.ship!.cargo = keep;
   assert.equal(s.ship!.docked, 'gravesend', 'still in port');
-  assert.equal(s.profile!.gold, 1000, 'nothing paid');
+  assert.equal(s.profile!.gold, 100_000, 'nothing paid');
 });
 
-test('ferry: the trip — paid, ×10 at once, untouchable, in at the other hub; the cooldown kept 45 min', () => {
+test('ferry: the trip — paid, ×10 at once, untouchable, in at the other hub; the cooldown kept an hour', () => {
   assert.equal(VOYAGE.on, false, 'the generic far voyage stays off');
   const { game, s, c } = captain('Ferry Rider', 'gravesend');
   const ship = s.ship!;
@@ -99,7 +106,7 @@ test('ferry: the trip — paid, ×10 at once, untouchable, in at the other hub; 
   assert.ok(route && route.price === ferryCost(game, 'gravesend', 'hollowmere'));
   assert.equal(view.why, null);
   assert.equal(ferryGo(game, s, 'hollowmere'), null);
-  assert.equal(s.profile!.gold, 1000 - route.price, 'paid');
+  assert.equal(s.profile!.gold, 100_000 - route.price, 'paid');
   assert.ok(voyaging(ship), 'the passage at once');
   assert.ok(!ship.docked);
   assert.equal(voyageOf(ship)!.v, voyageSpeed(ship));
@@ -122,7 +129,7 @@ test('ferry: the trip — paid, ×10 at once, untouchable, in at the other hub; 
   assert.equal(off.why, 'arrived');
   assert.equal(off.ferry, 'hollowmere');
   // the cooldown, then free again
-  assert.match(ferryGo(game, s, 'gravesend')!, /next passage in 4\d min/);
+  assert.match(ferryGo(game, s, 'gravesend')!, /next passage in (5\d|60) min/);
   assert.equal(s.ship!.docked, 'hollowmere');
   const skew = (game as unknown as { wallSkew: number });
   skew.wallSkew = (skew.wallSkew ?? 0) + FERRY_COOLDOWN_SEC * 1000;
@@ -146,8 +153,9 @@ test('ferry: every hub-to-hub route has open water from the harbour mouth (the p
     for (const to of FERRY_HUBS) {
       if (to === from) continue;
       dockAt(game, s, from);
-      s.profile!.gold = 1000;
+      s.profile!.gold = 100_000;
       s.profile!.ferryAt = 0;
+      s.ship!.cargo = {} as NonNullable<typeof s.ship>['cargo'];
       assert.equal(ferryGo(game, s, to), null, `${from} → ${to}`);
       assert.ok(voyaging(s.ship!), `${from} → ${to} carried`);
       const v = voyageOf(s.ship!)!;
