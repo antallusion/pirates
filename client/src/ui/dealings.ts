@@ -2,6 +2,7 @@
 // ports (#13), the tavern's whispers for silver (#14), repairs at sea set against the yard's (#15). The clocks tick in
 // place (no redraw of the harbour page, so a half-typed bid is not lost); a whisper bought becomes her mark.
 
+import { itemDetailAttr } from './detail.ts'; // the detail card (owner, 2026-10-30)
 import { AUCTION_BIDDERS, RELIABILITY, RESERVE_MAX, RESERVE_MIN, RUN_HOUSES, RUN_LEGS, RUN_SLOTS, OWN_LOTS } from '../../../shared/src/data/dealings.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import { RARITY_NAMES, SLOT_NAMES, itemName, itemSlot, itemValue } from '../../../shared/src/data/items.ts';
@@ -119,7 +120,7 @@ export function auctionCard(view: PortView, state: ClientState): string {
     const who = l.mine ? L('au.mine') : l.seller ? L('au.seller', { name: personName(l.seller) }) : L('au.house');
     const lead = l.leading ? `<span class="dl-lead">${esc(L('au.you'))}</span>` : l.leader ? `<span class="muted">${esc(L('au.leader', { name: bidder(l.leader) }))}</span>` : '';
     const can = !l.mine && !l.leading;
-    return `<div class="au-lot"><details><summary>${itemIcon(l.item, slot, 'ico-md')}<span class="au-name">${coloured(l.item)}<span class="muted">${esc(RARITY_NAMES[l.item.rarity][ru()])} · ${esc(SLOT_NAMES[slot][ru()])} · ⚓${l.item.ilvl} · ${esc(who)}</span></span></summary>${itemCardHtml(l.item)}</details>
+    return `<div class="au-lot"><details><summary><span class="dc-tap"${itemDetailAttr(l.item)}>${itemIcon(l.item, slot, 'ico-md')}</span><span class="au-name">${coloured(l.item)}<span class="muted">${esc(RARITY_NAMES[l.item.rarity][ru()])} · ${esc(SLOT_NAMES[slot][ru()])} · ⚓${l.item.ilvl} · ${esc(who)}</span></span></summary>${itemCardHtml(l.item)}</details>
       <div class="au-state"><span class="au-bid">${esc(l.bids ? L('au.standing') : L('au.opening'))} ${money(l.bid)}</span><span class="muted">${esc(L('au.worth', { n: fmt(l.worth) }))}${l.bids ? ` · ${esc(L('au.bids', { n: l.bids }))}` : ''}</span>${lead}
         <span class="au-time">${esc(L('au.ends'))} <b class="dl-clock" data-wend="${l.endsAt}"></b></span></div>
       ${can ? `<div class="au-form"><input class="field" type="number" min="${l.next}" step="1" value="${l.next}" data-aubid="${esc(l.id)}" aria-label="${esc(L('au.bid'))}"><button class="btn btn-small btn-primary" data-act="dl" data-dl="au_bid" data-id="${esc(l.id)}" ${self.gold < l.next ? 'disabled' : ''}>${esc(L('au.bid'))}</button></div>` : ''}</div>`;

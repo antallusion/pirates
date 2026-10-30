@@ -12,6 +12,9 @@
 //    count on «⋯» itself; a tier up comes as the server's toast.
 // RU and EN: client/src/lang/ui/seasonpass.ts.
 
+import { detailAttr } from './detailattr.ts'; // the detail card (owner, 2026-10-30)
+import { registerDetail } from './detail.ts';
+import { EN as DET_EN, RU as DET_RU } from '../lang/ui/detail.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { passLine } from '../../../shared/src/data/passlines.ts';
 import type { PassLine } from '../../../shared/src/data/passlines.ts';
@@ -186,7 +189,14 @@ export class SeasonPass {
     const main = passLine(rs[0], v.silverMin);
     const more = rs.length > 1 ? `<small class="sp-more">${esc(L('more', { n: rs.length - 1 }))}</small>` : '';
     const name = rs.map((r) => { const l = passLine(r, v.silverMin); return `${T(l.name)} ${T(l.qty)}`; }).join(' · ');
-    return `<button type="button" class="${cls}" data-spt="${x.t}" data-sptr="${track}" title="${esc(name)}" aria-label="${esc(`${L('tierN', { n: x.t })}, ${L(track === 'free' ? 'free' : 'premium')}: ${name}`)}">
+    // its card on a long press or a right click (a tap claims it, or opens the tier): every reward with its icon and words
+    registerDetail(`pass:${x.t}:${track}`, () => ({
+      name: main.name, color: big ? '#ff9a3c' : '#e8c872', sub: [DET_EN['pass.sub'].replace('{n}', String(x.t)).replace('{track}', DET_EN[`pass.${track === 'free' ? 'free' : 'premium'}`]), DET_RU['pass.sub'].replace('{n}', String(x.t)).replace('{track}', DET_RU[`pass.${track === 'free' ? 'free' : 'premium'}`])],
+      art: main.icon, fig: 'icon',
+      rows: rs.map((r) => { const l = passLine(r, v.silverMin); return { k: l.name, v: l.qty, icon: l.icon }; }),
+      notes: rs.map((r) => passLine(r, v.silverMin).hint).filter((h): h is [string, string] => !!h).map((t) => ({ t, tone: 'gift' as const })),
+    }));
+    return `<button type="button" class="${cls}" data-spt="${x.t}" data-sptr="${track}"${detailAttr(`pass:${x.t}:${track}`, { hold: true })} title="${esc(name)}" aria-label="${esc(`${L('tierN', { n: x.t })}, ${L(track === 'free' ? 'free' : 'premium')}: ${name}`)}">
       <span class="sp-pic">${pic(main, 'sp-ico')}${more}</span><b class="sp-q">${esc(T(main.qty))}</b>${taken ? '<i class="sp-tick" aria-hidden="true">✓</i>' : ''}${lockedPass ? `<i class="sp-lock" aria-hidden="true">${LOCK}</i>` : ''}</button>`;
   }
 

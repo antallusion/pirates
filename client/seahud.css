@@ -543,6 +543,11 @@ body.reduce-motion #atk-mark { animation: none; }
 .tm-item { position: absolute; left: 0; top: 0; display: block; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--k-bone); cursor: pointer; pointer-events: auto;
   opacity: 0; transition: opacity var(--k-dur-2) var(--k-ease-out) calc(var(--tm-i, 0) * 45ms); -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 .tm.tm-open .tm-item { opacity: 1; }
+/* «Подробнее» (owner, 2026-10-30): the small ⓘ beside the ring that opens her detail card (client/detail.css) */
+.tm-extra { position: absolute; left: 0; top: 0; width: 34px; height: 34px; padding: 0; border: 1px solid #b08d57; border-radius: 50%; background: radial-gradient(circle at 50% 36%, #3b3125 0, #1c1711 60%, #0d0b08 100%); color: #e0b862; font: 700 18px/32px Georgia, serif; text-align: center; cursor: pointer; pointer-events: auto; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.8); opacity: 0; transition: opacity var(--k-dur-2) var(--k-ease-out); -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.tm.tm-open .tm-extra { opacity: 1; }
+.tm.tm-crowded .tm-item { display: none; }
+@media (hover: hover) { .tm-extra:hover { color: #fff; border-color: #e0b862; box-shadow: 0 0 10px rgba(224, 184, 98, 0.5); } }
 .tm-pic { position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 50% 36%, #3b3125 0, #1c1711 44%, #0d0b08 66%); box-shadow: 0 3px 10px rgba(0, 0, 0, 0.8); transition: transform var(--k-dur-1) var(--k-ease-out); }
 .tm-pic::after { content: ''; position: absolute; inset: -11%; border-radius: 50%; background: var(--ui-ring) center / contain no-repeat; pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.75)); transition: filter var(--k-dur-2) var(--k-ease-out); }
 body:not(.skinned) .tm-pic::after { inset: 0; box-shadow: inset 0 0 0 3px var(--k-brass-dim); }

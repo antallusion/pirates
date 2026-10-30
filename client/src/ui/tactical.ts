@@ -4,6 +4,7 @@
 // the captains on the side panel with their orders; the feed; the end. The server decides everything: a tap sends
 // the order (a second tap on a lit hex moves there; a tap on a foe strikes or fires), a long press shows a stack.
 
+import { detailAttr } from './detailattr.ts'; // the detail card (owner, 2026-10-30)
 import { SEAL_MOVES } from '../../../shared/src/data/seals.ts';
 import { cue } from '../sfx.ts'; // the sound pass (owner, 2026-10-16): the blows, the shots and the procs heard
 import { AUTO_SCROLL_ICON, AUTO_SCROLL_PACKS } from '../../../shared/src/data/premium.ts'; // «Свиток автобоя» (owner, 2026-10-11)
@@ -121,7 +122,7 @@ function lootParts(l: LairLoot): { chips: string[]; lines: string[] } {
     const chips = [`<span class="tb-lc">${icon('icon.xp', '', 'ico-sm')}${esc(RL('loot.xp', { n: r.xp }))}</span>`, `<span class="tb-lc">${icon('icon.coin', '', 'ico-sm')}${r.silver}</span>`];
     for (const [k, n] of Object.entries(r.res) as [LandRes | 'pearls', number][]) {
       const name = k === 'pearls' ? GOODS.pearls.name : LAND_RES_DEF[k].name[ru];
-      chips.push(`<span class="tb-lc" title="${esc(name)}">${icon(k === 'pearls' ? 'icon.good_pearls' : `icon.${LAND_RES_DEF[k].icon}`, '', 'ico-sm')}${esc(name)} ${n}</span>`);
+      chips.push(`<span class="tb-lc"${detailAttr(k === 'pearls' ? 'good:pearls' : `lres:${k}`)} title="${esc(name)}">${icon(k === 'pearls' ? 'icon.good_pearls' : `icon.${LAND_RES_DEF[k].icon}`, '', 'ico-sm')}${esc(name)} ${n}</span>`);
     }
     const lines: string[] = [];
     if (r.grey) lines.push(esc(RL('loot.grey')));
@@ -132,7 +133,7 @@ function lootParts(l: LairLoot): { chips: string[]; lines: string[] } {
     return { chips, lines };
   }
   // docs/19 D5: the chest among the sharks — what came up in it.
-  if (l.find) return { chips: [`<span class="tb-lc">${icon('icon.coin', '', 'ico-sm')}${l.find.silver}</span>`, ...l.find.goods.map((g) => `<span class="tb-lc" title="${esc(GOODS[g.g].name)}">${icon(`icon.good_${g.g}`, '', 'ico-sm')}${g.n}</span>`)], lines: [] };
+  if (l.find) return { chips: [`<span class="tb-lc">${icon('icon.coin', '', 'ico-sm')}${l.find.silver}</span>`, ...l.find.goods.map((g) => `<span class="tb-lc"${detailAttr(`good:${g.g}`)} title="${esc(GOODS[g.g].name)}">${icon(`icon.good_${g.g}`, '', 'ico-sm')}${g.n}</span>`)], lines: [] };
   // docs/18 IV: a drift beaten at sea — its silver and lesson.
   if (l.drift) return { chips: [`<span class="tb-lc">${icon('icon.coin', '', 'ico-sm')}${l.drift.silver}</span>`, `<span class="tb-lc">${icon('icon.xp', '', 'ico-sm')}${esc(LL('loot.xp', { n: l.drift.xp }))}</span>`], lines: [] };
   if (l.looted) return { chips: [], lines: [esc(LL('loot.looted'))] };
@@ -140,10 +141,10 @@ function lootParts(l: LairLoot): { chips: string[]; lines: string[] } {
   const chips: string[] = [];
   if (l.silver) chips.push(`<span class="tb-lc">${icon('icon.coin', '', 'ico-sm')}${l.silver}</span>`);
   if (l.xp) chips.push(`<span class="tb-lc">${icon('icon.xp', '', 'ico-sm')}${esc(LL('loot.xp', { n: l.xp }))}</span>`);
-  for (const g of l.goods) chips.push(`<span class="tb-lc" title="${esc(GOODS[g.g].name)}">${icon(`icon.good_${g.g}`, '', 'ico-sm')}${g.n}</span>`);
+  for (const g of l.goods) chips.push(`<span class="tb-lc"${detailAttr(`good:${g.g}`)} title="${esc(GOODS[g.g].name)}">${icon(`icon.good_${g.g}`, '', 'ico-sm')}${g.n}</span>`);
   for (const [r, n] of Object.entries(l.res) as [LandRes | 'pearls', number][]) {
     const name = r === 'pearls' ? GOODS.pearls.name : LAND_RES_DEF[r].name[ru];
-    chips.push(`<span class="tb-lc" title="${esc(name)}">${icon(r === 'pearls' ? 'icon.good_pearls' : `icon.${LAND_RES_DEF[r].icon}`, '', 'ico-sm')}${esc(name)} ${n}</span>`);
+    chips.push(`<span class="tb-lc"${detailAttr(r === 'pearls' ? 'good:pearls' : `lres:${r}`)} title="${esc(name)}">${icon(r === 'pearls' ? 'icon.good_pearls' : `icon.${LAND_RES_DEF[r].icon}`, '', 'ico-sm')}${esc(name)} ${n}</span>`);
   }
   // docs/29 §9: the island's loot of a creature of the islands (speed-ups, the yard's goods, the harvest, a brigade).
   for (const d of l.isle ?? []) chips.push(isleDropChip(d));
@@ -151,7 +152,7 @@ function lootParts(l: LairLoot): { chips: string[]; lines: string[] } {
   if (l.scrolls) chips.push(`<span class="tb-lc" title="${esc(L('scLoot', { n: l.scrolls }))}">${icon(AUTO_SCROLL_ICON, '', 'ico-sm')}×${l.scrolls}</span>`);
   const lines: string[] = [];
   if (l.artifact) lines.push(esc(LL('loot.art', { a: ARTIFACTS[l.artifact]?.name[ru] ?? l.artifact })));
-  if (l.egg) lines.push(`${unitIcon(l.egg, 'ico-sm')} ${esc(LL('loot.egg', { u: unitName(l.egg) }))}`);
+  if (l.egg) lines.push(`<span${detailAttr(`unit:${l.egg}`)}>${unitIcon(l.egg, 'ico-sm')}</span> ${esc(LL('loot.egg', { u: unitName(l.egg) }))}`);
   if (l.chest) lines.push(esc(LL('loot.chest', { s: l.chest.silver, x: l.chest.xp })) + (l.chest.artifact ? ` · ${esc(ARTIFACTS[l.chest.artifact]?.name[ru] ?? '')}` : ''));
   if (l.claimed) lines.push(esc(LL('loot.claimed', { island: placeName(l.claimed) })));
   if (l.dwell) lines.push(esc(LL('loot.dwell')));

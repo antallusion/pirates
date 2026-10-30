@@ -179,7 +179,9 @@ export function icon(id: string, glyph = '', cls = 'ico'): string {
   if (fb && own && own !== fb && !DEAD_ART.has(own)) return `<img class="${cls}" src="${own}" data-fb="${fb}" alt="" draggable="false" />`;
   if (fb && own && DEAD_ART.has(own)) return `<img class="${cls}" src="${fb}" alt="" draggable="false" />`;
   const url =(id.startsWith('portrait.') ? portraitUrl(id.slice(9)) : assetUrl(id.includes('.') ? id : `icon.${id}`)) ?? (STAND_IN[id] ? assetUrl(`icon.${STAND_IN[id]}`) : null) ?? (id.startsWith('good_') ? assetUrl('icon.good_provisions') : null);
-  return url ? `<img class="${cls}" src="${url}" alt="" draggable="false" />` : glyph ? `<span class="${cls} glyph">${esc(glyph)}</span>` : '';
+  // a good's picture opens its detail card on a long press or a right click wherever it is drawn (detail.ts, 2026-10-30)
+  const held = /^(icon\.)?good_[a-z_]+$/.test(id) ? ` data-detail-hold="good:${id.replace(/^(icon\.)?good_/, '')}"` : '';
+  return url ? `<img class="${cls}"${held} src="${url}" alt="" draggable="false" />` : glyph ? `<span class="${cls} glyph">${esc(glyph)}</span>` : '';
 }
 
 /** A fish's painted icon (docs/12 P11, the catch sheet); the string of fish stands in for one not yet painted. */

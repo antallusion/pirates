@@ -11,6 +11,7 @@
 // One layer of DOM moved by a transform (the map, the pictures, the plots' diamonds in one SVG, the tags): a drag
 // redraws nothing, the pictures are diffed by spot when the view changes.
 
+import { detailAttr } from './detailattr.ts'; // the detail card (owner, 2026-10-30)
 import { HL, bindHaul, haulCard } from './islehaul.ts';
 import { ISO_H, ISO_MAP_OF, ISO_SLOT, ISO_UNIT, ISO_W, isoFoot, isoSheet, isoSpot, isoStage } from '../../../shared/src/data/isleiso.ts';
 import type { IsoMap, Pt } from '../../../shared/src/data/isleiso.ts';
@@ -588,7 +589,7 @@ export class IsleScene {
     const name = v ? `<div class="is-name"><b>${esc(placeName(v.name))}</b><span>${esc(L('hall', { n: hall }))}</span></div>` : '<div class="is-name"></div>';
     const res = v ? v.store.map((r) => {
       const full = r.n >= r.cap;
-      return `<span class="is-res${full ? ' full' : ''}" title="${esc(`${GOODS[r.good].name}: ${fmt(r.n)}/${fmt(r.cap)}${r.rate > 0 ? ` · +${Math.round(r.rate * 10) / 10}/${ru ? 'ч' : 'h'}` : ''}`)}">${icon(`good_${r.good}`, '', 'ico-sm')}<b>${fmt(r.n)}</b><i>/${fmt(r.cap)}</i></span>`;
+      return `<span class="is-res${full ? ' full' : ''}"${detailAttr(`good:${r.good}`)} title="${esc(`${GOODS[r.good].name}: ${fmt(r.n)}/${fmt(r.cap)}${r.rate > 0 ? ` · +${Math.round(r.rate * 10) / 10}/${ru ? 'ч' : 'h'}` : ''}`)}">${icon(`good_${r.good}`, '', 'ico-sm')}<b>${fmt(r.n)}</b><i>/${fmt(r.cap)}</i></span>`;
     }).join('') : '';
     return `${name}<div class="is-store">${res}${v ? `<button type="button" class="is-res is-tre" data-itre title="${esc(`${L('treasury')} · ${HL('deposit')}`)}">${icon('coin', '', 'ico-sm')}<b>${fmt(Math.max(0, v.claim?.treasury ?? 0))}</b><span class="is-tre-plus" aria-hidden="true">+</span></button>` : ''}<span class="is-res is-silver" title="${esc(L('silver'))}">${money(state.self?.gold ?? 0)}</span></div>
       <button type="button" class="btn btn-primary is-sea" data-isea title="${esc(L('seaTip'))}">${icon('menu_ship', '', 'ico-sm')}<span>${esc(L('sea'))}</span></button>`;

@@ -2,6 +2,7 @@
 // window), the album of collections (another tab), the week's challenges (in the journal), and the window of what
 // happened while she was away, with its gift.
 
+import { detailAttr } from './detailattr.ts'; // the detail card (owner, 2026-10-30)
 import { BEASTS } from '../../../shared/src/data/beasts.ts';
 import type { BeastId } from '../../../shared/src/data/beasts.ts';
 import { FISH } from '../../../shared/src/data/fishing.ts';
@@ -119,7 +120,7 @@ function bestiaryPage(u: CreatureId): string {
     ...drifts.map((k) => (DRIFTS[k].legend ? V('bst.legend', { a: DRIFTS[k].lv[0] }) : V('bst.drift', { drift: DRIFTS[k].name[ru()], a: DRIFTS[k].lv[0], b: DRIFTS[k].lv[1] }))),
   ];
   const favs = CAPTAIN_IDS.filter((c) => isFavourite(c, u)).map((c) => CAPTAINS[c].archetype);
-  return `<div class="rn-page" data-bst-page="${u}"><div class="rn-page-h">${unitIcon(u, 'ico-lg')}<div><b>${esc(unitName(u))}</b><span class="muted">${esc(V('bst.tier', { n: d.tier }))} · ${esc(PEOPLE_NAME[peopleOf(u)][ru()])}</span></div><button class="btn btn-small btn-ghost" data-bst-close aria-label="${esc(V('bst.close'))}">×</button></div>
+  return `<div class="rn-page" data-bst-page="${u}"><div class="rn-page-h"><span class="dc-tap"${detailAttr(`unit:${u}`)}>${unitIcon(u, 'ico-lg')}</span><div><b>${esc(unitName(u))}</b><span class="muted">${esc(V('bst.tier', { n: d.tier }))} · ${esc(PEOPLE_NAME[peopleOf(u)][ru()])}</span></div><button class="btn btn-small btn-ghost" data-bst-close aria-label="${esc(V('bst.close'))}">✕</button></div>
     <p class="rn-page-stats">${esc(stats)}</p>
     <div class="giver-h">${esc(V('bst.specials'))}</div><ul class="rn-page-list">${sp}</ul>
     <div class="giver-h">${esc(V('bst.loot'))}</div><p class="rn-page-loot">${loot}</p>

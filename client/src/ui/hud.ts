@@ -72,6 +72,8 @@ import { drawWaysMini } from '../render/waystations.ts'; // docs/35
 import { drawRoamsMini } from '../render/roamers.ts';
 import { drawCitadelsMini } from '../render/citadels.ts'; // docs/19 E4 // docs/19 D7
 import { armyGlance } from './army.ts';
+import { detailAttr } from './detailattr.ts';
+import { EN as DET_EN, RU as DET_RU } from '../lang/ui/detail.ts';
 import { holdMix, holdMixHtml } from './holdmix.ts';
 import { gloryChip } from './throne.ts'; // docs/19 E1
 import { Toasts } from './kit/toast.ts'; // docs/23 phase 1
@@ -86,6 +88,7 @@ const LSF = dict(SEAF_EN, SEAF_RU); // the quick sea fight (docs/23 phases 3–4
 /** The battles the server plays out for a chance (server/src/game/boardodds.ts ODDS_SIMS). */
 const ODDS_SIMS_SHOWN = 200;
 const RL = dict(REN, RRU);
+const DL = dict(DET_EN, DET_RU);
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 const wantedTitle = (n: number): string => L(`wanted.${Math.max(0, Math.min(5, n))}` as keyof typeof EN & string);
@@ -2356,12 +2359,14 @@ export class Hud {
     const guardName = guard ? GUARDS[guard.kind].name[lang() === 'ru' ? 1 : 0] : '';
     const role = guard ? (sameWords(guardName, name) ? L('tg.guard') : guardName) : info.isPlayer ? L('tg.lv', { n: info.level ?? 1 }) : info.npcRole && `role.${info.npcRole}` in REN ? RL(`role.${info.npcRole}` as 'role.merchant') : '';
     const bar = (k: string, v: number) => `<span class="tg-bar tg-${k}"><i style="width:${pct(clamp(v, 0, 1))}"></i></span>`;
+    // ⓘ: her detail card (owner, 2026-10-30; client/src/ui/detail.ts) — the frame's own tap still inspects a captain
+    const infoBtn = `<button type="button" class="dc-info tg-info"${detailAttr(`ship:${id}`)} aria-label="${esc(DL('infoT'))}" title="${esc(DL('infoT'))}">ⓘ</button>`;
     if (beast) {
       // A beast of the sea (docs/12 P4): its nature instead of a class and a role, and only its hide for a bar.
       const temper = BEASTS[beast].temper;
       const nature = temper === 'shy' || temper === 'tusk' ? L('tg.shy') : temper === 'ram' ? L('tg.ram') : L('tg.predator');
       el.className = `hud-block tg${info.elite ? ' tg-elite' : ''}${threat ? ` tg-${threat}` : ''}`;
-      el.innerHTML = `<div class="tg-head">${info.shipLevel ? levelChip(info.shipLevel, info.classId) : ''}<b class="tg-name">${esc(name)}</b><span class="tg-dist">${esc(dist)}</span></div>
+      el.innerHTML = `<div class="tg-head">${info.shipLevel ? levelChip(info.shipLevel, info.classId) : ''}<b class="tg-name">${esc(name)}</b><span class="tg-dist">${esc(dist)}</span>${infoBtn}</div>
       <div class="tg-sub muted">${esc(nature)}${info.elite ? ` · <span class="tg-el">${esc(L('tg.elite'))}</span>` : ''}</div>
       ${bar('hull', c.hull)}
       <div class="tg-foot">${threat ? `<span class="tg-threat" style="color:${THREAT_COLOR[threat]}">${esc(L(`tg.${threat}`))}</span>` : ''}</div>`;
@@ -2369,7 +2374,7 @@ export class Hud {
       return;
     }
     el.className = `hud-block tg${info.elite ? ' tg-elite' : ''}${threat ? ` tg-${threat}` : ''}`;
-    el.innerHTML = `<div class="tg-head">${info.shipLevel ? levelChip(info.shipLevel, info.classId) : ''}<b class="tg-name">${esc(name)}</b><span class="tg-dist">${esc(dist)}</span></div>
+    el.innerHTML = `<div class="tg-head">${info.shipLevel ? levelChip(info.shipLevel, info.classId) : ''}<b class="tg-name">${esc(name)}</b><span class="tg-dist">${esc(dist)}</span>${infoBtn}</div>
       <div class="tg-sub muted">${info.isPlayer && info.title ? `<span class="tg-title">${esc(sv(info.title))}</span> · ` : ''}${named ? `<span class="tg-wanted">${esc(named.tag)}</span> · ` : ''}${esc([guard || sameWords(cls?.name ?? info.classId, name) ? '' : cls?.name ?? info.classId, role].filter(Boolean).join(' · '))}${info.elite ? ` · <span class="tg-el">${esc(L('tg.elite'))}</span>` : ''}</div>
       ${info.isPlayer ? `<div class="tg-colours">${flagChip(shipColours(c.flags, info))}</div>` : ''}
       ${bar('hull', c.hull)}${bar('crew', c.crew)}${bar('sails', c.sails)}

@@ -1,6 +1,7 @@
 // Inspecting a captain (docs/11 P6), as WoW's inspect: the face of their Path, their level, title and guild, the
 // ship they sail, their deeds and the work they have done — and a whisper, a call aboard or a friend's name.
 
+import { itemDetailAttr } from './detail.ts'; // the detail card (owner, 2026-10-30)
 import { RARITY_COLOR, SLOT_NAMES, itemName, itemSlot } from '../../../shared/src/data/items.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
@@ -73,7 +74,7 @@ export function inspectDialog(v: InspectView, acts: InspectActs, opts: { friend:
         <p class="insp-line muted">${esc(L('waters', { region: placeName(REGIONS[v.region]?.name ?? v.region) }))}</p>
       </div></div>
     <div class="insp-stats">${stat('deeds', v.deeds)}${stat('season', v.seasonLevel)}${stat('quests', v.questsDone)}${stat('contracts', v.contracts)}${stat('mentored', v.mentored)}${stat('rating', v.rating)}${v.wanted ? stat('wanted', '☠'.repeat(v.wanted)) : ''}</div>
-    ${v.gear?.length ? `<div class="insp-gear"><div class="muted insp-gear-h">${esc(L('gear'))}</div>${v.gear.map((it) => `<span class="insp-item" style="color:${RARITY_COLOR[it.rarity]}" title="${esc(SLOT_NAMES[itemSlot(it)][lang() === 'ru' ? 1 : 0])} · ⚓${it.ilvl}">${esc(itemName(it, lang() === 'ru'))}</span>`).join('')}</div>` : ''}
+    ${v.gear?.length ? `<div class="insp-gear"><div class="muted insp-gear-h">${esc(L('gear'))}</div>${v.gear.map((it) => `<span class="insp-item"${itemDetailAttr(it)} style="color:${RARITY_COLOR[it.rarity]}" title="${esc(SLOT_NAMES[itemSlot(it)][lang() === 'ru' ? 1 : 0])} · ⚓${it.ilvl}">${esc(itemName(it, lang() === 'ru'))}</span>`).join('')}</div>` : ''}
     <div class="insp-acts">${opts.canInvite ? `<button class="btn btn-small" data-insp-invite>${esc(L('invite'))}</button>` : ''}${opts.friend ? '' : `<button class="btn btn-small" data-insp-friend>${esc(L('befriend'))}</button>`}</div>`;
   void askHtml(body, L('whisper'), L('close'), 'giver-panel').then((ok) => ok && acts.whisper(v.name));
   const root = document.getElementById('confirm');

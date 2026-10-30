@@ -5,6 +5,7 @@
 // emotes. Buying goes the shop's own way (premium.ts `data-shbuy`: the price in roubles or Stars first, the doubloons
 // beside it, the top-up first when short).
 
+import { detailAttr } from './detailattr.ts'; // the detail card (owner, 2026-10-30)
 import {
   BUNDLES, CLOTHS, COS_EMOTES, EMBLEMS, EMOTE_PACKS, FRAMES, PLATES, TITLES, TRAILS, bundleWorth, cosItem, cosKey, expandKeys, frameOf, titleOf,
 } from '../../../shared/src/data/cosmetics.ts';
@@ -221,7 +222,7 @@ function foot(x: CosItem, v: CosView, sv: ShopView, offerId: string): string {
 const tierCls = (x: { tier: number }) => `cos-t${x.tier}`;
 
 function card(x: CosItem, preview: string, v: CosView, sv: ShopView, offerId: string, extra = '', prevCls = ''): string {
-  return `<div class="cos-card ${tierCls(x)}${statusOf(x, v) === 'worn' ? ' worn' : ''}" data-cos="${esc(cosKey(x))}"><div class="cos-prev${prevCls ? ` ${prevCls}` : ''}">${preview}</div>
+  return `<div class="cos-card ${tierCls(x)}${statusOf(x, v) === 'worn' ? ' worn' : ''}" data-cos="${esc(cosKey(x))}"${detailAttr(`cos:${cosKey(x)}`)}><div class="cos-prev${prevCls ? ` ${prevCls}` : ''}">${preview}</div>
     <div class="cos-txt"><b class="cos-name">${esc(T(x.name))}</b><small class="cos-tier">${esc(L(`tier${Math.min(4, x.tier)}` as 'tier0'))}${extra}</small></div>
     <div class="cos-foot">${foot(x, v, sv, offerId)}</div></div>`;
 }

@@ -2,6 +2,7 @@
 // card's «Возможная добыча» with each chance. Existing icons only: the storm glass of the shop's speed-ups, the goods,
 // the farm of the harvest, the carpenter of the brigades.
 
+import { detailAttr } from './detailattr.ts'; // the detail card (owner, 2026-10-30)
 import type { IsleDrop, lootChances } from '../../../shared/src/data/isleloot.ts';
 import { PROD_BOOST } from '../../../shared/src/data/shop.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -25,7 +26,7 @@ const goodName = (g: string) => GOODS[g as keyof typeof GOODS]?.name ?? g;
 export function isleDropChip(d: IsleDrop): string {
   switch (d.k) {
     case 'speed': return `<span class="tb-lc tb-isle" title="${esc(L('speedTip', { m: mins(d.min) }))}">${icon(ISLE_LOOT_ICON.speed, '', 'ico-sm')}${esc(mins(d.min))}</span>`;
-    case 'res': return `<span class="tb-lc tb-isle" title="${esc(`${goodName(d.good)} · ${L('resTip')}`)}">${icon(`good_${d.good}`, '', 'ico-sm')}${d.n}</span>`;
+    case 'res': return `<span class="tb-lc tb-isle"${detailAttr(`good:${d.good}`)} title="${esc(`${goodName(d.good)} · ${L('resTip')}`)}">${icon(`good_${d.good}`, '', 'ico-sm')}${d.n}</span>`;
     case 'prod': return `<span class="tb-lc tb-isle" title="${esc(L('prodTip', { p: Math.round(PROD_BOOST * 100), h: d.hours }))}">${icon(ISLE_LOOT_ICON.prod, '', 'ico-sm')}+${Math.round(PROD_BOOST * 100)}% ${esc(L('hour', { n: d.hours }))}</span>`;
     default: return `<span class="tb-lc tb-isle" title="${esc(L('builderTip', { h: d.hours }))}">${icon(ISLE_LOOT_ICON.builder, '', 'ico-sm')}${esc(L('builder', { h: d.hours }))}</span>`;
   }

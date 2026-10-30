@@ -1,6 +1,7 @@
 // Talent screen — the "Wind Rose" (docs/03_TALENT_TREES.md §2.10): ten rays, one per tree, grow with the points
 // invested; the selected tree shows its tiers and keystones, then loadouts, respec and Legend Deeds.
 
+import { detailAttr } from './detailattr.ts'; // the detail card (owner, 2026-10-30)
 import { DEEDS, MAX_COUNTED_DEEDS } from '../../../shared/src/data/deeds.ts';
 import { ROSE_ORDER, TALENTS, TREES, KEYSTONE_GATE, canLearn, canUnlearn, pointsInTree, tierRequirement } from '../../../shared/src/data/talents.ts';
 import type { TalentDef, TreeId } from '../../../shared/src/data/talents.ts';
@@ -139,12 +140,12 @@ function card(x: TalentDef, self: NonNullable<ClientState['self']>, ctx: { level
   const forgettable = docked && rank > 0 && !x.keystone && canUnlearn(self.talents, x.id, ctx) === null;
   const art = x.tree === 'bridge' ? `tree_${x.bridge?.trees[0] ?? 'command'}` : `tree_${x.tree}`;
   const pips = `<span class="pips">${Array.from({ length: x.maxRank }, (_, i) => `<i class="${i < rank ? 'on' : ''}"></i>`).join('')}</span>`;
-  return `<div class="talent ${rank ? 'has' : ''} ${rank >= x.maxRank ? 'max' : ''} ${x.keystone ? 'keystone' : ''} ${locked ? 'locked' : ''}" data-id="${x.id}" title="${esc(why ? serverText(why) : L('learn'))}">
-    ${icon(`talent_${x.id}`, '', 'talent-ico') || icon(art, '✦', 'talent-ico')}<div class="talent-body"><div class="talent-top"><b>${esc(x.name)}</b>${x.active ? `<span class="tag">${esc(L('active'))}</span>` : ''}${pips}${forgettable ? `<span class="forget" data-forget="${x.id}" title="${esc(L('forget'))}">×</span>` : ''}</div>
+  return `<div class="talent ${rank ? 'has' : ''} ${rank >= x.maxRank ? 'max' : ''} ${x.keystone ? 'keystone' : ''} ${locked ? 'locked' : ''}" data-id="${x.id}"${detailAttr(`talent:${x.id}:${Math.max(1, rank)}`, { hold: true })} title="${esc(why ? serverText(why) : L('learn'))}">
+    <span class="dc-tap talent-ico-tap"${detailAttr(`talent:${x.id}:${Math.max(1, rank)}`)}>${icon(`talent_${x.id}`, '', 'talent-ico') || icon(art, '✦', 'talent-ico')}</span><div class="talent-body"><div class="talent-top"><b>${esc(x.name)}</b>${x.active ? `<span class="tag">${esc(L('active'))}</span>` : ''}${pips}${forgettable ? `<span class="forget" data-forget="${x.id}" title="${esc(L('forget'))}">×</span>` : ''}</div>
     <small>${esc(keyless(x.description))}</small>${skillLine(x.id, self.captain)}${bookLine(x.id)}${locked && why ? `<small class="why">${icon('danger', '', 'ico-xs')}${esc(serverText(why))}</small>` : ''}</div></div>`;
 }
 
 function deeds(have: string[]): string {
   return `<h3 class="tree-h">${icon('goal', '', 'ico-md')}${esc(L('deeds'))}</h3><p class="motto">${esc(L('deedsMotto'))}</p>
-    <div class="deed-list">${DEEDS.map((d) => `<div class="deed-row ${have.includes(d.id) ? 'done' : ''}">${icon(d.id, '', 'item-ico') || icon('goal', '✦', 'item-ico')}<div class="item-text"><b>${esc(d.name)}</b><span class="muted">${esc(d.condition)}${d.awaits ? ` ${esc(L('opensWith', { what: d.awaits }))}` : ''}</span></div>${have.includes(d.id) ? '<span class="good deed-tick">✔</span>' : '<span></span>'}</div>`).join('')}</div>`;
+    <div class="deed-list">${DEEDS.map((d) => `<div class="deed-row ${have.includes(d.id) ? 'done' : ''}"${detailAttr(`deed:${d.id}`)}>${icon(d.id, '', 'item-ico') || icon('goal', '✦', 'item-ico')}<div class="item-text"><b>${esc(d.name)}</b><span class="muted">${esc(d.condition)}${d.awaits ? ` ${esc(L('opensWith', { what: d.awaits }))}` : ''}</span></div>${have.includes(d.id) ? '<span class="good deed-tick">✔</span>' : '<span></span>'}</div>`).join('')}</div>`;
 }

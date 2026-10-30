@@ -6,6 +6,7 @@
 // Brethren's havens. Now, in any port: (a) tap a place → a picker → tap a tattoo; (b) hold a card and drag it onto a
 // place. A waiting one is inked as it is set; changing or removing one is free.
 
+import { detailAttr } from './detailattr.ts'; // the detail card (owner, 2026-10-30)
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { TATTOOS, TATTOO_BY_ID } from '../../../shared/src/data/sidequests.ts';
 import type { TattooDef } from '../../../shared/src/data/sidequests.ts';
@@ -132,7 +133,7 @@ export function renderTattoos(root: HTMLElement, state: ClientState, send: (m: C
     const t = id ? TATTOO_BY_ID[id] : undefined;
     const lock = lockOf(i, level, v.owned);
     const title = open ? (t ? t.name[ru()] : L('empty')) : lock[0];
-    return `<button class="doll-slot${t ? ' full' : ''}${open ? '' : ' locked'}${sel === i || picker === i ? ' on' : ''}${glow.has(i) ? ' tt-new' : ''}" ${open ? `data-place="${i}"` : 'disabled'} title="${esc(title)}" aria-label="${esc(title)}">
+    return `<button class="doll-slot${t ? ' full' : ''}${open ? '' : ' locked'}${sel === i || picker === i ? ' on' : ''}${glow.has(i) ? ' tt-new' : ''}" ${open ? `data-place="${i}"` : 'disabled'}${t ? detailAttr(`tattoo:${t.id}`, { hold: true }) : ''} title="${esc(title)}" aria-label="${esc(title)}">
       ${t ? tattooIcon(t, 'doll-ico') : open ? '<span class="doll-empty">+</span>' : (lock[1] === 'needle' ? icon('tattoo_needle', '', 'doll-ico doll-ico--lock') : `<span class="doll-lock">${esc(lock[1])}</span>`)}</button>`;
   };
   const cap = state.self ? CAPTAINS[state.self.captain] : undefined;
@@ -155,7 +156,7 @@ export function renderTattoos(root: HTMLElement, state: ClientState, send: (m: C
       const t = TATTOO_BY_ID[id];
       const at = v.active.indexOf(id);
       const note = v.pending.includes(id) ? L('pickInk') : at >= 0 && at < v.slots ? L('pickWornAt', { n: at + 1 }) : '';
-      return `<button class="tt-pick-row${v.pending.includes(id) ? ' pending' : ''}" data-pick="${esc(id)}"${docked ? '' : ' disabled'}>${tattooIcon(t)}<span class="tt-text"><b>${esc(t.name[ru()])}</b><span class="tt-gives">${esc(t.gives[ru()])}</span>${note ? `<span class="muted tt-how">${esc(note)}</span>` : ''}</span></button>`;
+      return `<button class="tt-pick-row${v.pending.includes(id) ? ' pending' : ''}" data-pick="${esc(id)}"${detailAttr(`tattoo:${id}`, { hold: true })}${docked ? '' : ' disabled'}>${tattooIcon(t)}<span class="tt-text"><b>${esc(t.name[ru()])}</b><span class="tt-gives">${esc(t.gives[ru()])}</span>${note ? `<span class="muted tt-how">${esc(note)}</span>` : ''}</span></button>`;
     };
     const choices = pickChoices(v, picker);
     return `<div class="tt-picker" data-picker><div class="tt-pick-card panel" role="dialog" aria-label="${esc(L('pickTitle', { n: picker + 1 }))}">

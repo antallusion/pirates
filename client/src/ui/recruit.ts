@@ -3,6 +3,7 @@
 // the store, the hammocks and the stacks allow, "Max", the cost line, "Recruit". Under it the stacks aboard that the
 // upgraded dwellings here train up for the difference in price. The army's row of slots on top, as it will stand.
 
+import { detailAttr } from './detailattr.ts'; // the detail card (owner, 2026-10-30)
 import { wayName } from '../render/waystations.ts'; // docs/35: the waystation's hire
 import type { WayKind } from '../../../shared/src/world/waystations.ts';
 import { hasTamer } from '../../../shared/src/data/drifts.ts';
@@ -175,20 +176,20 @@ export class RecruitWindow {
       const why = v.why ? serverText(v.why) : r.why ? serverText(r.why) : r.pool <= 0 ? L('nobody') : v.crew >= v.crewMax && !(d.tier >= 2 && r.swap) ? L('nohammock') : !v.army.some((x) => x.u === u && !x.g) && v.army.length >= v.slots ? L('noslot') : d.tier >= PICKED_TIER && !UNITS[u].titan && v.picked <= 0 ? L('picked.full', { max: v.pickedMax }) : unit.room === 0 ? L('might.full') : most <= 0 ? L('lack') : '';
       // (the cost and «Нанять» share a row on a phone held sideways, the men waiting said by the dwelling's card: the
       // button stood 6–15 px under the fold at 640×360 — docs/19 E19)
-      pick = `<div class="rc-pick"><div class="rc-ph">${unitIcon(u, 'rc-big')}<div><b>${esc(unitName(u))}</b><span class="muted">${esc(L('stats', { atk: d.atk, def: d.def, dmin: d.dmin, dmax: d.dmax, hp: d.hp, spd: d.speed }))}</span><span class="muted rc-avail">${esc(L('avail', { n: r.pool }))}</span></div></div>
+      pick = `<div class="rc-pick"><div class="rc-ph"${detailAttr(`unit:${u}`)}>${unitIcon(u, 'rc-big')}<div><b>${esc(unitName(u))}</b><span class="muted">${esc(L('stats', { atk: d.atk, def: d.def, dmin: d.dmin, dmax: d.dmax, hp: d.hp, spd: d.speed }))}</span><span class="muted rc-avail">${esc(L('avail', { n: r.pool }))}</span></div></div>
         <div class="rc-slide"><input type="range" min="0" max="${most}" value="${this.n}" data-rcn aria-label="${esc(unitName(u))}"${most <= 0 ? ' disabled' : ''}><b class="rc-count" data-rccount>${this.n}</b><button class="btn btn-small" data-rcmax${most <= 0 ? ' disabled' : ''}>${esc(L('max'))} ${most}</button></div>
         ${why ? `<p class="bad rc-why">${esc(why)}</p>` : ''}<p class="muted rc-swap" data-rcswap>${esc(this.ashoreLine(v, u))}</p>
         <div class="rc-buy"><div class="rc-cost"><span class="muted">${esc(L('cost'))}</span><span data-rccost>${costLine(price, v.gold, v.have)}</span></div>
         <button class="btn btn-primary rc-go" data-rcgo${this.n > 0 && !why ? '' : ' disabled'}>${esc(L('recruit'))}</button></div></div>`;
     }
     const have = (Object.entries(v.have) as [GoodId, number][]).filter(([g, n]) => n > 0 && ['timber', 'iron', 'tar', 'gunpowder', 'pearls', 'rum'].includes(g));
-    const res = have.length ? `<p class="rc-have"><span class="muted">${esc(L('have'))}:</span> ${have.map(([g, n]) => `<span class="bcost" title="${esc(GOODS[g].name)}">${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}</span>`).join('')}</p>` : '';
+    const res = have.length ? `<p class="rc-have"><span class="muted">${esc(L('have'))}:</span> ${have.map(([g, n]) => `<span class="bcost"${detailAttr(`good:${g}`)} title="${esc(GOODS[g].name)}">${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}</span>`).join('')}</p>` : '';
     const ups = v.ups.length
       ? v.ups.map((x) => {
         const n = Math.max(0, Math.min(x.n, x.room ?? x.n));
         const p = priceOf(x.per, x.goods, n);
         const ok = n > 0 && !v.why && p.silver <= v.gold && (Object.entries(p.goods) as [GoodId, number][]).every(([g, k]) => (v.have[g] ?? 0) >= k);
-        return `<div class="rc-up">${unitIcon(x.u, 'rc-face')}<span class="rc-arrow">→</span>${unitIcon(x.to, 'rc-face up')}<div class="rc-ut"><b>${esc(unitName(x.u))} → ${esc(unitName(x.to))}</b>${n > 0 ? costLine(p, v.gold, v.have) : `<span class="muted">${esc(L('might.full'))}</span>`}</div><button class="btn btn-small" data-rctrain="${x.u}" data-n="${n}"${ok ? '' : ' disabled'}>${esc(L('train.btn', { n }))}</button></div>`;
+        return `<div class="rc-up"><span class="dc-tap"${detailAttr(`unit:${x.u}`)}>${unitIcon(x.u, 'rc-face')}</span><span class="rc-arrow">→</span><span class="dc-tap"${detailAttr(`unit:${x.to}`)}>${unitIcon(x.to, 'rc-face up')}</span><div class="rc-ut"><b>${esc(unitName(x.u))} → ${esc(unitName(x.to))}</b>${n > 0 ? costLine(p, v.gold, v.have) : `<span class="muted">${esc(L('might.full'))}</span>`}</div><button class="btn btn-small" data-rctrain="${x.u}" data-n="${n}"${ok ? '' : ' disabled'}>${esc(L('train.btn', { n }))}</button></div>`;
       }).join('')
       : `<p class="muted">${esc(L('train.none'))}</p>`;
     const hasUp = v.rows.some((x) => x.up);

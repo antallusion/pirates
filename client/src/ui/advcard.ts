@@ -4,6 +4,7 @@
 // offer when she is much the stronger (they flee, or some sign on), and "Board them". Compact, over the sea, like
 // the terms of a struck ship; closed with ×, it comes back when there is something new to say.
 
+import { detailAttr } from './detailattr.ts'; // the detail card (owner, 2026-10-30)
 import { GUARDS, OBJS, WELL_MORALE, WELL_SANITY, TOWER_R } from '../../../shared/src/data/advmap.ts';
 import type { GuardKind } from '../../../shared/src/data/advmap.ts';
 import { OFFICER_DEFS } from '../../../shared/src/data/crew.ts';
@@ -52,7 +53,7 @@ export function timeWords(secs: number): string {
 
 function guardBlock(g: GuardCard, own: boolean): string {
   const w = strengthWord(g.men);
-  const faces = g.units.slice(0, 7).map((u) => `<span class="army-mini" title="${esc(unitName(u))}">${unitIcon(u, 'army-face-xs')}</span>`).join('');
+  const faces = g.units.slice(0, 7).map((u) => `<span class="army-mini"${detailAttr(`unit:${u}`)} title="${esc(unitName(u))}">${unitIcon(u, 'army-face-xs')}</span>`).join('');
   const what = g.at === 'mine' ? L('guard.mine') : g.at ? L('guard.of', { what: OBJS[g.at].name[ru()].toLowerCase() }) : L('guard.strait');
   const offer = g.offer === 'join' ? (g.joinN > 0 ? L('guard.joinText', { n: g.joinN }) : L('guard.joinNoRoom')) : g.offer === 'flee' ? L('guard.fleeText') : '';
   const ratio = g.ratio >= 10 ? String(Math.round(g.ratio)) : g.ratio < 0.1 ? (lang() === 'ru' ? '<0,1' : '<0.1') : g.ratio.toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB', { maximumFractionDigits: 1 });
@@ -88,7 +89,7 @@ function lairBlock(c: LairCard, x: boolean): string {
   const id = face.id;
   const art = id.startsWith('portrait.') ? portraitUrl(id.slice(9)) : assetUrl(id);
   const tint = face.tint;
-  const faces = c.stacks.slice(0, 7).map((s) => `<span class="army-mini" title="${esc(unitName(s.u))}">${unitIcon(s.u, 'army-face-xs')}<i class="ac-n">${s.n}</i></span>`).join('');
+  const faces = c.stacks.slice(0, 7).map((s) => `<span class="army-mini"${detailAttr(`unit:${s.u}:${s.n}`)} title="${esc(unitName(s.u))}">${unitIcon(s.u, 'army-face-xs')}<i class="ac-n">${s.n}</i></span>`).join('');
   const ratio = c.ratio >= 10 ? String(Math.round(c.ratio)) : c.ratio < 0.1 ? (lang() === 'ru' ? '<0,1' : '<0.1') : c.ratio.toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB', { maximumFractionDigits: 1 });
   const offer = c.offer === 'join' ? (c.joinN > 0 ? LL('joinText', { n: c.joinN }) : LL('joinNoRoom')) : c.offer === 'flee' ? LL('fleeText') : '';
   const step = (k: number) => `<span class="ac-step${c.chain!.done[k] ? ' done' : ''}${k === c.chain!.step ? ' on' : ''}">${c.chain!.done[k] ? '✓ ' : ''}${esc(LL(`chain.${k}` as 'chain.0'))}</span>`;
@@ -98,7 +99,7 @@ function lairBlock(c: LairCard, x: boolean): string {
   let dwell = '';
   if (d) {
     const body = d.own
-      ? `<span>${unitIcon(d.u, 'army-face-xs')} ${esc(LL('dwell.own', { n: d.pool, g: ru() ? String(d.growth).replace('.', ',') : d.growth }))}</span><button class="btn btn-small btn-primary" data-ahire>${esc(LL('dwell.hire'))}</button>${settleBlock(c.id, d)}`
+      ? `<span${detailAttr(`unit:${d.u}`)}>${unitIcon(d.u, 'army-face-xs')} ${esc(LL('dwell.own', { n: d.pool, g: ru() ? String(d.growth).replace('.', ',') : d.growth }))}</span><button class="btn btn-small btn-primary" data-ahire>${esc(LL('dwell.hire'))}</button>${settleBlock(c.id, d)}`
       : `${d.owner ? `<span class="muted">${esc(LL('dwell.other', { name: personName(d.owner) }))}</span>` : `<span class="muted">${esc(LL('dwell.can'))}</span>`}${d.can ? `<button class="btn btn-small" data-al="flag" data-id="${c.id}">${esc(LL('dwell.flag'))}</button>` : d.why ? `<span class="muted">${esc(serverText(d.why))}</span>` : ''}`;
     dwell = `<div class="ac-dwell">${body}</div>`;
   }
@@ -156,7 +157,7 @@ function driftBlock(c: DriftCard, x: boolean): string {
       <div class="ac-acts"><button class="btn btn-primary dm-go" data-dtap="${c.id}">${esc(DL('mini.tap'))}</button><button class="btn btn-small" data-droll="${c.id}">${esc(DL('mini.roll'))}</button></div></div>`;
   } else {
     const ways = c.ways.map((w) => {
-      const cost = w.cost ? ` <span class="bcost">${icon(`good_${w.cost.good}`, '', 'ico-sm')}${w.cost.n}</span>` : '';
+      const cost = w.cost ? ` <span class="bcost"${detailAttr(`good:${w.cost.good}`)}>${icon(`good_${w.cost.good}`, '', 'ico-sm')}${w.cost.n}</span>` : '';
       const dis = !!c.why || !!w.why || w.chance <= 0;
       return `<button class="btn btn-small dw-way${dis ? '' : ' btn-primary'}" data-dway="${w.way}" data-id="${c.id}"${dis ? ' disabled' : ''} title="${esc(w.why ? serverText(w.why) : '')}"><b>${esc(DL(`way.${w.way}` as 'way.cut'))}</b> <span class="dw-p">${pct(w.chance)}</span>${cost}</button>`;
     }).join('');
@@ -165,7 +166,7 @@ function driftBlock(c: DriftCard, x: boolean): string {
   const why = !c.reach ? DL('come') : c.why ? serverText(c.why) : '';
   return `<div class="enc-card ac-card ac-gcard ac-dcard${c.legend ? ' legend' : ''}" data-drift="${c.kind}">
     <div class="ac-head">${art ? `<img class="ac-art${tint ? ' beast-tok' : ''}${face.fig ? ' fig' : ''}" src="${art}" alt="" draggable="false"${tint ? ` style="filter:${tint}"` : ''} />` : ''}<div class="ac-id"><div class="enc-h">${esc(def.name[ru()])} <span class="ac-lvl">⚓${c.level}</span></div>
-    <div class="ac-sub muted">${c.legend ? `<b class="dw-leg">${esc(DL('legend'))}</b> · ` : ''}<span class="army-mini">${unitIcon(c.u, 'army-face-xs')}<i class="ac-n">${c.n}</i></span> ${esc(unitName(c.u))} · ${esc(DL('left', { t: timeWords(c.left) }))}</div></div>${x ? `<button class="ac-x g-only" data-ax title="${esc(L('close'))}" aria-label="${esc(L('close'))}">${glyphSvg('close')}</button>` : ''}</div>
+    <div class="ac-sub muted">${c.legend ? `<b class="dw-leg">${esc(DL('legend'))}</b> · ` : ''}<span class="army-mini"${detailAttr(`unit:${c.u}:${c.n}`)}>${unitIcon(c.u, 'army-face-xs')}<i class="ac-n">${c.n}</i></span> ${esc(unitName(c.u))} · ${esc(DL('left', { t: timeWords(c.left) }))}</div></div>${x ? `<button class="ac-x g-only" data-ax title="${esc(L('close'))}" aria-label="${esc(L('close'))}">${glyphSvg('close')}</button>` : ''}</div>
     <p class="ac-text muted">${esc(def.text[ru()])}</p>
     ${why ? `<div class="muted ac-gl ac-come">${esc(why)}</div>` : ''}
     ${body}
@@ -199,7 +200,7 @@ function objBody(o: ObjCard): string {
     case 'mill':
     case 'store': {
       const l = o.load!;
-      return `<div class="ac-line">${icon(`good_${l.good}`, '', 'ico-sm')}${esc(L('load.text', { n: l.n, good: GOODS[l.good].name.toLowerCase() }))}</div><div class="ac-acts">${btn(esc(L('load.btn')))}</div>`;
+      return `<div class="ac-line"><span class="dc-tap"${detailAttr(`good:${l.good}`)}>${icon(`good_${l.good}`, '', 'ico-sm')}</span>${esc(L('load.text', { n: l.n, good: GOODS[l.good].name.toLowerCase() }))}</div><div class="ac-acts">${btn(esc(L('load.btn')))}</div>`;
     }
     case 'prison': {
       const p = o.prison!;

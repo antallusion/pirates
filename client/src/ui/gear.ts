@@ -4,6 +4,7 @@
 // its card — its lines in its rarity's colour, how it weighs against what is worn in that slot, and what can be done
 // with it here.
 
+import { itemDetailAttr } from './detail.ts'; // the detail card (owner, 2026-10-30)
 import {
   AFFIXES, CAPTAIN_SLOTS, CAP_STATS, CAP_STAT_NAMES, LEGENDARY_ITEMS, TEMPER_MAX, reforgeCost, temperCost, RARITY_COLOR, RARITY_NAMES, SETS, SHIP_SLOTS, SLOT_NAMES, SLOT_OPENS,
   STASH_SIZE, captainIlvl, gearSource, isShipSlot, itemEffect, itemName, itemSlot, itemValue, setBonuses,
@@ -112,8 +113,10 @@ const SLOT_ICON: Record<Slot, string> = {
 
 export function itemIcon(it: Item | null, slot: Slot, cls = 'ico-md'): string {
   // An artifact's painting (docs/17 H2), a legendary's own, else its base's (docs/12 P11), else the slot's mark.
-  if (it?.art && ARTIFACTS[it.art]) return icon(ARTIFACTS[it.art].icon, '', cls) || icon(SLOT_ICON[slot], '◆', cls);
-  return (it?.legendary ? icon(`item_${it.legendary}`, '', cls) : '') || (it ? icon(`item_${it.base}`, '', cls) : '') || icon(SLOT_ICON[slot], '◆', cls);
+  const html = it?.art && ARTIFACTS[it.art] ? icon(ARTIFACTS[it.art].icon, '', cls) || icon(SLOT_ICON[slot], '◆', cls)
+    : (it?.legendary ? icon(`item_${it.legendary}`, '', cls) : '') || (it ? icon(`item_${it.base}`, '', cls) : '') || icon(SLOT_ICON[slot], '◆', cls);
+  // every piece's picture opens its detail card on a long press or a right click, wherever it is drawn (detail.ts)
+  return it ? html.replace(/^<(img|span) /, `<$1${itemDetailAttr(it, { hold: true })} `) : html;
 }
 
 
@@ -338,7 +341,7 @@ export function renderGear(root: HTMLElement, state: ClientState, send: (m: Clie
   // «Надеть лучшее»: on the dolls and the locker, how many pieces it would change.
   const best = tab === 'shop' ? [] : bestGear(self);
   const quick = tab === 'shop' ? '' : quickBar([{ label: W('gear.best'), sub: best.length ? `+${best.length}` : esc(W('gear.bestNone')), icon: 'tab_holdings', hint: W('gear.bestHint'), primary: best.length > 0, disabled: !best.length, data: { gbest: 1 } }], 'gear-quick');
-  root.innerHTML = `${quick}<div class="gear-main"><div class="gear-body">${body}</div>${detail ? `<div class="gear-detail sheet"><button class="gear-hide" data-ghide aria-label="${esc(L('hide'))}">×</button>${detail}</div>` : ''}</div>`;
+  root.innerHTML = `${quick}<div class="gear-main"><div class="gear-body">${body}</div>${detail ? `<div class="gear-detail sheet"><button class="gear-hide" data-ghide aria-label="${esc(L('hide'))}">✕</button>${detail}</div>` : ''}</div>`;
 
   const redo = () => renderGear(root, state, send);
   root.querySelector<HTMLElement>('[data-gbest]')?.addEventListener('click', () => {

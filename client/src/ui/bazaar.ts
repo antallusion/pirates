@@ -2,6 +2,8 @@
 // and her own — open one here, set out goods from her hold and pieces from her locker at her prices, take them back,
 // close it; where it stands if it is elsewhere.
 
+import { itemDetailAttr } from './detail.ts'; // the detail card (owner, 2026-10-30)
+import { detailAttr } from './detailattr.ts';
 import { STALL_FEE, STALL_GOODS, STALL_ITEMS } from '../../../shared/src/data/bazaar.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -63,11 +65,11 @@ const L = dict({
 const ru = () => (lang() === 'ru' ? 1 : 0);
 
 function lines(st: BazaarStallView, own: boolean): string {
-  const goods = st.goods.map((g, i) => `<div class="bz-line">${icon(`good_${g.good}`, '', 'ico-sm')}<span class="bz-name">${esc(GOODS[g.good].name)} <span class="muted">× ${g.qty}</span></span>
+  const goods = st.goods.map((g, i) => `<div class="bz-line"${detailAttr(`good:${g.good}`, { buy: g.price })}>${icon(`good_${g.good}`, '', 'ico-sm')}<span class="bz-name">${esc(GOODS[g.good].name)} <span class="muted">× ${g.qty}</span></span>
     <span class="bz-price">${money(g.price)} <span class="muted">${esc(L('each'))}</span></span>
     ${own ? `<button class="btn btn-small" data-act="bz" data-bz="remove" data-kind="good" data-i="${i}">${esc(L('take'))}</button>`
       : `<span class="bz-buy">${[1, 10].filter((n) => n <= g.qty || n === 1).map((n) => `<button class="btn btn-small" data-act="bz" data-bz="buy" data-owner="${st.owner}" data-kind="good" data-i="${i}" data-n="${n}">×${n}</button>`).join('')}</span>`}</div>`).join('');
-  const items = st.items.map((it, i) => `<details class="bz-item"><summary>${itemIcon(it.item, itemSlot(it.item), 'ico-sm')}<span class="bz-name">${coloured(it.item)} <span class="muted">${esc(SLOT_NAMES[itemSlot(it.item)][ru()])} · ⚓${it.item.ilvl}</span></span>
+  const items = st.items.map((it, i) => `<details class="bz-item"><summary><span class="dc-tap"${itemDetailAttr(it.item)}>${itemIcon(it.item, itemSlot(it.item), 'ico-sm')}</span><span class="bz-name">${coloured(it.item)} <span class="muted">${esc(SLOT_NAMES[itemSlot(it.item)][ru()])} · ⚓${it.item.ilvl}</span></span>
     <span class="bz-price">${money(it.price)}</span>
     ${own ? `<button class="btn btn-small" data-act="bz" data-bz="remove" data-kind="item" data-i="${i}">${esc(L('take'))}</button>`
       : `<button class="btn btn-small" data-act="bz" data-bz="buy" data-owner="${st.owner}" data-kind="item" data-i="${i}" data-n="1">${esc(L('buy'))}</button>`}</summary>${itemCardHtml(it.item)}</details>`).join('');
