@@ -25,6 +25,7 @@ import type { ClientState } from '../state.ts';
 import { armyEditReset, armyEditor, unitIcon, unitName, unitNote, wireArmy } from './army.ts';
 import { dec1, esc, fmt, icon, money } from './dom.ts';
 import { placeName } from './maps.ts';
+import { srcAttr } from './srctip.ts'; // «Где взять» (owner, 2026-10-30)
 
 const L = dict(EN, RU);
 const DL = dict(DEN, DRU);
@@ -62,13 +63,13 @@ export function priceOf(per: number, goods: Partial<Record<GoodId, number>>, n: 
 
 /** A cost line: silver and the resources, each red where the purse or the store falls short. */
 export function costLine(p: Price, gold: number, have: Partial<Record<GoodId, number>>): string {
-  const goods = (Object.entries(p.goods) as [GoodId, number][]).filter(([, n]) => n > 0).map(([g, n]) => `<span class="bcost${(have[g] ?? 0) < n ? ' lack' : ''}" title="${esc(GOODS[g].name)}">${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}</span>`).join('');
+  const goods = (Object.entries(p.goods) as [GoodId, number][]).filter(([, n]) => n > 0).map(([g, n]) => `<span class="bcost${(have[g] ?? 0) < n ? ' lack' : ''}"${srcAttr(`g:${g}`, n, have[g] ?? 0)}>${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}</span>`).join('');
   return `<span class="bcosts"><span class="bcost${gold < p.silver ? ' lack' : ''}">${money(p.silver)}</span>${goods}</span>`;
 }
 
 /** Silver and the resources a man asks (the resources in fractions: a barrel of powder for four musketeers). */
 export function perLine(per: number, goods: Partial<Record<GoodId, number>>): string {
-  const g = (Object.entries(goods) as [GoodId, number][]).filter(([, n]) => n > 0).map(([k, n]) => `<span class="bcost" title="${esc(GOODS[k].name)}">${icon(`good_${k}`, '', 'ico-sm')}${esc(String(Math.round(n * 100) / 100).replace('.', lang() === 'ru' ? ',' : '.'))}</span>`).join('');
+  const g = (Object.entries(goods) as [GoodId, number][]).filter(([, n]) => n > 0).map(([k, n]) => `<span class="bcost"${srcAttr(`g:${k}`)}>${icon(`good_${k}`, '', 'ico-sm')}${esc(String(Math.round(n * 100) / 100).replace('.', lang() === 'ru' ? ',' : '.'))}</span>`).join('');
   return `<span class="bcosts"><span class="bcost">${money(per)}</span>${g}</span>`;
 }
 

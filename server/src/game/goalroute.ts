@@ -14,6 +14,7 @@
 // contract of a port's board, `t:<task>` a task of the sea, `d:<kind>` a daily order, `w:<id>` a goal of the sea,
 // `r:<kind>:<region>` the week's challenge, `cm` the common goal, `inv` the Choir's invasion, `g:<id>` a captain's goal,
 // `f` her trade (the fishing: by her tackle), `b:<group>` the beasts, `zb:<region>` a zone boss, `boss` the sea's bosses.
+// `sg:<good>` the nearest harbour that sells a good (the «Где взять» tooltip, client/src/ui/srctip.ts).
 
 import { armyMen } from '../../../shared/src/data/army.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -737,7 +738,7 @@ function bossPlaces(game: Game, region?: RegionId): Resolved {
 }
 
 /** Every key a goal is routed by (the client builds them; anything else is refused). */
-export const GOAL_KEYS = ['q', 'c', 't', 'd', 'w', 'r', 'cm', 'inv', 'g', 'f', 'b', 'zb', 'boss', 'dv'] as const;
+export const GOAL_KEYS = ['q', 'c', 't', 'd', 'w', 'r', 'cm', 'inv', 'g', 'f', 'b', 'zb', 'boss', 'dv', 'sg'] as const;
 
 /** The places a goal's key names now. */
 export function resolveGoal(game: Game, s: PlayerSession, key: string): Resolved {
@@ -785,6 +786,14 @@ export function resolveGoal(game: Game, s: PlayerSession, key: string): Resolved
       return bossPlaces(game, REGION_IDS.includes(id as RegionId) ? (id as RegionId) : undefined);
     case 'boss':
       return bossPlaces(game);
+    case 'sg': {
+      // «Где взять» (owner, 2026-10-30): the nearest harbour whose market sells a good (the tooltip's «Плыть»)
+      const good = id as GoodId;
+      if (!GOODS[good]) return { none: ROUTE_WORDS.unknown };
+      const sells = game.world.ports.filter((pt) => ownStockOf(game, s.profile!, pt, good) > 0);
+      if (s.ship.docked && sells.some((pt) => pt.id === s.ship!.docked)) return { done: true };
+      return sells.length ? { cands: sells.map((pt) => portCand(pt)) } : { none: ROUTE_WORDS.none };
+    }
     case 'p': {
       // a harbour by name (owner, 2026-10-21: «не продаётся здесь» — the nearest port that sells it, a course there)
       const pt = game.portById(id);

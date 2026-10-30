@@ -47,6 +47,7 @@ import type { LandRes } from '../../../shared/src/data/bestiary.ts';
 import { EN as H_EN, RU as H_RU } from '../lang/ui/h3.ts';
 import { EN as WIN_EN, RU as WIN_RU } from '../lang/ui/win.ts';
 import { chipRow, quickBar, winHead } from './kit/window.ts';
+import { srcAttr } from './srctip.ts'; // «Где взять» (owner, 2026-10-30)
 
 const L = dict(EN, RU);
 const CO = dict(CO_EN, CO_RU);
@@ -330,9 +331,11 @@ export class BaseWindow {
 
   private costHtml(v: BaseView, c: { silver: number; goods: Partial<Record<GoodId, number>>; secs: number }, gold: number): string {
     const have = (g: GoodId) => v.store.find((r) => r.good === g)?.n;
+    // (the tooltip's count: the yard, else the island's store of what the yard does not keep — the pearls, the rum)
+    const owned = (g: GoodId) => have(g) ?? v.town?.res.find((r) => r.good === g)?.n ?? 0;
     const goods = (Object.entries(c.goods) as [GoodId, number][]).map(([g, n]) => {
       const h = have(g);
-      return `<span class="bcost${h !== undefined && h < n ? ' lack' : ''}" title="${esc(GOODS[g].name)}">${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}</span>`;
+      return `<span class="bcost${h !== undefined && h < n ? ' lack' : ''}"${srcAttr(`g:${g}`, n, owned(g))}>${icon(`good_${g}`, '', 'ico-sm')}${fmt(n)}</span>`;
     }).join('');
     return `<span class="bcosts"><span class="bcost${gold < c.silver ? ' lack' : ''}">${money(c.silver)}</span>${goods}<span class="bcost btimec">⏱ ${esc(spanText(c.secs))}</span></span>`;
   }
@@ -418,7 +421,7 @@ export class BaseWindow {
     const pool = d.tier && t.level > 0 ? `<p class="tr-now">${esc(H('town.pool', { n: t.pool ?? 0, g: dec1(t.growth ?? 0).replace(/[.,]0$/, '') }))} <button class="btn btn-small" data-trecruit>${esc(H('town.recruit'))}</button></p>` : '';
     const job = t.job ? this.jobCard(v, t.job, t.level ? T29('raising', { n: t.job.level }) : T29('founding'), false) : '';
     const n = t.next;
-    const land = n?.land ? (Object.entries(n.land) as [LandRes, number][]).filter(([, k]) => (k ?? 0) > 0).map(([r, k]) => `<span class="bcost" title="${esc(LAND_RES_DEF[r].name[ru])}">${icon(LAND_RES_DEF[r].icon, '', 'ico-sm')}${fmt(k)}</span>`).join('') : '';
+    const land = n?.land ? (Object.entries(n.land) as [LandRes, number][]).filter(([, k]) => (k ?? 0) > 0).map(([r, k]) => `<span class="bcost${(v.town?.land?.res[r] ?? 0) < k ? ' lack' : ''}"${srcAttr(`l:${r}`, k, v.town?.land?.res[r] ?? 0)}>${icon(LAND_RES_DEF[r].icon, '', 'ico-sm')}${fmt(k)}</span>`).join('') : '';
     const next = !t.job && n ? `<div class="bupcard tr-card"><div class="row"><b>${esc(T29('gives'))} ${esc(treeLabel(t.id, n.level))}${t.max > 1 ? ` · ${esc(T29('lvOf', { n: n.level, max: t.max }))}` : ''}</b></div>${givesText(t.id, n.level, ctx) ? `<p class="tr-gives">${esc(givesText(t.id, n.level, ctx))}</p>` : ''}
       ${this.costHtml(v, n, gold)}${land ? `<span class="bcosts">${land}</span>` : ''}${n.needs ? needsHtml(n.needs) : ''}${whyOf(n)}${this.farLack(v, n.goods)}
       <button class="btn btn-small btn-primary" data-tbuild="${t.id}"${n.why ? ' disabled' : ''}>${esc(t.level ? T29('upgrade') : T29('build'))}</button></div>`

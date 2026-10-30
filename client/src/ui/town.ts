@@ -38,6 +38,7 @@ import { forgeLineText } from './gear.ts';
 import { FITTINGS } from '../../../shared/src/data/landecon.ts';
 import type { FittingId, LandCost } from '../../../shared/src/data/landecon.ts';
 import type { LandTownView } from '../../../shared/src/h3proto.ts';
+import { srcAttr } from './srctip.ts'; // «Где взять» (owner, 2026-10-30)
 
 const L = dict(EN, RU);
 const B = dict(B_EN, B_RU);
@@ -87,7 +88,7 @@ function forgeBlock(l: LandTownView, gold: number): string {
       return RL(`fl.${k}`, { v: `${pct(lo)}–${pct(hi)}` });
     }).join(', ');
     const n = primSum(cur.forge?.p ?? a.prim);
-    const cost = `<span class="bcosts"><span class="bcost${gold < c.silver ? ' lack' : ''}">${money(c.silver)}</span><span class="bcost">${icon('good_pearls', '', 'ico-sm')}${fmt(c.pearls)}</span>${landLine(c.land, l.res)}</span>`;
+    const cost = `<span class="bcosts"><span class="bcost${gold < c.silver ? ' lack' : ''}">${money(c.silver)}</span><span class="bcost"${srcAttr('g:pearls', c.pearls)}>${icon('good_pearls', '', 'ico-sm')}${fmt(c.pearls)}</span>${landLine(c.land, l.res)}</span>`;
     const why = cur.why.line ?? cur.why.prim;
     const lineBtn = cur.forge?.k ? RL('forge.lineRe') : RL('forge.lineNew');
     const acts = forgeAsk
@@ -105,7 +106,7 @@ function forgeBlock(l: LandTownView, gold: number): string {
 
 /** docs/18 #43: a cost of the land's resources, each piece short marked. */
 function landLine(c: LandCost | undefined, have: Partial<Record<LandRes, number>> | undefined): string {
-  return (Object.entries(c ?? {}) as [LandRes, number][]).filter(([, n]) => n > 0).map(([r, n]) => `<span class="bcost${(have?.[r] ?? 0) < n ? ' lack' : ''}" title="${esc(LAND_RES_DEF[r].name[ru()])}">${icon(LAND_RES_DEF[r].icon, '', 'ico-sm')}${fmt(n)}</span>`).join('');
+  return (Object.entries(c ?? {}) as [LandRes, number][]).filter(([, n]) => n > 0).map(([r, n]) => `<span class="bcost${(have?.[r] ?? 0) < n ? ' lack' : ''}"${srcAttr(`l:${r}`, n, have?.[r] ?? 0)}>${icon(LAND_RES_DEF[r].icon, '', 'ico-sm')}${fmt(n)}</span>`).join('');
 }
 
 /** docs/18 #43: the land's resources — the store and the market's price, the workshop, the ship's fittings. */
