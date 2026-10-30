@@ -53,6 +53,7 @@ export function ownGood(game: Game, p: Profile, port: Port, good: GoodId): GoodM
     stock: Math.max(STOCK_FLOOR, ownLevel(p, port.id, good, gm, game.now)),
     target: gm.target * k, prod: gm.prod * k, cons: gm.cons * k,
     history: gm.history, shock: gm.shock, base: (gm.base ?? gm.target) * k, floor: STOCK_FLOOR,
+    ...(gm.season !== undefined ? { season: gm.season, seasonPrev: gm.seasonPrev } : {}),
   };
 }
 
