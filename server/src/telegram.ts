@@ -18,6 +18,9 @@ import type { Db } from './persistence/db.ts';
 import type { Game } from './game/Game.ts';
 import { chargebackPremium, payIn, setPayDesk } from './game/premium.ts';
 import { doubloonPack } from '../../shared/src/data/premium.ts';
+import type { DoubloonPack } from '../../shared/src/data/premium.ts';
+import { passProduct } from '../../shared/src/data/seasonpass.ts';
+import { passPaid, passRefund } from './game/seasonpass.ts'; // «Сезонная карта» (owner, 2026-10-30)
 import { tgDevice, tgLang, tgText, tgTime } from '../../shared/src/data/telegram.ts';
 import type { TgLang, TgnCat } from '../../shared/src/data/telegram.ts';
 import { noticeLink, notifyCommand, setNoticeDesk, setNotices } from './game/tgnotify.ts';
@@ -697,30 +700,33 @@ ${this.publicUrl}/telemetry/admin`);
     return `${accountId}:${packId}:${nonce}`;
   }
 
-  /** The payload read back and checked against the account and the pack (null: no longer valid). */
-  private order(payload: string): { accountId: number; pack: NonNullable<ReturnType<typeof doubloonPack>> } | null {
+  /** The payload read back and checked against the account and the pack (null: no longer valid). A season card's pass
+   *  (owner, 2026-10-30) stands as a pack of its roubles' doubloons, no bonus, at its own Stars. */
+  private order(payload: string): { accountId: number; pack: DoubloonPack } | null {
     const m = /^(\d{1,12}):([a-z0-9_]{1,16}):[\w-]{1,24}$/.exec(String(payload ?? ''));
     if (!m) return null;
     const accountId = Number(m[1]);
-    const pack = doubloonPack(m[2]);
+    const pack = packOrPass(m[2]);
     if (!pack || !this.db.accountById(accountId)) return null;
     return { accountId, pack };
   }
 
   /** A Stars invoice link for a pack (createInvoiceLink, XTR, no provider token). */
   async invoice(accountId: number, packId: string, l: TgLang): Promise<string | null> {
-    const pack = doubloonPack(packId);
+    const pack = packOrPass(packId);
     const acc = this.db.accountById(accountId);
     if (!pack || !acc) return null;
     const n = pack.n + pack.bonus;
+    const pass = passProduct(pack.id);
+    const title = pass ? tgText('passTitle', l, { pass: pass.name[l === 'ru' ? 1 : 0] }) : tgText('invoiceTitle', l, { n });
     try {
       return await this.api.call<string>('createInvoiceLink', {
-        title: tgText('invoiceTitle', l, { n }),
-        description: tgText('invoiceText', l, { n, name: acc.name }),
+        title,
+        description: pass ? tgText('passText', l, { pass: pass.name[l === 'ru' ? 1 : 0], name: acc.name }) : tgText('invoiceText', l, { n, name: acc.name }),
         payload: TelegramService.payload(accountId, pack.id),
         provider_token: '',
         currency: 'XTR',
-        prices: [{ label: tgText('invoiceTitle', l, { n }), amount: pack.stars }],
+        prices: [{ label: title, amount: pack.stars }],
       });
     } catch (e) {
       this.log(`[tg] ${(e as Error).message}`);
@@ -754,6 +760,16 @@ ${this.publicUrl}/telemetry/admin`);
       return;
     }
     const n = o.pack.n + o.pack.bonus;
+    const pass = passProduct(o.pack.id);
+    if (pass) {
+      // the season card's pass (owner, 2026-10-30): its roubles in as doubloons, the pass bought with them, once by the charge
+      const why = passPaid(this.game, o.accountId, pass.id, `tg:${charge}`, pass.rub);
+      if (why === 'No such account') return;
+      this.db.setKv(key, { account: o.accountId, user: from.id, pack: o.pack.id, stars: p.total_amount, n, at: this.now(), refunded: false } satisfies TgPayment);
+      this.log(`[tg] paid: account ${o.accountId}, ${o.pack.id}, ${p.total_amount} XTR, charge ${charge}${why ? ` (kept as doubloons: ${why})` : ''}`);
+      await this.say(from.id, tgText(why ? 'paid' : 'passPaid', tgLang(from.language_code), { n, pass: pass.name[tgLang(from.language_code) === 'ru' ? 1 : 0], name: this.db.accountById(o.accountId)?.name ?? '' }));
+      return;
+    }
     // docs/34: the revenue — the pack's roubles (its doubloons before the bonus; a doubloon ≈ 1 ₽)
     const bal = payIn(this.game, o.accountId, n, o.pack.n, o.pack.id, `tg:${charge}`);
     if (bal === null) return;
@@ -767,6 +783,9 @@ ${this.publicUrl}/telemetry/admin`);
     const key = `tgpay:${charge}`;
     const rec = this.db.getKv<TgPayment>(key);
     if (!rec || rec.refunded) return null;
+    // a season card's pass (owner, 2026-10-30): the pass taken back and its doubloons put back for the chargeback
+    const pass = passProduct(rec.pack);
+    if (pass) passRefund(this.game, rec.account, pass.id, `tg:${charge}`);
     const n = chargebackPremium(this.game, rec.account, rec.n, `tg:${charge}`);
     this.db.setKv(key, { ...rec, refunded: true });
     // docs/34: the revenue given back (the pack's roubles: its id is d<roubles>)
@@ -788,6 +807,14 @@ ${this.publicUrl}/telemetry/admin`);
     const n = this.takeBack(charge) ?? 0;
     return `Refunded ${rec.stars} stars for payment ${charge}; ${n} of ${rec.n} doubloons taken back.`;
   }
+}
+
+/** A pack of the top-up, or a season card's pass as a pack of its roubles' doubloons at its own Stars (owner, 2026-10-30). */
+function packOrPass(id: string): DoubloonPack | undefined {
+  const pack = doubloonPack(id);
+  if (pack) return pack;
+  const p = passProduct(id);
+  return p ? { id: p.id, n: p.rub, bonus: 0, stars: p.stars } : undefined;
 }
 
 // ------------------------------------------------------------------------------------------------ the updates' shape

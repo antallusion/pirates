@@ -11,6 +11,7 @@ import type { QuestEvent } from './quests.ts';
 import { grantSpeedups } from './base.ts';
 import { ownIsland } from './estate.ts';
 import { TOKENS_LOGIN, TOKENS_ORDER, TOKEN_SECS } from '../../../shared/src/data/base.ts';
+import { seasonXp as passXp } from './seasonpass.ts'; // «Сезонная карта» (owner, 2026-10-30)
 
 export function newDaily(): DailyState {
   return { day: -1, orders: [], streak: 0, lastFullDay: -2, chest: false };
@@ -93,6 +94,7 @@ export function dailyEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
     p.gold += r.silver;
     game.db.ledger(s.accountId, 'daily', r.silver, o.kind);
     game.grantXp(s, r.xp, 'Daily order');
+    passXp(game, s, 'daily'); // «Сезонная карта» (owner, 2026-10-30)
     game.sendTo(s, { t: 'toast', msg: `Daily order done: ${DAILY_DEFS[o.kind].text[0].replace('{n}', String(o.need))} +${r.silver} silver.`, kind: 'gold' });
     if (grantSpeedups(p, TOKENS_ORDER) > 0 && ownIsland(game, s.accountId)) game.sendTo(s, { t: 'toast', msg: `A speed-up for your island’s builders (${TOKEN_SECS / 60} minutes).`, kind: 'info' });
   }
@@ -106,6 +108,7 @@ export function dailyEvent(game: Game, s: PlayerSession, ev: QuestEvent): void {
     p.gold += r.silver;
     game.db.ledger(s.accountId, 'daily_chest', r.silver, String(p.daily.day));
     game.grantXp(s, r.xp, 'Daily chest');
+    passXp(game, s, 'daily_chest');
     game.sendTo(s, { t: 'toast', msg: `All three daily orders done: the chest holds ${r.silver} silver. Days in a row: ${streak}.`, kind: 'gold' });
   }
 }

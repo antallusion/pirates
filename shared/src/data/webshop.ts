@@ -11,7 +11,9 @@
 //  Ускорители the speed-ups, brigades, elixirs, charters, scrolls, charms and kits;
 //  Наборы     the shop's supplies: shot, the island's goods, maps, finery, scrolls of the path, the chest of finds;
 //  Косметика  every title, plate, frame, emblem, cloth, trail, emote pack and bundle (the seasonal in their dates);
-//  Акции      the starter chest, the subscription, the week's chest, the level's gifts, the deal of the day.
+//  Акции      the starter chest, the subscription, the week's chest, the level's gifts, the deal of the day;
+//  Сезонная карта  the season pass (owner, 2026-10-30; seasonpass.ts PASS_PRICES): «Премиум-пропуск», «Суперпропуск»
+//             and the step from the one to the other — sold for this season, for real money only.
 //
 // The server takes every price from here (or, for the shop's own offers, from the shop's table as the live ops have
 // it), never from the page. What the game sells that the site does not is WEB_EXCLUDED, each with its reason.
@@ -23,6 +25,8 @@ import type { CaptainId } from './captains.ts';
 import { CLOTHS, COS_EMOTES, EMOTE_PACKS, PLATES, TITLES, TRAILS, cosItem } from './cosmetics.ts';
 import { MAGIC_SHOTS, SKILLS, shotOf, skillOf } from './creatureskills.ts';
 import { AUTO_SCROLL_PACKS, DOUBLOON_PACKS, premiumShips, premiumUnits } from './premium.ts';
+import { MILESTONES, PASS_PRICES, PASS_PRODUCT_IDS, SUPER_TIERS } from './seasonpass.ts';
+import type { PassProductId } from './seasonpass.ts';
 import { PREMIUM_NAMES, PREMIUM_PEOPLE, isPremiumBeast, premiumFrom } from './premiumbeasts.ts';
 import { DEAL_OFF, DEAL_POOL, OFFERS, RECRUIT_KINDS, SHOP, unitPacks, worthOf } from './shop.ts';
 import type { ShopFamily, ShopGrant, ShopOffer } from './shop.ts';
@@ -37,11 +41,11 @@ import { EN as SK_EN, RU as SK_RU } from '../../../client/src/lang/ui/skills.ts'
 
 type Tr = [string, string];
 
-export type WebKind = 'pack' | 'captain' | 'ship' | 'unit' | 'offer' | 'deal';
-export type WebTab = 'dbl' | 'cap' | 'ship' | 'unit' | 'boost' | 'set' | 'cos' | 'deal';
-export const WEB_TABS: WebTab[] = ['dbl', 'cap', 'ship', 'unit', 'boost', 'set', 'cos', 'deal'];
+export type WebKind = 'pack' | 'captain' | 'ship' | 'unit' | 'offer' | 'deal' | 'pass';
+export type WebTab = 'dbl' | 'pass' | 'cap' | 'ship' | 'unit' | 'boost' | 'set' | 'cos' | 'deal';
+export const WEB_TABS: WebTab[] = ['dbl', 'pass', 'cap', 'ship', 'unit', 'boost', 'set', 'cos', 'deal'];
 export const WEB_TAB_NAMES: Record<WebTab, Tr> = {
-  dbl: ['Doubloons', 'Дублоны'], cap: ['Captains', 'Капитаны'], ship: ['Ships', 'Корабли'], unit: ['Creatures', 'Существа'],
+  dbl: ['Doubloons', 'Дублоны'], pass: ['Season card', 'Сезонная карта'], cap: ['Captains', 'Капитаны'], ship: ['Ships', 'Корабли'], unit: ['Creatures', 'Существа'],
   boost: ['Boosters', 'Ускорители'], set: ['Supplies', 'Наборы'], cos: ['Cosmetics', 'Косметика'], deal: ['Offers', 'Акции'],
 };
 
@@ -94,6 +98,8 @@ export interface WebItem {
   n?: number;
   /** The shop's offer it is. */
   offer?: string;
+  /** The season pass's product it is (seasonpass.ts PASS_PRICES). */
+  pass?: PassProductId;
   /** Bought once only. */
   once?: boolean;
   /** How often it may be bought (the shop's limit). */
@@ -446,6 +452,26 @@ function build(): WebItem[] {
       });
     }
   }
+  // ---- the season card (owner, 2026-10-30): its two passes and the step between them, for this season
+  for (const id of PASS_PRODUCT_IDS) {
+    const p = PASS_PRICES[id];
+    const sup = p.grants === 'super';
+    out.push({
+      id, kind: 'pass', tab: 'pass', sec: '', card: id, rub: p.rub, pass: id, name: p.name, title: p.name, aboard: false,
+      art: sup ? 'cos.frame_abyss' : 'icon.map_treasure', ...(id === 'pass_super' ? { tag: 'best' as const } : {}),
+      text: id === 'pass_premium'
+        ? ['The premium track of this season’s card: rewards on most of its 100 tiers, and on every 20th men of tier 4–5, rare artifacts, the storm’s wake and titles — and on the 100th the Thunderer, a ⚓7 storm frigate sold nowhere else.', 'Премиум-дорожка сезонной карты этого сезона: награды на большинстве из 100 ступеней, а на каждой 20-й — бойцы 4–5 уровня, редкие артефакты, грозовой след и звания; на 100-й — «Громовержец», штормовой фрегат ⚓7, которого больше нигде нет.']
+        : id === 'pass_super'
+          ? [`Everything of the Premium Pass, ${SUPER_TIERS} tiers at once and the Abyssal frame, had with this pass alone.`, `Всё, что даёт Премиум-пропуск, ещё ${SUPER_TIERS} ступеней сразу и рамка «Бездна», которую можно получить только с ним.`]
+          : [`For a captain with the Premium Pass this season: ${SUPER_TIERS} tiers at once and the Abyssal frame — the Super Pass for the difference.`, `Для капитана с Премиум-пропуском этого сезона: ${SUPER_TIERS} ступеней сразу и рамка «Бездна» — Суперпропуск за разницу в цене.`],
+      meta: ['For this season, till its last day. Laid on the account at once, aboard or not.', 'На этот сезон, до его последнего дня. Зачисляется на счёт сразу — в игре вы или нет.'],
+      badges: [
+        { k: 'tiers', icon: 'icon.ui_chest', v: same(sup ? `+${SUPER_TIERS}` : MILESTONES.length), hint: sup ? [`${SUPER_TIERS} tiers of the card at once`, `${SUPER_TIERS} ступеней карты сразу`] : [`${MILESTONES.length} great rewards: every 20th tier`, `${MILESTONES.length} больших наград: каждая 20-я ступень`] },
+        { k: 'ship', icon: 'icon.ui_anchor', v: same('7'), hint: ['The 100th tier: a ⚓7 hull sold nowhere else', '100-я ступень: корабль ⚓7, которого нигде не купить'] },
+        ...(sup ? [{ k: 'frame', icon: 'cos.frame_abyss', hint: ['The Abyssal frame: with the Super Pass alone', 'Рамка «Бездна»: только с Суперпропуском'] as Tr }] : []),
+      ],
+    });
+  }
   // ---- the deal of the day (its offer and price are the day's: dealItem, server/src/game/webshop.ts)
   out.push({
     id: 'deal', kind: 'deal', tab: 'deal', sec: 'deals', card: 'deal', rub: 0, art: 'icon.tattoo_star',
@@ -492,6 +518,7 @@ export function gameShopIds(): string[] {
     ...OFFERS.keys(),
     ...AUTO_SCROLL_PACKS.map((p) => p.id),
     'deal',
+    ...PASS_PRODUCT_IDS,
   ];
 }
 

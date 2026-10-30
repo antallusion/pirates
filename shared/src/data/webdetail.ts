@@ -41,6 +41,9 @@ import { captainLevelFor, levelRange } from './shiplevel.ts';
 import { MAGIC_SHOTS, SKILLS, shotOf, skillOf, skillVars } from './creatureskills.ts';
 import { WEB_ITEMS, WEB_SECS, WEB_TAB_NAMES, dealItem, shipName, unitNames, webItem } from './webshop.ts';
 import type { WebItem } from './webshop.ts';
+import { MILESTONES, PASS_PRICES, SUPER_TIERS, passSeason, passSeasonAt, passTier } from './seasonpass.ts';
+import type { PassReward } from './seasonpass.ts';
+import { passLine } from './passlines.ts';
 import { DATA_RU_CORE } from '../../../client/src/lang/data.ru.ts';
 import { DATA_RU_FLEET } from '../../../client/src/lang/data.fleet.ru.ts';
 import { DATA_RU_ARMS } from '../../../client/src/lang/data.arms.ru.ts';
@@ -657,8 +660,44 @@ function packDetail(x: WebItem, art: ArtOf): WebDetail {
 }
 
 /** The whole card of a catalogue's item (the deal of the day as today's: pass its own item). */
+/** The season card's pass (owner, 2026-10-30; seasonpass.ts): what it opens — the five great rewards of the premium
+ *  track, the super pass's tiers and frame — and how it is had. */
+function passDetail(x: WebItem, art: ArtOf): WebDetail {
+  const p = PASS_PRICES[x.pass!];
+  const sup = p.grants === 'super';
+  const season = passSeason(passSeasonAt(Date.now()));
+  const lineOf = (r: PassReward): DLine => {
+    const l = passLine(r);
+    return { k: l.k, icon: art(l.icon), name: l.name, qty: l.qty, ...(l.hint ? { hint: l.hint } : {}) };
+  };
+  const great: DLine[] = MILESTONES.flatMap((t) => (passTier(season.n, t)?.premium ?? []).map((r) => ({ ...lineOf(r), qty: [`Tier ${t} · ${lineOf(r).qty[0]}`, `Ступень ${t} · ${lineOf(r).qty[1]}`] as Tr })));
+  const extra: DLine[] = sup ? [
+    { k: 'tiers', icon: art('icon.ui_chest'), name: [`+${SUPER_TIERS} tiers at once`, `+${SUPER_TIERS} ступеней сразу`], qty: ['gift', 'подарок'], hint: ['Their rewards of both tracks are yours to take at once.', 'Награды обеих дорожек этих ступеней можно забрать сразу.'] },
+    { k: 'frame', icon: art('cos.frame_abyss'), name: ['Abyssal frame', 'Рамка «Бездна»'], qty: ['Frame', 'Рамка'], hint: ['Had with the Super Pass alone, for good.', 'Только с Суперпропуском, навсегда.'] },
+  ] : [];
+  return {
+    id: x.id, view: 'set',
+    hero: {
+      art: art(x.art), cls: sup ? 'cos' : 'hull', kicker: ['Season card', 'Сезонная карта'], title: x.name, lead: x.text,
+      chips: [{ k: 'price', icon: ICON.price, name: [`${fmt(p.rub)} ₽ · ${fmt(p.stars)} ⭐ · ${fmt(p.votes)} votes`, `${fmt(p.rub)} ₽ · ${fmt(p.stars)} ⭐ · ${fmt(p.votes)} голосов`], tone: 'gold' }, { k: 'season', icon: ICON.clock, name: ['This season', 'На этот сезон'] }],
+    },
+    tabs: [
+      tab('set', [
+        ...(extra.length ? [{ t: 'lines' as const, k: 'super', h: ['The Super Pass adds', 'Суперпропуск добавляет'] as Tr, rows: extra }] : []),
+        { t: 'lines', k: 'great', h: ['The great rewards of the premium track', 'Большие награды премиум-дорожки'], rows: great },
+        { t: 'text', k: 'more', icon: ICON.quest, body: ['Besides them the premium track holds speed-ups, auto-battle scrolls, elixirs of experience, fair winds, kits, charms, scrolls of resurrection and silver on most of its tiers; the free track stays open to every captain.', 'Кроме них на большинстве ступеней премиум-дорожки — ускорения, свитки автобоя, эликсиры опыта, попутный ветер, ремкомплекты, талисманы, свитки воскрешения и серебро; бесплатная дорожка открыта всем капитанам.'] },
+      ]),
+      tab('about', [
+        { t: 'text', k: 'how', h: ['How the season card works', 'Как устроена сезонная карта'], body: ['A season lasts two months; its 100 tiers are climbed by season experience from contracts, quests, captains beaten, boardings, lairs, bosses, world events and the island — and by the daily and weekly season challenges. About 300 hours of play close the whole card; an hour a day reaches about the 30th tier. At the season’s end the rewards earned and not taken come by letter.', 'Сезон длится два месяца; 100 ступеней поднимаются опытом сезона — за контракты, задания, победы над капитанами, абордажи, логова, боссов, события мира и остров, а ещё за ежедневные и еженедельные испытания сезона. Вся карта закрывается примерно за 300 часов игры; час в день — это около 30-й ступени. В конце сезона заработанные, но не забранные награды приходят письмом.'] },
+        { t: 'text', k: 'deliver', icon: ICON.port, h: ['Delivery', 'Вручение'], body: ['On the captain’s account at once for this season: the premium track opens in the game’s «Season card» window.', 'Сразу на счёт капитана на этот сезон: премиум-дорожка открывается в окне игры «Сезонная карта».'] },
+      ]),
+    ],
+    facts: { rub: p.rub, stars: p.stars, votes: p.votes, super: sup, great: great.length },
+  };
+}
+
 export function webDetailOf(x: WebItem, art: ArtOf): WebDetail {
-  const d = x.kind === 'ship' ? shipDetail(x, art) : x.kind === 'unit' ? unitDetail(x, art) : x.kind === 'captain' ? captainDetail(x, art) : x.kind === 'pack' ? packDetail(x, art) : offerDetail(x, art);
+  const d = x.kind === 'ship' ? shipDetail(x, art) : x.kind === 'unit' ? unitDetail(x, art) : x.kind === 'captain' ? captainDetail(x, art) : x.kind === 'pack' ? packDetail(x, art) : x.kind === 'pass' ? passDetail(x, art) : offerDetail(x, art);
   return icons(d, art);
 }
 

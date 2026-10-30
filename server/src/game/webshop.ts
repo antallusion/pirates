@@ -43,6 +43,7 @@ import { buyShip, buyUnit, payIn, sendBalance, sendPremium, setWebMail, setWebPa
 import { refitHolds } from './refit.ts';
 import { berthsFull } from './shipbuilding.ts';
 import { accountOfferWhy, buyForAccount, shopState } from './shop.ts';
+import { passBuy, passProductWhy } from './seasonpass.ts'; // «Сезонная карта» (owner, 2026-10-30)
 
 export type OrderStatus = 'pending' | 'paid' | 'done' | 'canceled' | 'failed';
 /** What a paid order of a thing for her ship waits for: her logging in, her making port, the fight's end. */
@@ -286,6 +287,9 @@ export class WebShop {
     switch (x.kind) {
       case 'pack':
         return null;
+      // the season card's passes (owner, 2026-10-30): the one she holds already, or the step without the first
+      case 'pass':
+        return passProductWhy(game, acc, x.pass!);
       case 'captain':
         return x.captain && ownsCaptain(game, acc, x.captain) ? 'owned' : null;
       case 'ship': {
@@ -399,7 +403,8 @@ export class WebShop {
     const row = this.game.db.accountById(acc);
     if (!row) return { error: 'not_found' };
     const x0 = webItem(pack);
-    if (!x0 || x0.kind !== 'pack') return { error: 'bad_item' };
+    // a pack of doubloons, or the season card's pass (owner, 2026-10-30: its «Купить» in the game's window)
+    if (!x0 || (x0.kind !== 'pack' && x0.kind !== 'pass')) return { error: 'bad_item' };
     // The receipt's e-mail (owner, 2026-10-21: live 54-FZ receipts): her account's, else the one she kept for receipts,
     // else the one she typed in the game now — kept for the next time only when she ticked «запомнить» (and never as
     // her login: the account's own e-mail is changed only by its own confirmed rules, auth.ts).
@@ -604,6 +609,7 @@ export class WebShop {
     else if (x.kind === 'unit') why = s ? buyUnit(game, s, x.unit!, x.k ?? 1, o.id) : 'not_aboard';
     else if (x.kind === 'offer') why = buyForAccount(game, o.acc, x.offer!, o.id, promo, true);
     else if (x.kind === 'deal') why = buyForAccount(game, o.acc, x.offer!, o.id, { ...promo, count: 'deal' }, true);
+    else if (x.kind === 'pass') why = passBuy(game, o.acc, x.pass!, ref); // the season card (owner, 2026-10-30)
     // (bought already by this very order — a resumed delivery — is no refusal)
     if (resumed && (why === 'That captain is yours already' || why === 'You already sail one')) why = null;
     o.status = 'done';
@@ -618,7 +624,8 @@ export class WebShop {
       if (ss.ship && ss.profile) sendPremium(game, ss);
       // (the web game's own top-up: the doubloons as the game's top-up words them)
       const msg = o.from === 'game' && x?.kind === 'pack' ? `Doubloons credited to your account: ${n}.` : !x || x.kind === 'pack' ? `Web shop purchase: ${n} doubloons.` : why ? `A web shop purchase could not be handed over: ${x.name[0]}. Its ${n} doubloons are on your account.` : `Web shop purchase: ${x.name[0]}.`;
-      game.sendTo(ss, { t: 'toast', msg, kind: why ? 'info' : 'gold' });
+      // (a pass bought in the game itself: its own toast said it — passBuy)
+      if (!(x?.kind === 'pass' && o.from === 'game' && !why)) game.sendTo(ss, { t: 'toast', msg, kind: why ? 'info' : 'gold' });
     }
   }
 

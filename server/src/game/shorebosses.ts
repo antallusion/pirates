@@ -55,6 +55,7 @@ import type { TacBattle, TacSideInput, TacStack } from './tacbattle.ts';
 import { tattooCount } from './tattoos.ts';
 import type { HeroBattle } from '../../../shared/src/data/hero.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
+import { seasonXp as passXp } from './seasonpass.ts'; // «Сезонная карта» (owner, 2026-10-30)
 
 /** Within this of the great one's spot (and the boats' reach of its island's shore) the land key lands against it. */
 export const SHORE_BOSS_REACH = 1100;
@@ -335,6 +336,7 @@ function shoreEnd(game: Game, s: PlayerSession, r: Rising, won: boolean, bt: Tac
   p.bossKills[lock] = (p.bossKills[lock] ?? 0) + 1;
   tattooCount(game, s, 'boss');
   seasonStat(game, s, 'monsters', 40);
+  passXp(game, s, 'shore'); // «Сезонная карта» (owner, 2026-10-30)
   logNote(game, s, 'boss', [name]);
   const isl = islandName(game, r);
   game.toastShip(ship, `${name} is beaten on ${isl}: ${pay.silver} silver, the land's spoils${loot.shore!.trophy ? ` and a trophy: ${trophy}` : ''}.`, 'gold');

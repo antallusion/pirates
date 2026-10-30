@@ -37,6 +37,7 @@ import type { QuestState } from './quests.ts';
 import { questEvent, startQuest } from './quests.ts';
 import { seasonStat } from './seasons.ts';
 import { GARRISON_R, lairsAll, namedForCampaign } from './wanted.ts';
+import { seasonXp as passXp } from './seasonpass.ts'; // «Сезонная карта» (owner, 2026-10-30)
 
 const built = new WeakMap<Game, Campaign>();
 
@@ -233,6 +234,7 @@ export function campaignDone(game: Game, s: PlayerSession, q: QuestDef): void {
   game.db.ledger(s.accountId, 'campaign', silver, q.id);
   game.grantXp(s, q.reward.xp, null, false, true);
   seasonStat(game, s, 'quests', 1);
+  passXp(game, s, 'campaign'); // «Сезонная карта» (owner, 2026-10-30)
   const { size } = chapterOfSlot(meta.slot);
   game.sendTo(s, { t: 'quest_done', name: q.name, silver, xp: q.reward.xp, line: meta.done, campaign: { ch: meta.ch, k: meta.k, size, at: c.at, total: CAMPAIGN_SIZE } });
   if (meta.k === size - 1) chapterEnd(game, s, meta.ch, q.requires.level ?? 1);

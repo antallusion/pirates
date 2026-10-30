@@ -35,6 +35,10 @@ export const TG_TEXTS = {
   someDevice: ['an unknown device', 'неизвестное устройство'],
   invoiceTitle: ['{n} doubloons', '{n} дублонов'],
   invoiceText: ['GRAVETIDE premium currency for captain {name}: {n} doubloons.', 'Премиальная валюта GRAVETIDE для капитана {name}: {n} дублонов.'],
+  // the season card's passes (owner, 2026-10-30)
+  passTitle: ['{pass}: the season card', '{pass}: сезонная карта'],
+  passText: ['GRAVETIDE season card for captain {name}: {pass} for this season.', 'Сезонная карта GRAVETIDE для капитана {name}: {pass} на этот сезон.'],
+  passPaid: ['Captain {name} holds the {pass} now: the premium track of the season card is open. Fair winds!', 'Капитану {name} открыт {pass}: премиум-дорожка сезонной карты доступна. Попутного ветра!'],
   cmdStart: ['Play GRAVETIDE', 'Играть в GRAVETIDE'],
   cmdPaysupport: ['Payment support', 'Поддержка по оплатам'],
   cmdTerms: ['Terms of purchase', 'Условия покупки'],

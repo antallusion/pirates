@@ -30,6 +30,8 @@ import { chronicle } from './renown.ts';
 import type { Game } from './Game.ts';
 import type { ShipEntity } from './ship.ts';
 import type { PlayerSession } from './player.ts';
+import { seasonXp as passXp } from './seasonpass.ts'; // «Сезонная карта» (owner, 2026-10-30)
+import { passBossXp } from '../../../shared/src/data/seasonpass.ts';
 
 /** What a ship that is a zone boss carries (ShipEntity.zoneBoss). */
 export interface ZoneBossTag {
@@ -447,6 +449,7 @@ function spoils(game: Game, live: ZbLive, ship: ShipEntity): void {
     }
     sh.xp = xpAt(p.level, def.level, sh.xp); // docs/26: her part of the boss's lesson, at her level by its colour
     game.grantXp(s, sh.xp, null); // (told in the one line below: the toasts of a sinking are many already)
+    passXp(game, s, 'zboss', passBossXp('zboss', sh.share)); // «Сезонная карта» (owner, 2026-10-30)
     const pct = Math.max(1, Math.round(sh.share * 100));
     // The silver comes by letter, a draft on the League (any port pays it).
     deliver(game, sh.account, { from: 'The Admiralty Prize Court', subject: `The spoils of ${ship.name}`, body: `Your part of her: ${pct}%. Pieces of ship gear taken from her: ${items.length}. Your share of her prize money is enclosed.`, gold: sh.silver, goods: null });

@@ -126,6 +126,9 @@ export interface PremiumShip {
   /** Creatures that come aboard with her (the one way besides the shop a premium kind is had); with no room for
    *  them in her she is not sold. */
   beasts?: { u: UnitId; n: number }[];
+  /** Had only from the season pass's 100th tier (owner, 2026-10-30; shared/src/data/seasonpass.ts PASS_SHIP): off the
+   *  doubloon shop — `price` is her worth, no longer a price. A captain who bought her before keeps her. */
+  pass?: true;
 }
 
 const ship = (d: ShipClassDef): ShipClassDef => d;
@@ -352,7 +355,7 @@ export const SHIP_CLASSES: Record<ShipClassId, ShipClassDef> = {
     holdVolume: 110, holdWeight: 140, crewMin: 120, crewMax: 360, gunPortsPerSide: 15, bowChasers: 2, sternChasers: 2,
     sailHp: 240, repairRate: 0.9, detection: 1650, price: 50000, purchasable: false, sprite: 'ship.thunderer', list: 'combat',
     passive: { id: 'copper_rods', name: 'Copper Rods', description: 'Copper down every mast to the sea: lightning strikes do 60% less damage.', flags: ['lightning_rod'] },
-    premium: { price: 6990, note: ['Copper rods on every masthead: the storm fights for her.', 'Медные громоотводы на каждой мачте: буря сражается за неё.'], beasts: [{ u: 'storm_caller', n: 12 }] },
+    premium: { price: 6990, pass: true, note: ['Copper rods on every masthead: the storm fights for her.', 'Медные громоотводы на каждой мачте: буря сражается за неё.'], beasts: [{ u: 'storm_caller', n: 12 }] },
   }),
   wyvern_galleass: ship({
     id: 'wyvern_galleass', name: 'Wyvern Galleass', tier: 5, rig: 'fore_aft', role: 'A great galleass: banks of oars and a heavy battery at the bow.',

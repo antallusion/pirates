@@ -93,6 +93,13 @@ test('every item of the catalogue has its card, with the blocks of its kind', ()
         assert.equal(d.view, 'pack');
         assert.ok(block(d, 'tiles', 'pack') && block(d, 'lines', 'buys')!.rows.length >= 1, `${id}: the amount and what it buys`);
         break;
+      // the season card's passes (owner, 2026-10-30): the great rewards of the premium track, the super's own
+      case 'pass':
+        assert.equal(d.view, 'set');
+        assert.ok(block(d, 'lines', 'great')!.rows.length >= 5 && block(d, 'lines', 'great')!.rows.every((r) => r.icon && r.name[1] && r.qty[1]), `${id}: the great rewards`);
+        if (x.pass !== 'pass_premium') assert.ok(block(d, 'lines', 'super')!.rows.some((r) => r.k === 'frame'), `${id}: the frame`);
+        assert.ok(block(d, 'text', 'how'), `${id}: how the card works`);
+        break;
       default: {
         if (x.tab === 'cos') {
           assert.equal(d.view, 'cos');

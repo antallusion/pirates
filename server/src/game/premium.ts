@@ -175,6 +175,8 @@ const samples = new WeakSet<Game>();
 
 export function shipOffer(game: Game, c: ShipClassId): PremiumShip | undefined {
   if (!Object.hasOwn(SHIP_CLASSES, c)) return undefined;
+  // (a hull of the season pass's alone is sold no more: owner, 2026-10-30 — seasonpass.ts PASS_SHIP)
+  if (SHIP_CLASSES[c].premium?.pass) return undefined;
   return SHIP_CLASSES[c].premium ?? (samples.has(game) ? PREMIUM_SAMPLE.ships[c] : undefined);
 }
 

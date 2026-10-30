@@ -20,7 +20,7 @@ import type { Port } from '../../../shared/src/world/worldgen.ts';
 import { WAREHOUSE_VOLUME, warehouseVolume } from './resources.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId } from '../../../shared/src/data/army.ts';
-import { GIFT28_NO_ROOM, giftRoom } from '../../../shared/src/data/gift.ts';
+import { GIFT28_NO_ROOM, GIFT28_UNIT, giftRoom } from '../../../shared/src/data/gift.ts';
 import { reconcile } from './crew.ts';
 
 export const POSTAGE = 10;
@@ -255,7 +255,7 @@ function takeUnits(game: Game, s: PlayerSession, box: Mailbox, l: Letter): strin
   if (!l.unitsTaken) {
     if (!UNITS[u.u]) l.unitsTaken = true;
     else if (ship.boarding || ship.grappled) why = 'Not in the middle of a boarding';
-    else if (!giftRoom(ship.army.length, ship.armySlots, ship.crew, ship.stats.crewMax, u.n)) why = GIFT28_NO_ROOM;
+    else if (!giftRoom(ship.army.length, ship.armySlots, ship.crew, ship.stats.crewMax, u.n)) why = u.u === GIFT28_UNIT ? GIFT28_NO_ROOM : 'No room aboard: dismiss someone in the Crew window to take them.'; // (the season card's men: seasonpass.ts)
     else {
       reconcile(game, p.company, ship.crew);
       ship.setArmy([...ship.army.map((x) => ({ ...x })), { u: u.u, n: u.n, ...(u.gift ? { g: 1 as const } : {}) }]);

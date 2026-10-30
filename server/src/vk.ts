@@ -16,6 +16,8 @@ import type { Db } from './persistence/db.ts';
 import type { Game } from './game/Game.ts';
 import { payIn } from './game/premium.ts';
 import { packVotes, vkPack } from '../../shared/src/data/vk.ts';
+import { passProduct } from '../../shared/src/data/seasonpass.ts';
+import { passPaid } from './game/seasonpass.ts'; // «Сезонная карта» (owner, 2026-10-30)
 import { setVkNoticeDesk, tgnState, vkNoticeLink } from './game/tgnotify.ts';
 import type { TgnCat } from '../../shared/src/data/telegram.ts';
 
@@ -229,6 +231,11 @@ export class VkService {
     return r;
   }
 
+  /** A season card's pass paid in votes (owner, 2026-10-30): vkPayPass. */
+  private payPass(params: Record<string, string>, id: string, order: string, uid: number, test: boolean, key: string): VkPayAnswer {
+    return vkPayPass({ db: this.db, game: this.game, payTest: this.payTest, admins: this.admins, now: this.now, log: this.log }, params, id, order, uid, test, key);
+  }
+
   /** The payments' callback (its form's fields): the answer VK wants, never a throw. */
   pay(params: Record<string, string>): VkPayAnswer {
     if (!params.sig || !/^[0-9a-f]{32}$/i.test(params.sig)) return fail(10, 'Bad signature');
@@ -241,6 +248,9 @@ export class VkService {
     const kind = test ? type.slice(0, -5) : type;
     const lang = /^en/i.test(params.lang ?? '') ? 'en' : 'ru';
     if (kind === 'get_item') {
+      // the season card's passes (owner, 2026-10-30): at their own votes
+      const pass = passProduct(String(params.item ?? ''));
+      if (pass) return { response: { item_id: pass.id, title: pass.name[lang === 'ru' ? 1 : 0], photo_url: `${this.publicUrl}/vk-doubloon.png`, price: pass.votes, expiration: 0 } };
       const pack = vkPack(String(params.item ?? ''));
       if (!pack) return fail(20, 'Item not found');
       return { response: { item_id: pack.id, title: doubloonsTitle(pack.n + pack.bonus, lang), photo_url: `${this.publicUrl}/vk-doubloon.png`, price: packVotes(pack), expiration: 0 } };
@@ -253,6 +263,8 @@ export class VkService {
     const key = `vkpay:${test ? 'test:' : ''}${order}`;
     const had = this.db.getKv<VkPayment>(key);
     if (had) return { response: { order_id: Number(order), app_order_id: had.app } };
+    const pass = passProduct(String(params.item ?? params.item_id ?? ''));
+    if (pass) return this.payPass(params, pass.id, order, uid, test, key);
     const pack = vkPack(String(params.item ?? params.item_id ?? ''));
     if (!pack) return fail(20, 'Item not found');
     if (params.item_price !== undefined && Number(params.item_price) < packVotes(pack)) return fail(11, 'Wrong price');
@@ -272,6 +284,25 @@ export class VkService {
 }
 
 // ------------------------------------------------------------------------------------------------ from the environment
+
+export interface VkPassCtx { db: Db; game: Game; payTest: boolean; admins: Set<number>; now: () => number; log: (s: string) => void }
+
+/** A season card's pass paid in votes (owner, 2026-10-30): its roubles in as doubloons, the pass bought with them —
+ *  once by the order (kv `vkpay:<order>`, the ledger's reference `vk:<order>`). */
+export function vkPayPass(c: VkPassCtx, params: Record<string, string>, id: string, order: string, uid: number, test: boolean, key: string): VkPayAnswer {
+  const pass = passProduct(id)!;
+  if (params.item_price !== undefined && Number(params.item_price) < pass.votes) return fail(11, 'Wrong price');
+  if (test && !c.payTest && !c.admins.has(uid) && !c.admins.has(Number(params.user_id))) return fail(101, 'Test payments are not credited on this server');
+  const acc = Number.isSafeInteger(uid) && uid > 0 ? c.db.accountByOAuth(PROVIDER, String(uid)) : undefined;
+  if (!acc) return fail(22, 'User not found');
+  const why = passPaid(c.game, acc.id, pass.id, `${test ? 'vktest' : 'vk'}:${order}`, test ? 0 : pass.rub);
+  if (why === 'No such account') return fail(2, 'Temporary error, try again', false);
+  const app = (c.db.getKv<number>('vkpay:seq') ?? 0) + 1;
+  c.db.setKv('vkpay:seq', app);
+  c.db.setKv(key, { account: acc.id, user: uid, pack: pass.id, votes: Number(params.item_price ?? pass.votes), n: pass.rub, app, at: c.now(), test } satisfies VkPayment);
+  c.log(`[vk] paid${test ? ' (test)' : ''}: account ${acc.id}, ${pass.id}, ${params.item_price ?? '?'} votes, order ${order}${why ? ` (kept as doubloons: ${why})` : ''}`);
+  return { response: { order_id: Number(order), app_order_id: app } };
+}
 
 /** The service from the environment, or null without VK_APP_SECRET (then every VK route but the config is a 404). */
 export function vkFromEnv(o: { db: Db; auth: AuthService; game: Game; publicUrl: string }, env: NodeJS.ProcessEnv = process.env): VkService | null {
