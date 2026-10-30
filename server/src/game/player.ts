@@ -30,6 +30,7 @@ import { newPvp } from './pvp.ts';
 import { isColours } from '../../../shared/src/data/colours.ts';
 import type { Colours } from '../../../shared/src/data/colours.ts';
 import type { PvpState } from './pvp.ts';
+import type { PvpRank } from './pvprank.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
 import type { QuestDef } from '../../../shared/src/data/quests.ts';
@@ -103,6 +104,8 @@ export interface Profile {
   version: 1;
   captain: CaptainId;
   pvp: PvpState;
+  /** PvP points: this month's, all time, the streak (pvprank.ts; owner, 2026-10-30). */
+  pvpr?: PvpRank;
   shipName: string;
   level: number;
   xp: number;

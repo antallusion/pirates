@@ -81,7 +81,7 @@ test('the catalogue: the owner\'s sets (24+ titles, 8 plates, 9 frames, 15 emble
   assert.equal(FRAMES.length, 9);
   assert.equal(EMBLEMS.length, 15, 'sixteen painted, the shark\'s jaws not kept (a bone)');
   assert.ok(!EMBLEMS.some((e) => /jaw|shark/i.test(e.id)));
-  assert.ok(CLOTHS.length >= 8 && CLOTHS.length <= 10);
+  assert.ok(CLOTHS.length >= 8 && CLOTHS.length <= 11, 'ten colours and the PvP season’s banner (pvprank.ts)');
   assert.deepEqual(TRAILS.map((t) => t.id).sort(), ['fire', 'frost', 'gold', 'ink', 'mist', 'plankton']);
   assert.equal(COS_EMOTES.length, 16);
   for (const k of COS_KINDS) {

@@ -311,7 +311,7 @@ export async function profile(c: Ctx, ref: string): Promise<void> {
 <div class="f-prof-id"><h2 class="f-nick">${esc(u.name)}</h2>${roleBadge(u.role)}${rankLine(u.rank)}
 <div class="f-prof-char">${u.captain ? charLine(u) : `<span class="muted">${esc(t('p_no_char'))}</span>`}</div>
 ${u.guild ? `<div class="f-prof-g">${ico('anchor', 'f-ico')}<span>${esc(t('p_guild'))}:</span> ${guildTag(u.guild)} <span>${esc(u.guild.name)} · ${esc(t(`g_${u.guild.rank}`))}</span></div>` : ''}
-<div class="f-prof-dates"><span>${esc(t('p_joined'))} ${esc(fullDate(u.joined))}</span>${d.lastSeen ? `<span>${esc(t('p_seen'))} ${esc(ago(d.lastSeen))}</span>` : ''}</div></div>
+<div class="f-prof-dates"><span>${esc(t('p_joined'))} ${esc(fullDate(u.joined))}</span>${u.online ? `<span class="f-prof-on"><i class="f-dot"></i>${esc(t('p_ingame'))}</span>` : d.lastSeen ? `<span>${esc(t('p_seen'))} ${esc(ago(d.lastSeen))}</span>` : ''}</div></div>
 <div class="f-prof-cta">${d.canMessage ? `<a class="btn-gold" href="${href(`m/${u.id}`)}">${ico('messages', 'f-ico')}${esc(t('write'))}</a>` : ''}${mine ? `<a class="btn-oak sm" href="${href('me')}">${esc(t('p_settings'))}</a>` : ''}</div>
 </section>`;
   const statRow = `<div class="f-prof-stats reveal">${stats.map(([k, v]) => `<div><b>${fmtNum(v)}</b><span>${esc(k)}</span></div>`).join('')}<div><span class="f-prof-rankbig">${rankBadge(u.rank, 44)}</span><span>${esc(rankName(u.rank))}</span></div></div>`;
@@ -390,7 +390,7 @@ export async function list(c: Ctx, kind: string): Promise<void> {
   const page = Number(c.q.get('p') ?? 1);
   const d = await api(`list/${kind}?p=${page}`);
   const [label, icon] = LISTS[kind] ?? ['l_topics', 'scroll'];
-  hero({ kicker: t('l_kicker'), kickerIcon: icon, title: t(label), lead: kind === 'online' ? `${fmtNum(d.inGame ?? 0)} ${t('l_ingame')} · ${fmtNum(d.total)} ${t('l_onforum')}` : '' });
+  hero({ kicker: t('l_kicker'), kickerIcon: icon, title: t(label), lead: kind === 'online' ? `${fmtNum(d.inGame ?? 0)} ${t('l_ingame')}` : '' });
   const link = (p: number) => href(`l/${kind}${p > 1 ? `?p=${p}` : ''}`);
   const tabs = `<nav class="f-tabs" aria-label="${esc(t('l_kicker'))}">${Object.entries(LISTS).map(([k, [l, ic]]) => `<a href="${href(`l/${k}`)}"${k === kind ? ' class="on" aria-current="page"' : ''}>${ico(ic, 'f-ico f-ico-s')}${esc(t(l))}</a>`).join('')}</nav>`;
   let body = '';

@@ -2481,6 +2481,9 @@ function onMessage(m: ServerMsg): void {
     case 'captain_shop': // the premium captains on the choice screen (owner, 2026-10-19)
       captainShopHeard(m);
       break;
+    case 'pvprank': // her PvP page (owner, 2026-10-30)
+      if (modal === 'hero') refreshModal();
+      break;
     case 'cos': // docs/32 §12: her wardrobe — the shop's tab, her frame on the HUD
       if (modal === 'shop') refreshModal();
       hud.redrawCaptain();

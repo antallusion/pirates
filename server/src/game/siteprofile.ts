@@ -8,6 +8,8 @@
 // warehouses, trade profit, price intelligence, the treasury), anything private (e-mail, tokens, the account's id,
 // OAuth, her position — only the sea's name —, friends, the ignored, letters, hearsay, maps).
 
+import { monthOf } from '../../../shared/src/data/pvprank.ts';
+import { monthTally } from './pvprank.ts';
 import { MAX_LEVEL, xpForLevel } from '../../../shared/src/constants.ts';
 import { UNITS, armyPower, armySlots } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
@@ -135,7 +137,12 @@ export interface CaptainProfile {
   seen: number | null;
   created: number | null;
   ranks: Partial<Record<Board, number | null>>;
-  pvp: { rating: number; duels: number; wins: number; arena: number | null; arenaWins: number; arenaN: number; wanted: number; wantedName: Tr; infamy: number };
+  pvp: {
+    rating: number; duels: number; wins: number; arena: number | null; arenaWins: number; arenaN: number; wanted: number; wantedName: Tr; infamy: number;
+    /** The PvP points (pvprank.ts): this month's (its rank on the «pvp» board), all time, the best streak. */
+    season: { pts: number; kills: number; deaths: number; duels: number; rank: number | null };
+    all: { pts: number; kills: number; deaths: number; duels: number; best: number };
+  };
   rep: (PName & { v: number })[];
   careers: { id: string; name: Tr; rank: number; rankName: Tr | null }[];
   army: { power: number; men: number; slots: number; stacks: PUnit[] };
@@ -520,7 +527,11 @@ export class SiteProfile {
       online, sea: online && ship ? regionName(ship.region) : null, seen: online ? null : seen ? Math.max(seen.seen, 0) || null : null,
       created: seen?.created || null, ranks,
       pvp: { rating: Math.round(p.pvp?.rating ?? 1000), duels: num((p.pvp as { duels?: number })?.duels), wins: num((p.pvp as { duelWins?: number })?.duelWins),
-        arena: arena && arena.n > 0 ? num(arena.r) : null, arenaWins: num(arena?.w), arenaN: num(arena?.n), wanted: wl, wantedName: [HUD_EN[`wanted.${wl}` as 'wanted.0'] ?? WANTED_TITLES[0], HUD_RU[`wanted.${wl}` as 'wanted.0'] ?? WANTED_TITLES[0]], infamy },
+        arena: arena && arena.n > 0 ? num(arena.r) : null, arenaWins: num(arena?.w), arenaN: num(arena?.n), wanted: wl, wantedName: [HUD_EN[`wanted.${wl}` as 'wanted.0'] ?? WANTED_TITLES[0], HUD_RU[`wanted.${wl}` as 'wanted.0'] ?? WANTED_TITLES[0]], infamy,
+        ...((m, a) => ({
+          season: { pts: m?.pts ?? 0, kills: m?.kills ?? 0, deaths: m?.deaths ?? 0, duels: m?.duels ?? 0, rank: ranks.pvp ?? null },
+          all: { pts: a?.pts ?? 0, kills: a?.kills ?? 0, deaths: a?.deaths ?? 0, duels: a?.duels ?? 0, best: num((p.pvpr as { best?: number } | undefined)?.best) },
+        }))(monthTally(p.pvpr, monthOf(game.wallNow())), (p.pvpr as { all?: { pts: number; kills: number; deaths: number; duels: number } } | undefined)?.all) },
       rep: FACTION_IDS.map((f) => ({ id: f, name: [FACTIONS[f].name, dataRu(`factions.FACTIONS.${f}.name`, FACTIONS[f].name)] as Tr, icon: ico(`faction_${f}`), v: Math.round(p.reputation?.[f] ?? 0) })),
       careers,
       army: { power: Math.round(army.reduce((n, x) => n + x.power, 0)), men: army.reduce((n, x) => n + x.n, 0), slots: armySlots(shipCls?.tier ?? 1), stacks: army },

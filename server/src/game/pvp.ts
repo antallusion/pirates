@@ -42,6 +42,7 @@ import { ignores } from './friends.ts';
 import { changeRep } from './player.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { deliver } from './post.ts';
+import { pvpRankDuel } from './pvprank.ts';
 import type { ShipEntity } from './ship.ts';
 
 const H = 3_600_000;
@@ -468,6 +469,7 @@ function endDuel(game: Game, d: Duel, winner: 0 | 1 | null): void {
       w.pvp.rating += k;
       l.pvp.rating -= k;
     }
+    pvpRankDuel(game, d.sides[winner][0], d.sides[winner === 0 ? 1 : 0][0]); // the PvP points (pvprank.ts)
   }
   const names = (side: number[]) => side.map((m) => game.sessionByAccount(m)?.name ?? '?').join(', ');
   duelNotice(game, d, winner === null ? 'The duel ends: honours even.' : `The duel goes to ${names(d.sides[winner])}.`);

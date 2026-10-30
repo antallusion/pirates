@@ -509,3 +509,6 @@ a.f-gm-i:hover, .f-member:hover { border-color: rgba(245, 196, 81, 0.28); transf
   .f-act { padding: 0 6px; }
 }
 .f-md .md-quote > :last-child, .f-md .md-bq > :last-child, .f-md .md-spoiler-in > :last-child { margin-bottom: 0; }
+/* «Сейчас в игре» on a profile (owner, 2026-10-30: the game's presence, not the forum's) */
+.f-prof-on { display: inline-flex; align-items: center; gap: 6px; color: #8fe0a9; }
+.f-prof-on .f-dot { position: static; flex: none; }

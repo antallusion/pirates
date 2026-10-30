@@ -52,6 +52,8 @@ export interface GameLink {
   inGame(): number;
   /** The accounts in the game now. */
   onlineIds?(): number[];
+  /** When her captain was last in the game (wall ms; null: never). */
+  lastPlayed?(id: number): number | null;
   /** A member answered, quoted or mentioned: a letter to her captain's port mailbox (and an e-mail), game/forummail.ts. */
   letter?(account: number, n: ForumNote): void;
 }
@@ -669,7 +671,8 @@ export class ForumService {
     const posts = this.store.recentPosts(staff, 0, 8, u.id);
     const topics = this.store.topicsOf(posts.map((p) => p.topic_id));
     return {
-      user: this.author(u, 99), role: u.role, lastSeen: u.last_seen, topics: u.topics, official: u.official,
+      // «был в игре», not on the forum (owner, 2026-10-30): her captain's last time aboard, none while she is in the game
+      user: this.author(u, 99), role: u.role, lastSeen: u.id === SYSTEM_ID || this.link.online(u.id) ? null : this.link.lastPlayed?.(u.id) ?? null, topics: u.topics, official: u.official,
       recent: posts.map((p) => ({ id: p.id, at: p.created_at, topic: topics.has(p.topic_id) ? { id: p.topic_id, title: maskBadWords(topics.get(p.topic_id)!.title) } : null, excerpt: maskBadWords(plainText(p.body_md).slice(0, 220)) })),
       canMessage: !!me && me.id !== u.id && u.id !== SYSTEM_ID && me.role !== 'banned', canRole: me?.role === 'admin' && me.id !== u.id && u.id !== SYSTEM_ID,
       lang,
@@ -720,9 +723,22 @@ export class ForumService {
     }
     if (kind === 'online') {
       // the forum's members whose captains are in the game now (owner, 2026-10-29), the freshest on the forum first
-      const users = this.store.users((this.link.onlineIds?.() ?? []).filter((id) => id !== SYSTEM_ID));
-      const rows = [...users.values()].sort((a, b) => b.last_seen - a.last_seen).slice(0, 200);
-      return { kind, page: 1, pages: 1, total: rows.length, members: rows.map((u) => this.author(u, 4)), inGame: this.link.inGame() };
+      // (owner, 2026-10-30: every captain in the game, not only those with a forum profile — they lead, linked to it; the
+      // rest are linked to their public card on the site's rating, and carry no account id)
+      const ids = (this.link.onlineIds?.() ?? []).filter((id) => id !== SYSTEM_ID);
+      const users = this.store.users(ids);
+      const rows = ids.map((id) => {
+        const u = users.get(id);
+        if (u) return { ...this.author(u, 4)!, forum: true };
+        const name = this.link.accountName(id);
+        if (!name) return null;
+        const c = this.link.character(id);
+        return {
+          id: 0, name, role: 'user', avatar: c && CLASS_IDS.has(c.captain) ? `/assets/portraits/${c.captain}.webp` : '/assets/portraits/pirate_00.webp', rank: 0,
+          captain: c?.captain ?? null, level: c?.level ?? null, online: true, posts: 0, rep: 0, joined: 0, ship: null, guild: null, medals: [], medalsMore: 0, forum: false,
+        };
+      }).filter((x) => x !== null).sort((a, b) => Number(b.forum) - Number(a.forum) || (b.level ?? 0) - (a.level ?? 0) || a.name.localeCompare(b.name)).slice(0, 200);
+      return { kind, page: 1, pages: 1, total: rows.length, members: rows, inGame: this.link.inGame() };
     }
     return fail('not_found', 404);
   }

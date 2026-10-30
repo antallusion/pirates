@@ -439,6 +439,8 @@ const BOARD_UI: { id: string; icon: string; name: Tr; unit: Tr }[] = [
   { id: 'glory', icon: 'ico/achievements', name: ['Glory', 'Слава'], unit: ['glory rank', 'ранг славы'] },
   { id: 'boarded', icon: 'ico/boarding', name: ['Boardings', 'Абордажи'], unit: ['boardings won', 'абордажей'] },
   { id: 'arena', icon: 'ico/cutlasses', name: ['Colosseum', 'Колизей'], unit: ['rating', 'рейтинг'] },
+  // the PvP points of the month (owner, 2026-10-30; server/src/game/pvprank.ts)
+  { id: 'pvp', icon: 'ico/cannon', name: ['PvP', 'ПвП'], unit: ['points this month', 'очки за месяц'] },
   { id: 'campaign', icon: 'ico/scroll', name: ['Campaign', 'Кампания'], unit: ['chapter', 'глава'] },
   { id: 'guilds', icon: 'ico/official', name: ['Guilds', 'Гильдии'], unit: ['levels together', 'сумма уровней'] },
 ];
@@ -453,6 +455,10 @@ const RATING_T: Record<string, Tr> = {
   close: ['Close', 'Закрыть'], you: ['Found', 'Найден'], colCap: ['Captain', 'Капитан'], colGuild: ['Guild', 'Гильдия'],
   online: ['Online', 'В сети'], onTip: ['Only the captains in the game right now', 'Только капитаны, которые сейчас в игре'], live: ['In the game now', 'Сейчас в игре'],
   onEmpty: ['Nobody from this board is in the game right now.', 'Сейчас никого из этой таблицы нет в игре.'],
+  kills: ['kills', 'убито'], deaths: ['deaths', 'смертей'], pvpPast: ['Past seasons', 'Прошлые сезоны'], pvpPastTip: ['The top ten of each month gone', 'Десятка лучших каждого прошедшего месяца'],
+  pvpNow: ['This month', 'Этот месяц'], pvpNone: ['No season has ended yet: the first closes at the end of the month.', 'Ещё ни один сезон не завершён: первый закроется в конце месяца.'],
+  pvpRules: ['Points for victories over captains only: a ship sunk 10, taken by boarding 14, a duel won 5 — more against the stronger, nothing against the far weaker or the same captain beaten again and again. The table starts anew on the 1st (Moscow time); the top ten and everyone of 50 points are rewarded.', 'Очки — только за победы над капитанами: потопил корабль — 10, взял на абордаж — 14, выиграл дуэль — 5. За сильного соперника больше, за намного более слабого и за одного и того же раз за разом — ничего. Таблица обнуляется 1-го числа (по Москве); награды — десятке лучших и всем, кто набрал 50 очков.'],
+  months: ['January,February,March,April,May,June,July,August,September,October,November,December', 'Январь,Февраль,Март,Апрель,Май,Июнь,Июль,Август,Сентябрь,Октябрь,Ноябрь,Декабрь'],
 };
 
 /** The captain's card (owner, 2026-10-28: «нажимая на капитана я хочу видеть его армию, корабль и все что вообще только
@@ -464,7 +470,7 @@ const CP_T: Record<string, Tr> = {
   online: ['At sea now', 'В море сейчас'], seen: ['Last seen {t}', 'Был(а) {t}'], since: ['Sailing since {d}', 'В море с {d}'], lvl: ['Level', 'Уровень'], xp: ['Experience', 'Опыт'], maxed: ['The highest level', 'Высший уровень'],
   glory: ['Glory rank', 'Ранг славы'], power: ['Army might', 'Мощь армии'], men: ['men', 'бойцов'], stacks: ['Stacks', 'Отряды'], tier: ['Tier', 'Уровень'], up: ['upgraded', 'улучшен'],
   atk: ['Attack', 'Атака'], def: ['Defence', 'Защита'], dmg: ['Damage', 'Урон'], hp: ['Health', 'Здоровье'], count: ['Count', 'Численность'],
-  pvp: ['Duel rating', 'Рейтинг дуэлей'], arena: ['Colosseum', 'Колизей'], wins: ['wins', 'побед'], wanted: ['Wanted', 'Розыск'], places: ['Places on the boards', 'Места в рейтингах'],
+  pvp: ['Duel rating', 'Рейтинг дуэлей'], pvpPts: ['PvP points this month', 'Очки ПвП за месяц'], pvpAll: ['PvP points in all', 'Очки ПвП за всё время'], pvpKills: ['Captains defeated', 'Побеждено капитанов'], pvpKd: ['K/D', 'У/С'], pvpBest: ['Best streak', 'Лучшая серия'], place: ['place {n}', '{n} место'], arena: ['Colosseum', 'Колизей'], wins: ['wins', 'побед'], wanted: ['Wanted', 'Розыск'], places: ['Places on the boards', 'Места в рейтингах'],
   rep: ['Reputation', 'Репутация'], careers: ['Careers', 'Карьера'], titles: ['Titles', 'Титулы'], none: ['—', '—'],
   sunk: ['Ships sunk', 'Потоплено кораблей'], boarded: ['Boardings won', 'Абордажей'], distance: ['Sailed, km', 'Пройдено, км'], recruited: ['Men signed on', 'Нанято бойцов'], quests: ['Quests done', 'Заданий выполнено'], roamWins: ['Sea stacks beaten', 'Отрядов в море побеждено'], mentored: ['Captains guided', 'Наставничество'], season: ['Season level', 'Уровень сезона'], fish: ['Fish caught', 'Поймано рыбы'],
   hull: ['Hull', 'Корпус'], sails: ['Sails', 'Паруса'], speed: ['Speed', 'Скорость'], gunsSide: ['Guns a side', 'Пушек на борт'], crew: ['Crew', 'Экипаж'], armor: ['Armour', 'Броня'],
@@ -480,7 +486,7 @@ const CP_T: Record<string, Tr> = {
 };
 const CP_ICO = {
   power: asset('icon.act_attack'), men: asset('icon.stat_crew'), hull: asset('icon.stat_hull'), sails: asset('icon.sail_up'), speed: asset('icon.wind'), guns: asset('icon.gun_long_9'), crew: asset('icon.stat_crew'),
-  armor: asset('icon.mod_hull_plating'), xp: asset('icon.xp'), glory: K('ico/achievements'), pvp: K('ico/cutlasses'), arena: K('ico/cutlasses'), wanted: asset('icon.wanted'), sunk: asset('icon.map_wreck'),
+  armor: asset('icon.mod_hull_plating'), xp: asset('icon.xp'), glory: K('ico/achievements'), pvp: K('ico/cutlasses'), pvpPts: K('ico/cannon'), arena: K('ico/cutlasses'), wanted: asset('icon.wanted'), sunk: asset('icon.map_wreck'),
   boarded: K('ico/boarding'), distance: K('ico/compass'), recruited: asset('icon.prof_marine'), quests: K('ico/quest'), roamWins: asset('icon.map_monster'), mentored: K('ico/captains'), season: K('ico/star'),
   fish: asset('icon.build_fishing_village'), island: K('ico/island'), ship: K('ico/ships'), anchor: K('ico/anchor'), will: asset('icon.ab_brine_mend'), clock: K('ico/clock'), level: K('ico/star'),
 };

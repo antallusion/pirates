@@ -1,5 +1,6 @@
 // The website's API (owner, 2026-10-20: «рейтинг капитанов и магазин»): JSON under /api/site/….
-//   GET  /api/site/rating?board=level|glory|boarded|arena|campaign|guilds   a board's top 100 (cached a minute)
+//   GET  /api/site/rating?board=level|glory|boarded|arena|pvp|campaign|guilds a board's top 100 (cached a minute)
+//   GET  /api/site/rating/pvp-seasons                                       the PvP seasons closed: each month's top ten
 //   GET  /api/site/rating?board=…&online=1                                  only the captains in the game now, at their real places
 //   GET  /api/site/online                                                   «в сети»: the captains in the game now {count,names}
 //   GET  /api/site/rating/find?name=…                                       a captain's places on every board
@@ -159,6 +160,7 @@ export function siteRoutes(d: SiteDeps) {
           return json(res, 200, d.rating.board(b), MINUTE_CACHE);
         }
         if (path === 'online') return json(res, 200, d.rating.online(), ONLINE_CACHE);
+        if (path === 'rating/pvp-seasons') return json(res, 200, { seasons: d.rating.pvpSeasons() }, MINUTE_CACHE);
         if (path === 'rating/find') {
           take('find', ip, SITE_LIMITS.find);
           const name = String(url.searchParams.get('name') ?? '').trim().slice(0, 40);
