@@ -40,7 +40,7 @@
     const pad = Math.max(1.2, k * words.length * 0.56).toFixed(2);
     return `<span class="rt-plate" style="${p && p.url ? `background-image:url(${esc(p.url)});` : ''}color:${esc(p ? p.ink : '#f3e6c8')};--halo:${esc(p ? p.halo : '#000')};padding:1px ${pad}em 0">${esc(words)}</span>`;
   };
-  const board = () => tabs.find((b) => b.classList.contains('on'))?.dataset.board || 'power';
+  const board = () => tabs.find((b) => b.classList.contains('on'))?.dataset.board || 'level';
   // «Мощь» (owner, 2026-10-31: «рейтинг должен строиться на мощи … и вещей»): the total and its four parts, each row with
   // the breakdown (server/src/game/siterating.ts, shared/src/data/power.ts).
   const POWER = ['power', 'army', 'ship', 'isle', 'gear'];
@@ -236,7 +236,7 @@
   });
 
   const q = new URLSearchParams(location.search);
-  const first = data.boards.some((b) => b.id === q.get('board')) ? q.get('board') : 'power';
+  const first = data.boards.some((b) => b.id === q.get('board')) ? q.get('board') : 'level';
   pick(first);
   if (q.get('name')) { form.querySelector('input').value = q.get('name'); form.requestSubmit(); }
   // ================================================================================================ the captain's card

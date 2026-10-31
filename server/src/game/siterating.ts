@@ -24,10 +24,10 @@ export type Board = PowerBoard | 'level' | 'glory' | 'boarded' | 'arena' | 'pvp'
  *  «power» and its parts «army», «ship», «isle», «gear» (owner, 2026-10-31: «рейтинг должен строиться на мощи … выводи в
  *  рейтинг именно по этой мощи»; shared/src/data/power.ts): the total is the main board — the first, the default, and the
  *  place a captain is told everywhere. */
-export const BOARDS: Board[] = ['power', 'army', 'ship', 'isle', 'gear', 'level', 'glory', 'boarded', 'arena', 'pvp', 'campaign', 'guilds'];
+export const BOARDS: Board[] = ['level', 'power', 'army', 'ship', 'isle', 'gear', 'glory', 'boarded', 'arena', 'pvp', 'campaign', 'guilds'];
 export const POWER_BOARDS: PowerBoard[] = ['power', 'army', 'ship', 'isle', 'gear'];
 /** The board when none is asked for. */
-export const DEFAULT_BOARD: Board = 'power';
+export const DEFAULT_BOARD: Board = 'level'; // owner, 2026-10-31: level first, «Мощь» second
 export const TOP = 100;
 export const RATING_TTL = 60_000;
 /** Who is in the game now is read afresh at most this often (owner, 2026-10-29: «"в сети" должны показываться люди кто

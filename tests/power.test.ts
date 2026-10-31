@@ -92,9 +92,10 @@ function cap(g: G, name: string, p: Record<string, unknown>): number {
   return id;
 }
 
-test('the site: «power» is the first and the default board, by the total, each row with its parts; the place told everywhere', () => {
-  assert.equal(BOARDS[0], 'power');
-  assert.equal(DEFAULT_BOARD, 'power');
+test('the site: «level» first and the default, «power» second (owner 2026-10-31), by the total, each row with its parts; the place told everywhere', () => {
+  assert.equal(BOARDS[0], 'level');
+  assert.equal(BOARDS[1], 'power');
+  assert.equal(DEFAULT_BOARD, 'level');
   for (const b of ['army', 'ship', 'isle', 'gear', 'level', 'pvp', 'guilds'] as const) assert.ok(BOARDS.includes(b), `${b} kept`);
   const g = makeGame();
   cap(g, 'High Level', { level: 50, army: [{ u: 'deckhand', n: 10 }] });

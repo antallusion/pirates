@@ -455,12 +455,13 @@ const dataTag = (id: string, v: unknown) => `<script type="application/json" id=
 const BOARD_UI: { id: string; icon: string; name: Tr; unit: Tr }[] = [
   // «Мощь» first and the default (owner, 2026-10-31: «рейтинг должен строиться на мощи … выводи в рейтинг именно по этой
   // мощи»; shared/src/data/power.ts), then its four parts
+  // «Уровень» first and the default, «Мощь» second (owner, 2026-10-31: «первым выводи в рейтинге людей по уровню, а не по мощи»)
+  { id: 'level', icon: 'ico/star', name: ['Level', 'Уровень'], unit: ['level', 'уровень'] },
   { id: 'power', icon: 'ico/hot', name: ['Might', 'Мощь'], unit: ['might', 'мощь'] },
   { id: 'army', icon: 'ico/creatures', name: ['Army', 'Армия'], unit: ['army might', 'мощь армии'] },
   { id: 'ship', icon: 'ico/ships', name: ['Ship', 'Корабль'], unit: ['ship might', 'мощь корабля'] },
   { id: 'isle', icon: 'ico/island', name: ['Island', 'Остров'], unit: ['island might', 'мощь острова'] },
   { id: 'gear', icon: 'ico/chest', name: ['Gear', 'Снаряжение'], unit: ['gear might', 'мощь снаряжения'] },
-  { id: 'level', icon: 'ico/star', name: ['Level', 'Уровень'], unit: ['level', 'уровень'] },
   { id: 'glory', icon: 'ico/achievements', name: ['Glory', 'Слава'], unit: ['glory rank', 'ранг славы'] },
   { id: 'boarded', icon: 'ico/boarding', name: ['Boardings', 'Абордажи'], unit: ['boardings won', 'абордажей'] },
   { id: 'arena', icon: 'ico/cutlasses', name: ['Colosseum', 'Колизей'], unit: ['rating', 'рейтинг'] },
