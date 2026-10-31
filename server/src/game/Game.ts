@@ -321,6 +321,8 @@ import { silverKin } from '../../../shared/src/data/fleet.ts';
 import { isle18Message, isle18Second, islandFor, isleExtras, landDanger, onHiddenCharted, turtlePrompt } from './isles18.ts'; // docs/18 III
 import { installHeroHooks } from './h5.ts'; // docs/17 H5
 import { mineLandable } from './mines.ts';
+import { peaceBlocked, stepHueAndCry } from './flaglaw.ts'; // forum 34: the three flags and the sea's peaceful ships
+import { WASH_PER_SEC } from '../../../shared/src/data/colours.ts';
 import { crewOnKill, stepCrewLife } from './crewlife.ts';
 
 /** A bump on a ship she struck this lately is a ram she meant (forum 2026-10-30; Game.meantRam). */
@@ -972,7 +974,8 @@ export class Game {
         // own mark — her «Атаковать», an NPC's prey, a ship she fired on just now — or two ships at war make one; no
         // infamy, no quarrel, no escort's answer from a brush.)
         const peace = !this.meantRam(a, b) && !this.meantRam(b, a) && !this.isHostile(a, b) && !this.isHostile(b, a);
-        const friends = peace || (a.ownerId !== null && a.ownerId === b.ownerId) || damageBlocked(this, a, b) === 'friendly';
+        // (forum 34: a peaceful ship and a captain whose colours keep her off it — a bump, whoever meant it, both ways)
+        const friends = peace || (a.ownerId !== null && a.ownerId === b.ownerId) || damageBlocked(this, a, b) === 'friendly' || peaceBlocked(this, a, b) !== null || peaceBlocked(this, b, a) !== null;
         if (closing > 3 && friends) {
           a.state.speed *= 0.6;
           b.state.speed *= 0.6;
@@ -1135,6 +1138,7 @@ export class Game {
     stepWanted(this); // the named pirates, their trail, their lairs; the hunters (docs/12 P5)
     stepRaiding(this); // convoys, rockets, tips, the lanes' heat, the guarded (docs/12 P6)
     stepHires(this); // the ships of the sea hired as guards: the clock, the chip (owner, 2026-10-25)
+    stepHueAndCry(this); // forum 34: the law's patrols after a skulled pirate (flaglaw.ts)
     if (sec % 10 === 0) stepEstate(this); // outposts at work, raided and robbed (docs/12 P7)
     stepCaravans(this); // one's own caravans at sea (docs/12 P8)
     stepCompanions(this); // the orca calves in their captains' wakes (docs/12 P10 #2)
@@ -1576,7 +1580,7 @@ export class Game {
     if (ship.isPlayer && !ship.inCombat(now)) {
       const p = this.profileOf(ship);
       if (p && p.infamy > 0) {
-        p.infamy = Math.max(0, p.infamy - 0.05 * (1 + tval(st, 'infamyDecay')));
+        p.infamy = Math.max(0, p.infamy - WASH_PER_SEC * (1 + tval(st, 'infamyDecay')));
         ship.wantedCache = wantedLevel(p.infamy);
       }
     }
@@ -3757,7 +3761,8 @@ export class Game {
         return err(why);
       }
       case 'volley': {
-        const why = aimedVolley(this, s);
+        // (forum 34: her own mark goes with the order — refused for why, never another ship fired on instead)
+        const why = aimedVolley(this, s, msg.target === undefined ? undefined : Math.trunc(Number(msg.target)));
         // (in the First Watch her press is the lesson, a volley refused too — out of range, the guns not bearing: the
         // newcomer's run tapped «Огонь» nine times in 19 s with the raider still closing; retention, 2026-10-25)
         if (!why || onboardingProtected(s)) onboardingFire(s);
@@ -5083,6 +5088,11 @@ export class Game {
     const isl = port ? this.world.islands[port.islandId] : undefined;
     const quay = isl ? { x: isl.x, y: isl.y, r: isl.radius, poly: isl.poly } : null;
     if (!port || dist(port.x, port.y, ship.state.x, ship.state.y) > PORT_DOCK_RADIUS) return 'No harbour close enough';
+    // (forum 34: a harbour that will not take her says so at once — the helmsman no longer sails her in to be refused)
+    {
+      const pre = canDock(p, port.faction);
+      if (!pre.ok && !dockOverride(ship, p, port, bribing)) return pre.reason!;
+    }
     if (!dockWithin(hullOf(ship), port, quay, REACH_SLACK)) {
       return approach(this, s, { x: port.x, y: port.y, reach: REACH_DOCK, r: LANDING_R, near: () => !!s.ship && dockWithin(hullOf(s.ship), port, quay, -4), slow: DOCK_SLOW - 0.5 }, 'Come into the harbour first: up to its quays.');
     }

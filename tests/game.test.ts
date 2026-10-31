@@ -25,6 +25,7 @@ function npcAbeam(game: Game, player: ShipEntity, side: 'port' | 'starboard', di
   const h = player.state.heading + (side === 'port' ? -Math.PI / 2 : Math.PI / 2);
   const v = headingVec(h);
   const npc = game.spawnNpcShip('merchant', 'fluyt', 'league', player.state.x + v.x * distance, player.state.y + v.y * distance, player.state.heading);
+  game.profileOf(player)!.pvp.flag = 'pirate'; // forum 34: a merchant, a fisher or a patrol is the pirate flag's prey only
   const brain = game.npcs.get(npc.id)!;
   brain.active = true;
   npc.input = { rudder: 0, sailTarget: 0 };
@@ -420,6 +421,7 @@ test('bow chasers hit a ship dead ahead; broadsides cannot', () => {
   const { game } = makeGame();
   const c = join(game, 'Chase Master');
   const ship = undockAtSea(game, c);
+  game.profileOf(ship)!.pvp.flag = 'pirate'; // forum 34: a peaceful ship is the pirate flag's prey only
   const npc = game.spawnNpcShip('merchant', 'fluyt', 'league', ship.state.x, ship.state.y - 200, 0);
   game.npcs.get(npc.id)!.active = true;
   npc.input = { rudder: 0, sailTarget: 0 };
@@ -445,6 +447,7 @@ test('heavy shot pierces armour; fire shot starts fires', () => {
   onHull(game, ship, 'brig'); // a brig fights a merchant galleon on even terms (canon D12)
   const hit = (ammo: 'round' | 'heavy' | 'incendiary') => {
     const npc = npcAbeam(game, ship, 'starboard', 110);
+    game.npcs.delete(npc.id); // (she lies still for the gunners: forum 34's merchants run from a black flag)
     npc.loadout.classId = 'galleon';
     npc.recompute(game.now);
     npc.hull = npc.stats.hullMax;

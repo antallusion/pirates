@@ -53,6 +53,7 @@ test('twelve bridges; each needs points in two trees; three at most', () => {
 test('Chain and Grapple: a tangled ship is boarded from further', () => {
   const { game } = makeGame();
   const { s, ship } = captain(game, 'Grapple', { brg_chain_and_grapple: 1 });
+  s.profile!.pvp.flag = 'pirate'; // forum 34: a peaceful ship is the pirate flag's prey only
   toSea(game, s);
   const foe = game.spawnNpcShip('merchant', 'fluyt', 'league', ship.state.x + 55, ship.state.y, 0);
   // Past the grapples' own reach, inside half as far again (owner, 2026-10-22: the water between the hulls alongside —

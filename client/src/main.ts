@@ -193,7 +193,9 @@ import { ResearchWindow } from './ui/research.ts'; // the yard's tree of hulls (
 import { AdvCard } from './ui/advcard.ts'; // docs/17 H4
 import { PuzzleWindow } from './ui/puzzle.ts';
 import { crewSayParts, renderLog } from './ui/crewlife.ts';
-import { flagLine, flagsCss, lawlessHere, lawlessWords, shipColours } from './ui/flags.ts'; // docs/24 C1, D1–D3
+import { guardOfEntity } from './render/advmap.ts'; // forum 34: the ring by what she is
+import { flagLine, flagsCss, lawlessHere, lawlessWords, peaceWords, portHint, shipColours } from './ui/flags.ts'; // docs/24 C1, D1–D3
+import { PEACE_SAY } from '../../shared/src/data/colours.ts'; // forum 34: the city flag's peace
 import { EN as FLAGS_EN, RU as FLAGS_RU } from './lang/ui/flags.ts';
 import { citiesHostile } from '../../shared/src/data/colours.ts';
 import { bootMark, settleViewport, watchViewport } from './viewport.ts'; // a start that always goes on (owner, 2026-10-16)
@@ -2417,6 +2419,10 @@ function onMessage(m: ServerMsg): void {
       // are told at once, in the battle's top band (docs/23 item 93: «Не ваш ход», a cut that failed, a ransom she cannot
       // pay — every refusal of the battle comes as a 'bad' toast, and was held to the end of it).
       else if (state.boardTac && m.kind !== 'bad' && m.kind !== 'good') heldToasts.push({ msg: serverText(m.msg), kind: m.kind });
+      // The city flag's peace (forum 34): its refusal with the one tap to the pirate flag; a lawful harbour shut to her
+      // skulls with the one tap to how she washes them off.
+      else if (m.msg === PEACE_SAY) hud.tapToast(`${peaceWords().line} ${peaceWords().hint}`, 'bad', openFlagCard, 'danger');
+      else if (/ harbours take no ship with \d+ skulls: /.test(m.msg)) hud.tapToast(`${serverText(m.msg)} ${portHint()}`, 'bad', openFlagCard, 'danger');
       else hud.toast(serverText(m.msg), m.kind);
       if (m.kind === 'gold') audio.coins();
       if (/a pirate is coming for you/.test(m.msg)) audio.bell(); // the lookout's alarm
@@ -4220,7 +4226,30 @@ function attackable(id: number | null): boolean {
   if (!s?.info || !own || state.self?.dockedAt || s.cur.flags & (SF.SINKING | SF.DOCKED | SF.PROTECTED | SF.IN_BATTLE | SF.VOYAGE)) return false;
   if (dist(own.x, own.y, s.cur.x, s.cur.y) > 2500) return false;
   if ((s.info.isPlayer || s.info.npcRole === 'escort') && !(s.cur.flags & SF.HOSTILE) && !fairCaptain(s.cur.flags, s.info)) return false;
+  // A peaceful ship (forum 34): the pirate flag's prey only, unless she comes for her (the server's flaglaw.ts decides).
+  if (peacefulInfo(s.info) && !(s.cur.flags & SF.HOSTILE) && state.self?.pvp.flag !== 'pirate') return false;
   return true;
+}
+
+/** A merchant, a fisher, or the law's own ship (a patrol, a hunter of a lawful flag): the city flag's peace (forum 34;
+ *  the server's flaglaw.ts peacefulNpc). */
+function peacefulInfo(info: ShipInfo): boolean {
+  if (info.isPlayer || !info.npcRole) return false;
+  if (info.npcRole === 'merchant' || info.npcRole === 'fisher') return true;
+  return (info.npcRole === 'patrol' || info.npcRole === 'hunter') && info.faction !== 'player' && !!FACTIONS[info.faction]?.lawful;
+}
+
+/** What she points at, by the ring's lights (owner, 2026-10-31: «остров утопленников, тут ваще кроме атаки ниче быть не
+ *  должно»): a thing of the deep (a beast, the drowned, a monster, a great one) — only «Атаковать»; one of the sea's
+ *  pirates; a peaceful ship; a captain or a captain's ship. */
+function markKind(info: ShipInfo): 'deep' | 'pirate' | 'peaceful' | 'captain' | 'other' {
+  if (info.isPlayer || info.npcRole === 'escort') return 'captain';
+  // (a guard of the adventure map — the Drowned's wreck, a holdout, a hulk, a beasts' raft: HoMM3's stack, fought, not hailed)
+  if (guardOfEntity(state, info.id)) return 'deep';
+  if (info.npcRole === 'beast' || info.npcRole === 'ghost' || info.npcRole === 'boss' || !!beastOfClass(info.classId) || !!SHIP_CLASSES[info.classId]?.monster || isZoneBossClass(info.classId)) return 'deep';
+  if (info.npcRole === 'pirate') return 'pirate';
+  if (peacefulInfo(info)) return 'peaceful';
+  return 'other';
 }
 
 /** A captain her colours let her come for before a shot is fired (docs/24 D1): the pirate flag either side, or two
@@ -4292,9 +4321,20 @@ function bestShot(): 'round' | 'chain' | 'grape' | null {
 }
 
 /** «Огонь»: a broadside out of turn (docs/23 item 35). */
+/** The flag card (forum 34): the port's «Флаг» tab in port, else the ship's window (the card there says it is changed in
+ *  port). */
+function openFlagCard(): void {
+  if (state.self?.dockedAt && state.portView) {
+    portScreen.showTab('colours', null, state);
+    openModal('port');
+  } else openModal('ship');
+}
+
 function fireVolley(): void {
   if (state.self?.dockedAt || modal) return;
-  net.send({ t: 'volley' });
+  // Her own mark goes with the order (forum 34): the server fires at her or says why not — never at another ship.
+  const mark = state.pursuit?.target ?? (targetPinned ? targetId : null);
+  net.send(mark !== null && mark !== undefined ? { t: 'volley', target: mark } : { t: 'volley' });
 }
 
 // ------------------------------------------------------------------ the sea HUD on a phone (docs/23 phase 2)
@@ -4662,22 +4702,31 @@ function targetChoices(about: string): { choices: TmChoice[]; name: string; x: n
     }
     // «Подробнее» (owner, 2026-10-30): the small ⓘ beside the ring opens her detail card (client/src/ui/detail.ts) with
     // «Цель / Атаковать / Плыть»; a ship she cannot fight (a friend, a ship in port's peace) offers it alone
-    if (s?.info && id !== state.entityId && !f?.attackable) return { name: s.info.isPlayer ? s.info.captainName : placeName(s.info.name), x: renderer.sx(s.cur.x), y: renderer.sy(s.cur.y), r: Math.max(18, SHIP_CLASSES[s.info.classId].length * 0.5 * renderer.zoom), choices: [{ id: 'info', art: 'bt_book', label: seaWord('tm.info'), title: seaWord('tm.infoT') }] };
+    // The ring by what she is (owner, 2026-10-31: «остров утопленников, тут ваще кроме атаки ниче быть не должно, откуда
+    // это колесо действий?»): a thing of the deep — «Атаковать» alone (one big button); one of the sea's pirates —
+    // «Атаковать», «На абордаж», and the talks when he is on her; a peaceful ship — under the pirate flag the same, under
+    // any other only her hire (forum 34: the city flag's peace); a captain — by the colours' rules. ⓘ beside each.
+    const kind = s?.info ? markKind(s.info) : 'other';
+    const hire: TmChoice[] = s?.info && kind !== 'deep' && kind !== 'captain' && s.info.npcRole && (HIRE_ROLES as readonly string[]).includes(s.info.npcRole) && !s.info.named && !s.info.elite && s.info.shipLevel !== undefined && !(s.cur.flags & (SF.HOSTILE | SF.SURRENDERED | SF.SINKING | SF.BOARDING))
+      ? [{ id: 'hire', art: 'ab_call_escort', label: LHIRE('hr.tm'), title: LHIRE('hr.tmT') }] : [];
+    if (s?.info && id !== state.entityId && !f?.attackable) {
+      const pos = { name: s.info.isPlayer ? s.info.captainName : placeName(s.info.name), x: renderer.sx(s.cur.x), y: renderer.sy(s.cur.y), r: Math.max(18, SHIP_CLASSES[s.info.classId].length * 0.5 * renderer.zoom) };
+      return hire.length ? { ...pos, choices: hire, info: true } : { ...pos, choices: [{ id: 'info', art: 'bt_book', label: seaWord('tm.info'), title: seaWord('tm.infoT') }] };
+    }
     if (!s?.info || !f?.attackable) return null;
     const board = canBoardNow(id);
     const beast = beastOfClass(s.info.classId);
+    const run = state.pursuit?.target === id ? state.pursuit.mode : null;
+    const choices: TmChoice[] = [{ id: 'fight', art: board ? 'ab_red_hook_boarding' : 'talent_gun_rolling_broadside', label: seaWord('tm.attack'), title: seaWord(board ? 'tm.fightBoard' : 'tm.fightGuns'), on: run === 'guns' }];
+    // «На абордаж» from afar: the helmsman's intercept, the grapples flying alongside (alongside already, «Атаковать» boards)
+    if (kind !== 'deep' && f.boardable && !board) choices.push({ id: 'board', art: 'ab_red_hook_boarding', label: seaWord('tm.board'), title: seaWord('tm.pursueT'), on: run === 'board' });
+    // One of the sea's ships on her: the talks (owner, 2026-10-18; the server says who will not bargain) — never the deep's.
+    if (kind !== 'deep' && kind !== 'captain' && s.cur.flags & SF.HOSTILE) choices.push({ id: 'talk', art: 'faction_free', label: LOUT('cf.tm'), title: LOUT('cf.tmT') });
+    choices.push(...hire);
     return {
       name: beast ? BEASTS[beast].name[lang() === 'ru' ? 1 : 0] : s.info.isPlayer ? s.info.captainName : placeName(s.info.name),
       x: renderer.sx(s.cur.x), y: renderer.sy(s.cur.y), r: Math.max(18, SHIP_CLASSES[s.info.classId].length * 0.5 * renderer.zoom),
-      choices: [
-        { id: 'lock', art: 'item_ranging_glass', label: seaWord('tm.lock'), title: seaWord('tm.lockT'), on: targetPinned && targetId === id },
-        { id: 'pursue', art: 'talent_nav_wake_rider', label: seaWord('tm.pursue'), title: seaWord(f.boardable ? 'tm.pursueT' : 'tm.pursueGuns'), on: state.pursuit?.target === id },
-        { id: 'fight', art: board ? 'ab_red_hook_boarding' : 'talent_gun_rolling_broadside', label: seaWord('tm.fight'), title: seaWord(board ? 'tm.fightBoard' : 'tm.fightGuns') },
-        // A ship of the sea firing on her: the talks (owner, 2026-10-18; the server says who will not bargain).
-        ...(!s.info.isPlayer && s.info.npcRole && s.info.npcRole !== 'beast' && s.cur.flags & SF.HOSTILE ? [{ id: 'talk' as const, art: 'faction_free', label: LOUT('cf.tm'), title: LOUT('cf.tmT') }] : []),
-        // A peaceful ship of the sea: hire her as a guard (owner, 2026-10-25; the card says why not, the server decides).
-        ...(!s.info.isPlayer && s.info.npcRole && (HIRE_ROLES as readonly string[]).includes(s.info.npcRole) && !s.info.named && !s.info.elite && s.info.shipLevel !== undefined && !(s.cur.flags & (SF.HOSTILE | SF.SURRENDERED | SF.SINKING | SF.BOARDING)) ? [{ id: 'hire' as const, art: 'ab_call_escort', label: LHIRE('hr.tm'), title: LHIRE('hr.tmT') }] : []),
-      ],
+      choices,
       info: true,
     };
   }
@@ -4712,10 +4761,11 @@ function pickTargetChoice(id: TmId, about: string): void {
     if (id === 'talk') return ceasefireCard.ask(n);
     if (id === 'hire') return hireCard.ask(n);
     pinTarget(n); // the pursuit and the fight are about her: she is the mark too
-    if (id === 'pursue') net.send({ t: 'attack', target: n, mode: unboardableMark(n) ? 'guns' : 'board' });
+    if (id === 'pursue' || id === 'board') net.send({ t: 'attack', target: n, mode: unboardableMark(n) ? 'guns' : 'board' });
     else if (id === 'fight') {
       if (canBoardNow(n)) net.send({ t: 'board', target: n, aggression: 'standard' });
-      else net.send({ t: 'attack', target: n, mode: 'guns' });
+      // (a guard of the adventure map is fought on her deck: the helmsman's boarding run, not the guns)
+      else net.send({ t: 'attack', target: n, mode: guardOfEntity(state, n) && !unboardableMark(n) ? 'board' : 'guns' });
     }
     return;
   }

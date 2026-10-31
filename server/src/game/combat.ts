@@ -24,6 +24,7 @@ import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import { crueltyMul, inDuel, legalTarget, neutral, onPlayerAttack, pvpBlocked } from './pvp.ts';
 import { markPvp } from './colours.ts';
+import { PEACE_SAY, skullFor, wrongBrethren } from './flaglaw.ts'; // forum 34: the three flags
 import { sameGroup } from './party.ts';
 import { siegeImpact } from './siege.ts';
 import { guildFriends } from './guilds.ts';
@@ -608,7 +609,8 @@ function resolveHit(game: Game, p: Projectile, target: ShipEntity, hx: number, h
   }
   const blocked = damageBlocked(game, shooter, target);
   if (blocked) {
-    if (shooter?.isPlayer && blocked.length > 12) game.toastShip(shooter, blocked, 'bad');
+    // (a stray ball on a peaceful ship beside her fight is no order of hers to refuse: forum 34)
+    if (shooter?.isPlayer && blocked.length > 12 && blocked !== PEACE_SAY) game.toastShip(shooter, blocked, 'bad');
     game.emit({ k: 'hit', x: Math.round(hx), y: Math.round(hy), ship: target.id, dmg: 0, ammo: p.ammo, blocked: true }, hx, hy);
     return;
   }
@@ -1094,6 +1096,7 @@ function registerAggression(game: Game, a: ShipEntity, b: ShipEntity): void {
   if (inDuel(game, a) && inDuel(game, a) === inDuel(game, b)) return; // a duel is no crime
   const pa = a.isPlayer ? game.profileOf(a) : null;
   if (!pa) return;
+  wrongBrethren(game, a, b); // forum 34: a pirate-flag captain who fires on the sea's pirates loses their honour a while
   // Self defence: b attacked a recently.
   const selfDefence = (a.attackers.get(b.id) ?? -999) > now - 90;
   if (selfDefence) return;
@@ -1123,6 +1126,9 @@ function registerAggression(game: Game, a: ShipEntity, b: ShipEntity): void {
     game.adjustRep(a, b.faction, -4);
   }
   // Black Flag in contested water: the first attack under it costs a whole wanted level.
+  // The pirate flag (forum 34): every new victim of the law's — a peaceful ship, a captain who was no fair game — is a
+  // skull at once (flaglaw.ts skullFor), however small the crime's own infamy.
+  infamy = Math.max(infamy, skullFor(game, a, b, b.isPlayer && legalTarget(game, a, b)));
   if (a.hasEffect('aggressor') && REGIONS[b.region].safety === 'contested') {
     const lvl = wantedLevel(pa.infamy);
     if (lvl < 5) infamy = Math.max(infamy, WANTED_THRESHOLDS[lvl + 1] - pa.infamy + 1);

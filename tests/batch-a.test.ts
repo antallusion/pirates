@@ -96,6 +96,7 @@ test('a broadside flies downwind of where it is laid by the same reckoning the a
 function mark(game: Game, ship: ShipEntity, d: number): ShipEntity {
   const v = headingVec(ship.state.heading + Math.PI / 2);
   const npc = game.spawnNpcShip('merchant', 'brig', 'league', ship.state.x + v.x * d, ship.state.y + v.y * d, ship.state.heading);
+  game.profileOf(ship)!.pvp.flag = 'pirate'; // forum 34: a merchant, a fisher or a patrol is the pirate flag's prey only
   onHull(game, ship, 'brig', npc.shipLevel);
   game.npcs.get(npc.id)!.active = true;
   npc.input = { rudder: 0, sailTarget: 0 };

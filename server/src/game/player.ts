@@ -27,7 +27,7 @@ import { newTutorial, sanitizeTutorial } from './onboarding.ts';
 import type { Tutorial } from './onboarding.ts';
 import type { SeasonStat } from '../../../shared/src/data/seasons.ts';
 import { newPvp } from './pvp.ts';
-import { isColours } from '../../../shared/src/data/colours.ts';
+import { WASH_PER_SEC, isColours } from '../../../shared/src/data/colours.ts';
 import type { Colours } from '../../../shared/src/data/colours.ts';
 import type { PvpState } from './pvp.ts';
 import type { PvpRank } from './pvprank.ts';
@@ -37,7 +37,7 @@ import type { QuestDef } from '../../../shared/src/data/quests.ts';
 import { OPENING_SLOTS } from '../../../shared/src/data/campaign/build.ts';
 import { questPayOf, veteranPay } from '../../../shared/src/data/questpay.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
-import { FACTIONS, FACTION_IDS, factionRelation, wantedLevel } from '../../../shared/src/data/factions.ts';
+import { FACTIONS, FACTION_IDS, WANTED_THRESHOLDS, factionRelation, wantedLevel } from '../../../shared/src/data/factions.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -582,10 +582,18 @@ export function canDock(p: Profile, faction: FactionId): { ok: boolean; reason?:
   const def = FACTIONS[faction];
   if (faction === 'crown' && (p.talents.smg_nobodys_ship ?? 0) > 0) return { ok: false, reason: 'The Crown does not moor a ship with no name and no flag.' };
   // (with the way out told: a campaign's port refused her and nothing said how to come back — mid-game QA 2026-10-23)
+  // (forum 34: two skulls and more shut every lawful harbour; the refusal says where she may go and how to wash them)
+  if (w > def.dockMaxWanted && def.lawful) return { ok: false, reason: `${def.short} harbours take no ship with ${w} skulls: a pirate haven will (the Red Tide, the Fog Brokers, the Free Harbors) and sells pardons; or wash them off out of fights (about ${washToMin(p.infamy, def.dockMaxWanted)} min).` };
   if (w > def.dockMaxWanted) return { ok: false, reason: `${def.short} harbour masters refuse ships at Wanted ${w}: buy a pardon in a free harbour, or let the sea forget.` };
   // (the name carries its own article: «The The Red Tide Confederacy considers you an enemy», docs/30)
   if ((p.reputation[faction] ?? 0) <= -50) return { ok: false, reason: `${def.name} considers you an enemy.` };
   return { ok: true };
+}
+
+/** Minutes out of a fight until her skulls are down to `to` (the wash: WASH_PER_SEC a second). */
+export function washToMin(infamy: number, to: number): number {
+  const ceil = WANTED_THRESHOLDS[to + 1] ?? Infinity;
+  return Math.max(1, Math.ceil((infamy - ceil + 1) / (WASH_PER_SEC * 60)));
 }
 
 export function pardonCost(p: Profile): number {

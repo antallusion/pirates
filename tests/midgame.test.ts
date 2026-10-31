@@ -232,7 +232,8 @@ test('a harbour that refuses a wanted ship says the way back (a pardon in a free
   assert.equal(r.ok, false);
   assert.match(r.reason!, /pardon/);
   setLang('ru');
-  try { assert.match(serverText(r.reason!), /^Начальники портов .+помилование.+вольной гавани/); } finally { setLang('en'); }
+  // (forum 34: a lawful harbour says where to go — the pirate havens, their pardons — and the wash by time)
+  try { assert.match(serverText(r.reason!), /^Порты.+пиратские гавани.+помилование.+отмойтесь/); } finally { setLang('en'); }
 });
 
 test('the law forgives a stray ball through the campaign’s Crown chapters (the Black Coast’s three), not beyond', async () => {

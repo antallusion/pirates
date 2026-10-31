@@ -38,6 +38,7 @@ import { groupOfAccount, sameGroup, sameGroupAccounts } from './party.ts';
 import { atWar, guildFriends } from './guilds.ts';
 import { cityOf, coloursBlocked, coloursOf, enemies, hasPennant, neutralRefused, setColours } from './colours.ts';
 import { PENNANT_SECONDS } from '../../../shared/src/data/colours.ts';
+import { peaceBlocked, washView } from './flaglaw.ts'; // forum 34: the three flags and the sea's peaceful ships
 import { ignores } from './friends.ts';
 import { changeRep } from './player.ts';
 import type { PlayerSession, Profile } from './player.ts';
@@ -300,6 +301,9 @@ export function pvpBlocked(game: Game, a: ShipEntity, b: ShipEntity): string | n
     if (da!.sides[sa].includes(b.accountId!)) return 'friendly';
     return 'duel_ok';
   }
+  // The sea's peaceful ships (forum 34, flaglaw.ts): only the pirate flag's prey — a captain's guns, rams and grapples,
+  // and her escorts', under any other colours keep off them.
+  if (ca && !cb) return peaceBlocked(game, a, b);
   if (!ca || !cb || ca.accountId === cb.accountId) return null;
   // A group and a guild (its allies, its pacts) never fire on their own: their own rule (combat.ts damageBlocked).
   if (sameGroup(game, ca, cb) || guildFriends(game, ca, cb)) return null;
@@ -653,6 +657,7 @@ export function pvpView(game: Game, s: PlayerSession): PvpView {
     noBoard: !!p.noBoard,
     pennant: hasPennant(game, p),
     pennantHoursLeft: Math.max(0, Math.round((PENNANT_SECONDS - p.pvp.played) / 360) / 10),
+    ...washView(game, s),
     shameUntil: p.pvp.shameUntil,
     bubbleUntil: p.pvp.bubbleUntil,
     rating: p.pvp.rating,

@@ -151,6 +151,7 @@ test('playthrough: she lies to beside her prize while the spoils are open — th
   const { game } = makeGame();
   game.tacticalBoarding = true;
   const c = join(game, 'Spoils Sal', 'reaver');
+  game.sessionByName('Spoils Sal')!.profile!.pvp.flag = 'pirate'; // forum 34: a peaceful ship is the pirate flag's prey only
   c.push({ t: 'undock' });
   const s = [...game.sessions].find((x) => x.name === 'Spoils Sal')!;
   const ship = s.ship!;

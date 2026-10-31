@@ -108,7 +108,7 @@ export type ClientMsg =
    *  helmsman sails her in and her boats go a cable off it (the hex battle). */
   | { t: 'attack'; target?: number; mode?: PursuitMode; stop?: boolean; roam?: number }
   /** «Огонь» (docs/23 item 35): a broadside out of turn, laid tighter, from the side that bears best. */
-  | { t: 'volley' }
+  | { t: 'volley'; /** her mark (forum 34): the volley is at her, or refused — never at another ship */ target?: number }
   /** The captain's gunnery settings (docs/23 items 35, 42, 46): auto-fire, auto-battle against the weak, the expert's
    *  hand (held broadsides, the fire order and the chasers by hand). */
   | { t: 'gunnery'; auto?: boolean; weak?: boolean; expert?: boolean }
@@ -3523,6 +3523,13 @@ export interface PvpView {
   /** Under the Green Pennant (a young captain under her city's flag), and its hours at sea left. */
   pennant: boolean;
   pennantHoursLeft: number;
+  /** Her skulls (the Wanted level) and the ways to wash them (forum 34, server flaglaw.ts): minutes out of a fight to
+   *  the next skull off and to none, the pardon's price in a pirate haven, and whether they lock her colours. */
+  skulls?: number;
+  washMin?: number;
+  washAllMin?: number;
+  pardon?: number;
+  locked?: boolean;
   shameUntil: number; // epoch ms
   bubbleUntil: number; // epoch ms
   rating: number;

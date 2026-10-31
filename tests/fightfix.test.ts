@@ -223,6 +223,7 @@ function lawfulBy(game: Game, s: PlayerSession): { fisher: ShipEntity; pirate: S
 test('bug 3: a newcomer\'s stray ball on a lawful fisher beside her fight is no crime; aimed at her with nothing about, it is', () => {
   const game = sea();
   const s = captain(game, 'Strayling', { newbie: true });
+  s.profile!.pvp.flag = 'pirate'; // forum 34: under any other flag a peaceful ship takes no ball at all
   assert.ok(lawNewbie(s.profile));
   const { fisher, pirate } = lawfulBy(game, s);
   pirate.attackers.set(s.ship!.id, game.now); // she is fighting the pirate (her broadside at him)
@@ -233,6 +234,7 @@ test('bug 3: a newcomer\'s stray ball on a lawful fisher beside her fight is no 
   assert.ok(SERVER_RU_BATTLE[STRAY_FORGIVEN], 'RU');
   // the opening's campaign (past the First Watch, chapter one): forgiven too
   const c1 = captain(game, 'Chapterone', { level: 4 });
+  c1.profile!.pvp.flag = 'pirate'; // forum 34: under any other flag a peaceful ship takes no ball at all
   c1.profile!.campaign!.at = 2;
   const l1 = lawfulBy(game, c1);
   l1.pirate.attackers.set(c1.ship!.id, game.now);
@@ -240,6 +242,7 @@ test('bug 3: a newcomer\'s stray ball on a lawful fisher beside her fight is no 
   assert.equal(c1.profile!.infamy, 0, 'the campaign\'s first chapter: forgiven');
   // with nothing else about it is no stray: the law as before
   const lone = captain(game, 'Loner', { newbie: true });
+  lone.profile!.pvp.flag = 'pirate'; // forum 34: under any other flag a peaceful ship takes no ball at all
   lone.ship!.state.y += 30000;
   game.grid.upsert(lone.ship!.id, lone.ship!.state.x, lone.ship!.state.y);
   const f2 = game.spawnNpcShip('fisher', 'sloop', 'crown', lone.ship!.state.x + 200, lone.ship!.state.y, 0);
@@ -248,6 +251,7 @@ test('bug 3: a newcomer\'s stray ball on a lawful fisher beside her fight is no 
   assert.ok(lone.profile!.infamy > 0, 'aimed at a lawful ship alone: a crime');
   // a seasoned captain's stray is hers to answer for (the rule is the newcomer's)
   const vet = captain(game, 'Veteran', { level: 20 });
+  vet.profile!.pvp.flag = 'pirate'; // forum 34: under any other flag a peaceful ship takes no ball at all
   const l2 = lawfulBy(game, vet);
   l2.pirate.attackers.set(vet.ship!.id, game.now);
   applyDamage(game, l2.fisher, { hull: 20 }, vet.ship!);

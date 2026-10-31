@@ -77,6 +77,7 @@ function foeAlongside(game: Game, ship: ShipEntity, crew: number, role: 'pirate'
 function boardAndWin(game: Game, name: string, room: number, foeCrew = 80) {
   game.tacticalBoarding = true;
   const { c, ship } = atSea(game, name);
+  game.profileOf(ship)!.pvp.flag = 'pirate'; // forum 34: a peaceful ship is the pirate flag's prey only
   ship.crew = ship.stats.crewMax - room;
   const npc = foeAlongside(game, ship, foeCrew);
   const s = [...game.sessions].find((x) => x.name === name)!;
@@ -129,6 +130,7 @@ test('never past her hammocks; none to a cruel officer\'s ship or one that gives
     const { game } = makeGame();
     game.tacticalBoarding = true;
     const { c, ship } = atSea(game, 'Cruel');
+    game.profileOf(ship)!.pvp.flag = 'pirate'; // forum 34: a peaceful ship is the pirate flag's prey only
     const s = [...game.sessions].find((x) => x.name === 'Cruel')!;
     s.profile!.company.officers.push({ id: 'o-cruel', name: 'Black Ned', role: 'boatswain', level: 3, xp: 0, traits: ['cruel'], loyalty: 60, wound: null, hiredAt: 0, orderReady: 0 } as never);
     ship.crew = ship.stats.crewMax - 40;

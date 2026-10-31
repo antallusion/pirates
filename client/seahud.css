@@ -93,6 +93,11 @@ body.simple.touch #hud-captain { pointer-events: auto; cursor: pointer; -webkit-
   mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
 /* a talent point waiting: a gold bead on the rim, high on the right */
 .cs-pts { position: absolute; right: calc(var(--cs-face) * -0.24); top: calc(var(--cs-face) * -0.24); z-index: 2; width: 11px; height: 11px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff1c4, var(--k-gold) 55%, #8a6a2c); box-shadow: 0 0 0 1.5px #120e0a, 0 0 9px rgba(224, 184, 98, 0.9); }
+/* Her colours and skulls on the frame (forum 34): the flag she flies, ☠N when the law wants her (top left of the portrait) */
+.cs-law { position: absolute; left: calc(var(--cs-face) * -0.32); top: calc(var(--cs-face) * -0.3); z-index: 2; display: inline-flex; align-items: center; gap: 2px; height: 20px; padding: 0 4px 0 2px; box-sizing: border-box; border-radius: var(--k-r-round);
+  background: linear-gradient(180deg, #221a14, #0e0b08); box-shadow: 0 0 0 1px #6f5a38, 0 2px 4px rgba(0, 0, 0, 0.8); font: 700 11px/1 var(--k-font-sans); color: #e6d9c0; pointer-events: none; }
+.cs-law.sk { box-shadow: 0 0 0 1px #a3302a, 0 0 8px rgba(163, 48, 42, 0.7); color: #f2a090; }
+.cs-law .cs-fl { transform: scale(0.8); transform-origin: left center; margin-right: -3px; }
 .cs-body { display: grid; grid-template-columns: auto; gap: 3px; min-width: 0; padding: 4px 10px 4px 2px; background: radial-gradient(ellipse 80% 70% at 35% 50%, rgba(5, 6, 8, 0.5), transparent 78%); }
 .cs-row { display: flex; align-items: center; gap: 5px; height: 14px; }
 .cs-ico { flex: none; width: 16px; height: 16px; object-fit: contain; margin: 0; filter: drop-shadow(0 1px 1px #000); }
@@ -569,6 +574,9 @@ body:not(.skinned) .tm-pic::after { inset: 0; box-shadow: inset 0 0 0 3px var(--
 .tm-item.on .tm-l { color: var(--k-gold); }
 body.touch .tm-item { width: 48px; height: 48px; }
 body.touch .tm-l { font-size: 12.5px; line-height: 18px; }
+/* One choice left (owner, 2026-10-31: a thing of the deep — «Атаковать» alone): one big button, its word bold */
+.tm.tm-single .tm-item, body.touch .tm.tm-single .tm-item { width: 60px; height: 60px; }
+.tm.tm-single .tm-l { font-size: 14px; line-height: 20px; font-weight: 700; color: var(--k-gold); padding: 3px 10px; }
 
 /* ---------- pictures in round frames elsewhere (the crop check): inside the frame's circle, the badge on the rim */
 .k-wheel-ico { width: 26px; height: 26px; border-radius: 14%; }

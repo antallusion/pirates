@@ -40,6 +40,7 @@ function alongside(game: Game, ship: ShipEntity, role: 'pirate' | 'merchant' | '
 test('a full-strength ship of the sea in reach is boarded at once: whole hull, full crew, under way, her crew of low heart', () => {
   const { game } = makeGame();
   const { ship } = atSea(game, 'Grapple Greta');
+  game.profileOf(ship)!.pvp.flag = 'pirate'; // forum 34: a peaceful ship is the pirate flag's prey only
   for (const role of ['pirate', 'merchant', 'patrol'] as const) {
     const npc = alongside(game, ship, role);
     assert.equal(npc.hull, npc.stats.hullMax, 'whole');

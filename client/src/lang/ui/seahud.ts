@@ -46,9 +46,11 @@ export const EN = {
   'tm.pursueGuns': 'Pursue: the helmsman holds her in the guns’ reach, broadside on',
   'tm.pursueStack': 'Pursue: sail to them',
   'tm.fight': 'Fight',
-  'tm.fightBoard': 'Fight: grapples away — board her now',
-  'tm.fightGuns': 'Fight: the guns — broadside on and fire',
+  'tm.fightBoard': 'Attack: grapples away — board her now',
+  'tm.fightGuns': 'Attack: the guns — broadside on and fire',
   'tm.fightStack': 'Fight: the boats go for them',
+  'tm.attack': 'Attack',
+  'tm.board': 'Board',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -97,7 +99,9 @@ export const RU: Record<keyof typeof EN, string> = {
   'tm.pursueGuns': 'Преследовать: рулевой держит её в дальности пушек, бортом',
   'tm.pursueStack': 'Преследовать: плыть к ним',
   'tm.fight': 'Бой',
-  'tm.fightBoard': 'Бой: крючья за борт — абордаж сейчас',
-  'tm.fightGuns': 'Бой: пушками — бортом к ней и огонь',
+  'tm.fightBoard': 'Атаковать: крючья за борт — абордаж сейчас',
+  'tm.fightGuns': 'Атаковать: пушками — бортом к ней и огонь',
   'tm.fightStack': 'Бой: шлюпки на них',
+  'tm.attack': 'Атаковать',
+  'tm.board': 'На абордаж',
 };

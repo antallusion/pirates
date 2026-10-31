@@ -21,6 +21,7 @@ import { atWar } from './guilds.ts';
 import type { NpcBrain } from './npc.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { FLAG_LOCK_SAY, flagLocked } from './flaglaw.ts'; // forum 34: skulls lock the colours
 
 /** The colours' own dice (a pirate's mind about a neutral captain, the hunts spared her): the sea's stream is not drawn
  *  on, so the fights and the landings the tests replay stay as they were. */
@@ -165,6 +166,9 @@ export function setColours(game: Game, s: PlayerSession, flag: Colours): string 
     }
     return null;
   }
+  // Skulls lock the colours (forum 34, flaglaw.ts): only the pirate flag goes up over them.
+  const locked = flagLocked(p, flag);
+  if (locked) return locked;
   p.pvp.next = flag;
   p.pvp.nextCity = flag === 'faction' && port ? port.faction : null;
   p.pvp.nextAt = hoistAt(game, p);
@@ -198,6 +202,8 @@ export function coloursSecond(game: Game, s: PlayerSession): void {
       const flag = p.pvp.next;
       if (flag === 'neutral' && neutralRefused(p, ship)) {
         game.sendTo(s, { t: 'toast', msg: neutralRefused(p, ship)!, kind: 'bad' });
+      } else if (flagLocked(p, flag)) {
+        game.sendTo(s, { t: 'toast', msg: FLAG_LOCK_SAY, kind: 'bad' });
       } else {
         p.pvp.flag = flag;
         if (p.pvp.nextCity) p.pvp.city = p.pvp.nextCity;
