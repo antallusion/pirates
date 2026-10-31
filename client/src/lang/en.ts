@@ -266,4 +266,6 @@ export const EN = {
   'hud.chatPhTouch': 'Say a word… (/g — your group, /w Name — a whisper)',
   'conn.reconnecting': 'Reconnecting to the Admiralty…',
   'opt.music': 'Music',
+  'opt.credits': 'Music and sound',
+  'opt.creditsAll': 'All authors and licences',
 } as const;

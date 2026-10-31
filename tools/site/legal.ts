@@ -326,6 +326,12 @@ const RU: Record<DocId, Doc> = {
       ['Где ещё', [
         `Форум игры — ${S.site}/site/forum/; Telegram-бот игры — @gravetide_bot.`,
       ]],
+      // the sound design's credits (2026-11-01): the CC BY music by its authors, the CC0 rest in the full list
+      ['Музыка и звуки', [
+        'Музыка: «Ocean Music Pack» — Leonardo Paz (leohpaz), лицензия CC BY 4.0, opengameart.org/content/ocean-music-pack.',
+        'Музыка: «Blackmoor Tides» — Matthew Pablo, www.matthewpablo.com, лицензия CC BY 3.0, opengameart.org/content/blackmoor-tides-epic-pirate-battle-theme.',
+        `Остальная музыка и звуки — общественное достояние (CC0): Kenney (kenney.nl), авторы Freesound и OpenGameArt. Полный список с авторами — ${S.site}/assets/audio/CREDITS.md.`,
+      ]],
     ],
   },
 };
@@ -607,6 +613,11 @@ const EN: Record<DocId, Doc> = {
       ]],
       ['Elsewhere', [
         `The game’s forum — ${S.site}/site/en/forum/; the game’s Telegram bot — @gravetide_bot.`,
+      ]],
+      ['Music and sound', [
+        'Music: “Ocean Music Pack” by Leonardo Paz (leohpaz), CC BY 4.0, opengameart.org/content/ocean-music-pack.',
+        'Music: “Blackmoor Tides” by Matthew Pablo, www.matthewpablo.com, CC BY 3.0, opengameart.org/content/blackmoor-tides-epic-pirate-battle-theme.',
+        `The rest of the music and sound is public domain (CC0): Kenney (kenney.nl), the authors of Freesound and OpenGameArt. The full list with every author — ${S.site}/assets/audio/CREDITS.md.`,
       ]],
     ],
   },

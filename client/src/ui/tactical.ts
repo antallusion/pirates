@@ -6,7 +6,7 @@
 
 import { detailAttr } from './detailattr.ts'; // the detail card (owner, 2026-10-30)
 import { SEAL_MOVES } from '../../../shared/src/data/seals.ts';
-import { cue } from '../sfx.ts'; // the sound pass (owner, 2026-10-16): the blows, the shots and the procs heard
+import { blowVoice, cue } from '../sfx.ts'; // the sound pass (owner, 2026-10-16): the blows, the shots and the procs heard
 import { AUTO_SCROLL_ICON, AUTO_SCROLL_PACKS } from '../../../shared/src/data/premium.ts'; // «Свиток автобоя» (owner, 2026-10-11)
 import { findTitle } from '../render/seafinds.ts'; // docs/19 D5: the chest among the sharks
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
@@ -702,6 +702,8 @@ export class TacticalPanel {
   private procs: Proc[] = [];
   /** The battle's end heard (its fanfare or its fall), once a fight. */
   private endHeard = false;
+  private startHeard = false;
+  private mineHeard = false;
   private lamps: { x: number; y: number }[] = [];
   /** The marks the fight leaves on the decks (item 7), laid on the deck's painting as their blows land. */
   private decals: { at: number; k: DecalKind; hex: number; dx: number; dy: number; seed: number; done: boolean }[] = [];
@@ -1252,8 +1254,20 @@ export class TacticalPanel {
     // The sound pass (owner, 2026-10-16): each thing heard as it lands (the cue keeps a least gap a kind: a sweep's six
     // blows are one sound).
     const ahead = (x: number) => x - performance.now();
-    if (e.k === 'hit' || e.k === 'ret') cue('blow', ahead(hit));
-    else if (e.k === 'shot') cue('shot', ahead(t + 40));
+    if (e.k === 'hit' || e.k === 'ret') {
+      // (the sound design, 2026-11-01: a beast's blow is its roar or bite, the drowned's a moan, under the steel)
+      const by = (v.stacks.find((x) => x.id === e.s) ?? was.stacks.find((x) => x.id === e.s))?.unit;
+      const voice = blowVoice(by ? UNITS[by] : null, e.i);
+      if (voice === 'roar') cue('roar', ahead(hit) - 60);
+      else if (voice === 'bite') cue('bite', ahead(hit) - 60);
+      else if (voice === 'moan') cue('moan', ahead(hit) - 60);
+      cue('blow', ahead(hit));
+      if (e.kills) cue('death', ahead(hit) + 120);
+    } else if (e.k === 'shot') {
+      cue('shot', ahead(t + 40));
+      if (e.kills) cue('death', ahead(hit) + 120);
+    } else if (e.k === 'die') cue('death', ahead(t));
+    else if (e.k === 'move') cue('step', ahead(t));
     else if (e.k === 'morale') cue('rally', ahead(t));
     else if (e.k === 'fear') cue('fear', ahead(t));
     else if (e.k === 'regen') cue('heal', ahead(t));
@@ -2270,6 +2284,13 @@ export class TacticalPanel {
     const banner = el.querySelector<HTMLElement>('.tb-banner')!;
     banner.classList.toggle('hidden', !v.over || this.endHidden);
     if (!v.over) this.endHeard = false;
+    // the drums as a fight begins, a ping as her turn comes (the sound design, 2026-11-01; not on a replay)
+    if (!v.over && !v.replay) {
+      if (!this.startHeard) cue('drum');
+      this.startHeard = true;
+      if (v.mine && !this.mineHeard) cue('turn');
+    } else this.startHeard = false;
+    this.mineHeard = !!v.mine && !v.over;
     if (v.over) {
       const won = v.over.winner === v.you;
       // the end heard once: a fanfare, or two falling notes (not on a replay)

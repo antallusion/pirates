@@ -1,0 +1,1357 @@
+{
+ "music/mus.title": {
+  "title": "Blackmoor Tides (Epic Pirate Battle Theme)",
+  "author": "Matthew Pablo",
+  "license": "CC-BY-3.0",
+  "credit": "Music: «Blackmoor Tides» by Matthew Pablo — www.matthewpablo.com, CC BY 3.0",
+  "url": "https://opengameart.org/content/blackmoor-tides-epic-pirate-battle-theme",
+  "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+  "from": "oga:blackmoor-tides-epic-pirate-battle-theme/unz/Epic Pirate Battle Theme/Blackmoor Tides Loop.wav"
+ },
+ "music/mus.calm": {
+  "title": "Ocean Music Pack",
+  "author": "Leonardo Paz (leohpaz)",
+  "license": "CC-BY-4.0",
+  "credit": "Music: «Ocean Music Pack» by Leonardo Paz (leohpaz), CC BY 4.0 — opengameart.org/content/ocean-music-pack",
+  "url": "https://opengameart.org/content/ocean-music-pack",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "from": "oga:ocean-music-pack/01_exploring_the_ocean.wav"
+ },
+ "music/mus.calm2": {
+  "title": "A sailor's chant",
+  "author": "Thimras",
+  "license": "CC0-1.0",
+  "url": "https://opengameart.org/content/a-sailors-chant",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "oga:a-sailors-chant/oga_jam_menu_music_loopable_0.ogg"
+ },
+ "music/mus.fog": {
+  "title": "Ocean Music Pack",
+  "author": "Leonardo Paz (leohpaz)",
+  "license": "CC-BY-4.0",
+  "credit": "Music: «Ocean Music Pack» by Leonardo Paz (leohpaz), CC BY 4.0 — opengameart.org/content/ocean-music-pack",
+  "url": "https://opengameart.org/content/ocean-music-pack",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "from": "oga:ocean-music-pack/03_hearts_separated_by_the_ocean.wav"
+ },
+ "music/mus.storm": {
+  "title": "Ocean Music Pack",
+  "author": "Leonardo Paz (leohpaz)",
+  "license": "CC-BY-4.0",
+  "credit": "Music: «Ocean Music Pack» by Leonardo Paz (leohpaz), CC BY 4.0 — opengameart.org/content/ocean-music-pack",
+  "url": "https://opengameart.org/content/ocean-music-pack",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "from": "oga:ocean-music-pack/05_stranded_in_the_ocean.wav"
+ },
+ "music/mus.chase": {
+  "title": "Ocean Music Pack",
+  "author": "Leonardo Paz (leohpaz)",
+  "license": "CC-BY-4.0",
+  "credit": "Music: «Ocean Music Pack» by Leonardo Paz (leohpaz), CC BY 4.0 — opengameart.org/content/ocean-music-pack",
+  "url": "https://opengameart.org/content/ocean-music-pack",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "from": "oga:ocean-music-pack/07_ready_cannons_and_fire.wav"
+ },
+ "music/mus.battle": {
+  "title": "Blackmoor Tides (Epic Pirate Battle Theme)",
+  "author": "Matthew Pablo",
+  "license": "CC-BY-3.0",
+  "credit": "Music: «Blackmoor Tides» by Matthew Pablo — www.matthewpablo.com, CC BY 3.0",
+  "url": "https://opengameart.org/content/blackmoor-tides-epic-pirate-battle-theme",
+  "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+  "from": "oga:blackmoor-tides-epic-pirate-battle-theme/unz/Epic Pirate Battle Theme/Blackmoor Tides Loop (No Chants).wav"
+ },
+ "music/mus.boss": {
+  "title": "Ocean Music Pack",
+  "author": "Leonardo Paz (leohpaz)",
+  "license": "CC-BY-4.0",
+  "credit": "Music: «Ocean Music Pack» by Leonardo Paz (leohpaz), CC BY 4.0 — opengameart.org/content/ocean-music-pack",
+  "url": "https://opengameart.org/content/ocean-music-pack",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "from": "oga:ocean-music-pack/06_the_kraken_loop.wav"
+ },
+ "music/mus.anomaly": {
+  "title": "Ocean Music Pack",
+  "author": "Leonardo Paz (leohpaz)",
+  "license": "CC-BY-4.0",
+  "credit": "Music: «Ocean Music Pack» by Leonardo Paz (leohpaz), CC BY 4.0 — opengameart.org/content/ocean-music-pack",
+  "url": "https://opengameart.org/content/ocean-music-pack",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "from": "oga:ocean-music-pack/04_sirens_call.wav"
+ },
+ "music/mus.port": {
+  "title": "Ocean Music Pack",
+  "author": "Leonardo Paz (leohpaz)",
+  "license": "CC-BY-4.0",
+  "credit": "Music: «Ocean Music Pack» by Leonardo Paz (leohpaz), CC BY 4.0 — opengameart.org/content/ocean-music-pack",
+  "url": "https://opengameart.org/content/ocean-music-pack",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "from": "oga:ocean-music-pack/02_seaside_village.wav"
+ },
+ "music/mus.tavern": {
+  "title": "Medieval: The Old Tower Inn",
+  "author": "RandomMind",
+  "license": "CC0-1.0",
+  "url": "https://opengameart.org/content/medieval-the-old-tower-inn",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "oga:medieval-the-old-tower-inn/Loop_The_Old_Tower_Inn.wav"
+ },
+ "music/mus.isle": {
+  "title": "Medieval: King's Feast",
+  "author": "RandomMind",
+  "license": "CC0-1.0",
+  "url": "https://opengameart.org/content/medieval-kings-feast",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "oga:medieval-kings-feast/Loop_Kings_Feast_0.wav"
+ },
+ "music/mus.win": {
+  "title": "Victory Fanfare Short",
+  "author": "cynicmusic",
+  "license": "CC0-1.0",
+  "url": "https://opengameart.org/content/victory-fanfare-short",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "oga:victory-fanfare-short/Heavy_ConceptB.wav"
+ },
+ "music/mus.lose": {
+  "title": "Cinematic Hit With Horns.wav",
+  "author": "DeVern",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/DeVern/sounds/427803/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:427803",
+  "dur": 4.4
+ },
+ "amb/amb.sea": {
+  "title": "Sailing boat, bow wave (close perspective)",
+  "author": "Pfannkuchn",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Pfannkuchn/sounds/360631/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:360631",
+  "at": 10,
+  "dur": 20
+ },
+ "amb/amb.waves": {
+  "title": "Ocean Waves.wav",
+  "author": "Noted451",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Noted451/sounds/531015/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:531015",
+  "at": 8,
+  "dur": 20
+ },
+ "amb/amb.wind": {
+  "title": "Wind__Artic__Cold.wav",
+  "author": "cobratronik",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/cobratronik/sounds/117136/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:117136",
+  "at": 5,
+  "dur": 18
+ },
+ "amb/amb.gale": {
+  "title": "wind_howl2_stereo.wav",
+  "author": "swiftoid",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/swiftoid/sounds/117611/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:117611",
+  "at": 4,
+  "dur": 18
+ },
+ "amb/amb.rain": {
+  "title": "Rain light 2 (rural)",
+  "author": "jmbphilmes",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/jmbphilmes/sounds/200273/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:200273",
+  "at": 10,
+  "dur": 16
+ },
+ "amb/amb.creak": {
+  "title": "Wood Creaking.wav",
+  "author": "laft2k",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/laft2k/sounds/397620/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:397620",
+  "at": 6,
+  "dur": 18
+ },
+ "amb/amb.gulls": {
+  "title": "Seagulls distant.wav",
+  "author": "Ambientsoundapp",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Ambientsoundapp/sounds/537854/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:537854",
+  "at": 2,
+  "dur": 18
+ },
+ "amb/amb.harbour": {
+  "title": "Harbor Ambience 2",
+  "author": "clif_creates",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/clif_creates/sounds/254130/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:254130",
+  "at": 2,
+  "dur": 20
+ },
+ "amb/amb.tavern": {
+  "title": "Pirate Tavern",
+  "author": "brunoboselli",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/brunoboselli/sounds/695295/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:695295",
+  "at": 5,
+  "dur": 22
+ },
+ "amb/amb.fire": {
+  "title": "Fire Crackle and Flames 002",
+  "author": "TheWoodlandNomad",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/TheWoodlandNomad/sounds/363092/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:363092",
+  "at": 2,
+  "dur": 12
+ },
+ "sfx/cannon-1": {
+  "title": "cannon.mp3",
+  "author": "Kneeling",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Kneeling/sounds/448002/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:448002",
+  "dur": 2.6
+ },
+ "sfx/cannon-2": {
+  "title": "Cannonball.mp3",
+  "author": "Kastenfrosch",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Kastenfrosch/sounds/162455/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:162455",
+  "dur": 2.4
+ },
+ "sfx/cannon-3": {
+  "title": "Cannon5.wav",
+  "author": "Isaac200000",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Isaac200000/sounds/184651/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:184651",
+  "dur": 1.4
+ },
+ "sfx/cannon-4": {
+  "title": "Cannon fire.wav",
+  "author": "Jon285",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Jon285/sounds/106850/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:106850",
+  "dur": 2.6
+ },
+ "sfx/cannon.heavy-1": {
+  "title": "Deep Boom Heavy Cannon Fire - Game SFX (2 of 2)",
+  "author": "el_boss",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/el_boss/sounds/853281/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:853281",
+  "dur": 2.4
+ },
+ "sfx/cannon.heavy-2": {
+  "title": "Cannon explosion sound 4",
+  "author": "SamsterBirdies",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/SamsterBirdies/sounds/621003/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:621003",
+  "dur": 2.6
+ },
+ "sfx/cannon.heavy-3": {
+  "title": "cannon_boom10.wav",
+  "author": "ReadeOnly",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/ReadeOnly/sounds/186930/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:186930",
+  "dur": 2.4
+ },
+ "sfx/swivel-1": {
+  "title": "Musket Explosion",
+  "author": "Willlewis",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Willlewis/sounds/244345/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:244345",
+  "dur": 1.6
+ },
+ "sfx/swivel-2": {
+  "title": "Musket Shot.wav",
+  "author": "mlsulli",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/mlsulli/sounds/234869/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:234869",
+  "dur": 1.6
+ },
+ "sfx/whistle-1": {
+  "title": "Fly-by whiz SFX (subsonic)",
+  "author": "modusmogulus",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/modusmogulus/sounds/789222/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:789222",
+  "dur": 1.3
+ },
+ "sfx/whistle-2": {
+  "title": "Incoming mortar 1",
+  "author": "Zagge28",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Zagge28/sounds/241840/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:241840",
+  "dur": 1.6
+ },
+ "sfx/splash-1": {
+  "title": "Small Water Splash",
+  "author": "qubodup",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/qubodup/sounds/737233/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:737233"
+ },
+ "sfx/splash-2": {
+  "title": "Splash",
+  "author": "swordofkings128",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/swordofkings128/sounds/398032/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:398032",
+  "dur": 1.2
+ },
+ "sfx/splash-3": {
+  "title": "SPLASH.wav",
+  "author": "petenice",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/petenice/sounds/9508/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:9508",
+  "dur": 1.4
+ },
+ "sfx/splash.big-1": {
+  "title": "Big Water Splash",
+  "author": "qubodup",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/qubodup/sounds/442773/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:442773",
+  "dur": 2.2
+ },
+ "sfx/splash.big-2": {
+  "title": "SPLASH (by blaukreuz)",
+  "author": "qubodup",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/qubodup/sounds/212143/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:212143",
+  "dur": 2
+ },
+ "sfx/hull-1": {
+  "title": "Wood Crack 5",
+  "author": "utsuru",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/utsuru/sounds/183450/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:183450",
+  "dur": 1.2
+ },
+ "sfx/hull-2": {
+  "title": "Wood Crack 1",
+  "author": "utsuru",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/utsuru/sounds/183453/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:183453",
+  "dur": 1.2
+ },
+ "sfx/hull-3": {
+  "title": "Wood Crack 2",
+  "author": "utsuru",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/utsuru/sounds/183452/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:183452",
+  "dur": 1.2
+ },
+ "sfx/hull-4": {
+  "title": "Impact Sounds — impactWood_heavy_002.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/impact-sounds",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:impact-sounds/impactWood_heavy_002.ogg"
+ },
+ "sfx/hull.crit-1": {
+  "title": "Smashing a Wooden Container",
+  "author": "Kreastricon62",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Kreastricon62/sounds/241601/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:241601",
+  "dur": 2
+ },
+ "sfx/hull.crit-2": {
+  "title": "Cracking wood",
+  "author": "JappeHallunken",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/JappeHallunken/sounds/501302/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:501302",
+  "dur": 1.4
+ },
+ "sfx/sail.rip-1": {
+  "title": "cloth_rip.mp3",
+  "author": "Johnny2810",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Johnny2810/sounds/507756/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:507756"
+ },
+ "sfx/sail.rip-2": {
+  "title": "Tearing fabric",
+  "author": "melle_teich",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/melle_teich/sounds/565970/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:565970",
+  "dur": 1
+ },
+ "sfx/sail.rip-3": {
+  "title": "Ripping Clothing",
+  "author": "CraigSnedeker",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/CraigSnedeker/sounds/221680/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:221680",
+  "dur": 0.8
+ },
+ "sfx/explosion-1": {
+  "title": "Explosion",
+  "author": "qubodup",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/qubodup/sounds/182429/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:182429",
+  "dur": 3
+ },
+ "sfx/explosion-2": {
+  "title": "Explosion 1",
+  "author": "magnuswaker",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/magnuswaker/sounds/523089/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:523089",
+  "dur": 1.2
+ },
+ "sfx/explosion-3": {
+  "title": "Explosion",
+  "author": "FlashTrauma",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/FlashTrauma/sounds/398283/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:398283",
+  "dur": 3
+ },
+ "sfx/sink-1": {
+  "title": "ship_creak.mp3",
+  "author": "Walter_Odington",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Walter_Odington/sounds/31574/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:31574",
+  "at": 20,
+  "dur": 5
+ },
+ "sfx/sink-2": {
+  "title": "Bubbling",
+  "author": "pillwave",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/pillwave/sounds/423959/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:423959",
+  "dur": 5
+ },
+ "sfx/grapple-1": {
+  "title": "grappling hook",
+  "author": "16bitstudios",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/16bitstudios/sounds/541975/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:541975"
+ },
+ "sfx/grapple-2": {
+  "title": "Throwing / Whip Effect",
+  "author": "denao270",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/denao270/sounds/346373/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:346373"
+ },
+ "sfx/rope-1": {
+  "title": "Rope Tightening.wav",
+  "author": "EugeneEverett",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/EugeneEverett/sounds/596513/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:596513",
+  "at": 2,
+  "dur": 3
+ },
+ "sfx/rope-2": {
+  "title": "Rope Cracking",
+  "author": "bahaish",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/bahaish/sounds/145786/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:145786",
+  "at": 2,
+  "dur": 3
+ },
+ "sfx/bell": {
+  "title": "Ship Bell Single Ring",
+  "author": "Sojan",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Sojan/sounds/353233/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:353233"
+ },
+ "sfx/bell.double": {
+  "title": "Ship Bell Two Chimes",
+  "author": "Sojan",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Sojan/sounds/353232/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:353232"
+ },
+ "sfx/drum-1": {
+  "title": "warriordrums.wav",
+  "author": "Sclolex",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Sclolex/sounds/209546/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:209546",
+  "dur": 3.2
+ },
+ "sfx/drum-2": {
+  "title": "Military Snaredrum",
+  "author": "aUREa",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/aUREa/sounds/475246/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:475246",
+  "dur": 2.6
+ },
+ "sfx/roar.deep-1": {
+  "title": "Sea Creature Roar",
+  "author": "Bikkit99",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Bikkit99/sounds/837799/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:837799",
+  "dur": 4
+ },
+ "sfx/roar.deep-2": {
+  "title": "Deep sea monster.flac",
+  "author": "cylon8472",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/cylon8472/sounds/341173/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:341173",
+  "dur": 4
+ },
+ "sfx/roar.deep-3": {
+  "title": "Monster Roar 2.wav",
+  "author": "quadraslayer",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/quadraslayer/sounds/398908/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:398908",
+  "dur": 3.5
+ },
+ "sfx/whale-1": {
+  "title": "Baleines.wav",
+  "author": "davidou",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/davidou/sounds/88449/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:88449",
+  "dur": 5
+ },
+ "sfx/whale-2": {
+  "title": "whale song",
+  "author": "muri_kuri",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/muri_kuri/sounds/684188/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:684188",
+  "dur": 6
+ },
+ "sfx/thunder-1": {
+  "title": "Thunder.ogg",
+  "author": "lennyboy",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/lennyboy/sounds/244053/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:244053",
+  "dur": 8
+ },
+ "sfx/thunder-2": {
+  "title": "sfx_thunder blast.wav",
+  "author": "bajko",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/bajko/sounds/399656/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:399656",
+  "dur": 8
+ },
+ "sfx/thunder-3": {
+  "title": "thunder",
+  "author": "netaj",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/netaj/sounds/193170/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:193170",
+  "dur": 6
+ },
+ "sfx/firework": {
+  "title": "fireworks",
+  "author": "loganzsound",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/loganzsound/sounds/774236/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:774236",
+  "dur": 3.2
+ },
+ "sfx/clash-1": {
+  "title": "Sword clash 1.wav",
+  "author": "spycrah",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/spycrah/sounds/471095/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:471095",
+  "dur": 1
+ },
+ "sfx/clash-2": {
+  "title": "Sword Clash",
+  "author": "loudernoises",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/loudernoises/sounds/334169/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:334169"
+ },
+ "sfx/clash-3": {
+  "title": "Sword_Clash (7).wav",
+  "author": "JohnBuhr",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/JohnBuhr/sounds/326868/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:326868",
+  "dur": 1
+ },
+ "sfx/clash-4": {
+  "title": "Swords Clash - High Quality #2",
+  "author": "Christopherderp",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Christopherderp/sounds/364530/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:364530",
+  "dur": 1.2
+ },
+ "sfx/swing-1": {
+  "title": "Whoosh",
+  "author": "qubodup",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/qubodup/sounds/60013/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:60013"
+ },
+ "sfx/swing-2": {
+  "title": "woosh.wav",
+  "author": "freakinbehemoth",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/freakinbehemoth/sounds/243400/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:243400",
+  "dur": 0.8
+ },
+ "sfx/swing-3": {
+  "title": "quick woosh",
+  "author": "florianreichelt",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/florianreichelt/sounds/683101/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:683101",
+  "dur": 0.8
+ },
+ "sfx/thud-1": {
+  "title": "Punch_02.wav",
+  "author": "thefsoundman",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/thefsoundman/sounds/118513/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:118513"
+ },
+ "sfx/thud-2": {
+  "title": "punch.wav",
+  "author": "Ekokubza123",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Ekokubza123/sounds/104183/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:104183",
+  "dur": 0.6
+ },
+ "sfx/thud-3": {
+  "title": "Impact Sounds — impactPunch_heavy_001.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/impact-sounds",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:impact-sounds/impactPunch_heavy_001.ogg"
+ },
+ "sfx/musket-1": {
+  "title": "Musket Explosion",
+  "author": "Willlewis",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Willlewis/sounds/244345/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:244345",
+  "dur": 1.4
+ },
+ "sfx/musket-2": {
+  "title": "Musket Shot.wav",
+  "author": "mlsulli",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/mlsulli/sounds/234869/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:234869",
+  "dur": 1.4
+ },
+ "sfx/musket-3": {
+  "title": "musket.wav",
+  "author": "fennelliott",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/fennelliott/sounds/347647/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:347647",
+  "dur": 1.4
+ },
+ "sfx/musket-4": {
+  "title": "old musket bang.wav",
+  "author": "bruno.auzet",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/bruno.auzet/sounds/538795/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:538795",
+  "dur": 1.4
+ },
+ "sfx/roar-1": {
+  "title": "Scary Monster Roar #2",
+  "author": "NicknameLarry",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/NicknameLarry/sounds/489901/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:489901",
+  "dur": 2
+ },
+ "sfx/roar-2": {
+  "title": "Beast Snarling",
+  "author": "Christopherderp",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Christopherderp/sounds/342204/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:342204",
+  "dur": 2
+ },
+ "sfx/roar-3": {
+  "title": "MonsterGrowl.mp3",
+  "author": "yatoimtop",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/yatoimtop/sounds/171178/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:171178",
+  "dur": 2
+ },
+ "sfx/bite-1": {
+  "title": "monster bite",
+  "author": "LucasDuff",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/LucasDuff/sounds/467701/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:467701",
+  "dur": 1.2
+ },
+ "sfx/bite-2": {
+  "title": "Crunch",
+  "author": "LilMati",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/LilMati/sounds/348112/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:348112"
+ },
+ "sfx/moan-1": {
+  "title": "Ghostly Moan.mp3",
+  "author": "SnowFightStudios",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/SnowFightStudios/sounds/643741/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:643741",
+  "dur": 2.6
+ },
+ "sfx/moan-2": {
+  "title": "Zombie Moan.wav",
+  "author": "mrh4hn",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/mrh4hn/sounds/426628/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:426628",
+  "dur": 2.4
+ },
+ "sfx/spell-1": {
+  "title": "Magic Spell",
+  "author": "qubodup",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/qubodup/sounds/442774/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:442774"
+ },
+ "sfx/spell-2": {
+  "title": "Magic SFX for Games ",
+  "author": "suntemple",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/suntemple/sounds/241809/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:241809",
+  "dur": 2
+ },
+ "sfx/spell-3": {
+  "title": "Spellcast",
+  "author": "russscott1",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/russscott1/sounds/455341/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:455341",
+  "dur": 2.4
+ },
+ "sfx/heal": {
+  "title": "Heal - Rpg",
+  "author": "colorsCrimsonTears",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/colorsCrimsonTears/sounds/562292/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:562292"
+ },
+ "sfx/fear": {
+  "title": "Scary_Breath.wav",
+  "author": "titsher",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/titsher/sounds/204963/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:204963",
+  "dur": 2.4
+ },
+ "sfx/rally": {
+  "title": "CRWDBatl_Crowd Yells Charge, Continues_ShaneVincent_GSC24_MSDEC-MKH435-Spirit.wav",
+  "author": "ShangusBurger",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/ShangusBurger/sounds/764158/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:764158",
+  "at": 0.5,
+  "dur": 2.4
+ },
+ "sfx/luck": {
+  "title": "GLEAM-GLOW-SFX-CHIME.wav",
+  "author": "newagesoup",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/newagesoup/sounds/351408/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:351408",
+  "dur": 1.6
+ },
+ "sfx/death-1": {
+  "title": "Thud / Falling on wooden floor / Snapping, breaking neck",
+  "author": "Breviceps",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Breviceps/sounds/447922/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:447922"
+ },
+ "sfx/death-2": {
+  "title": "Body fall.wav",
+  "author": "DylanTheFish",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/DylanTheFish/sounds/417994/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:417994",
+  "dur": 1.2
+ },
+ "sfx/death-3": {
+  "title": "Grunt1 - Death Pain.wav",
+  "author": "tonsil5",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/tonsil5/sounds/416839/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:416839"
+ },
+ "sfx/step-1": {
+  "title": "Impact Sounds — footstep_wood_000.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/impact-sounds",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:impact-sounds/footstep_wood_000.ogg"
+ },
+ "sfx/step-2": {
+  "title": "Impact Sounds — footstep_wood_001.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/impact-sounds",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:impact-sounds/footstep_wood_001.ogg"
+ },
+ "sfx/step-3": {
+  "title": "Impact Sounds — footstep_wood_002.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/impact-sounds",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:impact-sounds/footstep_wood_002.ogg"
+ },
+ "sfx/step-4": {
+  "title": "Impact Sounds — footstep_wood_003.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/impact-sounds",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:impact-sounds/footstep_wood_003.ogg"
+ },
+ "sfx/turn": {
+  "title": "Interface Sounds — question_002.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/interface-sounds",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:interface-sounds/question_002.ogg"
+ },
+ "sfx/crowd": {
+  "title": "CRWDBatl_Crowd Yells Charge, Continues_ShaneVincent_GSC24_MSDEC-MKH435-Spirit.wav",
+  "author": "ShangusBurger",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/ShangusBurger/sounds/764158/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:764158",
+  "at": 2,
+  "dur": 3.2
+ },
+ "sfx/click-1": {
+  "title": "UI Audio — click1.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/ui-audio",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:ui-audio/click1.ogg"
+ },
+ "sfx/click-2": {
+  "title": "UI Audio — click3.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/ui-audio",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:ui-audio/click3.ogg"
+ },
+ "sfx/click-3": {
+  "title": "UI Audio — click2.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/ui-audio",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:ui-audio/click2.ogg"
+ },
+ "sfx/hover-1": {
+  "title": "UI Audio — rollover2.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/ui-audio",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:ui-audio/rollover2.ogg"
+ },
+ "sfx/hover-2": {
+  "title": "UI Audio — rollover3.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/ui-audio",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:ui-audio/rollover3.ogg"
+ },
+ "sfx/tab-1": {
+  "title": "RPG Audio — bookFlip1.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/rpg-audio",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:rpg-audio/bookFlip1.ogg"
+ },
+ "sfx/tab-2": {
+  "title": "RPG Audio — bookFlip2.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/rpg-audio",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:rpg-audio/bookFlip2.ogg"
+ },
+ "sfx/tab-3": {
+  "title": "RPG Audio — bookFlip3.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/rpg-audio",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:rpg-audio/bookFlip3.ogg"
+ },
+ "sfx/open": {
+  "title": "RPG Audio — bookOpen.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/rpg-audio",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:rpg-audio/bookOpen.ogg"
+ },
+ "sfx/close": {
+  "title": "RPG Audio — bookClose.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/rpg-audio",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:rpg-audio/bookClose.ogg"
+ },
+ "sfx/coins-1": {
+  "title": "RPG Audio — handleCoins.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/rpg-audio",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:rpg-audio/handleCoins.ogg"
+ },
+ "sfx/coins-2": {
+  "title": "RPG Audio — handleCoins2.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/rpg-audio",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:rpg-audio/handleCoins2.ogg"
+ },
+ "sfx/coins-3": {
+  "title": "Coin dropping.wav",
+  "author": "Jace",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Jace/sounds/17502/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:17502",
+  "dur": 1.4
+ },
+ "sfx/coins.big-1": {
+  "title": "Coin Spill",
+  "author": "clairinski",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/clairinski/sounds/184372/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:184372",
+  "dur": 2.4
+ },
+ "sfx/coins.big-2": {
+  "title": "Counting Me Shillings.mp3",
+  "author": "husky70",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/husky70/sounds/161315/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:161315",
+  "dur": 2.4
+ },
+ "sfx/level": {
+  "title": "Success Fanfare Trumpets.mp3",
+  "author": "FunWithSound",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/FunWithSound/sounds/456966/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:456966"
+ },
+ "sfx/quest": {
+  "title": "Success! Quest Complete! (RPG Sound)",
+  "author": "qubodup",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/qubodup/sounds/166540/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:166540",
+  "dur": 3.4
+ },
+ "sfx/equip-1": {
+  "title": "RPG Audio — drawKnife1.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/rpg-audio",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:rpg-audio/drawKnife1.ogg"
+ },
+ "sfx/equip-2": {
+  "title": "RPG Audio — drawKnife2.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/rpg-audio",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:rpg-audio/drawKnife2.ogg"
+ },
+ "sfx/equip-3": {
+  "title": "RPG Audio — metalLatch.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/rpg-audio",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:rpg-audio/metalLatch.ogg"
+ },
+ "sfx/equip-4": {
+  "title": "RPG Audio — beltHandle1.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/rpg-audio",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:rpg-audio/beltHandle1.ogg"
+ },
+ "sfx/build-1": {
+  "title": "Hammering.wav",
+  "author": "Dvideoguy",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Dvideoguy/sounds/207782/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:207782",
+  "dur": 2.4
+ },
+ "sfx/build-2": {
+  "title": "hammering 2.wav",
+  "author": "cognito perceptu",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/cognito%20perceptu/sounds/17012/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:17012"
+ },
+ "sfx/notice-1": {
+  "title": "Interface Sounds — confirmation_002.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/interface-sounds",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:interface-sounds/confirmation_002.ogg"
+ },
+ "sfx/notice-2": {
+  "title": "Interface Sounds — confirmation_001.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/interface-sounds",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:interface-sounds/confirmation_001.ogg"
+ },
+ "sfx/error-1": {
+  "title": "Interface Sounds — error_006.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/interface-sounds",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:interface-sounds/error_006.ogg"
+ },
+ "sfx/error-2": {
+  "title": "Interface Sounds — error_004.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/interface-sounds",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:interface-sounds/error_004.ogg"
+ },
+ "sfx/chat-1": {
+  "title": "Interface Sounds — pluck_001.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/interface-sounds",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:interface-sounds/pluck_001.ogg"
+ },
+ "sfx/chat-2": {
+  "title": "Interface Sounds — pluck_002.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/interface-sounds",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:interface-sounds/pluck_002.ogg"
+ },
+ "sfx/chest-1": {
+  "title": "Chest Opening.wav",
+  "author": "spookymodem",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/spookymodem/sounds/202092/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:202092",
+  "dur": 2.6
+ },
+ "sfx/chest-2": {
+  "title": "Treasure Chest Open",
+  "author": "steprock",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/steprock/sounds/771164/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:771164"
+ },
+ "sfx/map-1": {
+  "title": "Unfold a map",
+  "author": "Breviceps",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Breviceps/sounds/447931/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:447931"
+ },
+ "sfx/map-2": {
+  "title": "Paper drawn with rustle",
+  "author": "Mafon2",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/Mafon2/sounds/360646/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:360646",
+  "dur": 1.6
+ },
+ "sfx/dig-1": {
+  "title": "Shovel_dirt.wav",
+  "author": "dr19",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/dr19/sounds/353907/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:353907",
+  "dur": 2.4
+ },
+ "sfx/dig-2": {
+  "title": "Shovel.wav",
+  "author": "abstraktgeneriert",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/abstraktgeneriert/sounds/213005/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:213005"
+ },
+ "sfx/found": {
+  "title": "GLEAM-GLOW-SFX-CHIME.wav",
+  "author": "newagesoup",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/newagesoup/sounds/351408/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:351408",
+  "dur": 2.4
+ },
+ "sfx/reel-1": {
+  "title": "reeling.wav",
+  "author": "BranndyBottle",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/BranndyBottle/sounds/464701/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:464701"
+ },
+ "sfx/reel-2": {
+  "title": "FishingRod Winding.aif",
+  "author": "esperri",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/esperri/sounds/118973/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:118973",
+  "dur": 2.4
+ },
+ "sfx/cast-1": {
+  "title": "Throwing / Whip Effect",
+  "author": "denao270",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/denao270/sounds/346373/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:346373"
+ },
+ "sfx/cast-2": {
+  "title": "whip03.wav",
+  "author": "snowflakes",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/snowflakes/sounds/72191/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:72191"
+ },
+ "sfx/anchor.down": {
+  "title": "S29-28 Anchor drops over side of boat.wav",
+  "author": "craigsmith",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/craigsmith/sounds/675781/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:675781",
+  "dur": 4
+ },
+ "sfx/anchor.up": {
+  "title": "anchor raising",
+  "author": "mycompasstv",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/mycompasstv/sounds/477129/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:477129",
+  "at": 2,
+  "dur": 4
+ },
+ "sfx/sail-1": {
+  "title": "Fabric Flapping",
+  "author": "IENBA",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/IENBA/sounds/701647/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:701647",
+  "at": 1,
+  "dur": 1.6
+ },
+ "sfx/sail-2": {
+  "title": "flag.wav",
+  "author": "GeorgeHopkins",
+  "license": "CC0-1.0",
+  "url": "https://freesound.org/people/GeorgeHopkins/sounds/448975/",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "fs:448975",
+  "at": 3,
+  "dur": 1.6
+ },
+ "sfx/creak-1": {
+  "title": "RPG Audio — creak1.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/rpg-audio",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:rpg-audio/creak1.ogg"
+ },
+ "sfx/creak-2": {
+  "title": "RPG Audio — creak2.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/rpg-audio",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:rpg-audio/creak2.ogg"
+ },
+ "sfx/creak-3": {
+  "title": "RPG Audio — creak3.ogg",
+  "author": "Kenney (kenney.nl)",
+  "license": "CC0-1.0",
+  "url": "https://kenney.nl/assets/rpg-audio",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "from": "kenney:rpg-audio/creak3.ogg"
+ }
+}
