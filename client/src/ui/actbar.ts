@@ -26,7 +26,7 @@ const LR = dict(REN, RRU);
 const LS = dict(SEN, SRU);
 const LW = dict(WEN, WRU);
 
-export type ActId = 'attack' | 'attack_stop' | 'attack_mode' | 'axes' | 'harbour' | 'board' | 'dock' | 'moor_way' | 'homeport' | 'land' | 'cut_mast' | 'cast' | 'base' | 'claim' | 'ritual' | 'mark' | 'find' | 'roam' | 'roam_join' | 'roam_look' | 'look' | 'repair' | 'jury' | 'scuttle' | 'goal_sail' | 'sel_go' | 'sel_hire' | 'sel_look';
+export type ActId = 'attack' | 'attack_stop' | 'attack_mode' | 'axes' | 'harbour' | 'board' | 'dock' | 'moor_way' | 'homeport' | 'land' | 'cut_mast' | 'cast' | 'base' | 'claim' | 'ritual' | 'mark' | 'find' | 'roam' | 'roam_join' | 'roam_look' | 'look' | 'repair' | 'jury' | 'scuttle' | 'goal_sail' | 'sel_go' | 'sel_attack' | 'sel_talk';
 export type LandAction = 'land' | 'dig' | 'raise' | 'expedition' | 'descent' | 'keeper' | 'escort' | 'dive' | 'lair';
 export type LookKind = 'obj' | 'guard' | 'lair' | 'drift' | 'struck';
 
@@ -74,8 +74,9 @@ export interface ActFacts {
   /** Owner, 2026-10-26 («на пк версии выбрав порт или корабль не дает дополнительного экшена»): the thing she selected
    *  (a click, a tap) — a harbour, an island, a ship that is no foe, her wreckage — and what it offers wherever it lies:
    *  «К порту» / «Плыть сюда» (the helmsman takes her there; a harbour's run puts her in), «Плыть» when it is her quest's
-   *  place, «Нанять» for a peaceful ship of the sea, «Осмотреть» for a captain. `far`: metres off. */
-  sel?: { kind: 'port' | 'isle' | 'wreck' | 'ship'; name: string; far: number; quest?: boolean; go?: boolean; hire?: boolean; look?: boolean } | null;
+   *  place. A ship (owner, 2026-11-01, the ring's rule): «Атаковать» refused under her colours (`attackNo`: a tap says
+   *  why), «Поговорить» (`talk`: the hail — the hire, the talks, a captain's whisper and card). `far`: metres off. */
+  sel?: { kind: 'port' | 'isle' | 'wreck' | 'ship'; name: string; far: number; quest?: boolean; go?: boolean; attackNo?: boolean; talk?: boolean } | null;
 }
 
 export interface Act {
@@ -171,14 +172,20 @@ export function buildActs(f: ActFacts): Act[] {
   const sl = f.sel;
   if (sl) {
     const sel: Act[] = [];
+    // a ship: «Атаковать» (refused: why, the flag card), «Поговорить», then «Плыть к нему» (owner, 2026-11-01)
+    if (sl.attackNo) sel.push({ id: 'sel_attack', icon: 'act_attack', label: LS('a.attack'), sub: sl.name, title: L('a.attackNo') });
+    if (sl.talk) sel.push({ id: 'sel_talk', icon: 'faction_free', label: L('a.talk'), sub: sl.name, title: L('a.talkTitle', { name: sl.name }) });
     if (sl.go) {
       const label = sl.quest ? L('a.goalSail') : sl.kind === 'port' ? L('a.toPort') : sl.kind === 'ship' ? L('a.toShip') : L('a.sailHere');
       sel.push({ id: 'sel_go', icon: sl.kind === 'port' ? 'map_port' : 'stat_sails', label, sub: sl.far >= 60 ? `${sl.name} · ${farWords(sl.far)}` : sl.name, title: L(sl.kind === 'port' ? 'a.toPortTitle' : 'a.sailHereTitle', { name: sl.name }), ...(sl.kind === 'port' ? { key: 'dock' as const } : {}) });
     }
-    if (sl.hire) sel.push({ id: 'sel_hire', icon: 'ab_call_escort', label: L('a.hire'), sub: sl.name, title: L('a.hireTitle', { name: sl.name }) });
-    if (sl.look) sel.push({ id: 'sel_look', icon: 'act_inspect', label: L('a.inspect'), sub: sl.name, title: L('a.inspectTitle', { name: sl.name }) });
     if (sel.length && !FIGHT_FIRST.has(out[0]?.id as ActId) && out[0]?.id !== 'dock' && out[0]?.id !== 'land') out.unshift(...sel);
-    else out.push(...sel);
+    else {
+      // after the fight's own buttons («Атаковать», «На абордаж»…), before the rest («Ремонт»)
+      let i = 0;
+      while (i < out.length && FIGHT_FIRST.has(out[i].id)) i++;
+      out.splice(i, 0, ...sel);
+    }
   }
   // (last: the step's own button — «Атаковать», «Занять» — leads when it is there)
   if (f.goalSail && !f.docked) {
