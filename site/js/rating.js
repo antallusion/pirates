@@ -419,8 +419,9 @@ ${flags ? `<ul class="cp-chips">${flags}</ul>` : ''}${fit ? `<ul class="cp-chips
     const by = Object.fromEntries(h.gear.map((it) => [it.slot, it]));
     const prim = h.prim.length ? `${h3(ct.prim)}<div class="cp-tiles four">${h.prim.map((x) => tile(x.icon, tr(x.name), fmt(x.base + x.art), x.art ? `+${fmt(x.art)}` : '')).join('')}</div>` : '';
     const skills = h.skills.length ? `${h3(ct.skills, String(h.skills.length))}<ul class="cp-chips big">${h.skills.map((x) => chip(x, '', `rk${x.rank}`, tr(x.rankName))).join('')}</ul>` : '';
-    const doll = h.gear.length ? `${h3(ct.gear, `${h.gear.length}/10`)}<div class="cp-doll"><div class="cp-dcol">${LEFT.map((sl) => slotSq(by[sl])).join('')}</div>
-<div class="cp-dmid">${v.figure ? im(v.figure, '', 'cp-dfig') : face(v.captain, v.frame, 150)}</div><div class="cp-dcol">${RIGHT.map((sl) => slotSq(by[sl])).join('')}</div></div><ul class="cp-items">${h.gear.map(itemTile).join('')}</ul>` : '';
+    // the doll for every captain, an empty one too (owner 2026-11-01: «сделай чтобы у всех все видно было»)
+    const doll = `${h3(ct.gear, `${h.gear.length}/10`)}<div class="cp-doll"><div class="cp-dcol">${LEFT.map((sl) => slotSq(by[sl])).join('')}</div>
+<div class="cp-dmid">${v.figure ? im(v.figure, '', 'cp-dfig') : face(v.captain, v.frame, 150)}</div><div class="cp-dcol">${RIGHT.map((sl) => slotSq(by[sl])).join('')}</div></div>${h.gear.length ? `<ul class="cp-items">${h.gear.map(itemTile).join('')}</ul>` : ''}`;
     const relics = h.relics.length ? `${h3(ct.relics)}<ul class="cp-chips">${h.relics.map((r) => chip(r, r.on ? esc(ct.made) : `${r.worn}/${r.of}`, r.on ? 'gold' : '')).join('')}</ul>` : '';
     const sets = h.sets.length ? `${h3(ct.sets)}<ul class="cp-chips">${h.sets.map((x) => `<li class="cp-chip gold"${tp(x)}><span>${esc(tr(x.name))}</span></li>`).join('')}</ul>` : '';
     const orders = h.orders.length ? `${h3(ct.orders, h.willMax ? `${esc(ct.will)} ${fmt(h.willMax)}` : String(h.orders.length))}<ul class="cp-chips">${h.orders.map((o) => chip(o, ROMAN[o.level] || '', '', tr(o.school))).join('')}</ul>` : '';
