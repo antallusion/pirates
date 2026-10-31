@@ -1063,7 +1063,11 @@ export function engageHelm(game: Game, ship: ShipEntity, brain: NpcBrain, target
         // The close fight: in at 29° off her beam (inside the gun captains' 36°: a broadside on her mark while she
         // closes) down to a little past the band's best, square on it there, out below its inside edge.
         if (d > hold.best * 1.15) return wrapAngle(h + inward * 0.5);
-        if (d < hold.near) return wrapAngle(h - inward * 0.35);
+        // (a ship pressing in on her, forum 40: she bears away harder the nearer it comes, out of the grapples' reach —
+        // a beast or a great one has no grapples, and is fought in the close band as it was)
+        const grapples = target.npcRole !== 'beast' && !great && !target.bossOf && !target.bossPart;
+        if (grapples && d < hold.near * 0.85) return wrapAngle(h - inward * 0.75);
+        if (d < hold.near) return wrapAngle(h - inward * (grapples ? 0.45 : 0.35));
         return h;
       }
       // Boarders fight at chain-shot range to strip the rigging; others at their gun's comfortable range.

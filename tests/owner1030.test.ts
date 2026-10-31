@@ -185,7 +185,8 @@ test('3: a captain comes out of a pirate of her level with most of her canvas �
       }
       const sails = me.sails / me.stats.sailHpMax;
       rows.push(`⚓${level} ${cls}: sails ${Math.round(sails * 100)}% after ${Math.round(game.now - t0)} s`);
-      assert.ok(sails >= 0.72, rows.at(-1));
+      // (forum 40: «Атаковать» lies outside the grapples now, in a pirate's chain-shot band a little longer: 71 % at ⚓1)
+      assert.ok(sails >= 0.7, rows.at(-1));
       stopPursuit(game, s, 'off');
       if (game.ships.has(B.ship.id)) game.removeShip(B.ship.id);
       me.lastStandUntil = 0;

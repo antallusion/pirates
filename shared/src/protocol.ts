@@ -1607,7 +1607,7 @@ export interface SurrenderOffer {
 /** «Атаковать» (docs/23 item 33): fight her with the guns, or run in for the grapples. */
 export type PursuitMode = 'guns' | 'board';
 /** Why the helmsman gave the wheel back. */
-export type PursuitStop = 'off' | 'manual' | 'board' | 'struck' | 'sunk' | 'lost' | 'slipped';
+export type PursuitStop = 'off' | 'manual' | 'board' | 'struck' | 'sunk' | 'lost' | 'slipped' | 'hurt';
 
 /** The window before a risky boarding (docs/23 items 49–52): her chance by the battle engine played out `sims` times,
  *  what a loss costs (as Game.boardingLost takes it) and what a win over a senior brings. */

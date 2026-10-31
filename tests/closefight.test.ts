@@ -164,7 +164,9 @@ test('«Атаковать» on a ship no grapple takes (a beast of the sea): th
   assert.equal(pursuitOf(s.ship!)?.mode, 'guns');
 });
 
-test('the guns\' fight closes bow on with the boarding run\'s hands and comes broadside on in the band', () => {
+// (forum 40, 2026-10-31: no boarding run's hands in the guns' fight — its +70 % way and its own wind were the autopilot's
+// cheat, and a pirate took it for her boarding him: she closes bow on under her own canvas, and lies outside the grapples)
+test('the guns’ fight closes bow on under her own canvas (no boarding run) and comes broadside on in the band', () => {
   const game = duelSea();
   const at = openWater(game, 13);
   const s = seaCaptain(game, 'brig', 5, at.x, at.y, 0);
@@ -173,12 +175,13 @@ test('the guns\' fight closes bow on with the boarding run\'s hands and comes br
   foe.input = { rudder: 0, sailTarget: 0 };
   assert.equal(startPursuit(game, s, foe.id, 'guns'), null);
   steps(game, 10);
-  assert.ok(me.hasEffect('board_run'), 'running in');
-  const best = pursuitHold(me).best;
+  assert.ok(!me.hasEffect('board_run'), 'running in under her own canvas');
+  const best = pursuitHold(me, foe).best;
   for (let i = 0; i < 20 * 30 && Math.hypot(foe.state.x - me.state.x, foe.state.y - me.state.y) > best * 1.2; i++) game.step();
   steps(game, 20);
   assert.ok(!me.hasEffect('board_run'), 'broadside on in the band');
-  assert.ok(Math.hypot(foe.state.x - me.state.x, foe.state.y - me.state.y) < effectiveRange(me, 'port', 'round') * 0.5);
+  const d = Math.hypot(foe.state.x - me.state.x, foe.state.y - me.state.y);
+  assert.ok(d < pursuitHold(me, foe).far && d > best * 0.8, `${Math.round(d)} m`);
 });
 
 // ------------------------------------------------------------------------------------------------ the creature stacks

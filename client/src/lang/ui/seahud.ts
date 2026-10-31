@@ -51,6 +51,11 @@ export const EN = {
   'tm.fightStack': 'Fight: the boats go for them',
   'tm.attack': 'Attack',
   'tm.board': 'Board',
+  'tm.sink': 'Sink',
+  'tm.sinkT': 'Sink her: take all she has and send her down (the helmsman takes you alongside)',
+  'tm.release': 'Let go',
+  'tm.releaseT': 'Let her go: take her crew and let her sail off (the helmsman takes you alongside)',
+  'tm.fightStruck': 'Attack: refuse her surrender — the guns finish her',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -104,4 +109,9 @@ export const RU: Record<keyof typeof EN, string> = {
   'tm.fightStack': 'Бой: шлюпки на них',
   'tm.attack': 'Атаковать',
   'tm.board': 'На абордаж',
+  'tm.sink': 'Утопить',
+  'tm.sinkT': 'Утопить: забрать всё и пустить её ко дну (рулевой подведёт к борту)',
+  'tm.release': 'Отпустить',
+  'tm.releaseT': 'Отпустить: забрать экипаж и дать ей уйти (рулевой подведёт к борту)',
+  'tm.fightStruck': 'Атаковать: не принять сдачу — пушки её добьют',
 };

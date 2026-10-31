@@ -2095,7 +2095,7 @@ function onMessage(m: ServerMsg): void {
   switch (m.t) {
     case 'pursuit':
       // docs/23 item 33: the wheel back, and why when it is news (a mark lost, slipped away, sunk).
-      if (!m.on && (m.why === 'lost' || m.why === 'slipped' || m.why === 'sunk')) hud.toast(LSF(`why.${m.why}`), m.why === 'sunk' ? 'good' : 'info');
+      if (!m.on && (m.why === 'lost' || m.why === 'slipped' || m.why === 'sunk' || m.why === 'hurt')) hud.toast(LSF(`why.${m.why}`), m.why === 'sunk' ? 'good' : m.why === 'hurt' ? 'bad' : 'info');
       // «Огонь» with no mark (owner, 2026-10-22): the foe the helmsman took is her mark — its ring on it, its line on top.
       if (m.on && m.target !== undefined && (targetId === null || !targetPinned)) pinTarget(m.target);
       break;
@@ -4216,8 +4216,9 @@ function runAct(a: Act): void {
       return void net.send({ t: 'repair', on: !(state.you && state.you.flags & SF.REPAIRING) });
     case 'attack': {
       if (attackMark === null) return;
-      // A beast, a monster, a zone boss: no grapple takes her — the guns' fight (the server says the same).
-      return void net.send({ t: 'attack', target: attackMark, mode: unboardableMark(attackMark) ? 'guns' : 'board' });
+      // Forum 40 (2026-10-31): «Атаковать» keeps the gunnery distance and shoots — never a run in for the grapples
+      // («Сближение» closes, «На абордаж» throws them); a guard of the adventure map is fought on her deck, as the ring's.
+      return void net.send({ t: 'attack', target: attackMark, mode: guardOfEntity(state, attackMark) && !unboardableMark(attackMark) ? 'board' : 'guns' });
     }
     case 'attack_mode':
       return void (state.pursuit && net.send({ t: 'attack', target: state.pursuit.target, mode: state.pursuit.mode === 'board' ? 'guns' : 'board' }));
@@ -4392,7 +4393,9 @@ function seaFire(): void {
   // A creature stack marked (docs/19 D7): «Огонь» is the volley at whatever ship is in reach, not a pursuit of the ship
   // the target frame picked by itself.
   if (state.roamMark !== null && !targetPinned && !state.pursuit) return fireVolley();
-  if (id !== null && attackable(id) && !targetBears(id)) {
+  // (a beast of the sea, forum 40: «Огонь» fires her own broadside at it or at whichever beast bears — never the
+  // helmsman's run after it, that is «Атаковать»'s)
+  if (id !== null && attackable(id) && !targetBears(id) && state.ships.get(id)?.info?.npcRole !== 'beast') {
     if (state.pursuit?.target !== id || state.pursuit.mode !== 'guns') net.send({ t: 'attack', target: id, mode: 'guns' });
     seaHud.flashFire(false);
     return;
@@ -4647,7 +4650,8 @@ function shipFight(id: number): { attackable: boolean; boardable: boolean; inRea
   const s = state.ships.get(id);
   if (!s?.info) return null;
   const inReach = boardWhy(id) === null; // alongside (owner, 2026-10-22)
-  return { attackable: attackable(id) && !(s.cur.flags & SF.SURRENDERED), boardable: !unboardableMark(id) && !grabbed(), inReach };
+  // (a ship lying struck too, forum 40: after «Позже» her ring is «Атаковать» / «На абордаж» / «Утопить» / «Отпустить»)
+  return { attackable: attackable(id), boardable: !unboardableMark(id) && !grabbed(), inReach };
 }
 
 /** The attack cursor (owner, 2026-10-07: «при наведении на цель показывать иконку атаки»): what she may fight under the
@@ -4745,12 +4749,15 @@ function targetChoices(about: string): { choices: TmChoice[]; name: string; x: n
     const board = canBoardNow(id);
     const beast = beastOfClass(s.info.classId);
     const run = state.pursuit?.target === id ? state.pursuit.mode : null;
-    const choices: TmChoice[] = [{ id: 'fight', art: board ? 'ab_red_hook_boarding' : 'talent_gun_rolling_broadside', label: seaWord('tm.attack'), title: seaWord(board ? 'tm.fightBoard' : 'tm.fightGuns'), on: run === 'guns' }];
+    const struck = !!(s.cur.flags & SF.SURRENDERED);
+    const choices: TmChoice[] = [{ id: 'fight', art: board ? 'ab_red_hook_boarding' : 'talent_gun_rolling_broadside', label: seaWord('tm.attack'), title: seaWord(struck ? 'tm.fightStruck' : board ? 'tm.fightBoard' : 'tm.fightGuns'), on: run === 'guns' }];
     // «На абордаж» from afar: the helmsman's intercept, the grapples flying alongside (alongside already, «Атаковать» boards)
     if (kind !== 'deep' && f.boardable && !board) choices.push({ id: 'board', art: 'ab_red_hook_boarding', label: seaWord('tm.board'), title: seaWord('tm.pursueT'), on: run === 'board' });
     // One of the sea's ships on her: the talks (owner, 2026-10-18; the server says who will not bargain) — never the deep's.
-    if (kind !== 'deep' && kind !== 'captain' && s.cur.flags & SF.HOSTILE) choices.push({ id: 'talk', art: 'faction_free', label: LOUT('cf.tm'), title: LOUT('cf.tmT') });
-    choices.push(...hire);
+    if (kind !== 'deep' && kind !== 'captain' && s.cur.flags & SF.HOSTILE && !struck) choices.push({ id: 'talk', art: 'faction_free', label: LOUT('cf.tm'), title: LOUT('cf.tmT') });
+    // Struck (forum 40): her terms from the ring as well as from the card — the card put off by «Позже» or closed
+    if (struck) choices.push({ id: 'sink', art: 'fire', label: seaWord('tm.sink'), title: seaWord('tm.sinkT') }, { id: 'release', art: 'stat_crew', label: seaWord('tm.release'), title: seaWord('tm.releaseT') });
+    else choices.push(...hire);
     return {
       name: beast ? BEASTS[beast].name[lang() === 'ru' ? 1 : 0] : s.info.isPlayer ? s.info.captainName : placeName(s.info.name),
       x: renderer.sx(s.cur.x), y: renderer.sy(s.cur.y), r: Math.max(18, SHIP_CLASSES[s.info.classId].length * 0.5 * renderer.zoom),
@@ -4787,6 +4794,7 @@ function pickTargetChoice(id: TmId, about: string): void {
       return;
     }
     if (id === 'talk') return ceasefireCard.ask(n);
+    if (id === 'sink' || id === 'release') return void net.send({ t: 'surrender', id: n, fate: id });
     if (id === 'hire') return hireCard.ask(n);
     pinTarget(n); // the pursuit and the fight are about her: she is the mark too
     if (id === 'pursue' || id === 'board') net.send({ t: 'attack', target: n, mode: unboardableMark(n) ? 'guns' : 'board' });

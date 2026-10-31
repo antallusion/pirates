@@ -63,7 +63,8 @@ test('the fight\'s length (owner 2026-10-26: NPC HP ×0.5): an ordinary beast of
   for (const r of measured()) {
     const [lo, hi] = BEAST_BAND[r.beast];
     assert.ok(r.fightMed <= hi && r.fightMed >= lo * 0.5, `⚓${r.level} ${r.beast} ⚓${r.blevel}: ${r.fightMed} s from the first broadside (band ${lo}–${hi})`);
-    assert.ok(r.secMed <= hi + 12, `⚓${r.level} ${r.beast}: ${r.secMed} s from «Атаковать»`);
+    // (forum 40: the run in is sailed by the wind and her canvas now, no boarding run's +70 % — a few seconds more to reach it)
+    assert.ok(r.secMed <= hi + 16, `⚓${r.level} ${r.beast}: ${r.secMed} s from «Атаковать»`);
   }
 });
 

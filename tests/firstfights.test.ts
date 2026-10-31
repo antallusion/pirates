@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { ArmyStack } from '../shared/src/data/army.ts';
 import { canBoard, startBoarding } from '../server/src/game/boarding.ts';
+import { grappleWhy, startGrapple } from '../server/src/game/grapple.ts';
 import { boardOdds } from '../server/src/game/boardodds.ts';
 import { easyLeft, FOE_IDLE, SOFT_DEALT, SOFT_HULL, softDealt } from '../server/src/game/firstfights.ts';
 import { npcSkill } from '../shared/src/data/shiplevel.ts';
@@ -49,9 +50,10 @@ test('the first three fights of a new captain are short and won; the fourth is n
       assert.ok(foe.crew < men0 * 0.7, `her men thinned (${men0} → ${foe.crew})`);
       assert.equal(softDealt(game, foe, me), SOFT_DEALT, 'what she fires hurts less');
     }
-    // «Атаковать»: the helmsman runs alongside.
+    // «Атаковать»: the helmsman closes — under her own canvas since forum 40 — until «На абордаж» is up (the grapples'
+    // hundred metres, owner 2026-10-30).
     let next = 0;
-    while (game.now - t0 < 30 && canBoard(game, me, foe) !== null && foe.alive) {
+    while (game.now - t0 < 30 && grappleWhy(game, me, foe) !== null && foe.alive) {
       if (game.now >= next) {
         next = game.now + npcSkill(L).react;
         engage(game, foe, B.brain, me, Math.hypot(me.state.x - foe.state.x, me.state.y - foe.state.y));
@@ -67,8 +69,11 @@ test('the first three fights of a new captain are short and won; the fourth is n
       break;
     }
     if (foe.alive) {
-      assert.equal(canBoard(game, me, foe), null, `fight ${k + 1}: alongside in ${run} s`);
-      startBoarding(game, me, foe, 'standard');
+      assert.equal(grappleWhy(game, me, foe), null, `fight ${k + 1}: in the grapples' reach in ${run} s`);
+      // «На абордаж»: the grapples haul the two alongside, and the battle opens
+      if (canBoard(game, me, foe) === null) startBoarding(game, me, foe, 'standard');
+      else startGrapple(game, me, foe, 'standard');
+      for (let i = 0; i < 20 * 6 && !me.boarding; i++) game.step();
       assert.ok(me.boarding?.fight.tac, 'the hex battle');
       giveScrolls(game); // «Свиток автобоя» (owner, 2026-10-11): this quick fight is not the free one (the foe is not clearly the weaker)
       assert.equal(tacAction(game, me, { a: 'quick' }), null);
