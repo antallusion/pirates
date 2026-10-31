@@ -190,7 +190,8 @@ test('any finger tap on the sea sails her (owner, 2026-10-29: «тапнуть �
   assert.match(main, /aim: \(px, py\) => seaTap\(px, py\),/);
   const st = main.slice(main.indexOf('function seaTap('), main.indexOf('function sailToSpot('));
   assert.match(st, /if \(plan === 'blocked'\) return void hud\.toast\(seaTapWhy\(/);
-  assert.match(st, /if \(plan === 'port'\) return startGoal\(`p:\$\{pl!\.id\}`\);/);
+  // (forum 40: a harbour's town tapped opens its ring — «Войти в порт» among it — the run in if the ring has no room)
+  assert.match(st, /if \(plan === 'port'\) return void \(openPortRing\(String\(pl!\.id\)\) \|\| startGoal\(`p:\$\{pl!\.id\}`\)\);/);
   assert.ok(st.lastIndexOf("if (docked) net.send({ t: 'undock' });") > st.lastIndexOf('else sailToScreen(px, py);'), 'in port: the course, then she casts off');
   assert.doesNotMatch(st, /dockedAt\) return/, 'never a silent «in port: nothing»');
   // the chart: a finger's tap at sea is the course at once (the mouse keeps its mark and «Плыть»)

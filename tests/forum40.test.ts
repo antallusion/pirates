@@ -257,3 +257,20 @@ test('the helmsman still gives the ships on her course a berth: a course past an
   assert.ok(least > (me.stats.length + merchant.stats.length) * 0.32, `kept off: ${least.toFixed(0)} m`);
   assert.equal(me.hull, h0, 'no bump');
 });
+
+// ------------------------------------------------------------------------------------------------ 3. the harbour's ring
+
+test('the harbour’s ring: «Войти в порт», «Приблизиться», «Карточка порта», and «Мой остров» by her own island', async () => {
+  const { portRingChoices } = await import('../client/src/ui/portring.ts');
+  setLang('ru');
+  try {
+    assert.deepEqual(portRingChoices('Солтмарроу', false).map((c) => c.label.replace(/\s/g, ' ')),['Войти в порт', 'Приблизиться', 'Карточка порта']);
+    const own = portRingChoices('Солтмарроу', true);
+    assert.deepEqual(own.map((c) => c.id), ['enter', 'near', 'card', 'isle']);
+    assert.equal(own[3].label.replace(/\s/g, ' '), 'Мой остров');
+    assert.match(own[0].title, /Солтмарроу/);
+  } finally {
+    setLang('en');
+  }
+  assert.deepEqual(portRingChoices('Saltmarrow', true).map((c) => c.label), ['Enter port', 'Approach', 'Port card', 'My island']);
+});
