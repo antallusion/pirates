@@ -69,7 +69,8 @@ import type { CampaignState } from '../../../shared/src/data/campaign/progress.t
 import { contractFor } from '../../../shared/src/data/xpcurve.ts';
 import { dailyView, newDaily, sanitizeDaily } from './dailies.ts';
 import type { DailyState } from '../../../shared/src/data/dailies.ts';
-import { berthCap, sanitizeShipbuilding } from './shipbuilding.ts';
+import { berthCap, calledBerth, sanitizeShipbuilding } from './shipbuilding.ts';
+import type { BerthCall } from './shipbuilding.ts';
 import type { Berth, BuildOrder } from './shipbuilding.ts';
 import type { FigureheadId, Plan } from '../../../shared/src/data/shipbuild.ts';
 import type { Oath, QuestLog } from './quests.ts';
@@ -153,6 +154,8 @@ export interface Profile {
   berths: Berth[];
   /** «Причал»: berths bought for doubloons over the free five (shipbuilding.ts berthCap). */
   berthsBought?: number;
+  /** A berthed ship sent for, on her way to her (forum 40, shipbuilding.ts callBerth). */
+  berthCall?: BerthCall | null;
   figureheads: FigureheadId[]; // carved figureheads found, not yet fitted
   exotic: Partial<Record<GoodId, number>>; // units bought in lawless waters (Exotic Goods)
   salvageDay: number; // Salvage King: the game day of the last raising
@@ -723,6 +726,8 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     plans: p.plans.map((x) => ({ id: x.id, classId: x.classId, quality: x.quality, variants: x.variants, uses: x.uses })),
     berths: p.berths.map((b) => ({ port: b.port, name: b.loadout.name, classId: b.loadout.classId, hull: Math.round(b.hull * 100), level: shipLevelOf(b.loadout), mods: Object.values(b.loadout.modules ?? {}).reduce((a, n) => a + (n ?? 0), 0), guns: [b.loadout.guns.port, b.loadout.guns.starboard], ...(b.loadout.mount ? { mount: b.loadout.mount } : {}), ...(b.loadout.trophy ? { trophy: b.loadout.trophy } : {}) })),
     berthCap: berthCap(p),
+    // forum 40: the ship sent for — which berth, from where, when she comes (wall ms)
+    berthCall: p.berthCall && calledBerth(p) >= 0 ? { index: calledBerth(p), name: p.berthCall.name, port: p.berthCall.port, at: p.berthCall.at } : null,
     research: researchView(p),
     streak: streakView(p),
     figureheads: p.figureheads,

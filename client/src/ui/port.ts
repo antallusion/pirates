@@ -61,7 +61,7 @@ import { holidayCard } from './holidays.ts';
 import { bazaarAct, bazaarCard, bindBazaar } from './bazaar.ts';
 import { departOrAsk, voyageOrder, voyageShip } from './depart.ts';
 import { LF, bindFerry, ferryCard } from './ferry.ts';
-import { LB, berthsCard, chooseTrade, escortRepairHtml } from './berths.ts'; // forum 2026-10-30: «Причал»
+import { LB, berthCallFigure, berthsCard, chooseTrade, escortRepairHtml, tickEtas } from './berths.ts'; // forum 2026-10-30: «Причал»
 import { VOYAGE_MINUTES, voyageCrew, voyageNeeds } from '../../../shared/src/data/voyage.ts';
 import { showHint } from './kit/hint.ts';
 import { EN as IS_EN, RU as IS_RU } from '../lang/ui/islescene.ts';
@@ -263,7 +263,7 @@ export class PortScreen {
     // flag's generic harbour, her flag's (shared/src/data/paintart.ts) — the next one if a file fails to load.
     artVar(root, '--bg-port', harbourArt(port));
     const events = state.events.filter((e) => e.port === port.id).map((e) => `${serverText(e.title)}${e.kind === 'blockade' || e.kind === 'armada' ? L('head.blockade') : e.kind === 'epidemic' ? L('head.epidemic') : ''}`);
-    const figures = `${events.length ? `<span class="w-fig bad" data-hint="${esc(W('port.event', { what: events.join(' · ') }))}" title="${esc(events.join(' · '))}">⚑</span>` : ''}${figure('coin', fmt(self.gold), W('port.purse'), 'gold')}${figure('tab_market', `${vol.toFixed(0)}/${holdMax.toFixed(0)}`, `${W('port.hold', { vol: vol.toFixed(0), max: holdMax.toFixed(0) })}: ${holdMixText(holdMix(self.cargo, state.ownStats))}`)}${figure('stat_crew', String(self.crew), W('port.crew', { n: self.crew }))}`;
+    const figures = `${events.length ? `<span class="w-fig bad" data-hint="${esc(W('port.event', { what: events.join(' · ') }))}" title="${esc(events.join(' · '))}">⚑</span>` : ''}${figure('coin', fmt(self.gold), W('port.purse'), 'gold')}${figure('tab_market', `${vol.toFixed(0)}/${holdMax.toFixed(0)}`, `${W('port.hold', { vol: vol.toFixed(0), max: holdMax.toFixed(0) })}: ${holdMixText(holdMix(self.cargo, state.ownStats))}`)}${figure('stat_crew', String(self.crew), W('port.crew', { n: self.crew }))}${berthCallFigure(state, view.portId)}`;
     const html = `${winHead(placeName(port.name), { crest: `faction_${port.faction}`, sub: `${faction.name} · ${REGIONS[port.region].name}`, figures })}
       <div class="w-frame">${railTabs(main, this.tab, 'ptab')}<div class="w-pane">${chipRow(second, this.tab, 'ptab')}${this.tab === 'quests' ? boardSwitches(view, state, this.qchip) : ''}
       <div class="modal-body w-body port-body" data-page="${this.tab}">${this.body(view, state)}</div></div></div>`;
@@ -272,6 +272,7 @@ export class PortScreen {
     if (html === this.lastHtml && root.querySelector('.port-body')) return;
     this.lastHtml = html;
     keepFolds(root, () => (root.innerHTML = html));
+    tickEtas(root); // (forum 40: the berthed ship's countdown, set at once)
     root.querySelectorAll<HTMLElement>('[data-ptab]').forEach((el) => (el.onclick = () => {
       const id = el.dataset.ptab!;
       if (id === 'sea') return this.act({ act: 'undock' } as DOMStringMap, root, state);

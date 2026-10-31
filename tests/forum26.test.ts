@@ -26,7 +26,7 @@ import type { ShipEntity } from '../server/src/game/ship.ts';
 import { duelSea, openWater } from './balance/duel.ts';
 import { seaCaptain } from './balance/seafight.ts';
 import type { FakeConn } from './helpers.ts';
-import { join, knowHulls, makeGame, steps } from './helpers.ts';
+import { berthArrives, join, knowHulls, makeGame, steps } from './helpers.ts';
 
 function inPort(name: string): { game: Game; c: FakeConn; s: PlayerSession; db: ReturnType<typeof makeGame>['db'] } {
   const { game, db } = makeGame();
@@ -108,6 +108,7 @@ test('«Пересесть» at any harbour with a yard: the berthed ship out wi
   ship.cargo = { rum: 3 } as never;
   const men = ship.crew;
   c.push({ t: 'berth', action: 'swap', index: 0 });
+  berthArrives(game, s); // (forum 40: she comes in two minutes)
   assert.equal(ship.loadout.classId, 'sloop', 'she sails the berthed sloop');
   assert.equal(p.berths[0].loadout.classId, 'cutter', 'the cutter takes the berth');
   assert.equal(p.berths[0].port, far.id, 'berthed where she changed');
@@ -152,6 +153,7 @@ test('«Пересесть» into a smaller hull: a hold she cannot take is refu
   assert.equal(ask!.men, berthFit(s, p.berths[0].loadout).menOver);
   assert.equal(ship.loadout.classId, 'brig', 'nothing done before the answer');
   c.push({ ...ask!.again, force: true });
+  berthArrives(game, s);
   assert.equal(ship.loadout.classId, 'sloop');
   assert.ok(ship.crew <= ship.stats.crewMax);
 });

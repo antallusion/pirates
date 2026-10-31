@@ -8,7 +8,7 @@ import { researchWhy } from './research.ts';
 import { takeGearBack } from './gear.ts';
 import { refitHolds } from './refit.ts';
 import { pointsInTree } from '../../../shared/src/data/talents.ts';
-import { BERTH_PRICE, BERTHS_CAP, BERTHS_FREE } from '../../../shared/src/data/berths.ts';
+import { BERTH_CALL_MS, BERTH_PRICE, BERTHS_CAP, BERTHS_FREE } from '../../../shared/src/data/berths.ts';
 import { cargoVolume, computeShipStats } from '../../../shared/src/sim/shipstats.ts';
 import { move as moveDoubloons, sendBalance } from './premium.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -202,11 +202,8 @@ export function berthFit(s: PlayerSession, loadout: ShipLoadout): { menOver: num
 /** Words the client asks again with (`force`): men who will not fit are paid off ashore. */
 export const BERTH_MEN_ASK = 'men will not fit';
 
-/** «Пересесть» (forum 2026-10-30): swap the ship she sails for one of her berths — at any harbour with a yard (the berth
- *  sends her round), not an island's caravan hull (taken out at the island). The ship she leaves takes the berth here, her
- *  fittings, guns, gear and level with her. Her army and her hold go across with the captain: a hold the new hull cannot
- *  take is refused (sell or store the rest first); men she has no hammocks for are asked about once (`force`: paid off). */
-export function swapBerth(game: Game, s: PlayerSession, port: Port, index: number, force = false): string | null {
+/** Why she cannot change into berth `index` here now, or null (or the men's question: `${n} ${BERTH_MEN_ASK}`). */
+function swapWhy(game: Game, s: PlayerSession, port: Port, index: number, force: boolean): string | null {
   const p = s.profile!;
   const ship = s.ship!;
   const b = p.berths[index];
@@ -219,10 +216,100 @@ export function swapBerth(game: Game, s: PlayerSession, port: Port, index: numbe
   const fit = berthFit(s, b.loadout);
   if (fit.holdOver > 0) return `Her hold takes ${fit.hold}: sell or store ${fit.holdOver} more in the warehouse first`;
   if (fit.menOver > 0 && !force) return `${fit.menOver} ${BERTH_MEN_ASK}`;
+  return null;
+}
+
+/** «Пересесть» (forum 2026-10-30): swap the ship she sails for one of her berths — at any harbour with a yard (the berth
+ *  sends her round), not an island's caravan hull (taken out at the island). The ship she leaves takes the berth here, her
+ *  fittings, guns, gear and level with her. Her army and her hold go across with the captain: a hold the new hull cannot
+ *  take is refused (sell or store the rest first); men she has no hammocks for are asked about once (`force`: paid off).
+ *  At once: her island's yard, where the hull lies by her (forum 40: a harbour's «Пересесть» is callBerth's). */
+export function swapBerth(game: Game, s: PlayerSession, port: Port, index: number, force = false): string | null {
+  const p = s.profile!;
+  const ship = s.ship!;
+  const why = swapWhy(game, s, port, index, force);
+  if (why) return why;
+  const b = p.berths[index];
   p.berths.splice(index, 1, { port: port.id, loadout: ship.loadout, hull: ship.hull / ship.stats.hullMax });
   setShip(game, s, b.loadout, b.hull);
   game.toastShip(ship, `You take the ${b.loadout.name} out of her berth.`, 'info');
   return null;
+}
+
+/** A berthed ship on her way to her captain (forum 40, approved by the owner: «Добавьте время на смену корабля в
+ *  «Причал» 2 минуты (как для смены флага)… Корабль плывёт к вам с места предыдущей стоянки. Прибудет через …»): which
+ *  berth (its index and, against a list changed meanwhile, her class and name), the harbour she comes to, when she comes
+ *  (wall ms: a reload, a restart keep the clock), and the men's answer given. Saved with the captain. */
+export interface BerthCall {
+  index: number;
+  classId: ShipClassId;
+  name: string;
+  port: string;
+  at: number;
+  force: boolean;
+}
+
+/** The berth a call is for, found again if the list changed (a berth sold, a ship given): -1 if she is gone. */
+export function calledBerth(p: Pick<Profile, 'berths' | 'berthCall'>): number {
+  const c = p.berthCall;
+  if (!c) return -1;
+  const same = (i: number) => p.berths[i]?.loadout.classId === c.classId && p.berths[i]?.loadout.name === c.name;
+  if (same(c.index)) return c.index;
+  return p.berths.findIndex((_, i) => same(i));
+}
+
+/** «Пересесть» in a harbour (forum 40): the berthed ship is sent for — she sails round from her berth and comes in
+ *  BERTH_CALL_MS (two minutes, as new colours go up), and is changed into then if her captain is still in this harbour;
+ *  casting off calls her back. Everything is asked now (and again when she comes). «Пересесть» on the ship already on
+ *  her way calls her off; on another, sends for that one instead. */
+export function callBerth(game: Game, s: PlayerSession, port: Port, index: number, force = false): string | null {
+  const p = s.profile!;
+  if (p.berthCall && calledBerth(p) === index && p.berthCall.port === port.id) {
+    const name = p.berthCall.name;
+    p.berthCall = null;
+    game.toastShip(s.ship!, `The ${name} goes back to her berth.`, 'info');
+    game.pushSelf(s, true);
+    return null;
+  }
+  const why = swapWhy(game, s, port, index, force);
+  if (why) return why;
+  const b = p.berths[index];
+  p.berthCall = { index, classId: b.loadout.classId, name: b.loadout.name, port: port.id, at: game.wallNow() + BERTH_CALL_MS, force };
+  const mins = Math.ceil(BERTH_CALL_MS / 60_000);
+  const from = game.portById(b.port)?.name ?? b.port;
+  game.toastShip(s.ship!, b.port === port.id ? `The ${b.loadout.name} is warped round from her berth: she comes alongside in ${mins} min, if you are still in port.` : `The ${b.loadout.name} sails to you from ${from}: she comes in ${mins} min, if you are still in port.`, 'info');
+  game.pushSelf(s, true);
+  return null;
+}
+
+/** Every second: the ship sent for comes alongside (and is changed into), or her captain sailed first (she goes back). */
+export function berthCallSecond(game: Game, s: PlayerSession): void {
+  const p = s.profile, ship = s.ship;
+  const c = p?.berthCall;
+  if (!p || !ship || !c) return;
+  if (ship.docked !== c.port) return berthCallOff(game, s);
+  if (game.wallNow() < c.at) return;
+  p.berthCall = null;
+  const i = calledBerth({ berths: p.berths, berthCall: c });
+  const port = game.portById(c.port);
+  const why = i < 0 || !port ? 'No such berth' : swapBerth(game, s, port, i, c.force);
+  if (why) {
+    // (the reason in its own line, as the yard says it: the men's count since grown is the hammocks' words)
+    game.toastShip(ship, `The ${c.name} came, but you cannot change into her now: she goes back to her berth.`, 'bad');
+    game.toastShip(ship, why.endsWith(` ${BERTH_MEN_ASK}`) ? `${parseInt(why, 10) || 1} of your men will not fit her: send for her again.` : why, 'bad');
+  }
+  game.saveSession(s);
+  game.pushSelf(s, true);
+}
+
+/** She cast off before the ship she sent for came: the order is struck, the ship goes back to her berth. */
+export function berthCallOff(game: Game, s: PlayerSession): void {
+  const p = s.profile;
+  if (!p?.berthCall) return;
+  const name = p.berthCall.name;
+  p.berthCall = null;
+  game.toastShip(s.ship, `You sailed before the ${name} came: she goes back to her berth.`, 'bad');
+  game.pushSelf(s, true);
 }
 
 /** One more berth for BERTH_PRICE doubloons, to BERTHS_CAP. */
@@ -245,6 +332,7 @@ export function sellBerth(game: Game, s: PlayerSession, port: Port, index: numbe
   const p = s.profile!;
   const b = p.berths[index];
   if (!b || b.port !== port.id) return 'No such ship berthed here';
+  if (p.berthCall && calledBerth(p) === index) return 'She is on her way to you: call her off first';
   if (b.loadout.legendary) return 'No yard would buy her, and no captain should sell her';
   // Doubloons are never turned into silver (docs/01 P7): no yard buys a hull bought with them.
   if (SHIP_CLASSES[b.loadout.classId]?.premium) return 'No yard buys a hull bought with doubloons';
@@ -362,4 +450,7 @@ export function sanitizeShipbuilding(p: Profile): void {
   p.plans ??= [];
   p.berths ??= [];
   p.figureheads ??= [];
+  // (a ship sent for, saved: kept if it still names a berth, else dropped — forum 40)
+  const c = p.berthCall;
+  if (c && !(typeof c === 'object' && Number.isFinite(c.at) && typeof c.port === 'string' && typeof c.name === 'string' && calledBerth(p) >= 0)) p.berthCall = null;
 }

@@ -42,6 +42,7 @@ export function berthsCard(view: PortView, state: ClientState): string {
   const cap = self.berthCap ?? BERTHS_FREE;
   const yard = view.shipyard.tier > 0;
   const cur = SHIP_CLASSES[self.loadout.classId];
+  const call = self.berthCall ?? null;
   const rows = self.berths.map((b, i) => {
     const c = SHIP_CLASSES[b.classId];
     const art = assetUrl(c.sprite);
@@ -49,13 +50,16 @@ export function berthsCard(view: PortView, state: ClientState): string {
     const here = b.port === view.portId;
     const where = isle ? LB('isle') : LB('where', { port: placeName(state.ports.find((p) => p.id === b.port)?.name ?? b.port) });
     const can = !isle && (here || yard);
-    const tip = isle ? LB('isle') : !yard && !here ? LB('noYard') : LB('swapHint');
+    // forum 40: the ship sent for — her countdown, «Отменить» in place of «Пересесть»
+    const coming = call?.index === i && call.port === view.portId;
+    const tip = coming ? LB('callOffHint') : isle ? LB('isle') : !yard && !here ? LB('noYard') : LB('swapHint');
     const guns = b.guns ? GUNS[b.guns[0]]?.name ?? '' : '';
     const meta = [b.level ? LB('lvl', { n: b.level }) : levelSpan(b.classId), LB('hull', { n: b.hull }), b.mods ? LB('mods', { n: b.mods }) : '', guns].filter(Boolean).join(' · ');
     return `<div class="card hull-card bth-card" data-berth="${i}"><div class="hull-art">${art ? `<img src="${art}" alt="" draggable="false" />` : ''}</div>
       <div class="hull-text"><b>${esc(placeName(b.name))}</b>${trophyTag(b.trophy)} <span class="muted">${esc(c.name)}</span>
-        <small class="bth-meta">${esc(meta)}</small>${hullStats(b.classId)}<small class="muted bth-where">${esc(where)}</small></div>
-      <span class="bth-btns"><button type="button" class="btn btn-small${can ? ' btn-primary' : ''}" data-act="berth_swap" data-i="${i}" title="${esc(tip)}" ${can ? '' : 'disabled'}>${esc(LB('swap'))}</button>${here && !isle ? `<button type="button" class="btn btn-small btn-danger" data-act="berth_sell" data-i="${i}" title="${esc(LB('sellHint'))}">${esc(LB('sell'))}</button>` : ''}</span></div>`;
+        <small class="bth-meta">${esc(meta)}</small>${hullStats(b.classId)}<small class="muted bth-where">${esc(where)}</small>
+      ${coming ? `<small class="bth-coming" title="${esc(LB('comingHint'))}">${icon('stat_sails', '', 'ico-xs')}${etaHtml('coming', call.at)}</small>` : ''}</div>
+      <span class="bth-btns"><button type="button" class="btn btn-small${can && !coming ? ' btn-primary' : ''}" data-act="berth_swap" data-i="${i}" title="${esc(tip)}" ${can ? '' : 'disabled'}>${esc(LB(coming ? 'callOff' : 'swap'))}</button>${here && !isle && !coming ? `<button type="button" class="btn btn-small btn-danger" data-act="berth_sell" data-i="${i}" title="${esc(LB('sellHint'))}">${esc(LB('sell'))}</button>` : ''}</span></div>`;
   }).join('');
   const more = cap < BERTHS_CAP
     ? `<button type="button" class="btn btn-small bth-buy" data-act="berth_buy" title="${esc(LB('buyHint', { n: BERTH_PRICE, max: BERTHS_CAP }))}">${esc(LB('buy'))} · ${fmt(BERTH_PRICE)}${icon('doubloon', '◈', 'ico-xs')}</button>`
@@ -64,6 +68,37 @@ export function berthsCard(view: PortView, state: ClientState): string {
     <p class="muted bth-text">${esc(LB('text'))}</p>
     <p class="bth-now">${icon('menu_ship', '', 'ico-sm')}${esc(LB('sailing', { name: `${placeName(self.loadout.name)} (${cur.name})` }))}</p>
     ${rows ? `<div class="bth-list">${rows}</div>` : `<p class="muted">${esc(LB('empty'))}</p>`}</div>`;
+}
+
+// ------------------------------------------------------------------ the ship sent for (forum 40)
+
+/** «1:42» till a wall-clock moment (the server's ms). */
+export function etaText(at: number): string {
+  const sec = Math.max(0, Math.ceil((at - Date.now()) / 1000));
+  return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+}
+
+/** A line with a live countdown in it: the words round it, the time ticking by itself (tickEtas) — the markup itself
+ *  does not change from second to second, so a window that redraws only when its markup changes is left alone. */
+function etaHtml(key: 'coming' | 'comingLine', at: number, name = ''): string {
+  const [a, b] = LB(key, { name: placeName(name), t: '|T|' }).split('|T|');
+  return `${esc(a)}<b class="bth-eta" data-eta="${at}">${etaText(at)}</b>${esc(b ?? '')}`;
+}
+
+/** Every countdown on the page (or under `root`) set to now. */
+export function tickEtas(root: ParentNode = document): void {
+  root.querySelectorAll<HTMLElement>('[data-eta]').forEach((el) => {
+    const t = etaText(Number(el.dataset.eta));
+    if (el.textContent !== t) el.textContent = t;
+  });
+}
+if (typeof document !== 'undefined' && typeof setInterval !== 'undefined') setInterval(() => tickEtas(), 250);
+
+/** The port window's head line while her berthed ship is on her way («Прибудет через 1:42»; a tap opens «Причал»). */
+export function berthCallFigure(state: ClientState, portId: string): string {
+  const c = state.self?.berthCall;
+  if (!c || c.port !== portId) return '';
+  return `<button type="button" class="w-fig bth-fig" data-ptab="berths" title="${esc(LB('comingHint'))}">${icon('build_shipyard', '⚓', 'ico-sm')}<span>${etaHtml('comingLine', c.at, c.name)}</span></button>`;
 }
 
 /** The yard's repair card's escort line: each hurt ship and her price, «Починить сопровождение». */
