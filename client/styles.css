@@ -5937,3 +5937,8 @@ html.app-paused *, html.app-paused *::before, html.app-paused *::after { animati
   .pv-rw { grid-template-columns: minmax(0, 1fr); }
   .pv-big b { font-size: 22px; }
 }
+
+/* the encounter card's ✕ (forum 2026-10-31) */
+.enc-card { position: relative; }
+.enc-x { position: absolute; top: 4px; right: 4px; width: 28px; height: 28px; padding: 0; border: 1px solid rgba(201, 162, 92, 0.6); border-radius: 3px; background: rgba(12, 10, 8, 0.85); color: var(--bone, #e8dcc0); font: 600 14px/1 var(--sans, sans-serif); cursor: pointer; z-index: 2; }
+.enc-x:hover { border-color: var(--gold, #e0b862); color: var(--gold, #e0b862); }

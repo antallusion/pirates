@@ -47,6 +47,8 @@ export class EncounterCard {
   private el: HTMLElement;
   private shown: number | null = null;
   private hideAt = 0;
+  /** A choice sent and not yet answered (its card, the time): the buttons come back if the answer never comes. */
+  private asked: { id: number; at: number } | null = null;
 
   private send: (m: ClientMsg) => void;
 
@@ -82,12 +84,22 @@ export class EncounterCard {
     this.el.classList.remove('hidden');
     this.el.querySelectorAll<HTMLElement>('[data-enc]').forEach((b) => (b.onclick = () => {
       this.el.querySelectorAll<HTMLButtonElement>('[data-enc]').forEach((x) => (x.disabled = true));
+      this.asked = { id: view.id, at: performance.now() };
       this.send({ t: 'encounter', id: view.id, choice: b.dataset.enc! });
     }));
+    // ✕: a card can always be put away (forum, 2026-10-31: it hung on the screen after a choice)
+    const x = document.createElement('button');
+    x.type = 'button';
+    x.className = 'enc-x';
+    x.setAttribute('aria-label', L('close'));
+    x.textContent = '✕';
+    x.onclick = () => this.close();
+    this.el.querySelector('.enc-card')!.appendChild(x);
   }
 
   /** What came of it: shown on the card (or on a card of its own, for a thing that simply happened). */
   result(r: EncounterResult): void {
+    this.asked = null;
     const d = ENCOUNTERS[r.def];
     this.shown = r.id;
     this.el.innerHTML = `<div class="enc-card">${this.art(r.def)}<div class="enc-h">${esc(d.title[ru()])}</div>${d.choices.length ? '' : `<p class="enc-text">${esc(d.text[ru()])}</p>`}
@@ -110,12 +122,18 @@ export class EncounterCard {
 
   close(): void {
     this.shown = null;
+    this.asked = null;
     this.el.classList.add('hidden');
     this.el.innerHTML = '';
   }
 
   /** Called every frame: an outcome fades by itself after a while. */
   frame(): void {
+    // a choice nobody answered (refused, or the ship sent alongside first): its buttons back after a few seconds
+    if (this.asked && performance.now() - this.asked.at > 4000) {
+      if (this.shown === this.asked.id) this.el.querySelectorAll<HTMLButtonElement>('[data-enc]').forEach((b) => (b.disabled = false));
+      this.asked = null;
+    }
     if (this.hideAt && performance.now() > this.hideAt) {
       this.hideAt = 0;
       this.close();

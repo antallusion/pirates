@@ -4072,8 +4072,12 @@ export class Game {
         err(resolveMutiny(this, s, msg.choice));
         this.pushSelf(s, true);
         return;
-      case 'encounter':
-        return err(chooseEncounter(this, s, Number(msg.id), String(msg.choice)));
+      case 'encounter': {
+        const why = chooseEncounter(this, s, Number(msg.id), String(msg.choice));
+        // (forum, 2026-10-31: a card whose moment had passed hung on the screen with its buttons greyed — it closes)
+        if (why === 'That moment has passed' || why === 'No such choice') this.sendTo(s, { t: 'encounter', view: null });
+        return err(why);
+      }
       case 'minigame':
         return err(playMinigame(this, s, Number(msg.id), String(msg.pick), msg.ms, msg.seq));
       case 'trek':
