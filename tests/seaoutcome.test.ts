@@ -401,6 +401,7 @@ test('QA 2026-10-18: after a turn-by-turn boarding won, bunks free are her bunks
   const { game } = makeGame();
   game.tacticalBoarding = true;
   const c = join(game, 'Bunk Counter', 'reaver');
+  game.sessionByName('Bunk Counter')!.profile!.pvp.flag = 'pirate'; // forum 34: a peaceful ship is the pirate flag's prey only
   c.push({ t: 'undock' });
   const s = [...game.sessions].find((x) => x.name === 'Bunk Counter')!;
   const ship = s.ship!;

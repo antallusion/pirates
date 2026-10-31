@@ -29,6 +29,7 @@ function atSea(game: Game, name: string): { c: FakeConn; ship: ShipEntity } {
 function target(game: Game, ship: ShipEntity, d: number): ShipEntity {
   const v = headingVec(ship.state.heading + Math.PI / 2);
   const npc = game.spawnNpcShip('merchant', 'fluyt', 'league', ship.state.x + v.x * d, ship.state.y + v.y * d, ship.state.heading);
+  game.profileOf(ship)!.pvp.flag = 'pirate'; // forum 34: a merchant, a fisher or a patrol is the pirate flag's prey only
   game.npcs.get(npc.id)!.active = true;
   npc.input = { rudder: 0, sailTarget: 0 };
   npc.state.speed = 0;

@@ -649,10 +649,20 @@ export function stepAutoFire(game: Game): void {
 
 /** «Огонь» (docs/23 item 35): a broadside out of turn, laid by the captain herself and tighter, from the loaded side
  *  that bears best on her mark (or on the nearest hostile ship abeam). */
-export function aimedVolley(game: Game, s: PlayerSession): string | null {
+export function aimedVolley(game: Game, s: PlayerSession, mark?: number): string | null {
   const ship = s.ship;
   if (!ship || !free(ship)) return 'Cannot fire now';
-  const t = gunneryMark(game, ship) ?? nearestThreat(game, ship, Math.max(effectiveRange(ship, 'port', ship.ammoSel), effectiveRange(ship, 'starboard', ship.ammoSel)));
+  // Her own mark (forum 34, Нефигугум: a merchant marked under the city flag and «Огонь» — the order went to the nearest
+  // shark, and the helmsman ran off after it): the volley is at her, or refused with why — never at another ship.
+  const run = runs.get(ship);
+  let marked: ShipEntity | null = null;
+  if (mark !== undefined && Number.isFinite(mark) && mark !== ship.id && !(run && run.roam === undefined && run.target === mark)) {
+    const m = game.ships.get(mark);
+    const why = attackBlocked(game, ship, m);
+    if (why) return why;
+    marked = m!;
+  }
+  const t = marked ?? gunneryMark(game, ship) ?? nearestThreat(game, ship, Math.max(effectiveRange(ship, 'port', ship.ammoSel), effectiveRange(ship, 'starboard', ship.ammoSel)));
   if (!t) {
     // Owner, 2026-10-22 («горела атака … надо было выделить цель, и нажать на корабль а не на кнопку атаки»): the round
     // «Огонь» with no mark and nobody in reach takes the best foe in sight — her quest's, else the nearest at war with

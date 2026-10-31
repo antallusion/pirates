@@ -33,6 +33,7 @@ function atSea(game: Game, name: string, talents: TalentRanks = {}) {
 function crippled(game: Game, ship: ShipEntity, distance: number, crew = 6): ShipEntity {
   const v = headingVec(ship.state.heading - Math.PI / 2);
   const npc = game.spawnNpcShip('merchant', 'fluyt', 'league', ship.state.x + v.x * distance, ship.state.y + v.y * distance, ship.state.heading);
+  game.profileOf(ship)!.pvp.flag = 'pirate'; // forum 34: a merchant, a fisher or a patrol is the pirate flag's prey only
   const brain = game.npcs.get(npc.id)!;
   brain.active = true;
   npc.input = { rudder: 0, sailTarget: 0 };

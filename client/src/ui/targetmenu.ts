@@ -15,7 +15,7 @@ import { esc, icon } from './dom.ts';
 
 const L = dict(EN, RU);
 
-export type TmId = 'lock' | 'pursue' | 'fight' | 'talk' | 'hire' | 'info';
+export type TmId = 'lock' | 'pursue' | 'fight' | 'board' | 'talk' | 'hire' | 'info';
 
 export interface TmChoice {
   id: TmId;
@@ -171,6 +171,8 @@ export class TargetMenu {
     this.about = about;
     if (key !== this.choicesKey || !this.isOpen) {
       this.choicesKey = key;
+      // One choice left (a thing of the deep: «Атаковать» alone — owner, 2026-10-31): one big button, not a ring of one.
+      this.el.classList.toggle('tm-single', choices.length === 1 && choices[0].id !== 'info');
       this.el.setAttribute('aria-label', L('tm.aria', { name }));
       this.el.innerHTML = choices.map((c, i) => `<button type="button" class="tm-item${c.on ? ' on' : ''}" role="menuitem" data-tm="${c.id}" style="--tm-i:${i}" aria-label="${esc(c.title)}" title="${esc(c.title)}"${c.on ? ' aria-pressed="true"' : ''}>`
         + `<span class="tm-pic">${icon(c.art, '•', 'tm-ico')}</span><span class="tm-l">${esc(c.label)}</span></button>`).join('')

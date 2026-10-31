@@ -322,6 +322,8 @@ import { silverKin } from '../../../shared/src/data/fleet.ts';
 import { isle18Message, isle18Second, islandFor, isleExtras, landDanger, onHiddenCharted, turtlePrompt } from './isles18.ts'; // docs/18 III
 import { installHeroHooks } from './h5.ts'; // docs/17 H5
 import { mineLandable } from './mines.ts';
+import { peaceBlocked, stepHueAndCry } from './flaglaw.ts'; // forum 34: the three flags and the sea's peaceful ships
+import { WASH_PER_SEC } from '../../../shared/src/data/colours.ts';
 import { crewOnKill, stepCrewLife } from './crewlife.ts';
 
 /** A bump on a ship she struck this lately is a ram she meant (forum 2026-10-30; Game.meantRam). */
@@ -975,7 +977,8 @@ export class Game {
         // own mark — her «Атаковать», an NPC's prey, a ship she fired on just now — or two ships at war make one; no
         // infamy, no quarrel, no escort's answer from a brush.)
         const peace = !this.meantRam(a, b) && !this.meantRam(b, a) && !this.isHostile(a, b) && !this.isHostile(b, a);
-        const friends = peace || (a.ownerId !== null && a.ownerId === b.ownerId) || damageBlocked(this, a, b) === 'friendly';
+        // (forum 34: a peaceful ship and a captain whose colours keep her off it — a bump, whoever meant it, both ways)
+        const friends = peace || (a.ownerId !== null && a.ownerId === b.ownerId) || damageBlocked(this, a, b) === 'friendly' || peaceBlocked(this, a, b) !== null || peaceBlocked(this, b, a) !== null;
         if (closing > 3 && friends) {
           a.state.speed *= 0.6;
           b.state.speed *= 0.6;
@@ -1138,6 +1141,7 @@ export class Game {
     stepWanted(this); // the named pirates, their trail, their lairs; the hunters (docs/12 P5)
     stepRaiding(this); // convoys, rockets, tips, the lanes' heat, the guarded (docs/12 P6)
     stepHires(this); // the ships of the sea hired as guards: the clock, the chip (owner, 2026-10-25)
+    stepHueAndCry(this); // forum 34: the law's patrols after a skulled pirate (flaglaw.ts)
     if (sec % 10 === 0) stepEstate(this); // outposts at work, raided and robbed (docs/12 P7)
     stepCaravans(this); // one's own caravans at sea (docs/12 P8)
     stepCompanions(this); // the orca calves in their captains' wakes (docs/12 P10 #2)
@@ -1579,7 +1583,7 @@ export class Game {
     if (ship.isPlayer && !ship.inCombat(now)) {
       const p = this.profileOf(ship);
       if (p && p.infamy > 0) {
-        p.infamy = Math.max(0, p.infamy - 0.05 * (1 + tval(st, 'infamyDecay')));
+        p.infamy = Math.max(0, p.infamy - WASH_PER_SEC * (1 + tval(st, 'infamyDecay')));
         ship.wantedCache = wantedLevel(p.infamy);
       }
     }
@@ -3761,7 +3765,8 @@ export class Game {
         return err(why);
       }
       case 'volley': {
-        const why = aimedVolley(this, s);
+        // (forum 34: her own mark goes with the order — refused for why, never another ship fired on instead)
+        const why = aimedVolley(this, s, msg.target === undefined ? undefined : Math.trunc(Number(msg.target)));
         // (in the First Watch her press is the lesson, a volley refused too — out of range, the guns not bearing: the
         // newcomer's run tapped «Огонь» nine times in 19 s with the raider still closing; retention, 2026-10-25)
         if (!why || onboardingProtected(s)) onboardingFire(s);
@@ -5080,8 +5085,13 @@ export class Game {
     // a fight ashore over, its reckoning still up: put away by the dock itself (it held her «in battle» for 45 s)
     if (landFighting(this, s) && !landFightOn(this, s)) closeFight(this, s);
     if (inBattle(this, ship)) return SELF_IN_BATTLE_WHY; // her party fights ashore, or her group's boarding holds her (owner, 2026-10-22)
-    if (ship.underFire(this.now)) return 'The harbour chain stays up while you are in a fight';
     const port = this.nearestPort(ship.state.x, ship.state.y);
+    // (forum 34: a harbour that will not take her skulls says so first — under fire or not, she must go elsewhere)
+    if (port && dist(port.x, port.y, ship.state.x, ship.state.y) <= PORT_DOCK_RADIUS) {
+      const pre = canDock(p, port.faction);
+      if (!pre.ok && !dockOverride(ship, p, port, bribing)) return pre.reason!;
+    }
+    if (ship.underFire(this.now)) return 'The harbour chain stays up while you are in a fight';
     // Only from the harbour's approach (owner, 2026-10-22: her hull within REACH_DOCK of its anchorage or its quays —
     // shared/src/world/dock.ts); a cable or a mile off, the helmsman takes her in and she puts in there (approach.ts).
     const isl = port ? this.world.islands[port.islandId] : undefined;

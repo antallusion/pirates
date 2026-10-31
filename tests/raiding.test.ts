@@ -45,6 +45,7 @@ function raider(game: Game, name: string, region: RegionId, cls = 'brig', level 
 
 function merchantBy(game: Game, ship: ShipEntity, cargo: Record<string, number>): ShipEntity {
   const m = game.spawnNpcShip('merchant', 'fluyt', 'league', ship.state.x + 28, ship.state.y, 0); // (alongside: within hail, 30 m of the hulls — reach.ts)
+  game.profileOf(ship)!.pvp.flag = 'pirate'; // forum 34: a merchant, a fisher or a patrol is the pirate flag's prey only
   game.setNpcLevel(m, 4);
   m.cargo = cargo;
   m.purse = 100;

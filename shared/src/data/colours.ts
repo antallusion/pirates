@@ -61,3 +61,27 @@ export function coloursBar(a: Colours, b: Colours, enemies: boolean): ColoursBar
   if (a === 'pirate' || b === 'pirate') return null;
   return enemies ? null : 'not_enemies';
 }
+
+// The three flags and the sea's own ships (forum post 34, 2026-10-31; server/src/game/flaglaw.ts).
+/** A skull lands her this much infamy into the next Wanted level: about ten minutes out of a fight to wash it off. */
+export const SKULL_PAD = 30;
+/** Infamy washed off a second out of a fight (Game.shipUpkeep; the Wanted talents add to it). */
+export const WASH_PER_SEC = 0.05;
+/** The Brethren's honour: a pirate-flag captain who fired on one of the sea's pirates is fair game to them this long. */
+export const HONOUR_SEC = 600;
+/** A merchant or a fisher runs from a pirate-flag captain this near. */
+export const MERCHANT_FLEE_R = 650;
+/** The hue and cry after a skulled pirate: the patrols this near take her for their chase and crowd on sail (+15% way);
+ *  in the Crown's safe water half again as far. */
+export const HUE_R = 3200;
+export const HUE_SAFE_MUL = 1.5;
+export const HUE_SPEED = 0.15;
+/** …and a lawful harbour this near sends a patrol out after her every HUE_SALLY_SEC, her skulls' worth at once (one more
+ *  in safe water), HUE_SALLY_MAX at most. */
+export const HUE_PORT_R = 6000;
+export const HUE_SALLY_SEC = 75;
+export const HUE_SALLY_MAX = 3;
+/** Said when the colours keep her guns off a peaceful ship (the client adds its «Поднять пиратский флаг»). */
+export const PEACE_SAY = 'Attacking peaceful ships is for the pirate flag only: hoist it in port.';
+/** Said when her skulls keep her colours up. */
+export const FLAG_LOCK_SAY = 'With skulls on you, your colours stay as they are: wash them off first — time out of fights, or a pardon in a pirate haven.';

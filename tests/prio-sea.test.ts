@@ -111,6 +111,7 @@ test('a merchant under a raider’s guns calls for help; the captain who sinks t
   const me = s.ship!;
   onHull(game, me, 'schooner', 4); // on even terms with the raider
   const mate = captainAt(game, 'Turncoat', x + 200, y + 200, 20);
+  mate.profile!.pvp.flag = 'pirate'; // forum 34: a peaceful ship is the pirate flag's prey only
   const pirate = npc(game, 'pirate', x + 1800, y);
   const merchant = npc(game, 'merchant', x + 1800, y + 400);
   // The raider fires on her: the call goes up with a bearing and a distance.

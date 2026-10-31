@@ -181,8 +181,9 @@ test('the sea’s own ships and the colours: pirates come for a neutral captain 
   s.profile!.pvp.flag = 'faction';
   assert.ok(npcHostileTo(game, pirate, me));
   assert.equal(neutralSpared(game, me), false);
+  // (forum 34: the Brethren's honour — the sea's pirates leave a pirate-flag captain be until she wrongs one of them)
   s.profile!.pvp.flag = 'pirate';
-  assert.ok(npcHostileTo(game, pirate, me));
+  assert.equal(npcHostileTo(game, pirate, me), false);
   // The law: a Crown patrol comes for the pirate flag; not for her city's colours nor for neutral ones (wanted 0).
   const patrol = game.spawnNpcShip('patrol', 'brig', 'crown', 29_600, 30_000, 0);
   game.setNpcLevel(patrol, 5);

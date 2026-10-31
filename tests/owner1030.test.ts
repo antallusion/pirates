@@ -79,6 +79,7 @@ test('2: «На абордаж» within 100 m of her hull only («Подойди
   assert.equal(grappleSecs(100), 4);
   const { game } = makeGame();
   const { c, ship } = atSea(game, 'Hook Hana');
+  game.profileOf(ship)!.pvp.flag = 'pirate'; // forum 34: a peaceful ship is the pirate flag's prey only
   const v = headingVec(ship.state.heading - Math.PI / 2);
   const npc = game.spawnNpcShip('merchant', 'brig', 'league', ship.state.x + v.x * 200, ship.state.y + v.y * 200, ship.state.heading + 0.8);
   npc.input = { rudder: 0, sailTarget: 0 };
@@ -124,6 +125,7 @@ test('2: «На абордаж» within 100 m of her hull only («Подойди
 test('2: «Атаковать → абордаж» (the intercept) sails her in and throws the grapples at 100 m — the approach, never the battle from afar', () => {
   const { game } = makeGame();
   const { s, ship } = atSea(game, 'Intercept Ida');
+  game.profileOf(ship)!.pvp.flag = 'pirate'; // forum 34: a peaceful ship is the pirate flag's prey only
   const v = headingVec(ship.state.heading - Math.PI / 2);
   const npc = game.spawnNpcShip('merchant', 'brig', 'league', ship.state.x + v.x * 600, ship.state.y + v.y * 600, ship.state.heading);
   npc.crew = Math.ceil(npc.stats.crewMax * 0.3);

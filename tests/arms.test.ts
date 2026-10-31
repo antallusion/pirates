@@ -306,6 +306,7 @@ test('the rarer shot at work: a star lights her, a stinkpot chokes her guns, a d
 test('the new deck mounts at work', () => {
   const { game } = makeGame();
   const { ship } = atSea(game, 'Pivot Pia');
+  game.profileOf(ship)!.pvp.flag = 'pirate'; // forum 34: a peaceful ship is the pirate flag's prey only
   const fit = (m: MountId) => {
     ship.loadout.mount = m;
     ship.mountReload = 0;

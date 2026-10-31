@@ -229,6 +229,7 @@ test('orders: Rally, Sea Shanty (not under fire), Cat-o\'-Nine-Tails, Concentrat
 test('Black Flag in contested water: the first attack costs a wanted level', () => {
   const { game } = makeGame();
   const { c, s, ship, p } = captain(game, 'Jolly', { cmd_black_flag: 1 });
+  p.pvp.flag = 'pirate'; // forum 34: a peaceful ship is the pirate flag's prey only
   const contested = REGIONS.gravewater.center;
   toSea(game, s, contested[0], contested[1]);
   steps(game, 1);

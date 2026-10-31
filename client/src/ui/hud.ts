@@ -50,7 +50,7 @@ import type { SectorData } from '../../../shared/src/protocol.ts';
 import { assetUrl, sprite } from '../assets.ts';
 import type { ClientState } from '../state.ts';
 import { $, bar, dec1, decorateSums, esc, fmt, glyphSvg, icon, knots, pct } from './dom.ts';
-import { flagChip, shipColours } from './flags.ts'; // docs/24 D2: her colours on the target card
+import { flagChip, flagMark, shipColours, skullsTip } from './flags.ts'; // docs/24 D2: her colours on the target card
 import { compassKey, objective, questPointer, trackedQuest, waypoint, waypointHooks } from './track.ts';
 import { courseAhead, courseOf } from './course.ts';
 import { DAILY_DEFS } from '../../../shared/src/data/dailies.ts';
@@ -94,6 +94,15 @@ const DL = dict(DET_EN, DET_RU);
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 const wantedTitle = (n: number): string => L(`wanted.${Math.max(0, Math.min(5, n))}` as keyof typeof EN & string);
+
+/** Her colours and skulls on the sea HUD's frame (forum 34): the flag she flies, ☠×N when she has skulls — locked
+ *  colours and the wash in its title (the frame opens the captain's menu; the ship's window has the flag card). */
+function skullBadge(state: ClientState): string {
+  const v = state.self?.pvp;
+  if (!v || (v.flag !== 'pirate' && !v.skulls)) return '';
+  const tip = skullsTip(state);
+  return `<b class="cs-law${v.skulls ? ' sk' : ''}" title="${esc(tip)}" aria-label="${esc(tip)}">${flagMark(v.flag, v.city, 'cs-fl')}${v.skulls ? `<span>☠${v.skulls}</span>` : ''}</b>`;
+}
 
 /** One simple sea HUD for every input (owner, 2026-10-07), unless «Подробный интерфейс» is on (settings: expertHud). */
 export function simpleHud(): boolean {
@@ -894,7 +903,7 @@ export class Hud {
           <div class="uf-top"><span class="uf-name">${esc(self.name)}${self.title ? `<small class="uf-title">${esc(sv(self.title))}</small>` : ''}</span><span class="gold val uf-silver">${icon('coin', '⛁', 'ico-sm')}${fmt(self.gold)}${exchPlus()}</span>${shopChip(state.doubloons, 'uf-dbl')}</div>
           ${fbar('hull', you.hull, you.hullMax, L('hull'), 'stat_hull')}${fbar('sails', you.sails, you.sailsMax, L('sails'), 'stat_sails')}${fbar('crew', you.crew, you.crewMax, L('crew'), 'stat_crew')}
           <div class="fbar xp" title="${esc(self.rested > 0 ? `${xpLine(self)} · ${L('rested', { n: fmt(self.rested) })}` : xpLine(self))}"><i style="width:${pct(self.xp / Math.max(1, self.xpNext))}"></i>${self.rested > 0 ? `<b class="xp-rest" style="left:${pct(self.xp / Math.max(1, self.xpNext))};width:${pct(Math.min(self.rested, Math.max(0, self.xpNext - self.xp)) / Math.max(1, self.xpNext))}"></b>` : ''}</div>
-          <div class="uf-sub"><span class="wanted" title="${esc(wantedTitle(self.wanted))}">${self.wanted ? icon('wanted', '☠', 'ico-sm') + '☠'.repeat(self.wanted) + ' ' + esc(wantedTitle(self.wanted)) : `<span class="muted">${esc(L('unknownToLaw'))}</span>`}</span>${self.talentPoints > 0 ? `<span class="gold uf-pts" title="${esc(keyless(L('talentPts', { n: self.talentPoints })))}">${keyChip('talents')}${icon('xp', '', 'ico-sm')}${self.talentPoints}</span>` : ''}${gloryChip(self.glory)}</div>
+          <div class="uf-sub"><span class="wanted" title="${esc(skullsTip(state) || wantedTitle(self.wanted))}">${self.wanted ? icon('wanted', '☠', 'ico-sm') + '☠'.repeat(self.wanted) + ' ' + esc(wantedTitle(self.wanted)) : `<span class="muted">${esc(L('unknownToLaw'))}</span>`}</span>${self.talentPoints > 0 ? `<span class="gold uf-pts" title="${esc(keyless(L('talentPts', { n: self.talentPoints })))}">${keyChip('talents')}${icon('xp', '', 'ico-sm')}${self.talentPoints}</span>` : ''}${gloryChip(self.glory)}</div>
         </div>`;
       $('hud-captain').querySelector<HTMLElement>('[data-throne]')?.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -1168,14 +1177,14 @@ export class Hud {
     const g = self.glory;
     const fr = state.cos?.eq.frame ?? ''; // docs/32 §12: her avatar frame
     const escorts = self.dockedAt ? [] : escortBars(state); // forum 2026-10-30: the ships with her, under her bars
-    const key = `simple|${fr}|${lang()}|${url ? 1 : 0}|${self.level}|${xpPct}|${self.gold}|${state.doubloons}|${you.hull}|${you.hullMax}|${you.crew}|${you.crewMax}|${you.sails}|${you.sailsMax}|${dot}|${g ? `${g.open}:${g.rank}:${g.pending}:${g.points - g.spent}` : ''}|${holdKey(self.hold)}|${escortKey(escorts)}`;
+    const key = `simple|${fr}|${lang()}|${url ? 1 : 0}|${self.level}|${xpPct}|${self.gold}|${state.doubloons}|${you.hull}|${you.hullMax}|${you.crew}|${you.crewMax}|${you.sails}|${you.sailsMax}|${dot}|${g ? `${g.open}:${g.rank}:${g.pending}:${g.points - g.spent}` : ''}|${holdKey(self.hold)}|${escortKey(escorts)}|${self.pvp?.flag}:${self.pvp?.skulls ?? 0}:${self.pvp?.washMin ?? 0}`;
     if (key === this.lastCaptainKey) return;
     this.lastCaptainKey = key;
     const el = $('hud-captain');
     const row = (k: 'hull' | 'crew' | 'sails', v: number, max: number, art: string, val: string) =>
       `<div class="cs-row cs-${k}" title="${esc(`${L(k)}: ${fmt(v)} / ${fmt(max)}`)}">${icon(art, '', 'cs-ico')}<span class="cs-bar"><i style="width:${pct(clamp(v / Math.max(1, max), 0, 1))}"></i></span><span class="cs-v">${esc(val)}</span></div>`;
     el.innerHTML = `<div class="cs">
-      <div class="cs-frame">${avatar({ face: cap.portrait, url, frame: fr || null, cls: 'cs-face' })}<b class="cs-lv" style="--xp:${xpPct}%" title="${esc(`${L('lv', { n: self.level })} · ${xpLine(self)}`)}">${self.level}</b>${dot ? `<i class="cs-pts" title="${esc(keyless(L('talentPts', { n: self.talentPoints })))}"></i>` : ''}${gloryChip(g, 'cs-glory')}</div>
+      <div class="cs-frame">${avatar({ face: cap.portrait, url, frame: fr || null, cls: 'cs-face' })}<b class="cs-lv" style="--xp:${xpPct}%" title="${esc(`${L('lv', { n: self.level })} · ${xpLine(self)}`)}">${self.level}</b>${dot ? `<i class="cs-pts" title="${esc(keyless(L('talentPts', { n: self.talentPoints })))}"></i>` : ''}${gloryChip(g, 'cs-glory')}${skullBadge(state)}</div>
       <div class="cs-body">${row('hull', you.hull, you.hullMax, 'stat_hull', fmt(you.hull))}${row('crew', you.crew, you.crewMax, 'stat_crew', `${you.crew}/${you.crewMax}`)}${row('sails', you.sails, you.sailsMax, 'stat_sails', fmt(you.sails))}${self.hold ? holdRowHtml(self.hold, icon('mod_hold_expansion', '', 'cs-ico'), L) : ''}
         <span class="cs-purse"><span class="cs-silver">${icon('coin', '⛁', 'cs-coin')}${fmt(self.gold)}${exchPlus()}</span>${shopChip(state.doubloons, 'cs-dbl')}</span>${escortRowHtml(escorts, icon('ab_call_escort', '', 'cs-eico'), L)}</div>
     </div>`;
@@ -2273,13 +2282,13 @@ export class Hud {
   }
 
   /** A toast that does something when tapped (an invitation waiting: the Company screen to answer it). */
-  tapToast(msg: string, kind: string, onTap: () => void): void {
+  tapToast(msg: string, kind: string, onTap: () => void, art = 'tab_letters'): void {
     this.toastQ.push(msg, kind, () => {
       const el = document.createElement('div');
       el.dataset.msg = msg;
       el.className = `toast ${kind} tap`;
       el.setAttribute('role', 'button');
-      el.innerHTML = `${icon('tab_letters', '', 'ico-toast')}<span>${esc(keyless(msg))}</span>`;
+      el.innerHTML = `${icon(art, '', 'ico-toast')}<span>${esc(keyless(msg))}</span>`;
       el.onclick = () => {
         el.remove();
         onTap();

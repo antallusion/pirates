@@ -231,7 +231,8 @@ test('a bump between ships at peace is no ram: no hull lost, no infamy, no quarr
   assert.equal(patrol.hull, h0, 'no hull lost');
   assert.equal(s.profile!.infamy, inf0, 'no infamy');
   assert.equal(npcHostileTo(game, patrol, me), false, 'the patrol keeps the peace');
-  // Ramming Speed: a ram she meant
+  // Ramming Speed: a ram she meant — under the pirate flag (forum 34: under the city flag a patrol is no prey, a ram a bump)
+  s.profile!.pvp.flag = 'pirate';
   patrol.state.x = me.state.x;
   patrol.state.y = me.state.y - 30;
   patrol.hull = patrol.stats.hullMax;

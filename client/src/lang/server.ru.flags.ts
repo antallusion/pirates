@@ -33,6 +33,12 @@ export const SERVER_RU_FLAGS: Record<string, string> = {
   'The pirate flag is up.': 'Поднят пиратский флаг.',
   'You sailed before your new colours went up: the order is struck.': 'Вы вышли в море раньше, чем подняли новый флаг: заказ отменён.',
   'The law wants you: your neutral colours are struck, and your city’s go up.': 'Вас ищет закон: нейтральный флаг спущен, поднят флаг вашего города.',
+  // The three flags and the sea's own ships (forum 34): the city flag's peace, the skulls' lock, the lawful harbours
+  // shut, the hue and cry.
+  'Attacking peaceful ships is for the pirate flag only: hoist it in port.': 'Нападение на мирных — только под пиратским флагом: поднимите его в порту.',
+  'With skulls on you, your colours stay as they are: wash them off first — time out of fights, or a pardon in a pirate haven.': 'Пока на вас черепа, флаг не сменить: сначала отмойтесь — время вне боя или помилование в пиратской гавани.',
+  '{0} harbours take no ship with {1} skulls: a pirate haven will (the Red Tide, the Fog Brokers, the Free Harbors) and sells pardons; or wash them off out of fights (about {2} min).': 'Порты ({0}) не принимают корабль с черепами: {1}. Примут пиратские гавани (Красный Прилив, Туманные брокеры, Вольные гавани), там же продают помилование; или отмойтесь вне боя (около {2} мин).',
+  'The law is out after you: a patrol puts out of {0}.': 'Закон идёт по вашему следу: из порта {0} вышел патруль.',
   // The tester's console.
   'Colours: {0} of {1}; {2}; {3}.': 'Флаг: {0} ({1}); {2}; {3}.',
   'Colours: {0} of {1}.': 'Флаг: {0} ({1}).',
@@ -46,5 +52,6 @@ export const SERVER_RU_FLAGS: Record<string, string> = {
   'Usage: /flag [neutral|faction|pirate] [city]': 'Использование: /flag [neutral|faction|pirate] [город]',
   'Usage: /noboard on|off': 'Использование: /noboard on|off',
   'Boarding off: guns only.': 'Абордаж выключен: только ядра.',
+  'Skulls: {0}.': 'Черепа: {0}.',
   'Boarding on.': 'Абордаж включён.',
 };

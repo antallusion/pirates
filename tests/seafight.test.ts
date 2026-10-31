@@ -125,6 +125,7 @@ test('no endless chase: forty seconds with no hit either way and the pursued mer
   s.autoFire = false;
   s.expert = true; // (no hit of hers: «Атаковать» fires whatever the auto-fire switch, but for the expert's own hand)
   const m = game.spawnNpcShip('merchant', 'fluyt', 'league', at.x + 900, at.y, Math.PI / 2);
+  s.profile!.pvp.flag = 'pirate'; // forum 34: a peaceful ship is the pirate flag's prey only
   game.npcs.get(m.id)!.active = true;
   game.setNpcLevel(m, 3);
   game.grid.upsert(m.id, m.state.x, m.state.y);

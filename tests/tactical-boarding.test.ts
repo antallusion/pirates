@@ -338,6 +338,7 @@ test("on the ships: the sea's side plays its own turns; a captain gone from the 
   const { game } = makeGame();
   game.tacticalBoarding = true;
   const { c, ship } = atSea(game, 'Merchantman');
+  game.profileOf(ship)!.pvp.flag = 'pirate'; // forum 34: a peaceful ship is the pirate flag's prey only
   const npc = foeAlongside(game, ship, 60, 'merchant', 'fluyt');
   const t0 = sideOf(game, npc, ship, false);
   assert.equal(t0.marines, 0, 'no marines on a merchant');

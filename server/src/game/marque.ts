@@ -3,6 +3,7 @@
 // the service's ports, fleet orders to be done by sunset (intercept a quarry off a port, sink the flag's enemies in a
 // sea, bring goods, patrol off a port), the service's quartermaster, the livery, and the letter revoked for crimes.
 
+import { sanction } from './flaglaw.ts';
 import { lackSilver } from '../../../shared/src/data/buyfail.ts';
 import { DAY_LENGTH_SEC, timeOfDay } from '../../../shared/src/constants.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -317,6 +318,7 @@ export function stepService(game: Game): void {
         const cls = game.rng.pick(hullsFor(def.quarry.role, lv));
         const npc = game.spawnNpcShip(def.quarry.role, cls, def.quarry.faction, spot[0], spot[1], game.rng.float() * Math.PI * 2);
         game.setNpcLevel(npc, lv);
+        sanction(npc, s.accountId); // her service's quarry: hers under any colours (forum 34, flaglaw.ts)
         if (def.quarry.role === 'merchant') npc.cargo = sv.id === 'crown' ? { dreamleaf: 12, rum: 10 } : { spices: 14, cloth: 12 };
         const brain = game.npcs.get(npc.id);
         if (brain) {

@@ -343,6 +343,7 @@ test('the «go there and do it» runs end inside the reaches and do it: a wreck 
 test('boarding from 300 m: «На абордаж» is not offered there («Подойдите ближе»), «Атаковать → абордаж» sails her in; a merchant striking on the way puts her terms up and stops her, and the terms taken sail her alongside', () => {
   const { game } = makeGame();
   const { s, c, ship } = captain(game, 'Boarder Bo');
+  s.profile!.pvp.flag = 'pirate'; // forum 34: a peaceful ship is the pirate flag's prey only
   ship.crew = ship.stats.crewMax;
   const v = headingVec(ship.state.heading + Math.PI / 2);
   const npc = game.spawnNpcShip('merchant', 'brig', 'league', ship.state.x + v.x * 300, ship.state.y + v.y * 300, ship.state.heading);

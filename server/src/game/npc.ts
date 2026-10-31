@@ -4,6 +4,7 @@
 //  * active — near a player: full sailing physics, perception, tacking and combat AI.
 // Every NPC has a purpose: merchants haul real cargo between real markets (docs/01 §5).
 
+import { fleesFrom, honourSpares } from './flaglaw.ts'; // forum 34: the three flags and the sea's own ships
 import { untouchable } from './inbattle.ts'; // owner, 2026-10-22
 import { convoyFoe, raidEscort } from './raiding.ts';
 import { joinedRaid } from './npcwars.ts';
@@ -353,6 +354,8 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
         // (the Bribe Signal's ranks and facets reach the pirates and the hunters too: docs/25 item 29, abilities.ts)
         // The pirate flag (docs/24 D1: «на вас напасть могут все»): the Crown's and the League's patrols come for her.
         if (coloursOf(p) === 'pirate' && (npc.faction === 'crown' || npc.faction === 'league')) return true;
+        // …and with a skull on her the Harpoon's too (forum 34: the law hunts a skulled pirate harder — flaglaw.ts).
+        if (coloursOf(p) === 'pirate' && wanted >= 1 && npc.faction === 'harpoon') return true;
         return wanted >= 2 && (npc.faction === 'crown' || (npc.faction === 'league' && wanted >= 3) || (npc.faction === 'harpoon' && wanted >= 4));
       case 'hunter':
         if (other.hasEffect('bribe_signal') && (other.talentReady.bribeReach ?? 0) >= 2) return false;
@@ -364,6 +367,9 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
         if (p?.oath === 'code') return false;
         // A lair's garrison (docs/16 #7) goes for any captain who comes to its island.
         if (npc.lairGuard && !other.surrendered) return true;
+        // The Brethren's honour (forum 34): a captain under the pirate flag is one of them — let be unless she wronged
+        // one of them lately (flaglaw.ts honourSpares; a ship she fired on answers her whatever, above).
+        if (honourSpares(game, npc, other)) return false;
         // A captain who joined them on their prey sails with them for a while (docs/16 P1).
         if (joinedRaid(game, npc, other)) return false;
         // Under a friend's guns (docs/12 P6): only a pirate well above her dares.
@@ -631,7 +637,8 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
       preyD = d;
       prey = o;
     }
-    if (game.isHostile(o, ship) && d < threatD) {
+    // (a merchant or a fisher runs from a black flag before the first shot: forum 34, flaglaw.ts)
+    if ((game.isHostile(o, ship) || (calm && fleesFrom(game, ship, o, d))) && d < threatD) {
       threatD = d;
       threat = o;
     }

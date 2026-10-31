@@ -15,6 +15,7 @@
 // Legends, the day's group contract (elite), the Admiralty's contracts, and a voyage between ports (a delivery, a
 // courier's run, a race, a scouting of a far sea) — the quest names where it goes.
 
+import { sanction } from './flaglaw.ts';
 import { BEASTS, BEAST_IDS, inGroup } from '../../../shared/src/data/beasts.ts';
 import type { BeastGroup, BeastId } from '../../../shared/src/data/beasts.ts';
 import { isAdmId } from '../../../shared/src/data/admiralty.ts';
@@ -265,6 +266,8 @@ function putOut(game: Game, s: PlayerSession, key: string, step: number, home: H
   } else {
     const foe = spawnQuestFoe(game, home, what.ship, lv, LOCAL_R, what.minTier ?? 0, what.region);
     if (foe) w.ids.push(foe.id);
+    // (a quest's merchant quarry is hers to take under any colours: forum 34, flaglaw.ts)
+    if (foe && s.accountId !== undefined) sanction(foe, s.accountId);
   }
   return localQuarry(game, s, key);
 }

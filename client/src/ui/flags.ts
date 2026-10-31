@@ -108,7 +108,8 @@ export function coloursCard(state: ClientState, opts: { head?: boolean } = {}): 
     // The city flag here is this port's city's (or the guild's over it): flying another city's, it is a change.
     const on = v.flag === k && (k !== 'faction' || !port || v.city === here);
     const soon = v.next === k;
-    const no = !docked || (k === 'neutral' && !!v.noNeutral);
+    // (skulls lock the colours: only the pirate flag goes up over them — forum 34)
+    const no = !docked || (k === 'neutral' && !!v.noNeutral) || (!!v.locked && k !== 'pirate' && !on);
     const title = k === 'neutral' ? L('fl.neutral') : k === 'pirate' ? L('fl.pirate') : L('fl.faction');
     const sub = k === 'neutral' ? L('fl.neutralSub') : k === 'pirate' ? L('fl.pirateSub') : L('fl.factionSub');
     // The Green Pennant rides over a young captain's city flag (docs/24): said on that option, in a word.
@@ -116,9 +117,10 @@ export function coloursCard(state: ClientState, opts: { head?: boolean } = {}): 
     const pen = k === 'faction' && v.pennant ? `<i class="fl-pen" title="${esc(L('mark.pennant'))}" aria-label="${esc(L('mark.pennant'))}"></i>` : '';
     const state_ = on ? `<em class="fl-on">${esc(L('fl.flying'))}</em>` : soon ? `<em class="fl-soon">${esc(L('fl.next', { n: mins }))}</em>` : '';
     return `<button type="button" class="fl-opt fl-opt--${k}${on ? ' on' : ''}${soon ? ' soon' : ''}" role="radio" aria-checked="${on}" data-colours="${k}"${no ? ' disabled' : ''}>
-      ${flagMark(k, k === 'faction' ? here : null)}<span class="fl-t"><b>${esc(title)}</b>${whose ? `<span class="fl-whose">${esc(whose)}${pen}</span>` : ''}<small>${esc(sub)}</small>${state_}</span></button>`;
+      ${flagMark(k, k === 'faction' ? here : null)}<span class="fl-t"><b>${esc(title)}</b>${whose ? `<span class="fl-whose">${esc(whose)}${pen}</span>` : ''}<small>${sub.split('|').map((x) => `<span class="fl-ln">${esc(x)}</span>`).join('')}</small>${state_}</span></button>`;
   };
-  const line = !docked ? L('fl.atSea') : v.noNeutral && v.flag !== 'neutral' ? L('fl.noNeutral') : L('fl.rule');
+  // (with skulls their own note above says it all: no line under the options — the boarding switch stays on the screen)
+  const line = v.skulls ? '' : !docked ? L('fl.atSea') : v.noNeutral && v.flag !== 'neutral' ? L('fl.noNeutral') : L('fl.rule');
   // (In the port the option says «зелёный вымпел» already; the ship window and «Флаг и закон» say what it is.)
   const pennant = v.pennant && opts.head !== false ? ` ${L('fl.pennant', { n: v.pennantHoursLeft })}` : '';
   // (The port's own place is named «Флаг» already: no heading over it there, the room is the boarding switch's.)
@@ -126,15 +128,44 @@ export function coloursCard(state: ClientState, opts: { head?: boolean } = {}): 
   // stays on but says it does nothing now.
   const idle = v.noBoard && v.flag !== 'neutral';
   const law = lawlessHere(state) ? `<p class="fl-law" role="note">${icon('danger', '', 'ico-sm')}<span>${esc(L('fl.lawCard'))}</span></p>` : '';
-  return `<div class="card fl-card${law ? ' fl-card--lawless' : ''}">${opts.head === false ? '' : `<h4 class="card-h">${icon('tab_law', '', 'ico-md')}${esc(L('fl.title'))}</h4>`}${law}
+  const skulls = skullsNote(state);
+  return `<div class="card fl-card${law ? ' fl-card--lawless' : ''}">${opts.head === false ? '' : `<h4 class="card-h">${icon('tab_law', '', 'ico-md')}${esc(L('fl.title'))}</h4>`}${law}${skulls}
     <div class="fl-opts" role="radiogroup" aria-label="${esc(L('fl.title'))}">${COLOURS.map(opt).join('')}</div>
-    <p class="fl-line muted">${esc(line)}${pennant ? `<span class="good">${esc(pennant)}</span>` : ''}</p>
+    <p class="fl-line muted"${line || pennant ? '' : ' hidden'}>${esc(line)}${pennant ? `<span class="good">${esc(pennant)}</span>` : ''}</p>
     <button type="button" class="fl-board${v.noBoard ? ' off' : ''}${idle ? ' idle' : ''}" role="switch" aria-checked="${!v.noBoard}" data-noboard="${v.noBoard ? '0' : '1'}"${docked ? '' : ' disabled'}>
       <i class="fl-nb-ico" aria-hidden="true"></i><span class="fl-t"><b>${esc(v.noBoard ? L('fl.boardOff') : L('fl.boardOn'))}</b>${idle ? `<em class="fl-idle">${esc(L('fl.boardIdle'))}</em>` : ''}<small>${esc(L('fl.boardSub'))}</small></span><i class="fl-sw" aria-hidden="true"></i></button></div>`;
 }
 
+/** Her skulls on the card (forum 34): what they lock, how to wash them off — time out of fights, or a pardon bought in a
+ *  pirate haven (its button there). Nothing when she is clean. */
+export function skullsNote(state: ClientState): string {
+  const v = state.self?.pvp;
+  if (!v?.skulls) return '';
+  const port = state.self?.dockedAt ? state.ports.find((p) => p.id === state.self!.dockedAt) : undefined;
+  const haven = !!port && (port.faction === 'free' || port.faction === 'brokers' || port.faction === 'confederacy');
+  const cost = v.pardon ?? 0;
+  return `<div class="fl-skulls" role="note"><b class="fl-sk">${esc(L('fl.skulls', { s: '☠'.repeat(v.skulls) }))}</b>
+    <span>${esc(L('fl.locked'))} ${esc(L('fl.wash', { n: v.washAllMin ?? 0, m: v.washMin ?? 0, cost: cost.toLocaleString('ru-RU') }))}</span>
+    ${haven ? `<button type="button" class="btn btn-small fl-pardon" data-pardon="1"${(state.self?.gold ?? 0) < cost ? ' disabled' : ''}>${esc(L('fl.pardonBuy', { cost: cost.toLocaleString('ru-RU') }))}</button>` : ''}</div>`;
+}
+
+/** The refusal at a peaceful ship and its one-tap hint, in her language (main.ts shows it as a tap toast). */
+export function peaceWords(): { line: string; hint: string } {
+  return { line: L('fl.peace'), hint: L('fl.peaceHint') };
+}
+/** Her skulls in a line for the HUD's badge (forum 34): how many, what they lock, how to wash them. */
+export function skullsTip(state: ClientState): string {
+  const v = state.self?.pvp;
+  if (!v?.skulls) return '';
+  return `${L('fl.skulls', { s: '☠'.repeat(v.skulls) })}. ${L('fl.locked')} ${L('fl.wash', { n: v.washAllMin ?? 0, m: v.washMin ?? 0, cost: (v.pardon ?? 0).toLocaleString('ru-RU') })}`;
+}
+export function portHint(): string {
+  return L('fl.portHint');
+}
+
 /** The card's buttons: an order for colours, boarding on or off. */
 export function bindColours(root: HTMLElement, send: (m: ClientMsg) => void): void {
+  root.querySelectorAll<HTMLButtonElement>('[data-pardon]').forEach((el) => (el.onclick = () => send({ t: 'pardon' })));
   root.querySelectorAll<HTMLButtonElement>('[data-colours]').forEach((el) => (el.onclick = () => send({ t: 'pvp', action: 'colours', flag: el.dataset.colours as Colours })));
   root.querySelectorAll<HTMLButtonElement>('[data-noboard]').forEach((el) => (el.onclick = () => send({ t: 'pvp', action: 'no_board', on: el.dataset.noboard === '1' })));
 }
