@@ -37,7 +37,7 @@ import { angleDiff, DEG, headingOf } from '../../../shared/src/math.ts';
 import { tx as tval } from '../../../shared/src/sim/shipstats.ts';
 import { stopAutosail, autosailOf } from './autosail.ts';
 import { BOARD_ABEAM, BOARD_FAR, BOARD_SPEED, boardingRangeBetween, canBoard, captainsShip, crewRefuses, startBoarding } from './boarding.ts';
-import { BOARD_GAP, boardGap, hullOf } from '../../../shared/src/data/reach.ts';
+import { BOARD_GAP, BOARD_OFFER, boardGap, hullOf } from '../../../shared/src/data/reach.ts';
 import { grappleWhy, startGrapple } from './grapple.ts'; // owner 2026-10-30
 import { NO_BOARD_HER, NO_BOARD_OWN, boardingOffVs, noBoardHolds } from './colours.ts';
 import { applyDamage, damageBlocked, effectiveRange, fireBroadside, fireChaser, sideHeading } from './combat.ts';
@@ -51,8 +51,9 @@ import type { NpcBrain } from './npc.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { softenFoe } from './firstfights.ts';
-import { canStrike, struck } from './struck.ts';
+import { canStrike, struck, surrenderClosed } from './struck.ts';
 import { attackRoam, roamRunWhy, roamWhereId } from './roamers.ts';
+import { beastBrain } from './beasts.ts';
 
 /** The helmsman has the wheel back this long after the captain lets go of it. */
 export const PURSUIT_RESUME = 1.5;
@@ -119,6 +120,9 @@ export interface Pursuit {
   /** The boarding intercept (forum 2026-10-30): her nearest to the mark so far and when — a run that keeps closing is no
    *  «endless chase», hits or none. */
   nearest?: { d: number; at: number };
+  /** Her mark is a beast of the sea (forum 40): its pack (0 for none) — the next mark, the first gone, is only one of
+   *  its pack or a beast that bites her, never the whole sea's. */
+  beast?: { pack: number };
   /** Held fast: the planner's route to her mark, its next point, when planned and to where. */
   way?: { path: Path; i: number; at: number; tx: number; ty: number } | null;
   /** Held fast: since when (under a knot), how many times running, when last under way; sailed round by the route
@@ -153,9 +157,21 @@ function send(game: Game, s: PlayerSession, run: Pursuit | null, why?: PursuitSt
   game.sendTo(s, run ? (run.roam !== undefined ? { t: 'pursuit', on: true, roam: run.roam } : { t: 'pursuit', on: true, target: run.target, mode: run.mode }) : { t: 'pursuit', on: false, why: why ?? 'off' });
 }
 
-/** The close fight's band for her guns as loaded (the broadside that reaches farther). */
-export function pursuitHold(ship: ShipEntity): { best: number; near: number; far: number } {
-  return closeRange(Math.max(effectiveRange(ship, 'port', ship.ammoSel), effectiveRange(ship, 'starboard', ship.ammoSel)));
+/** The guns' standoff's clear water beyond the grapples (forum 40, 2026-10-31: «Атака… если не нажать вовремя, корабль
+ *  сближается и пират берёт на абордаж»): hull to hull she lies at least this far outside BOARD_OFFER. */
+export const STANDOFF_CLEAR = 45;
+
+/** The close fight's band for her guns as loaded (the broadside that reaches farther) — and, against a mark (`t`), never
+ *  inside the grapples' reach: «Атаковать» keeps her distance and shoots (forum 40), the closing is «Сближение»'s. */
+export function pursuitHold(ship: ShipEntity, t?: ShipEntity): { best: number; near: number; far: number } {
+  const reach = Math.max(effectiveRange(ship, 'port', ship.ammoSel), effectiveRange(ship, 'starboard', ship.ammoSel));
+  const band = closeRange(reach);
+  // (no grapple from a beast, a monster, a boss: the close band, where the owner's fights against them were timed)
+  if (!t || unboardable(t)) return band;
+  // (centre to centre, lying beam to beam: half of each beam, the grapples' hundred metres and the clear water)
+  const clear = BOARD_OFFER + STANDOFF_CLEAR + (ship.stats.beam + t.stats.beam) / 2;
+  const best = Math.min(reach * 0.88, Math.max(band.best, clear));
+  return { best, near: Math.max(band.near, Math.min(best * 0.9, BOARD_OFFER + (ship.stats.beam + t.stats.beam) / 2 + 15)), far: Math.min(reach, Math.max(band.far, best * 1.12)) };
 }
 
 /** A mark no grapple takes (a beast of the sea, a monster, a zone boss, a great one's body or limb): «Атаковать» on her is
@@ -173,6 +189,7 @@ export function startPursuit(game: Game, s: PlayerSession, id: number, mode: Pur
   const why = attackBlocked(game, ship, target);
   if (why) return why;
   if (autosailOf(ship)) stopAutosail(game, s, 'manual');
+  if (target!.surrendered) refuseSurrender(game, s, target!);
   if (mode === 'board' && unboardable(target!)) mode = 'guns';
   // «Абордаж: выкл» on either ship (docs/24 C1): the guns' fight, and why, once (at the order, not every tick).
   // (Her own switch keeps her off captains only: the sea's own she boards at once, owner 2026-10-18.)
@@ -183,14 +200,34 @@ export function startPursuit(game: Game, s: PlayerSession, id: number, mode: Pur
   }
   const prev = runs.get(ship);
   const run: Pursuit = prev && prev.target === id && prev.roam === undefined
-    ? { ...prev, mode }
+    ? { ...prev, mode, grapple: false }
     : { target: id, mode, since: game.now, helmAt: -Infinity, brain: newBrain(ship.id, 'pirate', game.now) };
+  run.beast = beastMark(game, target!);
   // Auto-battle against the weak (docs/23 item 46): a ship of the ladder two levels and more below hers.
   if (!run.auto && s.autoWeak && weakMark(ship, target!)) run.auto = { left: 3, next: game.now + AUTO_WEAK_SEC / 3 };
   runs.set(ship, run);
   send(game, s, run);
   softenFoe(game, ship, target!); // one of her first three fights (docs/23 item 81)
   return null;
+}
+
+/** Said when her order to fight a ship that struck to her puts the surrender aside. */
+export const SURRENDER_REFUSED = 'You refuse her surrender: the fight goes on.';
+
+/** Forum 40 (2026-10-31: «пушки не добивают пирата… после «позже» пират становится неактивным, кольцо не появляется,
+ *  «Атака» ведёт только на абордаж»): «Атаковать» (or «Огонь» at her) on a ship lying struck puts her surrender aside —
+ *  her colours go back up, the card closes, and the guns may sink her. She does not strike again in this life
+ *  (brain.struck stays). */
+export function refuseSurrender(game: Game, s: PlayerSession, t: ShipEntity): void {
+  if (!t.surrendered || t.isPlayer || t.prize || t.boarding) return;
+  t.surrendered = false;
+  const brain = game.npcs.get(t.id);
+  if (brain) {
+    brain.struck = true;
+    brain.surrenderedAt = 0;
+  }
+  surrenderClosed(game, t);
+  game.sendTo(s, { t: 'toast', msg: SURRENDER_REFUSED, kind: 'info' });
 }
 
 /** docs/19 D7: «Атаковать» on a creature stack. A cable off, the boats go at once (the hex battle); farther, the helmsman
@@ -238,9 +275,9 @@ function stepRoamRun(game: Game, s: PlayerSession, ship: ShipEntity, run: Pursui
     if (e) game.refuse(s, e);
     return;
   }
-  // Full sail in with the boarding run's hands on the braces (as quick as a run for the grapples), easing the last
-  // cable so she does not run past it.
-  boardRun(game, s, ship, d < BOARD_RUN_FROM);
+  // Full sail in under her own canvas and the wind (forum 40: no run's way of its own), easing the last cable so she
+  // does not run past it.
+  boardRun(game, s, ship, false);
   helmTo(game, ship, run.brain, p.x, p.y, d < 160 ? 0.45 : 1);
 }
 
@@ -273,6 +310,31 @@ export function pursuitInput(game: Game, s: PlayerSession, rudder: number, sail:
   void sail;
   if (game.now - run.helmAt < PURSUIT_RESUME) s.ship!.input = { rudder: 0, sailTarget: s.ship!.input.sailTarget };
   return true;
+}
+
+/** A beast of the sea for her mark: its pack (0 alone); undefined for a ship. */
+function beastMark(game: Game, t: ShipEntity): { pack: number } | undefined {
+  return t.npcRole === 'beast' ? { pack: beastBrain(game, t.id)?.pack ?? 0 } : undefined;
+}
+
+/** Against the beasts (forum 40, «автофарм мобов — самоубийство: акулы и киты лезут со всех сторон»): below this share
+ *  of her hull the helmsman breaks off and the wheel is hers. */
+export const BEAST_BREAK_OFF = 0.25;
+/** A beast that bit her within this many seconds is a threat (the next mark), whatever its pack. */
+export const BEAST_BIT_SEC = 15;
+
+/** The next mark after a beast (forum 40): the nearest of its pack, or of the beasts biting her now — never a beast
+ *  lying quiet in the water round her (the helmsman ran from one kill to the next and pulled the whole sea on her). */
+function nextBeast(game: Game, ship: ShipEntity, pack: number, r: number): ShipEntity | null {
+  let best: ShipEntity | null = null, bd = r;
+  game.forShipsNear(ship.state.x, ship.state.y, r, (o) => {
+    if (o.id === ship.id || o.npcRole !== 'beast' || !o.alive || o.sinkingUntil || o.docked || damageBlocked(game, ship, o)) return;
+    const bit = (ship.attackers.get(o.id) ?? -Infinity) > game.now - BEAST_BIT_SEC;
+    if (!bit && !(pack > 0 && beastBrain(game, o.id)?.pack === pack)) return;
+    const d = Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y);
+    if (d < bd) [best, bd] = [o, d];
+  });
+  return best;
 }
 
 /** The nearest ship hostile to her that she may fire on, within `r`. */
@@ -316,8 +378,9 @@ export function stepPursuit(game: Game): void {
     }
     const blocked = t ? attackBlocked(game, ship, t) : null;
     if (!t || blocked) {
-      // Lost (sunk, gone, out of sight): the nearest threat is the next mark (docs/23 item 43).
-      const next = nearestThreat(game, ship, RETARGET_R);
+      // Lost (sunk, gone, out of sight): the nearest threat is the next mark (docs/23 item 43) — after a beast, only its
+      // pack or one biting her (forum 40).
+      const next = run.beast ? nextBeast(game, ship, run.beast.pack, RETARGET_R) : nearestThreat(game, ship, RETARGET_R);
       // (her mark gone into a battle of its own — owner, 2026-10-22: said why, not «lost»)
       if (!next && blocked === IN_BATTLE_WHY) {
         stopPursuit(game, s, 'off');
@@ -331,8 +394,14 @@ export function stepPursuit(game: Game): void {
       t = next;
       run.target = next.id;
       run.since = now;
+      run.beast = beastMark(game, next);
       run.auto = s.autoWeak && weakMark(ship, next) ? { left: 3, next: now + AUTO_WEAK_SEC / 3 } : undefined;
       send(game, s, run);
+    }
+    // Against the beasts her hull is the limit (forum 40): below a quarter the helmsman breaks off, the wheel hers.
+    if (t.npcRole === 'beast' && ship.hull < ship.stats.hullMax * BEAST_BREAK_OFF) {
+      stopPursuit(game, s, 'hurt');
+      continue;
     }
     // (seaux 2026-10-11: the auto-battle's broadsides only within her guns' reach — before, it settled the weak one
     // from as far as she could see her, 2.6 km; out of reach the pursuit below sails her in first)
@@ -365,9 +434,11 @@ export function stepPursuit(game: Game): void {
     if (wayRound(game, s, ship, run, t, d)) continue;
     if (run.mode === 'guns') {
       // The close fight (owner, 2026-10-07): in bow on to the band, then broadside on in it.
-      const hold = pursuitHold(ship);
+      // (forum 40: no boarding run's hands on the braces — its way and its wind were the autopilot's cheat, and a pirate
+      // read the run as her boarding him and came for his grapples; held outside the grapples' reach, pursuitHold)
+      const hold = pursuitHold(ship, t);
       run.closing = run.closing ? d > hold.best * CLOSE_TURN : d > hold.best * CLOSE_RUN;
-      boardRun(game, s, ship, !!run.closing && d < BOARD_RUN_FROM);
+      boardRun(game, s, ship, false);
       engageHelm(game, ship, run.brain, t, d, run.closing ? 'close' : 'guns', run.closing ? 180 / Math.max(6, ship.stats.maxSpeed) : 1, hold);
       continue;
     }
@@ -485,7 +556,7 @@ function wayRound(game: Game, s: PlayerSession, ship: ShipEntity, run: Pursuit, 
   }
   const [wx, wy] = way.path[way.i];
   // (The boarding run's hands on the braces as she closes, as on the straight run in.)
-  boardRun(game, s, ship, d < BOARD_RUN_FROM && (run.mode === 'board' || !!run.closing));
+  boardRun(game, s, ship, d < BOARD_RUN_FROM && run.mode === 'board');
   helmTo(game, ship, run.brain, wx, wy, 1);
   return true;
 }
@@ -494,7 +565,7 @@ function wayRound(game: Game, s: PlayerSession, ship: ShipEntity, run: Pursuit, 
 function boardRun(game: Game, s: PlayerSession, ship: ShipEntity, on: boolean): void {
   const has = ship.hasEffect('board_run');
   if (on === has) return;
-  if (on) ship.addEffect({ id: 'board_run', until: game.now + 60, mods: { ...BOARD_RUN }, flags: ['personal_wind'] }, game.now);
+  if (on) ship.addEffect({ id: 'board_run', until: game.now + 60, mods: { ...BOARD_RUN } }, game.now);
   else {
     ship.effects = ship.effects.filter((e) => e.id !== 'board_run');
     ship.recompute(game.now);
@@ -630,12 +701,15 @@ export function stepAutoFire(game: Game): void {
       }
       continue;
     }
+    // (the standoff outside the grapples, forum 40: her band's far edge where the helmsman holds her)
+    const held = run && run.roam === undefined && run.target === t.id ? pursuitHold(ship, t).far : 0;
     for (const side of ['port', 'starboard'] as const) {
       if (ship.reload[side] > 0) continue;
       const off = Math.abs(angleDiff(sideHeading(ship, side), lead.bearing));
       // Inside the close fight's band only (owner, 2026-10-07): a volley thrown from the edge of her reach struck one
       // ball in two and left the side loading when the helmsman brought her in.
-      if (off > AUTO_ARC_DEG * DEG || lead.d > closeRange(effectiveRange(ship, side, ship.ammoSel)).far) continue;
+      const reach = effectiveRange(ship, side, ship.ammoSel);
+      if (off > AUTO_ARC_DEG * DEG || lead.d > Math.min(reach, Math.max(closeRange(reach).far, held))) continue;
       if (!fireBroadside(game, ship, side, lead.d, lead, 1, {})) break; // one side a tick: the other answers the next
     }
     if (s.expert) continue;
@@ -656,6 +730,9 @@ export function aimedVolley(game: Game, s: PlayerSession, mark?: number): string
   // shark, and the helmsman ran off after it): the volley is at her, or refused with why — never at another ship.
   const run = runs.get(ship);
   let marked: ShipEntity | null = null;
+  // forum 40: «Огонь» at a ship lying struck puts her surrender aside, and the guns may sink her
+  const struckMark = mark !== undefined && Number.isFinite(mark) ? game.ships.get(mark) : undefined;
+  if (struckMark?.surrendered && attackBlocked(game, ship, struckMark) === null) refuseSurrender(game, s, struckMark);
   if (mark !== undefined && Number.isFinite(mark) && mark !== ship.id && !(run && run.roam === undefined && run.target === mark)) {
     const m = game.ships.get(mark);
     const why = attackBlocked(game, ship, m);
@@ -671,25 +748,41 @@ export function aimedVolley(game: Game, s: PlayerSession, mark?: number): string
     if (!foe) return NO_FOE;
     return startPursuit(game, s, foe.id, 'guns');
   }
-  const lead = leadOn(ship, t);
-  const arc = (LAY_ARC_DEG + tval(ship.stats, 'gunTrain')) * DEG;
-  let best: 'port' | 'starboard' | null = null, bo = Infinity, loaded = false;
-  for (const side of ['port', 'starboard'] as const) {
-    if (ship.reload[side] > 0) continue;
-    loaded = true;
-    const off = Math.abs(angleDiff(sideHeading(ship, side), lead.bearing));
-    if (off <= arc && lead.d <= effectiveRange(ship, side, ship.ammoSel) && off < bo) {
-      bo = off;
-      best = side;
-    }
+  if (ship.reload.port > 0 && ship.reload.starboard > 0) return 'Guns are still loading';
+  let lead = leadOn(ship, t);
+  let best = bearingSide(ship, lead);
+  // Beasts round her (forum 40: «не стреляют пушки по мобам вручную» — a shark under her bow or stern, never on her
+  // beam, and «Огонь» only turned the helmsman after it): the side that bears on any beast of its pack or biting her now.
+  if (!best && t.npcRole === 'beast') {
+    const pack = beastBrain(game, t.id)?.pack ?? 0;
+    let bd = Infinity;
+    game.forShipsNear(ship.state.x, ship.state.y, autoReach(ship), (o) => {
+      if (o.id === t.id || o.npcRole !== 'beast' || !o.alive || o.sinkingUntil || damageBlocked(game, ship, o)) return;
+      if ((ship.attackers.get(o.id) ?? -Infinity) <= game.now - BEAST_BIT_SEC && !(pack > 0 && beastBrain(game, o.id)?.pack === pack)) return;
+      const l = leadOn(ship, o);
+      const side = bearingSide(ship, l);
+      if (side && l.d < bd) [best, lead, bd] = [side, l, l.d];
+    });
   }
-  if (!loaded) return 'Guns are still loading';
   if (!best) {
     // Not on her beam and no helmsman at it: he lays the broadside on her (the button never just buzzes at a foe).
-    if (!runs.has(ship) && !attackBlocked(game, ship, t)) return startPursuit(game, s, t.id, 'guns');
+    // (not at a beast, forum 40: «Огонь» is her own hand there — the helmsman's run is «Атаковать»'s)
+    if (!runs.has(ship) && t.npcRole !== 'beast' && !attackBlocked(game, ship, t)) return startPursuit(game, s, t.id, 'guns');
     return 'She is not on your beam';
   }
   return fireBroadside(game, ship, best, lead.d, lead, 1, { spread: AIMED_SPREAD });
+}
+
+/** The loaded side that bears best on a lead (within her laying arc and its reach), or null. */
+function bearingSide(ship: ShipEntity, lead: { d: number; bearing: number }): 'port' | 'starboard' | null {
+  const arc = (LAY_ARC_DEG + tval(ship.stats, 'gunTrain')) * DEG;
+  let best: 'port' | 'starboard' | null = null, bo = Infinity;
+  for (const side of ['port', 'starboard'] as const) {
+    if (ship.reload[side] > 0) continue;
+    const off = Math.abs(angleDiff(sideHeading(ship, side), lead.bearing));
+    if (off <= arc && lead.d <= effectiveRange(ship, side, ship.ammoSel) && off < bo) [bo, best] = [off, side];
+  }
+  return best;
 }
 
 /** «Огонь» with no foe in sight at all: said, not buzzed. */

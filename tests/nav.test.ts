@@ -79,8 +79,9 @@ test('«Атаковать» to board past a hulk, a skerry, a graveyard\'s hulk
   const all = chaseScenes(game.world, 5);
   const scenes = (['wreck', 'skerry', 'hulks', 'pier', 'reef', 'isle'] as const).map((k) => all.find((s) => s.kind === k)!);
   for (const sc of scenes) {
-    const r = chaseRun(game, sc, 'captain', sc.kind === 'reef' ? 'frigate' : 'brig', 60);
-    assert.ok(r.grapple > 0 && r.grapple < 40, `${sc.kind} ${sc.of}: the grapples at ${r.grapple} s`);
+    // (forum 40: the helmsman sails by the wind now, no boarding run's +70 % — 700 m closed at her own way)
+    const r = chaseRun(game, sc, 'captain', sc.kind === 'reef' ? 'frigate' : 'brig', 150);
+    assert.ok(r.grapple > 0 && r.grapple < 140, `${sc.kind} ${sc.of}: the grapples at ${r.grapple} s (${JSON.stringify(r)})`);
     assert.equal(r.blows, 0, `${sc.kind}: no blow`);
     assert.equal(r.reef, 0, `${sc.kind}: no reef`);
     assert.equal(r.stuck, false, `${sc.kind}: never held fast`);
@@ -115,7 +116,7 @@ test('alongside by a skerry: the helmsman takes the beam away from it (her own s
 test('her mark behind an island: the helmsman takes her round it and boards her, no blow, never held fast', () => {
   const { game } = makeGame();
   const sc = chaseScenes(game.world, 5).find((s) => s.kind === 'behind')!;
-  const r = chaseRun(game, sc, 'captain', 'brig', 120);
+  const r = chaseRun(game, sc, 'captain', 'brig', 200); // (forum 40: her own way, no run's)
   assert.ok(r.grapple > 0, `boarded (${r.grapple} s)`);
   assert.equal(r.blows + r.reef, 0);
   assert.equal(r.stuck, false);

@@ -107,7 +107,8 @@ export type ClientMsg =
   /** «Атаковать» (docs/23 item 33): the ship pursues `target` — `guns` holds her best range broadside-on, `board` runs in
    *  for the grapples; `stop` gives the wheel back. `roam` (docs/19 D7): «Атаковать» on a creature stack instead — the
    *  helmsman sails her in and her boats go a cable off it (the hex battle). */
-  | { t: 'attack'; target?: number; mode?: PursuitMode; stop?: boolean; roam?: number }
+  /** `close` (forum 40): «Сближение» — the helmsman closes, the grapples wait for her own «На абордаж» */
+  | { t: 'attack'; target?: number; mode?: PursuitMode; stop?: boolean; roam?: number; close?: boolean }
   /** «Огонь» (docs/23 item 35): a broadside out of turn, laid tighter, from the side that bears best. */
   | { t: 'volley'; /** her mark (forum 34): the volley is at her, or refused — never at another ship */ target?: number }
   /** The captain's gunnery settings (docs/23 items 35, 42, 46): auto-fire, auto-battle against the weak, the expert's
@@ -1612,7 +1613,7 @@ export interface SurrenderOffer {
 /** «Атаковать» (docs/23 item 33): fight her with the guns, or run in for the grapples. */
 export type PursuitMode = 'guns' | 'board';
 /** Why the helmsman gave the wheel back. */
-export type PursuitStop = 'off' | 'manual' | 'board' | 'struck' | 'sunk' | 'lost' | 'slipped';
+export type PursuitStop = 'off' | 'manual' | 'board' | 'struck' | 'sunk' | 'lost' | 'slipped' | 'hurt';
 
 /** The window before a risky boarding (docs/23 items 49–52): her chance by the battle engine played out `sims` times,
  *  what a loss costs (as Game.boardingLost takes it) and what a win over a senior brings. */

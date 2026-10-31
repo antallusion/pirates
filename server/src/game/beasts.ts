@@ -717,6 +717,15 @@ const TELL_EVERY = 20;
 /** A sperm whale between its rams stands off this far (it stood off 200 m: the edge of a light gun's close band). */
 const RAM_STAND = 130;
 
+/** A beast's teeth leave her rudder this much of itself at least (her helm answers at 0.3 + 0.7 × it: four fifths). */
+export const BEAST_RUDDER_FLOOR = 0.7;
+/** …and bite it once in this many seconds at most, whatever the number round her. */
+export const BEAST_RUDDER_EVERY = 12;
+/** A serpent's coils, loosened, do not close on her again for this long (any serpent): she sails clear. */
+export const COIL_WARD = 15;
+const rudderBitAt = new WeakMap<ShipEntity, number>();
+const coilFreedAt = new WeakMap<ShipEntity, number>();
+
 /** The blow of a beast at its prey: into her hull — now and then her rudder (an orca's, a shark's), a leak (a narwhal's
  *  tusk), her rigging (the serpent's coils) — and never into her men (owner, 2026-10-07: «акулы всякие они не должны
  *  убивать моих людей, как они команду могут убить?»; a shark's bite took a man every bite and fifteen of a sloop's
@@ -728,12 +737,17 @@ function bite(game: Game, b: ShipEntity, br: Brain, t: ShipEntity, mul = 1): voi
   const now = game.now;
   const packet: DamagePacket = { hull: dmg };
   let crit: string | undefined, tell: string | undefined;
-  if (br.beast === 'orca' && S.rng.chance(0.3)) {
-    packet.rudder = 0.06;
+  // (forum 40: one shark, nearly dead, worried her rudder until she could not steer away from it and sank — a beast's
+  // teeth take her rudder no lower than BEAST_RUDDER_FLOOR, once in BEAST_RUDDER_EVERY seconds: she can always steer off)
+  const rudderOk = t.rudderHp > BEAST_RUDDER_FLOOR && now - (rudderBitAt.get(t) ?? -Infinity) >= BEAST_RUDDER_EVERY;
+  if (br.beast === 'orca' && rudderOk && S.rng.chance(0.3)) {
+    packet.rudder = Math.min(0.06, t.rudderHp - BEAST_RUDDER_FLOOR);
+    rudderBitAt.set(t, now);
     crit = 'rudder';
     tell = 'The orcas go for your rudder!';
-  } else if (br.beast === 'shark' && S.rng.chance(0.2)) {
-    packet.rudder = 0.04;
+  } else if (br.beast === 'shark' && rudderOk && S.rng.chance(0.2)) {
+    packet.rudder = Math.min(0.04, t.rudderHp - BEAST_RUDDER_FLOOR);
+    rudderBitAt.set(t, now);
     crit = 'rudder';
     tell = 'A shark worries at your rudder!';
   } else if (def.temper === 'coil') {
@@ -849,7 +863,7 @@ function attack(game: Game, b: ShipEntity, br: Brain, t: ShipEntity, dt: number,
         return;
       }
       swim(game, b, t.state.x, t.state.y, speedOf(b, br, 1), dt, 1.5);
-      if (now >= br.nextCoil && d < reach + 10) {
+      if (now >= br.nextCoil && d < reach + 10 && now - (coilFreedAt.get(t) ?? -Infinity) >= COIL_WARD && !t.hasEffect('coiled')) {
         br.coil = { target: t.id, until: now + 8, next: now + 0.5 };
         t.addEffect({ id: 'coiled', until: now + 8, mods: { maxSpeed: -0.85, turnRate: -0.8 }, source: b.id }, now);
         game.emit({ k: 'fx', fx: 'coil', x: Math.round(t.state.x), y: Math.round(t.state.y) }, t.state.x, t.state.y);
@@ -877,6 +891,7 @@ function stepCoil(game: Game, b: ShipEntity, br: Brain, now: number): void {
     br.nextCoil = now + 18;
     fleeFor(br, now, 6);
     if (t) {
+      coilFreedAt.set(t, now);
       t.effects = t.effects.filter((e) => e.id !== 'coiled');
       t.recompute(now);
       game.toastShip(t, 'The coils loosen.', 'good');

@@ -75,7 +75,10 @@ export const GRAPPLE_REACH = 1.8;
  *  her pick-up, × over her own, until the grapples bite. And her stem to the guns (item 47): bow-on she shows her mark
  *  the narrowest target she has, so the quick fight's broadsides do not sink her on the way in (the point of the game is
  *  to close and board). */
-export const BOARD_RUN = { maxSpeed: 0.7, accel: 4, turnRate: 0.8, incomingDamageMul: -0.4 } as const;
+// (forum 40, 2026-10-31: «с автобоем корабль разгоняется до максимальной скорости корпуса, против ветра, почти без
+// парусов» — the run's +70 % way, ×5 pick-up and its own wind put the helmsman past every law of the sea. Her way is
+// the wind's and her canvas's now, as under her own hand; the run keeps only her stem to the guns.)
+export const BOARD_RUN = { incomingDamageMul: -0.4 } as const;
 /** Chain or grape from a ship on her boarding run fouls a sea ship's running rigging (forum 2026-10-30, Нефигугум:
  *  «мелочь (пираты) отлетает от пушек, не успеваю сблизиться»): this much off her way for BOARD_SNARE_SEC, renewed. */
 export const BOARD_SNARE = 0.25;

@@ -322,7 +322,9 @@ export function chaseRun(game: Game, sc: ChaseScene, who: Who, mcls: ShipClassId
   const pb = newBrain(-1, 'pirate', game.now);
   // (A sea pirate has no boarding run: her mark a little slower, under easier canvas.)
   // (Behind an island she is beyond the boarding run's reach: her canvas eased, so the chase is the helm's, not a race.)
-  const tsail = who === 'npc' ? 0.55 : sc.kind === 'behind' ? 0.3 : 1;
+  // (forum 40, 2026-10-31: nor has a captain's helmsman any longer — the run's +70 % way and its own wind are gone, she
+  // sails by the wind as her mark does: her mark under the same eased canvas as a sea pirate's)
+  const tsail = sc.kind === 'behind' ? 0.3 : who === 'npc' ? 0.55 : 0.4;
   if (who !== 'npc') {
     const x = seaCaptainAt(game, mcls, sc.me.x, sc.me.y, sc.me.h);
     me = x.ship;
