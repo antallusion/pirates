@@ -3753,7 +3753,8 @@ export class Game {
         if (!why && msg.mode === 'guns') onboardingFire(s);
         // «Атаковать → абордаж» is the intercept (forum 2026-10-30, Нефигугум: «не успеваю сблизиться»): the helmsman cuts
         // her off at full sail and the grapples fly by themselves alongside — a bad fight's odds asked first, as at the rail.
-        if (!why && msg.mode !== 'guns') {
+        // (forum 40: «Сближение» only closes — no odds asked, no grapples of the helmsman's: «На абордаж» at 100 m is hers)
+        if (!why && msg.mode !== 'guns' && msg.close !== true) {
           const run = pursuitOf(ship);
           const t = this.ships.get(Math.trunc(Number(msg.target)));
           if (run && run.mode === 'board' && t) {

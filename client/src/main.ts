@@ -4221,7 +4221,8 @@ function runAct(a: Act): void {
       return void net.send({ t: 'attack', target: attackMark, mode: guardOfEntity(state, attackMark) && !unboardableMark(attackMark) ? 'board' : 'guns' });
     }
     case 'attack_mode':
-      return void (state.pursuit && net.send({ t: 'attack', target: state.pursuit.target, mode: state.pursuit.mode === 'board' ? 'guns' : 'board' }));
+      // «Сближение» / «На выстрел» (forum 40): closing never throws the grapples — «На абордаж» comes up at 100 m
+      return void (state.pursuit && net.send({ t: 'attack', target: state.pursuit.target, mode: state.pursuit.mode === 'board' ? 'guns' : 'board', close: true }));
     case 'attack_stop':
       return void net.send({ t: 'attack', stop: true });
     case 'goal_sail': {

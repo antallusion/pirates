@@ -107,7 +107,8 @@ export type ClientMsg =
   /** «Атаковать» (docs/23 item 33): the ship pursues `target` — `guns` holds her best range broadside-on, `board` runs in
    *  for the grapples; `stop` gives the wheel back. `roam` (docs/19 D7): «Атаковать» on a creature stack instead — the
    *  helmsman sails her in and her boats go a cable off it (the hex battle). */
-  | { t: 'attack'; target?: number; mode?: PursuitMode; stop?: boolean; roam?: number }
+  /** `close` (forum 40): «Сближение» — the helmsman closes, the grapples wait for her own «На абордаж» */
+  | { t: 'attack'; target?: number; mode?: PursuitMode; stop?: boolean; roam?: number; close?: boolean }
   /** «Огонь» (docs/23 item 35): a broadside out of turn, laid tighter, from the side that bears best. */
   | { t: 'volley'; /** her mark (forum 34): the volley is at her, or refused — never at another ship */ target?: number }
   /** The captain's gunnery settings (docs/23 items 35, 42, 46): auto-fire, auto-battle against the weak, the expert's

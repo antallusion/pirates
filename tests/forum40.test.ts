@@ -229,3 +229,20 @@ test('forum 40 · a beast\'s teeth never take her rudder past steering, and a se
   assert.ok(recoil >= COIL_WARD - 0.1, `coiled again ${recoil.toFixed(1)} s after it let go`);
   void serpent;
 });
+
+test('forum 40 · «Сближение» only closes: no odds asked, the helmsman never throws the grapples — «На абордаж» at 100 m is hers', () => {
+  const game = duelSea();
+  const at = openWater(game, 28);
+  const s = seaCaptain(game, 'brig', 5, at.x, at.y, 0);
+  const me = s.ship!;
+  const B = putSide(game, { cls: 'brig', level: 5, craft: 'idle' }, at.x + 400, at.y, 0);
+  B.ship.npcRole = 'pirate';
+  const push = (m: unknown) => (conn(s) as unknown as { push: (m: unknown) => void }).push(m);
+  push({ t: 'attack', target: B.ship.id, mode: 'guns' });
+  push({ t: 'attack', target: B.ship.id, mode: 'board', close: true });
+  assert.equal(pursuitOf(me)?.mode, 'board');
+  assert.ok(!pursuitOf(me)?.grapple, 'no grapples of the helmsman\'s');
+  assert.ok(!conn(s).inbox.some((m) => m.t === 'board_risk'), 'no odds asked for a closing');
+  for (let i = 0; i < 20 * 40 && !me.grapple && !me.boarding; i++) game.step();
+  assert.ok(!me.grapple?.attacker && !me.boarding, 'alongside, and still no grapples until she presses «На абордаж»');
+});

@@ -200,7 +200,7 @@ export function startPursuit(game: Game, s: PlayerSession, id: number, mode: Pur
   }
   const prev = runs.get(ship);
   const run: Pursuit = prev && prev.target === id && prev.roam === undefined
-    ? { ...prev, mode }
+    ? { ...prev, mode, grapple: false }
     : { target: id, mode, since: game.now, helmAt: -Infinity, brain: newBrain(ship.id, 'pirate', game.now) };
   run.beast = beastMark(game, target!);
   // Auto-battle against the weak (docs/23 item 46): a ship of the ladder two levels and more below hers.
