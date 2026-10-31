@@ -49,6 +49,8 @@ import { LOG_PAGES, logFrame, logTabOf } from './logbook.ts';
 import type { LogTab } from './logbook.ts';
 import type { WinTab } from './kit/window.ts';
 import { bindColours, coloursCard } from './flags.ts';
+import { renderChronicle } from './chronicle.ts';
+import { LC } from './crewlife.ts';
 
 const L = dict(EN, RU);
 /** A name or sentence the server built, in the player's language. */
@@ -57,7 +59,7 @@ const dayW = (n: number) => plural(n, L('day_one'), L('day_few'), L('day_many'))
 const hourW = (n: number) => plural(n, L('hour_one'), L('hour_few'), L('hour_many'));
 const slotW = (n: number) => plural(n, L('slot_one'), L('slot_few'), L('slot_many'));
 
-export type CompanyTab = 'group' | 'guild' | 'letters' | 'market' | 'law' | 'isles' | 'legends' | 'empires' | 'career' | 'album';
+export type CompanyTab = 'group' | 'guild' | 'letters' | 'market' | 'law' | 'isles' | 'legends' | 'empires' | 'career' | 'album' | 'chronicle';
 
 const ago = (ms: number) => {
   const m = Math.max(0, Math.round((Date.now() - ms) / 60_000));
@@ -135,8 +137,8 @@ export class CompanyScreen {
     const docked = state.self?.dockedAt ?? null;
     if (this.tab !== 'letters') this.mailTo = '';
     if (this.tab === 'market' && !docked) this.tab = 'group';
-    const TAB_ICON: Record<CompanyTab, string> = { group: 'tab_group', guild: 'tab_guild', law: 'tab_law', letters: 'tab_letters', isles: 'tab_isles', empires: 'tab_empire', legends: 'tab_legends', market: 'tab_board', career: 'service_crown', album: 'tattoo_compass_rose' };
-    const tabName = (t: CompanyTab) => t === 'career' || t === 'album' ? renownTab(t) : t === 'group' ? L('tab_group') : t === 'law' ? L('tab_law') : t === 'isles' ? L('tab_isles') : t === 'legends' ? L('tab_legends') : t === 'empires' ? L('tab_empires') : t === 'guild' ? (state.guild ? L('tab_guild_tag', { tag: esc(state.guild.tag) }) : L('tab_guild')) : t === 'letters' ? L('tab_letters') : state.market?.auction ? L('tab_market_auction') : L('tab_market');
+    const TAB_ICON: Record<CompanyTab, string> = { group: 'tab_group', guild: 'tab_guild', law: 'tab_law', letters: 'tab_letters', isles: 'tab_isles', empires: 'tab_empire', legends: 'tab_legends', market: 'tab_board', career: 'service_crown', album: 'tattoo_compass_rose', chronicle: 'ui_quill' };
+    const tabName = (t: CompanyTab) => t === 'chronicle' ? LC('chron') : t === 'career' || t === 'album' ? renownTab(t) : t === 'group' ? L('tab_group') : t === 'law' ? L('tab_law') : t === 'isles' ? L('tab_isles') : t === 'legends' ? L('tab_legends') : t === 'empires' ? L('tab_empires') : t === 'guild' ? (state.guild ? L('tab_guild_tag', { tag: esc(state.guild.tag) }) : L('tab_guild')) : t === 'letters' ? L('tab_letters') : state.market?.auction ? L('tab_market_auction') : L('tab_market');
     const badge = (t: CompanyTab) => t === 'law' ? state.self?.pvp.challenges.length ?? 0 : t === 'guild' ? state.guildInvites.length : t === 'letters' ? state.unread : 0;
     // docs/23 item 74: the journal's frame — the rail's five places, this one's pages as the second row's chips.
     const rail = logTabOf(this.tab) as Exclude<LogTab, 'quests'>;
@@ -153,6 +155,7 @@ export class CompanyScreen {
     else if (this.tab === 'empires') this.renderEmpires(body, state);
     else if (this.tab === 'career') renderCareer(body, state, this.send);
     else if (this.tab === 'album') renderAlbum(body, state, this.send);
+    else if (this.tab === 'chronicle') renderChronicle(body, state, this.send); // forum post 40
     else this.renderMarket(body, state);
     const go = (t: CompanyTab) => {
       this.tab = t;

@@ -24,6 +24,7 @@ import { grantMap, makeMap } from './explorefx.ts';
 import type { Game } from './Game.ts';
 import { addLand } from './landecon.ts';
 import { haulNote, haulPeek } from './seahaul.ts';
+import { cartography, charted } from './charting.ts';
 import type { PlayerSession, Profile } from './player.ts';
 
 /** Her boats at a mark: which, and when they are done (world seconds). */
@@ -219,6 +220,7 @@ export function workMark(game: Game, s: PlayerSession, m: SeaMark): string {
       break;
     }
     case 'buoy': {
+      charted(game, s, 'buoy'); // a lane mark read is charting: «Первопроходец» (forum post 40)
       // The lane mark's chart: the nearest island not yet on hers, else the way to the nearest port.
       let near: (typeof game.world.islands)[number] | null = null, nd = Infinity;
       for (const is of game.world.islands) {
@@ -231,7 +233,7 @@ export function workMark(game: Game, s: PlayerSession, m: SeaMark): string {
       }
       if (near) {
         game.chartIsland(s, near);
-        game.grantXp(s, pointsXp(s.profile!.level, worth / 4), null);
+        game.grantXp(s, pointsXp(s.profile!.level, (worth / 4) * (1 + cartography(s))), null); // «Картограф» (forum post 40)
         line = `The lane mark charts ${near.name}, ${Math.max(100, Math.round(Math.max(0, nd) / 100) * 100)} m to the ${compass(m.x, m.y, near.x, near.y)}.`;
         kind = 'gold';
       } else {
@@ -244,6 +246,7 @@ export function workMark(game: Game, s: PlayerSession, m: SeaMark): string {
           }
         }
         const silver = giveSilver(game, s, worth, 'buoy');
+        if (cartography(s) > 0) game.grantXp(s, pointsXp(s.profile!.level, (worth / 8) * (cartography(s) / 0.2)), null); // the lane's soundings, a Cartographer's (forum post 40)
         line = `The lane mark reads: ${port.name}, ${Math.max(1, Math.round(pd / 1000))} km to the ${compass(m.x, m.y, port.x, port.y)}. A pilot's tin on the buoy: ${silver} silver.`;
         kind = 'info';
       }

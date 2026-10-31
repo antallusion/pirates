@@ -477,7 +477,7 @@ function card(game: Game, s: PlayerSession, l: Lair): LairCard {
     id: l.id, kind: l.kind, role: l.role, size: l.size, level: l.level, island: islandName(game, l), men: armyMen(men), stacks: men.map((x) => ({ u: x.u, n: x.n })),
     ratio: Math.round(lairRatio(game, s, l) * 10) / 10, party: armyMen(partyOf(game, s)), offer, joinN: offer === 'join' ? armyMen(lairJoiners(game, s, l)) : 0,
     reach: inReach(game, s, l), why: up ? farless(fightWhy(game, s, l)) : null, pay: { silver: pay.silver, xp: xpAt(s.profile!.level, l.level, pay.xp) }, isle: lootChances({ src: 'lair', size: l.size, role: l.role, level: l.level }), ...(lairWeek(game, l) ? { week: true } : {}),
-    ...(p.v[l.id] === week1(game) ? { looted: true } : {}),
+    ...(p.v[l.id] === week1(game) ? { looted: true, lootIn: weekView(game).nextIn } : {}),
     ...(!up && st?.down !== undefined ? { down: Math.max(0, Math.round(st.down + LAIR_RESPAWN[l.role] - game.now)) } : {}),
     ...(chainSteps ? { chain: { step: l.chain!, done: chainSteps } } : {}),
     ...(dw ? { dwell: dw } : {}),
@@ -574,6 +574,7 @@ function marksOf(game: Game, s: PlayerSession): LairsView {
     const d = S.store.dw[l.id];
     list.push({
       id: l.id, kind: l.kind, role: l.role, x: Math.round(p.x), y: Math.round(p.y), level: l.level, men: armyMen(lairMen(game, l)), down: !lairUp(game, l), island: l.island,
+      ...(S.store.st[l.id]?.down !== undefined && !lairUp(game, l) ? { back: Math.round(S.store.st[l.id]!.down! + LAIR_RESPAWN[l.role]) } : {}),
       ...(d ? { flag: d.owner === s.accountId ? 'own' as const : 'other' as const } : {}), ...(l.turtle !== undefined ? { turtle: l.turtle } : {}), ...(l.bank !== undefined ? { bank: l.bank } : {}),
       ...(l.chain !== undefined ? { chain: l.chain } : {}),
     });

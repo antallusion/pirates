@@ -16,6 +16,10 @@ import { serverText } from '../lang/server.ts';
 import type { ClientState } from '../state.ts';
 import { esc, icon, officerIcon } from './dom.ts';
 import { sagaName, tellSagaShort } from './saga.ts';
+import { outcomeHtml } from './encounter.ts';
+import type { EncounterResult } from './encounter.ts';
+import { ENCOUNTERS } from '../../../shared/src/data/encounters.ts';
+import type { EncounterId } from '../../../shared/src/data/encounters.ts';
 
 export const LC = dict(EN, RU);
 const ru = () => (lang() === 'ru' ? 1 : 0);
@@ -102,8 +106,34 @@ export function tellLog(e: LogEntry, captain: string): string {
     case 'officer_dead': return LC('lg.officer_dead', { 0: personName(e.a[0] ?? ''), 1: serverText(e.a[1] ?? '') });
     case 'crew_lost': return LC('lg.crew_lost', { 0: a(0), n: e.n ?? 0, w: e.a[1] ?? '0' });
     case 'wounded_died': case 'level': return LC(`lg.${e.kind}`, { n: e.n ?? 0 });
+    // «Хроника» (forum post 40): the server's own sentence, in the reader's tongue
+    case 'loot': case 'find': case 'fight': case 'quest': case 'trade': case 'reward': case 'build': case 'note':
+      return serverText(e.a[0] ?? '');
+    case 'sunk_by': {
+      const where = a(1);
+      if (e.a[3] === 'scuttled') return LC('lg.sunk_byOwn', { 1: where });
+      if (!e.a[0]) return LC('lg.sunk_bySea', { 1: where });
+      return LC(e.a[2] ? 'lg.sunk_byCap' : 'lg.sunk_by', { 0: a(0), 1: where, 2: e.a[2] ?? '' });
+    }
+    case 'taken_by': return LC('lg.taken_by', { 0: a(0), n: e.n ?? 0 });
+    case 'boarded': return LC('lg.boarded', { 0: a(0), 1: e.a[1] ?? '0', 2: e.a[2] ?? '0', n: e.n ?? 0 });
+    case 'quest_done': return LC('lg.quest_done', { 0: serverText(e.a[0] ?? ''), 1: e.a[1] ?? '0', n: e.n ?? 0 });
+    case 'letter': return LC(e.n ? 'lg.letterSilver' : 'lg.letter', { 0: personName(e.a[0] ?? ''), 1: serverText(e.a[1] ?? ''), n: e.n ?? 0 });
+    case 'encounter': return encounterLine(e);
     default: return LC(`lg.${e.kind}` as 'lg.sank', { 0: a(0), 1: a(1) });
   }
+}
+
+/** A sea encounter's end as one line: its title and the outcome, the numbers filled in (encounter.ts). */
+function encounterLine(e: LogEntry): string {
+  const d = ENCOUNTERS[e.a[0] as EncounterId];
+  if (!d) return '';
+  let vars: EncounterResult['vars'] = {};
+  try { vars = JSON.parse(e.a[2] ?? '{}') as EncounterResult['vars']; } catch { /* an old line */ }
+  const out = outcomeHtml({ id: 0, def: e.a[0] as EncounterId, outcome: e.a[1] ?? '', vars }).replace(/<[^>]+>/g, '');
+  const div = document.createElement('div');
+  div.innerHTML = out;
+  return `${d.title[ru()]}: ${div.textContent ?? ''}`;
 }
 
 interface Row { tod: number; icon: string; text: string }
@@ -139,11 +169,18 @@ function tally(list: LogEntry[]): string {
   return s || p || d ? `<div class="lg-tally">${esc(LC('logTally', { s, p, d }))}</div>` : '';
 }
 
+/** Set by the shell: ask the server for the chronicle (the day log reads the same lines). */
+export let chronAsk: (() => void) | null = null;
+export function setChronAsk(f: () => void): void {
+  chronAsk = f;
+}
+
 /** The captain's log: the newest day first, each with its lines in order and the day's tally. */
 export function renderLog(root: HTMLElement, state: ClientState): void {
   const self = state.self;
   if (!self) return;
-  const log = self.log ?? [];
+  if (!state.chron) chronAsk?.();
+  const log = state.chron ?? []; // (it comes by {t:'chron'} now, forum post 40)
   const days = [...new Set(log.map((e) => e.day))].sort((x, y) => y - x);
   const today = days[0];
   const body = days.map((d) => {

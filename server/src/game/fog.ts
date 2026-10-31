@@ -30,6 +30,7 @@ import { has } from './holdings.ts';
 import { shipyardLevel } from './baseships.ts';
 import { townLevel } from './town.ts';
 import { notifyAway } from './tgnotify.ts';
+import { soundings } from './charting.ts';
 
 /** A scout as her captain's profile keeps her. */
 export interface ScoutRec {
@@ -192,7 +193,7 @@ export function fogSecond(game: Game, s: PlayerSession): void {
       st.sx = ship.state.x;
       st.sy = ship.state.y;
       st.sr = r;
-      fogReveal(game, s, ship.state.x, ship.state.y, r);
+      soundings(game, s, fogReveal(game, s, ship.state.x, ship.state.y, r)); // her own soundings (forum post 40, charting.ts)
     }
   }
   if (game.tick % 200 < 20) isleReach(game, s, st); // every ten seconds: a hall raised shows soon enough

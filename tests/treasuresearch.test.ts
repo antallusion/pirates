@@ -215,7 +215,7 @@ test('circleAim: a circle\'s middle ashore — the open water nearest it, inside
 
 test('the chart\'s «Сокровища» layer: its own toggle, in the essentials, and added to a chart kept from before', () => {
   assert.ok(defaultLayers(true).has('treasure'));
-  assert.deepEqual([...defaultLayers(false)], ['all']);
+  assert.deepEqual([...defaultLayers(false)].sort(), ['all', 'yards']); // forum post 40: «Всё» is the yards too
   const ess = defaultLayers(true);
   const off = toggleLayer(ess, 'treasure');
   assert.ok(!off.has('treasure') && off.has('goals'), 'off without touching «Цели»');

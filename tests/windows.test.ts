@@ -72,19 +72,20 @@ test(`«Надеть лучшее»: the locker's best piece for each slot it be
 
 test(`the chart's layers: the essentials on a phone, everything at a desk; «Всё» alone, a layer toggles, never none`, () => {
   assert.deepEqual([...defaultLayers(true)].sort(), ['goals', 'lairs', 'ports', 'treasure']); // («Сокровища», forum post 34)
-  assert.deepEqual([...defaultLayers(false)], ['all']);
+  assert.deepEqual([...defaultLayers(false)].sort(), ['all', 'yards']); // forum post 40: «Всё» is the yards too
   const ess = defaultLayers(true);
-  assert.deepEqual([...toggleLayer(ess, 'all')], ['all']);
+  assert.deepEqual([...toggleLayer(ess, 'all')].sort(), ['all', 'yards']);
   assert.deepEqual([...toggleLayer(new Set(['all'] as const), 'ports')], ['ports']);
   assert.deepEqual([...toggleLayer(new Set(['ports'] as const), 'ports')], ['ports'], 'the last layer stays');
   assert.deepEqual([...toggleLayer(ess, 'lairs')].sort(), ['goals', 'ports', 'treasure']);
 });
 
-test(`«Журнал»: five tabs; every company page sits under one of them`, () => {
+test(`«Журнал»: six tabs (with «Хроника», forum post 40); every company page sits under one of them`, () => {
   for (const page of ['group', 'guild', 'law', 'letters', 'isles', 'empires', 'career', 'album', 'legends', 'market']) assert.ok(Object.values(LOG_PAGES).some((p) => p.includes(page)), page);
   assert.equal(logTabOf('career'), 'album');
   assert.equal(logTabOf('law'), 'company');
-  assert.equal(Object.keys(LOG_PAGES).length + 1, 5);
+  assert.equal(Object.keys(LOG_PAGES).length + 1, 6);
+  assert.equal(logTabOf('chronicle'), 'chronicle');
 });
 
 test(`the kit's window parts: big tabs and chips say a word or two, the sentence goes to the hint; a was→becomes card has one button`, () => {

@@ -168,6 +168,10 @@ export interface Profile {
   /** The fog of war (owner, 2026-10-17; fog.ts): the sea's kilometre squares she has seen, base64 bits. Absent in a save
    *  from before it: made from what she knew at her next start. */
   fog?: string;
+  /** «Острова не бесконечны» (forum post 40, charting.ts): new sea squares toward the next page of soundings, and the
+   *  pages made. */
+  soundings?: number;
+  soundingPages?: number;
   /** Her island's scouts (fog.ts) and the last scout's number. */
   scouts?: ScoutRec[];
   scoutSeq?: number;
@@ -748,7 +752,6 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     stormHearts: p.stormHearts ?? 0,
     service: world.service ?? null,
     saga: p.saga ?? [],
-    log: p.log ?? [],
     fishing: fishingView(p),
     beasts: p.beasts ?? {},
     cargo: ship ? ship.cargo : p.cargo,

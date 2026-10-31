@@ -366,8 +366,8 @@ test('the captain\'s log writes the day by itself: sinkings, storms, discoveries
   const last = p.log!.at(-1)!;
   assert.equal(last.kind, 'saga');
   assert.deepEqual(last.a, ['wonder', 'The Glass Lagoon']);
-  // The private state carries it.
-  assert.equal(priv(game, s).log?.length, p.log!.length);
+  // The private state no longer carries it (forum post 40: it comes by {t:'chron'}).
+  assert.equal(priv(game, s).log, undefined);
   // Only the last few days are kept.
   const old = p.log!.map((x) => ({ ...x }));
   const today = old.at(-1)!.day + LOG_DAYS + 1;

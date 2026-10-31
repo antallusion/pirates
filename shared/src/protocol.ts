@@ -148,6 +148,8 @@ export type ClientMsg =
   /** QA 2026-10-22: the page back from the background (or its watchdog) asks again for a boarding's spoils still waiting
    *  for her answer — the card comes again (or, none waiting, a stale one goes). */
   | { t: 'board_result' }
+  /** «Хроника» (forum post 40): the whole chronicle, please. */
+  | { t: 'chron' }
   /** The captain would rather fight boardings the old way, round by round (Boarding 2.0). */
   | { t: 'board_pref'; classic: boolean; /** Owner, 2026-10-16: set her stacks before round one (absent: as before, on) */ deploy?: boolean }
   /** docs/25 item 64: come aboard a group mate's boarding (`with`: the ship that grappled, BoardOffer.with) with the kinds of
@@ -889,7 +891,7 @@ export interface PrivateState {
   service?: ServiceView | null;
   /** Her saga's chapters (docs/12 P10 #20). */
   saga?: SagaEntry[];
-  /** The captain's log of the last few days (docs/16 #20). */
+  /** The captain's log (docs/16 #20) — no longer sent here: it comes by {t:'chron'} (forum post 40). */
   log?: LogEntry[];
   /** Fishing (docs/12 P3). */
   fishing: FishingView;
@@ -2169,6 +2171,9 @@ export type ServerMsg =
   | { t: 'mutiny'; ringleader: string; mutineers: number; payCost: number; timeout: number }
   | { t: 'sunk_self'; lost: { cargoValue: number; crew: number; repairFee: number }; respawnPort: string; towed?: boolean; /** her own scuttling (owner 2026-10-20) */ scuttled?: boolean; /** a boarding lost (owner, 2026-10-05): who took her and the silver they had */ boarded?: { by: string; silver: number; repelled?: boolean } }
   | { t: 'toast'; msg: string; kind: 'info' | 'good' | 'bad' | 'xp' | 'gold' }
+  /** «Хроника» (forum post 40): the whole chronicle (`full`, asked for once) or a line just written (`again`: the last
+   *  line counted once more — it replaces the client's last). */
+  | { t: 'chron'; entries: LogEntry[]; full?: boolean; again?: boolean }
   /** A purchase refused, its one real reason and numbers (owner, 2026-10-21; shared/src/data/buyfail.ts); `msg` the toast's words. */
   | { t: 'buyfail'; fail: BuyFail; msg: string }
   /** A hull researched (docs/20): the yard's film and word. */

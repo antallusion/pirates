@@ -21,6 +21,7 @@ import { regattaSail } from '../../shared/src/data/regatta.ts';
 import { SHIP_CLASSES } from '../../shared/src/data/ships.ts';
 import { setNemeses } from './ui/nemesis.ts';
 import type { IslesView, RouteView } from '../../shared/src/protocol.ts';
+import type { LogEntry } from '../../shared/src/data/captainlog.ts';
 import type { DwellView, MineView, WeekView } from '../../shared/src/h3proto.ts';
 import type { AdvCardView, AdvView, PuzzleView } from '../../shared/src/h4proto.ts';
 import type { AppraisalView, CaravanView, CarcassView, BaseView, EstateView, HuntView, RaidView, ShoalView, SightView, WantedView, TattooView, CompanionView, PetView, PetsOwnView, DiceView, RegattaView, WondersView, DutchmanView, HallView, StormView, DescentView, HolidayView, BazaarShadow } from '../../shared/src/protocol.ts';
@@ -266,6 +267,11 @@ export class ClientState {
   barter: BarterView | null = null;
   letters: LetterView[] = [];
   unread = 0;
+  /** «Хроника» (forum post 40): the captain's chronicle as the server keeps it — null until asked for once; then each
+   *  new line follows by itself. */
+  chron: LogEntry[] | null = null;
+  /** Lines written since she last looked at the chronicle (the rail tab's badge). */
+  chronNew = 0;
   market: MarketView | null = null;
   duel: DuelView | null = null;
   bounties: BountyView[] = [];

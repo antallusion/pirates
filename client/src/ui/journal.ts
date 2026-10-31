@@ -210,10 +210,9 @@ export class Journal {
     const q = quests.find((x) => x.id === this.chosen) ?? null;
     const ct = this.chosen?.startsWith('c:') ? contracts.find((c) => `c:${c.id}` === this.chosen) ?? null : null;
     const inGroup = (state.party?.members.length ?? 0) > 1;
-    // The saga, the day's log and the tattoos: chips that open their own windows.
+    // The saga and the tattoos: chips that open their own windows (the day's log is the rail's «Хроника» now, forum post 40).
     const chips = [
       { id: 'cmp', icon: 'tab_legends', label: bookWord('tab'), hint: bookWord('tabHint') },
-      { id: 'log', icon: 'tab_letters', label: LC('logButton'), hint: LC('log'), badge: self?.log?.length ? self.log.filter((e) => e.day === self.log!.at(-1)!.day).length : 0 },
       { id: 'saga', icon: 'tab_legends', label: sagaButton(), badge: self?.saga?.length ?? 0 },
       { id: 'tattoos', icon: 'tattoo_needle', label: L('tattoos'), badge: state.tattoos?.pending.length ?? 0 },
     ];

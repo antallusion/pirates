@@ -38,6 +38,7 @@ import { strength } from './holdings.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { revealAdv } from './advmap.ts';
+import { cartography, charted } from './charting.ts';
 
 interface IslesState {
   rng: Rng;
@@ -179,9 +180,18 @@ export function climbLookout(game: Game, s: PlayerSession, is: Island, share: nu
   const { reefs, marks } = sendSea(game, s, is.x, is.y, r);
   revealAdv(game, s, is.x, is.y, r); // the guards and the things on the map in its sight (docs/17 H4)
   const wrecks = marks.filter((m) => m.kind === 'wreck').length;
-  game.grantXp(s, pointsXp(s.profile!.level, 60 * share), null);
+  game.grantXp(s, pointsXp(s.profile!.level, 60 * share * (1 + cartography(s))), null); // «Картограф» counts here too (forum post 40)
+  charted(game, s, 'lookout'); // ...and «Первопроходец»
   game.toastShip(ship, `From the lookout on ${is.name} the sea lies open for ${Math.round(r / 1000)} km: ${isl} islands, ${reefs.length} reefs and ${wrecks} wrecks newly on your chart.`, 'good');
   sendIsles(game, s, true);
+}
+
+/** The star fix's sea (forum post 40): the reefs, the sea's marks and the guards within `r` of her, on her chart.
+ *  The marks (wrecks, drifts, buoys…) counted. */
+export function chartSeaAround(game: Game, s: PlayerSession, x: number, y: number, r: number): number {
+  const { marks } = sendSea(game, s, x, y, r);
+  revealAdv(game, s, x, y, r);
+  return marks.length;
 }
 
 /** The reefs and the marks of the sea about a point, sent to her chart. */

@@ -282,7 +282,8 @@ import { abandonRun, acceptRun, expireRuns, settleRuns } from './traderuns.ts';
 import { bid as auctionBid, claimAuction, putUp, stepAuction } from './auction.ts';
 import { buyHearsay, forgetHearsay, stepHearsay } from './hearsay.ts';
 import { sagaNote, shareSaga } from './saga.ts';
-import { logNote } from './captainlog.ts';
+import { chronicleOf, logNote, sendChronicle, sunkByNote } from './captainlog.ts';
+import { charted } from './charting.ts';
 import { h3Message, stepH3 } from './h3.ts'; // docs/17 H3
 import { h4Message, stepH4 } from './h4.ts'; // docs/17 H4
 import { closeFight, installLairHooks, landFightOn, landFighting, landTac, lairBeach, lairList, lairMessage, lairPos, lairPrompt, lairUp, resendLandFight, stepLairs, stepLandFights } from './beastlairs.ts'; // docs/18 II
@@ -2605,6 +2606,7 @@ export class Game {
       return;
     }
     if (ship.loadout.legendary) legendarySunk(this, s, ship); // Sunken Glory
+    sunkByNote(this, s, ship); // «Хроника» (forum post 40): «а ещё кто тебя убил»
     grantBubble(this, s);
     onSunkCrew(this, s);
     questEvent(this, s, { k: 'die', region: ship.region });
@@ -3353,12 +3355,8 @@ export class Game {
     this.sendTo(s, { t: 'ev', list: [{ k: 'discover', islandId: is.id, name: is.name, region: is.region }] });
     const ship = s.ship;
     this.grantXp(s, pointsXp(s.profile!.level, xp * (1 + (ship ? tval(ship.stats, 'cartography') : 0))), null);
-    // Pathfinder: a new landfall lifts the crew.
-    const pf = ship ? tval(ship.stats, 'pathfinder') : 0;
-    if (ship && pf > 0) {
-      ship.morale = Math.min(100, ship.morale + 10);
-      ship.addEffect({ id: 'pathfinder', until: this.now + 600, mods: { maxSpeed: pf } }, this.now);
-    }
+    // Pathfinder: a new landfall lifts the crew (and any charting since forum post 40: charting.ts).
+    charted(this, s, 'island');
   }
 
   revealAround(ship: ShipEntity, r: number): number {
@@ -3496,6 +3494,7 @@ export class Game {
     cardSent(this, s, msg); // owner, 2026-10-22: a modal card coming up stops her (allstop.ts)
     // (her order refused: it did nothing, so it does not stop her — Game.handle)
     if (msg.t === 'toast' && msg.kind === 'bad' && this.handling?.s === s) this.handling.refused = true;
+    chronicleOf(this, s, msg); // «Хроника» (forum post 40): what is worth reading again, kept (offline too)
     if (s.conn.closed || s.disconnectedAt !== null) return;
     // Her own order refused for the shot flying or her way: held, not refused (holdOrder).
     if (msg.t === 'toast' && msg.kind === 'bad' && this.handling?.s === s) {
@@ -3955,6 +3954,9 @@ export class Game {
         return err(tacAction(this, ship, msg.act));
       case 'tac_done':
         battleCardClosed(this, ship); // owner, 2026-10-22: the reckoning put away — a moment's grace more, then the sea
+        return;
+      case 'chron':
+        sendChronicle(this, s); // «Хроника» (forum post 40): the whole chronicle, once
         return;
       case 'board_result':
         // QA 2026-10-22: the page asks again for spoils waiting for her answer (back from the background, its watchdog)

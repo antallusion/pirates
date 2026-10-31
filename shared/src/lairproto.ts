@@ -20,6 +20,8 @@ export interface LairMark {
   /** Its creatures now (the word «стая», «орда» is the client's), and whether it is beaten for now. */
   men: number;
   down: boolean;
+  /** Beaten: when it stands again (world seconds) — the chart's «вернётся через …» (forum post 40). */
+  back?: number;
   island: number;
   /** A creature dwelling's flag over it: hers, or another captain's. */
   flag?: 'own' | 'other';
@@ -53,6 +55,8 @@ export interface LairCard {
   pay: { silver: number; xp: number };
   /** She has had its loot this week already: beaten again, it is only the lesson. */
   looted?: boolean;
+  /** Looted: world seconds until the sea's next week, when its spoils are hers again (forum post 40). */
+  lootIn?: number;
   /** Down (beaten lately): world seconds until it stands again. */
   down?: number;
   /** The island's chain: the steps she has beaten this week. */

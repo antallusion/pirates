@@ -78,7 +78,7 @@ export const DATA_RU_CORE: Record<string, string> = {
   "captains.CAPTAINS.navigator.abilities.1.name": "Оседлать течение",
   "captains.CAPTAINS.navigator.abilities.1.description": "Встать на струю на 20 с: течения несут на 150% сильнее, поворот +20%; враги в 150 м идут против её течения и теряют 10% … 20% хода и 15% … 25% поворота.",
   "captains.CAPTAINS.navigator.abilities.2.name": "Обсервация по звёздам",
-  "captains.CAPTAINS.navigator.abilities.2.description": "Звёздный отсчёт: все острова в 7 км на карте, и 20 с видны слабые углы врагов в 750 м — её залпы по ним продольные, +12% … +20%.",
+  "captains.CAPTAINS.navigator.abilities.2.description": "Звёздный отсчёт: все острова, обломки и морские знаки в 7 км на карте (если новых островов нет — точное счисление: +8% хода на 3 мин), и 20 с видны слабые углы врагов в 750 м — её залпы по ним продольные, +12% … +20%.",
   "captains.CAPTAINS.navigator.abilities.3.name": "Ловец бурь",
   "captains.CAPTAINS.navigator.abilities.3.description": "УЛЬТА. Ветер следует за тобой: 20 с всегда лучший курс, +30% хода, и на нём пушки заряжаются быстрее. На 4-м ранге союзники в 250 м идут её ветром.",
   "captains.CAPTAINS.drowned.archetype": "Утопленный капитан",

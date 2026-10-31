@@ -5942,3 +5942,31 @@ html.app-paused *, html.app-paused *::before, html.app-paused *::after { animati
 .enc-card { position: relative; }
 .enc-x { position: absolute; top: 4px; right: 4px; width: 28px; height: 28px; padding: 0; border: 1px solid rgba(201, 162, 92, 0.6); border-radius: 3px; background: rgba(12, 10, 8, 0.85); color: var(--bone, #e8dcc0); font: 600 14px/1 var(--sans, sans-serif); cursor: pointer; z-index: 2; }
 .enc-x:hover { border-color: var(--gold, #e0b862); color: var(--gold, #e0b862); }
+
+/* «Хроника» (forum post 40): the journal's chronicle — the filters stay on top, the days scroll under them; one line
+   per event, the time in a column, an icon by its kind. A phone's (844×390) lines read at 14px, two lines at most. */
+.chron { display: flex; flex-direction: column; min-height: 0; height: 100%; }
+.chron .ch-top { flex: 0 0 auto; display: flex; flex-direction: column; gap: 4px; padding-bottom: 6px; border-bottom: 1px solid rgba(201, 162, 90, 0.22); }
+.chron .ch-top .w-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.chron .ch-sub { margin: 0; font-size: 12px; line-height: 1.35; }
+.chron .ch-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-top: 6px; overscroll-behavior: contain; }
+.chron .ch-day { margin-bottom: 10px; }
+.chron .ch-h { position: sticky; top: 0; z-index: 1; margin: 0 0 2px; padding: 2px 0; font-family: var(--display); font-weight: 400; font-size: 17px; color: var(--bone); background: linear-gradient(180deg, rgba(20, 15, 10, 0.96), rgba(20, 15, 10, 0.88)); }
+.chron .ch-list { list-style: none; margin: 0; padding: 0; }
+.chron .ch-row { display: grid; grid-template-columns: 22px 42px minmax(0, 1fr); gap: 8px; align-items: center; padding: 5px 2px; border-top: 1px dashed rgba(140, 107, 58, 0.2); font-family: var(--serif); font-size: 15px; line-height: 1.3; color: #eadfc6; }
+.chron .ch-row:first-child { border-top: 0; }
+.chron .ch-ico { width: 22px; height: 22px; }
+.chron .ch-row time { font: 600 12px/1.2 var(--sans); color: var(--fog); font-variant-numeric: tabular-nums; }
+.chron .ch-t { overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.chron .ch-x { font: 600 11px/1 var(--sans); color: var(--brass); }
+.chron .ch-sunk_by .ch-t, .chron .ch-taken_by .ch-t { color: #f0b0a0; }
+.chron .ch-boarded .ch-t, .chron .ch-quest_done .ch-t { color: #f0d48e; }
+.chron .ch-none { padding: 12px 4px; }
+@media (max-height: 520px) {
+  .chron .ch-row { font-size: 14px; padding: 3px 2px; gap: 6px; grid-template-columns: 20px 38px minmax(0, 1fr); }
+  .chron .ch-ico { width: 20px; height: 20px; }
+  .chron .ch-h { font-size: 15px; }
+}
+/* Forum post 40: the key explains every symbol in a line — a long one wraps inside the key, never past its edge. */
+.map-legend .lg-items > span { white-space: normal; align-items: flex-start; max-width: 100%; }
+.map-legend .lg-items > span > b, .map-legend .lg-items > span > .ico { flex: 0 0 auto; }

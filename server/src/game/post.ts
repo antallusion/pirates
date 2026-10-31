@@ -15,6 +15,7 @@ import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { FACTION_DUTY } from './economy.ts';
 import type { Game } from './Game.ts';
+import { logNote } from './captainlog.ts';
 import type { PlayerSession } from './player.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
 import { WAREHOUSE_VOLUME, warehouseVolume } from './resources.ts';
@@ -150,6 +151,7 @@ export function deliver(game: Game, accountId: number, l: Omit<Letter, 'id' | 's
 }
 
 function announce(game: Game, s: PlayerSession, l: Letter): void {
+  logNote(game, s, 'letter', [l.from, l.subject], l.gold || undefined); // «Хроника» (forum post 40)
   game.sendTo(s, { t: 'toast', msg: `A letter from ${l.from}: “${l.subject}”${l.gold ? ` — ${l.gold} silver enclosed` : ''}${l.goods ? ` — ${l.goods.qty} ${GOODS[l.goods.good].name} await you in port` : ''}. [Y]`, kind: 'info' });
   sendMail(game, s);
 }

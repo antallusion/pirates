@@ -103,6 +103,7 @@ import { renderCrew, renderMutiny } from './ui/crew.ts';
 import { CompanyScreen, renderBarter } from './ui/company.ts';
 import type { CompanyTab } from './ui/company.ts';
 import { LOG_PAGES } from './ui/logbook.ts';
+import { LOG_MAX } from '../../shared/src/data/captainlog.ts';
 import { InviteQueue } from './ui/invitequeue.ts';
 import { BaseWindow } from './ui/base.ts';
 import { boostReport, jobEnds } from './ui/isleboost.ts'; // «Ускорить»: what is left (owner, 2026-10-29)
@@ -194,7 +195,7 @@ import { gateFrames, mediaSleeps, onLifecycle, pauseApp, resumeApp, soundSleeps 
 import { ResearchWindow } from './ui/research.ts'; // the yard's tree of hulls (owner, 2026-10-04; docs/20)
 import { AdvCard } from './ui/advcard.ts'; // docs/17 H4
 import { PuzzleWindow } from './ui/puzzle.ts';
-import { crewSayParts, renderLog } from './ui/crewlife.ts';
+import { crewSayParts, renderLog, setChronAsk } from './ui/crewlife.ts';
 import { guardOfEntity } from './render/advmap.ts'; // forum 34: the ring by what she is
 import { flagLine, flagsCss, lawlessHere, lawlessWords, peaceWords, portHint, shipColours } from './ui/flags.ts'; // docs/24 C1, D1–D3
 import { PEACE_SAY } from '../../shared/src/data/colours.ts'; // forum 34: the city flag's peace
@@ -293,7 +294,11 @@ const journal = new Journal((m) => net.send(m));
 // (No film at a window: owner, 2026-10-05 — films only at the sea's own moments, filmMoments.)
 journal.openTattoos = () => openModal('tattoos');
 journal.openSaga = () => openModal('saga');
-journal.openLog = () => openModal('log');
+journal.openLog = () => {
+  companyScreen.open('chronicle'); // the day's log is «Хроника» now (forum post 40)
+  openModal('company');
+};
+setChronAsk(() => net.send({ t: 'chron' }));
 journal.onBook = () => refreshModal(); // docs/36: the journal's «Кампания» page
 // docs/23 item 74: «Журнал» — the quests are the journal's page, the company, guild, letters and album the company's.
 journal.onTab = (t) => {
@@ -2411,6 +2416,20 @@ function onMessage(m: ServerMsg): void {
           },
         });
       }
+      break;
+    case 'chron':
+      // «Хроника» (forum post 40): the whole chronicle once, then each line as it is written
+      if (m.full) state.chron = [...m.entries];
+      else if (state.chron) {
+        for (const e of m.entries) {
+          if (m.again && state.chron.length) state.chron[state.chron.length - 1] = e;
+          else state.chron.push(e);
+        }
+        if (state.chron.length > LOG_MAX) state.chron.splice(0, state.chron.length - LOG_MAX);
+      }
+      if (!m.full && !m.again) state.chronNew += m.entries.length;
+      if (modal === 'company' && companyScreen.tab === 'chronicle') refreshModal();
+      else if (modal === 'log') refreshModal();
       break;
     case 'toast':
       // The glass's own «too far» (askGlass asks by itself every few seconds; the server's refusals come as toasts, so

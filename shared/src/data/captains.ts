@@ -95,7 +95,7 @@ export const CAPTAINS: Record<CaptainId, CaptainDef> = {
     abilities: [
       { id: 'trim_sails', name: 'Trim Sails', kind: 'active', key: 'Z', cooldown: 25, duration: 12, targeting: 'self', description: 'Perfect trim for 12 s: +20% … +30% speed.' },
       { id: 'current_rider', name: 'Current Rider', kind: 'active', key: 'X', cooldown: 40, duration: 20, targeting: 'self', description: 'Ride the stream for 20 s: currents push 150% harder, +20% turn rate; enemies within 150 m fight her current and lose 10% … 20% way and 15% … 25% turn.' },
-      { id: 'star_fix', name: 'Star Fix', kind: 'active', key: 'C', cooldown: 50, duration: 0, targeting: 'self', description: 'Take a star fix: reveal every island within 7 km, and for 20 s the weak angles of enemies within 750 m — her broadsides on them rake, +12% … +20%.' },
+      { id: 'star_fix', name: 'Star Fix', kind: 'active', key: 'C', cooldown: 50, duration: 0, targeting: 'self', description: 'Take a star fix: reveal every island, wreck and sea mark within 7 km (with no new island the reckoning is exact: +8% speed for 3 min), and for 20 s the weak angles of enemies within 750 m — her broadsides on them rake, +12% … +20%.' },
       { id: 'storm_chaser', name: 'Storm Chaser', kind: 'ultimate', key: 'V', cooldown: 180, duration: 20, targeting: 'self', flags: ['personal_wind'], description: 'ULTIMATE. The wind follows you: for 20 s you always sail at the best angle, +30% speed, and the guns load faster on it. At rank 4 allies within 250 m sail her wind.' },
     ],
     start: { ship: 'cutter', gun: 'long_9', crew: 18, gold: 1300, cargo: { provisions: 10, planks: 3, sailcloth: 3 } },
