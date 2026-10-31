@@ -107,7 +107,7 @@ test('the card: one delegated listener, ✕, Esc (a layer), a tap beside it; a s
   assert.equal(RU['act.pursue'], 'Плыть');
   const main = read('client/src/main.ts');
   assert.match(main, /mountDetail\(\{/);
-  assert.match(main, /info: true,/);
+  assert.match(main, /info: true\b/);
   assert.match(read('client/src/ui/targetmenu.ts'), /class="tm-extra"[^`]*data-tm="info"/);
   assert.match(main, /openDetail\(`ship:\$\{n\}`\)/);
   assert.match(read('client/src/ui/targetmenu.ts'), /'info'/);

@@ -572,6 +572,9 @@ body:not(.skinned) .tm-pic::after { inset: 0; box-shadow: inset 0 0 0 3px var(--
 .tm-item:active .tm-pic { transform: scale(0.93); }
 .tm-item.on .tm-pic::after { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.75)) sepia(0.3) brightness(1.3) drop-shadow(0 0 5px rgba(224, 184, 98, 0.8)); }
 .tm-item.on .tm-l { color: var(--k-gold); }
+/* Not lawful now (owner, 2026-11-01): «Атаковать» under the city flag at a merchant — seen, dimmed; a tap says why */
+.tm-item.off .tm-pic::after { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.75)) grayscale(0.85) brightness(0.7); }
+.tm-item.off .tm-l { color: rgba(232, 222, 200, 0.6); }
 body.touch .tm-item { width: 48px; height: 48px; }
 body.touch .tm-l { font-size: 12.5px; line-height: 18px; }
 /* One choice left (owner, 2026-10-31: a thing of the deep — «Атаковать» alone): one big button, its word bold */

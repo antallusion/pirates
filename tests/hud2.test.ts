@@ -81,7 +81,7 @@ test('every control\'s art is the game\'s own: the sea HUD\'s pictures, the targ
   for (const id of Object.values(SEA_ART)) assert.ok(manifest.assets[`icon.${id}`], `icon.${id}`);
   for (const id of ['item_ranging_glass', 'talent_nav_wake_rider', 'ab_red_hook_boarding', 'talent_gun_rolling_broadside', 'bt_charge']) assert.ok(manifest.assets[`icon.${id}`], `icon.${id}`);
   for (const id of ['ui.ring', 'ui.slot', 'ui.bar', 'ui.helm', 'ui.stick_base', 'ui.minimap_ring']) assert.ok(manifest.assets[id], id);
-  const main = readFileSync('client/src/main.ts', 'utf8');
+  const main = readFileSync('client/src/main.ts', 'utf8') + readFileSync('client/src/ui/hail.ts', 'utf8'); // (the ship's ring: ui/hail.ts, owner 2026-11-01)
   for (const id of ['item_ranging_glass', 'talent_nav_wake_rider', 'ab_red_hook_boarding', 'talent_gun_rolling_broadside', 'bt_charge']) assert.ok(main.includes(`'${id}'`), `${id} used by the choices`);
 });
 

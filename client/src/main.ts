@@ -126,6 +126,8 @@ import { attackKind, buildCursors, cursorUrl } from './ui/cursor.ts'; // the att
 import type { AttackKind } from './ui/cursor.ts';
 import { TargetMenu } from './ui/targetmenu.ts'; // «Захват цели», «Преследовать», «Бой» beside a target
 import type { TmChoice, TmId, TmRect } from './ui/targetmenu.ts';
+import { HailCard, attackNoButtons, attackNoFlag, attackNoText, shipRing } from './ui/hail.ts'; // owner, 2026-11-01: «Атаковать» / «Поговорить» on every ship
+import type { AttackNo, HailFacts, HailOpt } from './ui/hail.ts';
 import type { TargetInfo } from './ui/kit/targetline.ts';
 import type { WheelOption } from './ui/kit/radial.ts';
 import { WHEEL_MAX } from './ui/kit/radial.ts';
@@ -3923,9 +3925,12 @@ function gatherActs(): { acts: Act[]; info: string[] } {
     // Within 100 m of her hull (owner, 2026-10-30; was alongside only, 2026-10-22) — the server's own rule (grapple.ts);
     // close but not yet, the bar says what is left (her mark's): «Подойдите ближе: N м».
     if (grapplingNow()) continue; // (the grapples already thrown: the approach, no second button)
+    // (owner, 2026-11-01: never a ship she may not attack — a merchant under the city flag offered «На абордаж» and
+    // «Абордаж «…»: подойдите ближе» — and the distance left only for the ship she is attacking now)
+    if (!attackable(s.id)) continue;
     const bw = boardWhy(s.id);
     if (bw !== null) {
-      if (s.id === (state.pursuit?.target ?? targetId) && bw.why) boardNear = { name: placeName(s.info.name), ...bw };
+      if (s.id === state.pursuit?.target && bw.why) boardNear = { name: placeName(s.info.name), ...bw };
       continue;
     }
     void cls;
@@ -4146,10 +4151,13 @@ function selFacts(dockHere: string | null, landHere: boolean): ActFacts['sel'] {
   const far = Math.round(dist(w.x, w.y, own.x, own.y));
   if (sp.kind === 'ship') {
     const sh = state.ships.get(Number(sp.id))!;
-    // a foe: «Атаковать» / «На абордаж» are hers already (attackRelevant: pinned); the rest — the course, the hire, the look
+    // The ring's rule (owner, 2026-11-01): «Атаковать», «Поговорить», «Плыть к нему» — a foe's «Атаковать» / «На абордаж»
+    // are hers already (attackRelevant: pinned); under colours that forbid the attack its button says why. No «Нанять»
+    // here: the hire is in «Поговорить».
     const foe = attackable(Number(sp.id)) && !(sh.cur.flags & SF.SURRENDERED);
-    const hire = !sh.info!.isPlayer && !!sh.info!.npcRole && (HIRE_ROLES as readonly string[]).includes(sh.info!.npcRole) && !sh.info!.named && !sh.info!.elite && sh.info!.shipLevel !== undefined && !(sh.cur.flags & (SF.HOSTILE | SF.SURRENDERED | SF.SINKING | SF.BOARDING));
-    return { kind: 'ship', name: w.name, far, go: !foe && far > 120, hire, look: !!sh.info!.isPlayer };
+    const mk = markKind(sh.info!);
+    const ring = shipRing({ kind: mk, isPlayer: sh.info!.isPlayer, attackOk: attackable(Number(sp.id)), boardNow: false, struck: !!(sh.cur.flags & SF.SURRENDERED), running: null });
+    return { kind: 'ship', name: w.name, far, go: !foe && far > 120, attackNo: ring.some((c) => c.id === 'fight' && c.off), talk: ring.some((c) => c.id === 'talk') };
   }
   if (sp.kind === 'port') return { kind: 'port', name: w.name, far, go: dockHere !== sp.id, ...(w.quest ? { quest: true } : {}) };
   return { kind: sp.kind, name: w.name, far, go: !landHere && far > (w.near ?? 60) };
@@ -4261,13 +4269,10 @@ function runAct(a: Act): void {
     }
     case 'sel_go':
       return selGo();
-    case 'sel_hire':
-      return void (selPlace?.kind === 'ship' && hireCard.ask(Number(selPlace.id)));
-    case 'sel_look': {
-      const sh = selPlace?.kind === 'ship' ? state.ships.get(Number(selPlace.id)) : undefined;
-      if (sh?.info?.isPlayer) net.send({ t: 'inspect', name: sh.info.captainName });
-      return;
-    }
+    case 'sel_attack':
+      return void (selPlace?.kind === 'ship' && refuseAttack(Number(selPlace.id)));
+    case 'sel_talk':
+      return void (selPlace?.kind === 'ship' && openHail(Number(selPlace.id)));
   }
 }
 
@@ -4790,38 +4795,17 @@ function targetChoices(about: string): { choices: TmChoice[]; name: string; x: n
       hud.toast(LP('hint'), 'info');
       return null;
     }
-    // «Подробнее» (owner, 2026-10-30): the small ⓘ beside the ring opens her detail card (client/src/ui/detail.ts) with
-    // «Цель / Атаковать / Плыть»; a ship she cannot fight (a friend, a ship in port's peace) offers it alone
-    // The ring by what she is (owner, 2026-10-31: «остров утопленников, тут ваще кроме атаки ниче быть не должно, откуда
-    // это колесо действий?»): a thing of the deep — «Атаковать» alone (one big button); one of the sea's pirates —
-    // «Атаковать», «На абордаж», and the talks when he is on her; a peaceful ship — under the pirate flag the same, under
-    // any other only her hire (forum 34: the city flag's peace); a captain — by the colours' rules. ⓘ beside each.
-    const kind = s?.info ? markKind(s.info) : 'other';
-    const hire: TmChoice[] = s?.info && kind !== 'deep' && kind !== 'captain' && s.info.npcRole && (HIRE_ROLES as readonly string[]).includes(s.info.npcRole) && !s.info.named && !s.info.elite && s.info.shipLevel !== undefined && !(s.cur.flags & (SF.HOSTILE | SF.SURRENDERED | SF.SINKING | SF.BOARDING))
-      ? [{ id: 'hire', art: 'ab_call_escort', label: LHIRE('hr.tm'), title: LHIRE('hr.tmT') }] : [];
-    if (s?.info && id !== state.entityId && !f?.attackable) {
-      const pos = { name: s.info.isPlayer ? s.info.captainName : placeName(s.info.name), x: renderer.sx(s.cur.x), y: renderer.sy(s.cur.y), r: Math.max(18, SHIP_CLASSES[s.info.classId].length * 0.5 * renderer.zoom) };
-      return hire.length ? { ...pos, choices: hire, info: true } : { ...pos, choices: [{ id: 'info', art: 'bt_book', label: seaWord('tm.info'), title: seaWord('tm.infoT') }] };
-    }
-    if (!s?.info || !f?.attackable) return null;
-    const board = canBoardNow(id);
-    const beast = beastOfClass(s.info.classId);
-    const run = state.pursuit?.target === id ? state.pursuit.mode : null;
-    const struck = !!(s.cur.flags & SF.SURRENDERED);
-    const choices: TmChoice[] = [{ id: 'fight', art: board ? 'ab_red_hook_boarding' : 'talent_gun_rolling_broadside', label: seaWord('tm.attack'), title: seaWord(struck ? 'tm.fightStruck' : board ? 'tm.fightBoard' : 'tm.fightGuns'), on: run === 'guns' }];
-    // «На абордаж» from afar: the helmsman's intercept, the grapples flying alongside (alongside already, «Атаковать» boards)
-    if (kind !== 'deep' && f.boardable && !board) choices.push({ id: 'board', art: 'ab_red_hook_boarding', label: seaWord('tm.board'), title: seaWord('tm.pursueT'), on: run === 'board' });
-    // One of the sea's ships on her: the talks (owner, 2026-10-18; the server says who will not bargain) — never the deep's.
-    if (kind !== 'deep' && kind !== 'captain' && s.cur.flags & SF.HOSTILE && !struck) choices.push({ id: 'talk', art: 'faction_free', label: LOUT('cf.tm'), title: LOUT('cf.tmT') });
-    // Struck (forum 40): her terms from the ring as well as from the card — the card put off by «Позже» or closed
-    if (struck) choices.push({ id: 'sink', art: 'fire', label: seaWord('tm.sink'), title: seaWord('tm.sinkT') }, { id: 'release', art: 'stat_crew', label: seaWord('tm.release'), title: seaWord('tm.releaseT') });
-    else choices.push(...hire);
-    return {
-      name: beast ? BEASTS[beast].name[lang() === 'ru' ? 1 : 0] : s.info.isPlayer ? s.info.captainName : placeName(s.info.name),
-      x: renderer.sx(s.cur.x), y: renderer.sy(s.cur.y), r: Math.max(18, SHIP_CLASSES[s.info.classId].length * 0.5 * renderer.zoom),
-      choices,
-      info: true,
-    };
+    // «Подробнее» (owner, 2026-10-30): the small ⓘ beside the ring opens her detail card (client/src/ui/detail.ts).
+    // The ring by one rule for every ship (owner, 2026-11-01: «мне нужно нападение, то есть атаковать или поговорить,
+    // применяется ко всем кораблям… нанять и все это бред ваще» — ui/hail.ts): «Атаковать» always (dimmed under colours
+    // that forbid it: a tap says why), «Поговорить» for all that talk (the hire, the talks inside), «На абордаж» within
+    // 100 m when lawful; a thing of the deep — «Атаковать» alone (owner, 2026-10-31); ⓘ beside each.
+    if (!s?.info || id === state.entityId || s.cur.flags & (SF.SINKING | SF.DOCKED)) return null;
+    const mk = markKind(s.info), beast = beastOfClass(s.info.classId);
+    const pos = { name: beast ? BEASTS[beast].name[lang() === 'ru' ? 1 : 0] : s.info.isPlayer ? s.info.captainName : placeName(s.info.name), x: renderer.sx(s.cur.x), y: renderer.sy(s.cur.y), r: Math.max(18, SHIP_CLASSES[s.info.classId].length * 0.5 * renderer.zoom) };
+    const ok = !!f?.attackable;
+    const choices = shipRing({ kind: mk, isPlayer: s.info.isPlayer, attackOk: ok, boardNow: ok && canBoardNow(id), struck: !!(s.cur.flags & SF.SURRENDERED), running: state.pursuit?.target === id ? state.pursuit.mode : null });
+    return choices.length ? { ...pos, choices, info: true } : { ...pos, choices: [{ id: 'info', art: 'bt_book', label: seaWord('tm.info'), title: seaWord('tm.infoT') }] };
   }
   if (kind === 'roam') {
     const v = state.roams.find((x) => x.id === id);
@@ -4842,6 +4826,56 @@ function targetChoices(about: string): { choices: TmChoice[]; name: string; x: n
   return null;
 }
 
+/** Why «Атаковать» on ship `id` is refused now, or null: lawful (attackable's rules, in her words). */
+function attackNo(id: number): AttackNo | null {
+  const s = state.ships.get(id), own = state.ownDisplay;
+  if (!s?.info || attackable(id)) return null;
+  if (s.cur.flags & SF.PROTECTED) return 'protected';
+  if (peacefulInfo(s.info) && !(s.cur.flags & SF.HOSTILE) && state.self?.pvp.flag !== 'pirate') return 'peace';
+  if ((s.info.isPlayer || s.info.npcRole === 'escort') && !(s.cur.flags & SF.HOSTILE)) return 'colours';
+  return own && dist(own.x, own.y, s.cur.x, s.cur.y) > 2500 ? 'far' : 'protected';
+}
+
+/** The attack refused (owner, 2026-11-01): a short card — why, and «Как сменить флаг» when the flag is the way. No
+ *  mark taken, no pursuit, no grapples. */
+function refuseAttack(id: number): void {
+  const why = attackNo(id);
+  if (!why) return;
+  const b = attackNoButtons();
+  if (!attackNoFlag(why)) return void tell(attackNoText(why));
+  void askHtml(`<p id="confirm-text">${esc(attackNoText(why))}</p>`, b.how, b.ok).then((go) => go && openFlagCard());
+}
+
+/** «Поговорить» (owner, 2026-11-01): the hail — her words and what there is to do with her (ui/hail.ts). */
+const hailCard = new HailCard();
+function hailFacts(id: number): HailFacts | null {
+  const s = state.ships.get(id);
+  if (!s?.info) return null;
+  const g = state.party, me = g?.members.find((x) => x.name === state.self?.name)?.accountId;
+  return {
+    kind: markKind(s.info), isPlayer: s.info.isPlayer, name: s.info.isPlayer ? s.info.captainName : placeName(s.info.name), ...(s.info.npcRole ? { npcRole: s.info.npcRole } : {}),
+    hostile: !!(s.cur.flags & SF.HOSTILE), hirable: hirableShip(s),
+    canInvite: s.info.isPlayer && (!g || g.leader === me) && !g?.members.some((x) => x.name === s.info!.captainName),
+  };
+}
+function openHail(id: number): void {
+  const f = hailFacts(id);
+  if (!f) return;
+  hailCard.show(id, f, (o: HailOpt) => {
+    const name = state.ships.get(id)?.info?.captainName ?? '';
+    if (o === 'hire') hireCard.ask(id);
+    else if (o === 'parley') ceasefireCard.ask(id);
+    else if (o === 'whisper') companyScreen.onWhisper(name);
+    else if (o === 'inspect') net.send({ t: 'inspect', name });
+    else if (o === 'invite') net.send({ t: 'group', action: 'invite', name });
+  });
+}
+/** A ship the hire at sea takes (seahire.ts: HIRE_ROLES, not named nor elite, on the ladder, in no fight). */
+function hirableShip(s: { info?: ShipInfo | null; cur: { flags: number } }): boolean {
+  const i = s.info;
+  return !!i && !i.isPlayer && !!i.npcRole && (HIRE_ROLES as readonly string[]).includes(i.npcRole) && !i.named && !i.elite && i.shipLevel !== undefined && !(s.cur.flags & (SF.HOSTILE | SF.SURRENDERED | SF.SINKING | SF.BOARDING));
+}
+
 /** A choice taken: the mark, the pursuit, the fight — by the messages the action button sends. */
 function pickTargetChoice(id: TmId, about: string): void {
   const [kind, sid] = about.split(':');
@@ -4851,16 +4885,20 @@ function pickTargetChoice(id: TmId, about: string): void {
       openDetail(`ship:${n}`);
       return;
     }
-    if (id === 'talk') return ceasefireCard.ask(n);
+    if (id === 'talk') return openHail(n);
     if (id === 'sink' || id === 'release') return void net.send({ t: 'surrender', id: n, fate: id });
-    if (id === 'hire') return hireCard.ask(n);
+    // «Атаковать» under colours that forbid it: why, and the one tap to the flag card — nothing sent, no mark taken
+    // (owner, 2026-11-01)
+    if ((id === 'fight' || id === 'board') && !attackable(n)) return refuseAttack(n);
     pinTarget(n); // the pursuit and the fight are about her: she is the mark too
-    if (id === 'pursue' || id === 'board') net.send({ t: 'attack', target: n, mode: unboardableMark(n) ? 'guns' : 'board' });
-    else if (id === 'fight') {
+    if (id === 'board') {
+      // «На абордаж» (offered within 100 m only): the grapples now
       if (canBoardNow(n)) net.send({ t: 'board', target: n, aggression: 'standard' });
-      // (a guard of the adventure map is fought on her deck: the helmsman's boarding run, not the guns)
-      else net.send({ t: 'attack', target: n, mode: guardOfEntity(state, n) && !unboardableMark(n) ? 'board' : 'guns' });
-    }
+      else net.send({ t: 'attack', target: n, mode: unboardableMark(n) ? 'guns' : 'board' });
+    } else if (id === 'pursue') net.send({ t: 'attack', target: n, mode: unboardableMark(n) ? 'guns' : 'board' });
+    // «Атаковать» (forum 40): the guns, keeping the distance — never the grapples by itself; a guard of the adventure
+    // map is fought on her deck (the helmsman's boarding run)
+    else if (id === 'fight') net.send({ t: 'attack', target: n, mode: guardOfEntity(state, n) && !unboardableMark(n) ? 'board' : 'guns' });
     return;
   }
   state.roamMark = n;
@@ -5673,4 +5711,4 @@ startTelemetry(() => (!inGame ? 'menu' : tactical.open ? 'battle' : isleScene.is
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.
-(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, isle: isleScene, assets: () => ({ ...assetStats(), loads: loadLog.slice(), kinds: assetKinds() }), open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), cos: { shop: (sec?: string) => openShop(false, { tab: 'cos', sec: sec as 'cos_titles' | undefined }), wardrobe: () => openWardrobe() }, promos, dailyGift, seasonPass, hero: (tab?: CaptainOpen) => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud, aim: { under: attackUnder, about: aboutAt, choices: targetChoices, menu: targetMenu }, roamNow: (id: number) => { const v = state.roams.find((x) => x.id === id); return v ? roamNow(state, v) : null; }, goal: (key: string) => startGoal(key), goalRun: () => goalRun?.key ?? null, modal: () => modal, tapGoal: (x: number, y: number) => sailToTap(x, y), portCard: (id: string) => openPortCard(state, id), portLabelAt: (x: number, y: number) => portLabelAt(x, y) };
+(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, isle: isleScene, assets: () => ({ ...assetStats(), loads: loadLog.slice(), kinds: assetKinds() }), open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), cos: { shop: (sec?: string) => openShop(false, { tab: 'cos', sec: sec as 'cos_titles' | undefined }), wardrobe: () => openWardrobe() }, promos, dailyGift, seasonPass, hero: (tab?: CaptainOpen) => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud, aim: { under: attackUnder, about: aboutAt, choices: targetChoices, menu: targetMenu, pick: pickTargetChoice }, roamNow: (id: number) => { const v = state.roams.find((x) => x.id === id); return v ? roamNow(state, v) : null; }, goal: (key: string) => startGoal(key), goalRun: () => goalRun?.key ?? null, modal: () => modal, tapGoal: (x: number, y: number) => sailToTap(x, y), portCard: (id: string) => openPortCard(state, id), portLabelAt: (x: number, y: number) => portLabelAt(x, y) };

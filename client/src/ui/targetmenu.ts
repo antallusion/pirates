@@ -6,7 +6,8 @@
 //             mouse is on the target or on them, and go a moment after it leaves both
 //   a phone   a tap on the target opens them (and marks her); a second tap picks; a tap on the open sea puts them away
 // They stand on an arc on the side of the target with room, clear of her (never over her), on the screen, and follow
-// her as she sails. A choice the server would refuse now is not offered (main.ts decides); a tap that opened them
+// her as she sails. A choice the server would refuse now is shown dimmed (the attack under the wrong colours: a tap
+// says why) or not offered (main.ts and ui/hail.ts decide); a tap that opened them
 // cannot pick one (the finger lifting over a choice that came up under it).
 
 import { dict } from '../i18n.ts';
@@ -15,7 +16,7 @@ import { esc, icon } from './dom.ts';
 
 const L = dict(EN, RU);
 
-export type TmId = 'lock' | 'pursue' | 'fight' | 'board' | 'talk' | 'hire' | 'info' | 'sink' | 'release';
+export type TmId = 'lock' | 'pursue' | 'fight' | 'board' | 'talk' | 'info' | 'sink' | 'release';
 
 export interface TmChoice {
   id: TmId;
@@ -27,6 +28,8 @@ export interface TmChoice {
   title: string;
   /** In force now (she is the mark, the pursuit is hers): the ring lit. */
   on?: boolean;
+  /** Not lawful now (owner, 2026-11-01: «Атаковать» under the city flag at a merchant): shown dimmed, a tap says why. */
+  off?: boolean;
 }
 
 /** A tap that opened the choices cannot pick one this soon (the same finger lifting). */
@@ -163,7 +166,7 @@ export class TargetMenu {
   /** Open (or redraw) the choices about a target. */
   show(about: string, choices: TmChoice[], name: string, info = false): void {
     if (!choices.length) return this.hide();
-    const key = `${about}|${info ? 'i|' : ''}${choices.map((c) => `${c.id}:${c.art}:${c.label}:${c.on ? 1 : 0}`).join(',')}`;
+    const key = `${about}|${info ? 'i|' : ''}${choices.map((c) => `${c.id}:${c.art}:${c.label}:${c.on ? 1 : 0}${c.off ? 'x' : ''}`).join(',')}`;
     if (!this.isOpen || this.about !== about) {
       this.openedAt = performance.now();
       this.keep();
@@ -174,7 +177,7 @@ export class TargetMenu {
       // One choice left (a thing of the deep: «Атаковать» alone — owner, 2026-10-31): one big button, not a ring of one.
       this.el.classList.toggle('tm-single', choices.length === 1 && choices[0].id !== 'info');
       this.el.setAttribute('aria-label', L('tm.aria', { name }));
-      this.el.innerHTML = choices.map((c, i) => `<button type="button" class="tm-item${c.on ? ' on' : ''}" role="menuitem" data-tm="${c.id}" style="--tm-i:${i}" aria-label="${esc(c.title)}" title="${esc(c.title)}"${c.on ? ' aria-pressed="true"' : ''}>`
+      this.el.innerHTML = choices.map((c, i) => `<button type="button" class="tm-item${c.on ? ' on' : ''}${c.off ? ' off' : ''}" role="menuitem" data-tm="${c.id}" style="--tm-i:${i}" aria-label="${esc(c.title)}" title="${esc(c.title)}"${c.on ? ' aria-pressed="true"' : ''}>`
         + `<span class="tm-pic">${icon(c.art, '•', 'tm-ico')}</span><span class="tm-l">${esc(c.label)}</span></button>`).join('')
         // «Подробнее» (owner, 2026-10-30): a small ⓘ on the ring's free side, outside its layout (detail.ts card)
         + (info ? `<button type="button" class="tm-extra" role="menuitem" data-tm="info" aria-label="${esc(L('tm.infoT'))}" title="${esc(L('tm.infoT'))}">ⓘ</button>` : '');
