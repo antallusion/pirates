@@ -22,7 +22,16 @@ const dismiss = (p) => p.evaluate(() => {
   document.querySelectorAll('.center-card .btn-primary').forEach((x) => x.click());
   document.querySelectorAll('button').forEach((x) => { if (/^(Позже|Later)$/.test(x.textContent.trim()) && x.offsetParent) x.click(); });
 }).catch(() => {});
-const toasts = (p) => p.evaluate(() => [...document.querySelectorAll('#toasts > .toast, .toast')].map((t) => t.innerText.replace(/\s+/g, ' ').trim()).filter(Boolean));
+const toasts = (p) => p.evaluate(() => {
+  // every toast that came up since the last ask (a watcher on the page: the short ones are gone by the time we look)
+  if (!globalThis.__seen) {
+    globalThis.__seen = [];
+    globalThis.__raw = [];
+    globalThis.gravetide.net.on((m) => { if (m.t === 'toast') globalThis.__raw.push(m.msg); });
+    new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) if (n.classList?.contains('toast')) globalThis.__seen.push(n.innerText.replace(/\s+/g, ' ').trim()); }).observe(document.body, { childList: true, subtree: true });
+  }
+  return globalThis.__seen.splice(0);
+});
 /** The nearest ship of a role (or a guard's), her id. */
 const nearest = (p, pred) => p.evaluate((src) => {
   const f = new Function('s', `return (${src})(s)`);
@@ -42,7 +51,8 @@ const ring = (p, id) => p.evaluate((i) => {
   if (!t) return null;
   g.aim.menu.show(`ship:${i}`, t.choices, t.name, !!t.info);
   g.aim.menu.place(t.x, t.y, t.r, []);
-  return { name: t.name, choices: t.choices.map((c) => c.label), single: document.getElementById('tmenu')?.classList.contains('tm-single') };
+  const it = document.querySelector("#tmenu .tm-item")?.getBoundingClientRect();
+  return { name: t.name, x: Math.round(t.x), y: Math.round(t.y), r: Math.round(t.r), item: it ? [Math.round(it.left), Math.round(it.top)] : null, choices: t.choices.map((c) => c.label), single: document.getElementById("tmenu")?.classList.contains("tm-single") };
 }, id);
 const portTab = (p, word) => p.evaluate((w) => {
   const b = [...document.querySelectorAll('#modal-panel button, #modal button')].find((x) => x.offsetParent && x.textContent.trim().startsWith(w));
@@ -62,6 +72,7 @@ try {
     await L.sleep(800);
     await dismiss(p);
     await L.closeAll(p);
+    await toasts(p);
     // 1. The flag card in port: the three modes; then with skulls under the pirate flag (locked, the wash, the pardon).
     if (want('card')) {
       await L.open(p, 'port');
@@ -129,25 +140,36 @@ try {
       await L.say(p, '/flag pirate');
       await L.say(p, '/skulls 2');
       await L.say(p, '/heal');
-      let pat = null;
-      for (let i = 0; i < 30; i++) {
-        await L.sleep(500);
-        pat = await nearest(p, (s) => s.info.npcRole === 'patrol' && (s.cur.flags & 0) === 0);
-        if (pat !== null && (await toasts(p)).some((t) => /Закон идёт/.test(t))) break;
+      let seen = false;
+      for (let i = 0; i < 40 && !seen; i++) {
+        await L.sleep(250);
+        seen = (await toasts(p)).some((t) => /Закон идёт/.test(t));
       }
-      await p.evaluate(() => { const r = globalThis.gravetide.renderer; if (r.setZoom) r.setZoom(r.zoom * 0.6); else r.zoom *= 0.6; });
-      await L.sleep(3500);
-      L.log(tag, 'patrol', pat, 'toasts', JSON.stringify(await toasts(p)));
+      await p.screenshot({ path: `${OUT}/patrol-sally-${tag}.png` });
+      // (the chart's eye pulled back a little: the patrols after her in the frame)
+      await p.evaluate(() => { const r = globalThis.gravetide.renderer; r.userZoomed = true; r.targetZoom = r.seenZoom = Math.max(0.9, r.targetZoom * 0.55); });
+      await L.sleep(6000);
+      const pats = await p.evaluate(() => { const st = globalThis.gravetide.state, o = st.ownDisplay; return [...st.ships.values()].filter((s) => s.info?.npcRole === 'patrol').map((s) => ({ d: Math.round(Math.hypot(s.cur.x - o.x, s.cur.y - o.y)), hostile: !!(s.cur.flags & 64) })).sort((a, b) => a.d - b.d).slice(0, 4); });
+      L.log(tag, 'sally toast', seen, 'patrols', JSON.stringify(pats));
       await p.screenshot({ path: `${OUT}/patrol-chase-${tag}.png` });
-      await p.evaluate(() => { const r = globalThis.gravetide.renderer; if (r.setZoom) r.setZoom(r.zoom / 0.6); else r.zoom /= 0.6; });
+      await p.evaluate(() => { const r = globalThis.gravetide.renderer; r.userZoomed = false; });
     }
     // 5. A lawful harbour refuses two skulls: where to go, how to wash them.
     if (want('port')) {
       await L.say(p, '/skulls 2');
-      await L.sleep(500);
-      await L.send(p, { t: 'dock' });
-      await L.sleep(900);
-      L.log(tag, 'dock toasts', JSON.stringify(await toasts(p)));
+      await L.say(p, '/heal');
+      const pt = await p.evaluate(() => { const st = globalThis.gravetide.state, o = st.ownDisplay; return st.ports.map((x) => ({ x: x.x, y: x.y, f: x.faction, d: Math.hypot(x.x - o.x, x.y - o.y) })).sort((a, b) => a.d - b.d)[0]; });
+      L.log(tag, 'sail in', await L.sailUntil(p, pt.x, pt.y, 380, 60000));
+      await toasts(p);
+      let got = null;
+      for (let i = 0; i < 6 && !got; i++) {
+        await L.send(p, { t: 'dock' });
+        for (let k = 0; k < 8 && !got; k++) {
+          await L.sleep(250);
+          got = (await toasts(p)).find((t) => /не принимают корабль/.test(t)) ?? null;
+        }
+      }
+      L.log(tag, 'port refusal', got, 'raw', JSON.stringify(await p.evaluate(() => globalThis.__raw.splice(0).slice(-3))));
       await p.screenshot({ path: `${OUT}/port-refusal-${tag}.png` });
     }
     // 6. The Drowned's wreck: «Атаковать» alone, one big button.
@@ -156,16 +178,27 @@ try {
       await L.say(p, '/flag faction');
       await L.say(p, '/heal');
       await L.say(p, '/guard go wreck');
-      await L.sleep(5000);
+      await L.sleep(9000);
+      await L.send(p, { t: 'input', seq: 1, rudder: 0, sail: 0 });
+      await L.sleep(3000);
       await dismiss(p);
       await L.closeAll(p);
       const g = await p.evaluate(() => globalThis.gravetide.state.adv?.guards?.filter((x) => x.e).map((x) => ({ e: x.e, kind: x.kind })) ?? []);
       L.log(tag, 'guards', JSON.stringify(g.slice(0, 5)));
-      const w = (g.find((x) => x.kind === 'wreck') ?? g[0])?.e ?? null;
+      const w = await p.evaluate((ids) => { const st = globalThis.gravetide.state, o = st.ownDisplay; let best = null, bd = Infinity; for (const i of ids) { const s = st.ships.get(i); if (!s) continue; const d = Math.hypot(s.cur.x - o.x, s.cur.y - o.y); if (d < bd) [best, bd] = [i, d]; } return best; }, g.filter((x) => x.kind === 'wreck').map((x) => x.e));
       if (w !== null) {
-        const r = await ring(p, w);
+        const wp = await p.evaluate((i) => { const s = globalThis.gravetide.state.ships.get(i); return { x: s.cur.x, y: s.cur.y }; }, w);
+        L.log(tag, 'to the wreck', await L.sailUntil(p, wp.x, wp.y, 110, 45000));
+        await L.send(p, { t: 'input', seq: 2, rudder: 0, sail: 0 });
+        await p.evaluate(() => globalThis.gravetide.chart.onStop?.());
+        await L.sleep(2500);
+        let r = null;
+        for (let i = 0; i < 8; i++) {
+          r = await ring(p, w);
+          await L.sleep(120);
+        }
+        r = await ring(p, w);
         L.log(tag, 'ring on the wreck', JSON.stringify(r));
-        await L.sleep(600);
         await p.screenshot({ path: `${OUT}/ring-drowned-${tag}.png` });
       }
     }

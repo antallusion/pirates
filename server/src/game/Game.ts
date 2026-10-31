@@ -5081,18 +5081,18 @@ export class Game {
     // a fight ashore over, its reckoning still up: put away by the dock itself (it held her «in battle» for 45 s)
     if (landFighting(this, s) && !landFightOn(this, s)) closeFight(this, s);
     if (inBattle(this, ship)) return SELF_IN_BATTLE_WHY; // her party fights ashore, or her group's boarding holds her (owner, 2026-10-22)
-    if (ship.underFire(this.now)) return 'The harbour chain stays up while you are in a fight';
     const port = this.nearestPort(ship.state.x, ship.state.y);
+    // (forum 34: a harbour that will not take her skulls says so first — under fire or not, she must go elsewhere)
+    if (port && dist(port.x, port.y, ship.state.x, ship.state.y) <= PORT_DOCK_RADIUS) {
+      const pre = canDock(p, port.faction);
+      if (!pre.ok && !dockOverride(ship, p, port, bribing)) return pre.reason!;
+    }
+    if (ship.underFire(this.now)) return 'The harbour chain stays up while you are in a fight';
     // Only from the harbour's approach (owner, 2026-10-22: her hull within REACH_DOCK of its anchorage or its quays —
     // shared/src/world/dock.ts); a cable or a mile off, the helmsman takes her in and she puts in there (approach.ts).
     const isl = port ? this.world.islands[port.islandId] : undefined;
     const quay = isl ? { x: isl.x, y: isl.y, r: isl.radius, poly: isl.poly } : null;
     if (!port || dist(port.x, port.y, ship.state.x, ship.state.y) > PORT_DOCK_RADIUS) return 'No harbour close enough';
-    // (forum 34: a harbour that will not take her says so at once — the helmsman no longer sails her in to be refused)
-    {
-      const pre = canDock(p, port.faction);
-      if (!pre.ok && !dockOverride(ship, p, port, bribing)) return pre.reason!;
-    }
     if (!dockWithin(hullOf(ship), port, quay, REACH_SLACK)) {
       return approach(this, s, { x: port.x, y: port.y, reach: REACH_DOCK, r: LANDING_R, near: () => !!s.ship && dockWithin(hullOf(s.ship), port, quay, -4), slow: DOCK_SLOW - 0.5 }, 'Come into the harbour first: up to its quays.');
     }

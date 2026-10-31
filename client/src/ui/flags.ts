@@ -119,7 +119,8 @@ export function coloursCard(state: ClientState, opts: { head?: boolean } = {}): 
     return `<button type="button" class="fl-opt fl-opt--${k}${on ? ' on' : ''}${soon ? ' soon' : ''}" role="radio" aria-checked="${on}" data-colours="${k}"${no ? ' disabled' : ''}>
       ${flagMark(k, k === 'faction' ? here : null)}<span class="fl-t"><b>${esc(title)}</b>${whose ? `<span class="fl-whose">${esc(whose)}${pen}</span>` : ''}<small>${sub.split('|').map((x) => `<span class="fl-ln">${esc(x)}</span>`).join('')}</small>${state_}</span></button>`;
   };
-  const line = !docked ? L('fl.atSea') : v.noNeutral && v.flag !== 'neutral' ? L('fl.noNeutral') : L('fl.rule');
+  // (with skulls their own note above says it all: no line under the options — the boarding switch stays on the screen)
+  const line = v.skulls ? '' : !docked ? L('fl.atSea') : v.noNeutral && v.flag !== 'neutral' ? L('fl.noNeutral') : L('fl.rule');
   // (In the port the option says «зелёный вымпел» already; the ship window and «Флаг и закон» say what it is.)
   const pennant = v.pennant && opts.head !== false ? ` ${L('fl.pennant', { n: v.pennantHoursLeft })}` : '';
   // (The port's own place is named «Флаг» already: no heading over it there, the room is the boarding switch's.)
@@ -130,7 +131,7 @@ export function coloursCard(state: ClientState, opts: { head?: boolean } = {}): 
   const skulls = skullsNote(state);
   return `<div class="card fl-card${law ? ' fl-card--lawless' : ''}">${opts.head === false ? '' : `<h4 class="card-h">${icon('tab_law', '', 'ico-md')}${esc(L('fl.title'))}</h4>`}${law}${skulls}
     <div class="fl-opts" role="radiogroup" aria-label="${esc(L('fl.title'))}">${COLOURS.map(opt).join('')}</div>
-    <p class="fl-line muted">${esc(line)}${pennant ? `<span class="good">${esc(pennant)}</span>` : ''}</p>
+    <p class="fl-line muted"${line || pennant ? '' : ' hidden'}>${esc(line)}${pennant ? `<span class="good">${esc(pennant)}</span>` : ''}</p>
     <button type="button" class="fl-board${v.noBoard ? ' off' : ''}${idle ? ' idle' : ''}" role="switch" aria-checked="${!v.noBoard}" data-noboard="${v.noBoard ? '0' : '1'}"${docked ? '' : ' disabled'}>
       <i class="fl-nb-ico" aria-hidden="true"></i><span class="fl-t"><b>${esc(v.noBoard ? L('fl.boardOff') : L('fl.boardOn'))}</b>${idle ? `<em class="fl-idle">${esc(L('fl.boardIdle'))}</em>` : ''}<small>${esc(L('fl.boardSub'))}</small></span><i class="fl-sw" aria-hidden="true"></i></button></div>`;
 }
