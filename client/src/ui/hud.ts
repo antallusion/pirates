@@ -28,6 +28,7 @@ import { levelChip, threatTo } from './levels.ts';
 import { shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
 import { DASH_COOLDOWN } from '../../../shared/src/data/gunnery.ts';
 import { dict, lang, plural, t } from '../i18n.ts';
+import { EN as TM_EN, RU as TM_RU } from '../lang/ui/maps.ts';
 import type { Key } from '../i18n.ts';
 import { term } from './terms.ts';
 import { drawRelation, relationOf, RELATION_COLOR } from '../render/relation.ts';
@@ -84,6 +85,7 @@ import { captainDot } from './capmenu.ts'; // seaux: the bead is news not yet se
 import { drawWrecksMini } from '../render/castaways.ts'; // seaux: her wreckage and castaways on the chart
 
 const L = dict(EN, RU);
+const TMW = dict(TM_EN, TM_RU); // the treasure search's words (forum post 34)
 const LSF = dict(SEAF_EN, SEAF_RU); // the quick sea fight (docs/23 phases 3–4)
 /** The battles the server plays out for a chance (server/src/game/boardodds.ts ODDS_SIMS). */
 const ODDS_SIMS_SHOWN = 200;
@@ -1304,7 +1306,13 @@ export class Hud {
     else if (o.kind === 'raid') body = `<span style="color:var(--bad)">${esc(L('obj.raid', { name: placeName(o.title) }))}</span>${where}${left.replace('var(--fog)', 'var(--bad)')}`;
     else if (o.kind === 'quest') body = `${esc(sv(o.title))}: <span class="muted">${esc(sv(o.text))}</span>${where}`;
     else if (o.kind === 'contract') body = `${esc(L('obj.contract'))} — ${esc(sv(o.title))}${o.text ? ` ${esc(o.text)}` : ''}${where}${left}`;
-    else if (o.kind === 'map') body = `${esc(L('obj.map'))} — ${esc(sv(o.title))}${where}`;
+    else if (o.kind === 'map') {
+      // inside the circle: no beacon, the warm/cold step instead (forum post 34); the scroll in sight: where it lies
+      const m = state.self?.maps.find((x) => `tm:${x.id}` === o.key);
+      const heat = m?.heat ? ` · <span class="tm-heat h${m.heat}" title="${esc(TMW('heat.hint'))}">${esc(TMW(`heat.${m.heat}`))}</span>` : '';
+      const look = o.d === undefined ? ` · <span class="muted">${esc(TMW('look'))}</span>` : m?.spot && m.r !== 0 ? ` · <span style="color:var(--gold)">${esc(TMW('inSight'))}</span>` : '';
+      body = `${esc(L('obj.map'))} — ${esc(placeName(m?.place ?? sv(o.title)))}${where}${look}${heat}`;
+    }
     else if (o.kind === 'sight') body = esc(L('obj.sight', { dir: L(`dir.${o.dir!}` as never), d: dist }));
     else if (o.kind === 'daily') {
       const def = DAILY_DEFS[o.title as keyof typeof DAILY_DEFS];
@@ -1754,19 +1762,24 @@ export class Hud {
       g.arc(tx(gx), ty(gy), 2, 0, Math.PI * 2);
       g.fill();
     }
-    g.strokeStyle = 'rgba(217,180,90,0.8)';
+    // a treasure map's search circle (Нефигугум, forum post 34): dashed gold, never the spot itself — only a circle drawn
+    // to a point (Legend Seeker, the full legendary set) is a red ✕ on a dark disc, clamped to the dial's rim when far
     g.setLineDash([3, 3]);
     for (const m of self?.maps ?? []) {
-      if (m.r < 0 || m.spot) continue;
+      if (m.r <= 0) continue;
+      g.strokeStyle = 'rgba(10,8,6,0.55)';
+      g.lineWidth = 2.6;
       g.beginPath();
-      g.arc(tx(m.x), ty(m.y), Math.max(3, m.r * k), 0, Math.PI * 2);
+      g.arc(tx(m.x), ty(m.y), Math.max(4, m.r * k), 0, Math.PI * 2);
+      g.stroke();
+      g.strokeStyle = 'rgba(232,196,106,0.95)';
+      g.lineWidth = 1.3;
       g.stroke();
     }
     g.setLineDash([]);
-    // a treasure map's dig spot (Нефигугум, forum post 26): a red ✕ on a dark disc, clamped to the dial's rim when far
     for (const m of self?.maps ?? []) {
-      if (!m.spot) continue;
-      const x = Math.max(6, Math.min(W - 6, tx(m.spot[0]))), y = Math.max(6, Math.min(H - 6, ty(m.spot[1])));
+      if (m.r !== 0) continue;
+      const x = Math.max(6, Math.min(W - 6, tx(m.x))), y = Math.max(6, Math.min(H - 6, ty(m.y)));
       g.fillStyle = 'rgba(10,8,6,0.7)';
       g.beginPath();
       g.arc(x, y, 5, 0, Math.PI * 2);

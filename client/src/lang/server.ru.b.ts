@@ -784,7 +784,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "{0}'s yards laid down new keels — timber is gold.": "На верфях порта {0} заложили новые кили — лес на вес золота.",
   "{0}, your {1}, is dead — {2}. The crew will remember.": "{0}, ваш {1}, мёртв — {2}. Команда будет помнить.",
   "{0}: a ritual shard ({1}/3). Three, and thirty cursed relics, raise a ghost ship at the Eye.": "{0}: ритуальный осколок ({1}/3). Три осколка и тридцать проклятых реликвий поднимут у Ока корабль-призрак.",
-  "{0}: a treasure map! {1}. The spot is marked on the chart (M): «Sail to the treasure».": "{0}: карта сокровищ! {1}. Место клада отмечено на карте (M): «Плыть к кладу».",
+  "{0}: a treasure map! {1}. Its circle is on the chart (M): sail into it and look for a scroll on the water.": "{0}: карта сокровищ! {1}. Круг поиска — на карте (M): плывите в него и ищите свиток на воде.",
   "{0}: a treasure map! {1}. (M: the chart)": "{0}: карта сокровищ! {1}. (M — карта)",
   "{0}: lease renewed": "{0}: аренда продлена",
   "{0}: order for {1} {2}": "{0}: заявка на {2} × {1}",

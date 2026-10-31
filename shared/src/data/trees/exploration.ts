@@ -13,7 +13,7 @@ export const EXPLORATION: TalentDef[] = [
   t({ id: 'exp_beachcomber', name: 'Beachcomber', tier: 1, maxRank: 2, keystone: false, description: 'Floating wreckage holds something of value 15% more often per rank: coin, pearls, a treasure map.', perRank: { beachcomber: 0.15 } }),
   t({ id: 'exp_star_reader', name: 'Star Reader', tier: 1, maxRank: 1, keystone: false, description: 'At night your minimap shows islands and ports twice as far.', flags: ['star_reader'] }),
   // T2
-  t({ id: 'exp_treasure_hunter', name: 'Treasure Hunter', tier: 2, maxRank: 2, keystone: false, description: 'The search circle on your treasure maps is 20% smaller per rank; digging is 15% faster per rank.', perRank: { treasureHunter: 1 } }),
+  t({ id: 'exp_treasure_hunter', name: 'Treasure Hunter', tier: 2, maxRank: 2, keystone: false, description: 'The search circle on your treasure maps is 20% smaller per rank — the scroll on the water is found sooner; digging is 15% faster per rank.', perRank: { treasureHunter: 1 } }),
   t({ id: 'exp_pearl_diver', name: 'Pearl Diver', tier: 2, maxRank: 2, keystone: false, description: 'Your divers raise cargo from sunken ships as deep as 20 m (rank 1) / 40 m (rank 2); without it, only 8 m.', perRank: { diveDepth: 1 } }),
   t({ id: 'exp_rumor_hound', name: 'Rumor Hound', tier: 2, maxRank: 1, keystone: false, description: 'Once a game day a tavern gives you a free rumour: a sunken wreck or a treasure map.', flags: ['rumor_hound'] }),
   t({ id: 'exp_pathfinder', name: 'Pathfinder', tier: 2, maxRank: 2, keystone: false, description: 'Charting a new island: +10 morale and +2% speed per rank for 10 min.', perRank: { pathfinder: 0.02 } }),

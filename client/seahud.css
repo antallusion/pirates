@@ -1068,3 +1068,19 @@ body.simple #touch > #tc-skill.none .k-btn-ico { filter: grayscale(0.5) brightne
    налазело на штурвал»): on the wheel's upper right at 60°, ~8 px clear of the gold sail arc (#tc-sailring, 9 px past the
    wheel) and of the «+»; a 30 px chip, its centre --stick/2 + 35 px from the wheel's. */
 body.simple.touch #tc-dashchip { top: calc(var(--stick) * 0.067 - 45.3px); right: calc(var(--stick) / 4 - 32.5px); }
+
+/* ---------- the treasure search's warm/cold step (Нефигугум, forum post 34): «Тепло» amber, «Теплее» orange, «Горячо!»
+   red and breathing — in the HUD's «Сейчас» line and on the map's card. */
+.tm-heat { font-weight: 700; letter-spacing: 0.02em; }
+.tm-heat.h1 { color: #e8c46a; }
+.tm-heat.h2 { color: #f0963c; }
+.tm-heat.h3 { color: #ff5a3a; animation: tm-heat-pulse 0.9s ease-in-out infinite; text-shadow: 0 0 6px rgba(255, 90, 58, 0.55); }
+.tmap-heat.h1 { color: #e8c46a; }
+.tmap-heat.h2 { color: #f0963c; }
+.tmap-heat.h3 { color: #ff5a3a; font-weight: 700; }
+@keyframes tm-heat-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+@media (prefers-reduced-motion: reduce) { .tm-heat.h3 { animation: none; } }
+/* the search's chip over the sea, under the run's pill (forum post 34) */
+#tm-chip { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 98px); left: 50%; transform: translateX(-50%); z-index: 30; pointer-events: none; display: flex; gap: 8px; align-items: baseline; padding: 4px 12px; border-radius: 14px; background: rgba(12, 10, 8, 0.72); border: 1px solid rgba(217, 180, 90, 0.55); font: 600 13px Inter, system-ui, sans-serif; color: #e8d6a8; white-space: nowrap; }
+#tm-chip.hidden { display: none; }
+#tm-chip .tm-heat { font-size: 14px; }

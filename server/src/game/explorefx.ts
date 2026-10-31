@@ -19,7 +19,7 @@ import type { PlayerSession } from './player.ts';
 import { grantDeed } from './progression.ts';
 import { questEvent } from './quests.ts';
 import { grantPlan } from './shipbuilding.ts';
-import { digOutcome, legendCircle, legendFragment, mapSpot } from './treasure.ts';
+import { digOutcome, legendCircle, legendFragment, searchCircle } from './treasure.ts';
 import { seasonStat } from './seasons.ts';
 import type { ShipEntity } from './ship.ts';
 import { maybeArtifact } from './hero.ts';
@@ -169,8 +169,8 @@ export function grantMap(game: Game, s: PlayerSession, m: TreasureMap, source: s
     return false;
   }
   p.explore.maps.push(m);
-  // (Нефигугум, forum post 26: the spot is on the chart at once, and one button sails there and digs)
-  game.sendTo(s, { t: 'toast', msg: mapSpot(game, s, m) ? `${source}: a treasure map! ${m.name}. The spot is marked on the chart (M): «Sail to the treasure».` : `${source}: a treasure map! ${m.name}. (M: the chart)`, kind: 'gold' });
+  // (Нефигугум, forum post 34: the chart draws the circle, the spot is a scroll on the water to be found in it)
+  game.sendTo(s, { t: 'toast', msg: searchCircle(game, s, m) ? `${source}: a treasure map! ${m.name}. Its circle is on the chart (M): sail into it and look for a scroll on the water.` : `${source}: a treasure map! ${m.name}. (M: the chart)`, kind: 'gold' });
   mapReveals(game, s, m); // docs/18 #30: a map may show a hidden island
   return true;
 }

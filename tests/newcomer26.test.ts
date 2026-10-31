@@ -10,41 +10,50 @@ import { toggleLayer } from '../client/src/ui/worldmap.ts';
 import { yardSpan } from '../shared/src/data/yardhulls.ts';
 import { join, makeGame, steps } from './helpers.ts';
 
-test('a treasure map marks its dig spot; a cursed one keeps its needle', () => {
+// (forum post 34 took the spot off the chart again: the circle on the chart, the scroll on the water — tests/treasuresearch.test.ts)
+test('a treasure map draws its search circle (not the spot); a cursed one keeps its needle', () => {
   const { game } = makeGame();
   join(game, 'Spot Sal', 'navigator');
   const s = game.sessionByName('Spot Sal')!;
+  s.ship!.docked = null;
+  s.ship!.state.x = 1000;
+  s.ship!.state.y = 1000;
   for (const kind of ['circle', 'riddle', 'drawing'] as const) {
     const m = makeMap(game, 1, { kind });
     const v = mapView(game, s, m);
-    assert.deepEqual(v.spot, [Math.round(m.sx), Math.round(m.sy)], kind);
+    assert.equal(v.spot, undefined, kind);
+    assert.ok(v.r > 0, kind);
   }
   const cursed = makeMap(game, 1, { kind: 'cursed' });
   assert.equal(mapView(game, s, cursed).spot, undefined);
+  assert.equal(mapView(game, s, cursed).r, -1);
 });
 
-test('«Плыть к кладу»: the goal tm:<map> is its spot; brought there, the boats dig by themselves; dug, the goal is met', () => {
+test('«Плыть к кладу»: the goal tm:<map> is its circle; the scroll in sight, its spot — the boats dig; dug, the goal is met', () => {
   const { game } = makeGame();
   const c = join(game, 'Dig Dora', 'navigator');
   const s = game.sessionByName('Dig Dora')!;
   const p = s.profile!;
   const m = makeMap(game, 1);
   p.explore.maps = [m];
-  const r = resolveGoal(game, s, `tm:${m.id}`);
-  assert.ok('cands' in r);
-  assert.equal(Math.round(r.cands[0].x), Math.round(m.sx));
-  // put her at sea a few hundred metres off the spot (the run's last stretch)
   const ship = s.ship!;
   ship.docked = null;
   p.docked = null;
+  const r0 = resolveGoal(game, s, `tm:${m.id}`);
+  assert.ok('cands' in r0);
+  assert.notEqual(Math.round(r0.cands[0].x) === Math.round(m.sx) && Math.round(r0.cands[0].y) === Math.round(m.sy), true, 'out of sight: never the spot');
+  // put her at sea a few hundred metres off the spot (the scroll in sight): the run is to the spot
   const is = game.world.islands[m.island!];
   const dx = m.sx - is.x, dy = m.sy - is.y, l = Math.hypot(dx, dy) || 1;
-  ship.state.x = m.sx + (dx / l) * 600; // out to sea from the spot: the helmsman brings her in
-  ship.state.y = m.sy + (dy / l) * 600;
+  ship.state.x = m.sx + (dx / l) * 300; // out to sea from the spot: the helmsman brings her in
+  ship.state.y = m.sy + (dy / l) * 300;
   ship.state.speed = 0;
   ship.protectedUntil = 0;
   ship.lastCombat = -999;
   game.grid.upsert(ship.id, ship.state.x, ship.state.y);
+  const r = resolveGoal(game, s, `tm:${m.id}`);
+  assert.ok('cands' in r);
+  assert.equal(Math.round(r.cands[0].x), Math.round(m.sx));
   c.push({ t: 'goto', key: `tm:${m.id}` });
   for (let i = 0; i < 60 && !ship.landing; i++) {
     for (const id of [...game.npcs.keys()]) game.removeShip(id);

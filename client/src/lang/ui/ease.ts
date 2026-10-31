@@ -42,7 +42,7 @@ export const EN = {
   'tip.sight': 'A sign on the horizon: the gold mark on the rim of the screen leads to it.',
   'tip.hunt': 'A beast of the sea: harpoons and chain shot slow it; the carcass is worth hauling in.',
   'tip.dive': 'A dive: watch the air and the lamp — come up before the air runs out.',
-  'tip.map': 'A treasure map: the gold ring on the chart is where to search; land a party inside it.',
+  'tip.map': 'A treasure map: sail into the gold circle on the chart and look for a scroll on the water — there the boats dig.',
   'tip.waypoint': 'Your mark is set: “Sail there” on the chart gives the wheel to the helmsman.',
   'tip.actions': 'Something to do here: the buttons over the guns say what — the gold one is the main thing.',
   // 38. gear comparison
@@ -94,7 +94,7 @@ export const RU: Record<keyof typeof EN, string> = {
   'tip.sight': 'Знак на горизонте: золотая метка на краю экрана ведёт к нему.',
   'tip.hunt': 'Морской зверь: гарпуны и книппели замедляют его, а тушу стоит взять на буксир.',
   'tip.dive': 'Погружение: следите за воздухом и лампой — поднимайтесь, пока воздух не кончился.',
-  'tip.map': 'Карта сокровищ: искать внутри золотого круга на карте — высадите туда партию.',
+  'tip.map': 'Карта сокровищ: плывите в золотой круг на карте и ищите свиток на воде — там шлюпки и копают.',
   'tip.waypoint': 'Метка поставлена: «Плыть сюда» на карте передаёт штурвал рулевому.',
   'tip.actions': 'Здесь есть что сделать: кнопки над пушками подскажут что — золотая из них главная.',
   cmp_this: 'Этот',

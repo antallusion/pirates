@@ -157,6 +157,8 @@ import { BTN, dead, HOLD, padAimPoint, PadInput, radialSector, rumble } from './
 import type { PadEvent } from './gamepad.ts';
 import type { Action, Settings } from './settings.ts';
 import { dict, lang, onLang, plural, setLang, t, translateDom } from './i18n.ts';
+import { searchChip, searchChipHtml, searchMemo, searchStep } from './ui/tmsearch.ts';
+import { EN as TMS_EN, RU as TMS_RU } from './lang/ui/maps.ts';
 import { EN as HUD_EN, RU as HUD_RU } from './lang/ui/hud.ts';
 const HUD_L = dict(HUD_EN, HUD_RU);
 import { applyDataLocale, NAME_RU } from './lang/data.ts';
@@ -201,6 +203,25 @@ import { startTelemetry, telemetryBoot } from './telemetry.ts'; // real-device t
 import './ui/artaim.ts'; // every banner painting framed on its subject (owner, 2026-10-28)
 
 const L = dict(MAIN_EN, MAIN_RU);
+const TMS = dict(TMS_EN, TMS_RU); // the treasure search's words (ui/tmsearch.ts, forum post 34)
+const tmMemo = searchMemo();
+let tmChipKey = '';
+/** The search's chip over the sea (forum post 34): «Тепло / Теплее / Горячо!» in a map's circle, «свиток на виду». */
+function tmChipFrame(maps: NonNullable<typeof state.self>['maps']): void {
+  const html = state.self?.dockedAt || modal ? '' : searchChipHtml(searchChip(maps), (k) => TMS(k));
+  if (html === tmChipKey) return;
+  tmChipKey = html;
+  let el = document.getElementById('tm-chip');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'tm-chip';
+    el.setAttribute('role', 'status');
+    el.title = TMS('heat.hint');
+    document.body.appendChild(el);
+  }
+  el.innerHTML = html;
+  el.classList.toggle('hidden', !html);
+}
 /** The captain last aboard on this device (docs/23 item 88: «Продолжить: …» on the title screen). */
 const CAPTAIN_KEY = 'gravetide.captain';
 /** A name or sentence that came from the server, in the player's language. */
@@ -1013,7 +1034,7 @@ function seaTap(px: number, py: number): void {
   if (plan === 'none' || plan === 'target') return;
   if (plan === 'blocked') return void hud.toast(seaTapWhy(blocked!, lang() === 'ru'), 'info');
   if (plan === 'port') return startGoal(`p:${pl!.id}`); // (the run casts her off in port and puts her in on arrival)
-  if (plan === 'thing' && !t) return tapGoal(); // the goal's beacon or rim arrow: the run (cast off by the server in port)
+  if (plan === 'thing' && !t) return tapGoal(px, py); // the goal's beacon or rim arrow: the run (cast off by the server in port)
   if (plan === 'chase') {
     const p = ship !== null ? state.ships.get(ship)?.cur : null;
     const r = roam !== null ? state.roams.find((x) => x.id === roam) : undefined;
@@ -1045,7 +1066,7 @@ function sailToTap(px: number, py: number): boolean {
   if (!inGame || state.self?.dockedAt || !state.ownDisplay) return false;
   // ux2: the goal's beacon on the sea or its arrow on the screen's edge — the course there (a quest: on through its steps)
   if (renderer.goalHit(px, py)) {
-    tapGoal();
+    tapGoal(px, py);
     return true;
   }
   const w = renderer.toWorld(px, py);
@@ -1103,7 +1124,13 @@ function startGoal(key: string, quiet = false): void {
   net.send({ t: 'goto', key });
 }
 /** A tap on the beacon: the run to the goal it shows (a quest, a contract's port), else a plain course to it. */
-function tapGoal(): void {
+function tapGoal(px?: number, py?: number): void {
+  // a treasure's scroll on the water (forum post 34): the run to it, and the boats dig
+  const scroll = px !== undefined && py !== undefined ? renderer.scrollAt(px, py) : null;
+  if (scroll) {
+    if (!(goalRun?.key === `tm:${scroll}` && state.route?.key === goalRun.key)) startGoal(`tm:${scroll}`);
+    return;
+  }
   if (goalRun && state.route?.key === goalRun.key) return; // already on her way there
   const own = state.ownDisplay;
   const o = own ? objective(state, own.x, own.y) : null;
@@ -5467,6 +5494,13 @@ function step(t: number): void {
     homeBtnFrame();
     hud.hauling = netHaul.active;
     hud.update(state, prompt);
+    if (own && !state.self?.dockedAt) {
+      // the treasure search (forum post 34): into a map's circle, and the scroll on the water in sight — once each
+      const st = searchStep(tmMemo, state.self?.maps ?? [], own.x, own.y);
+      if (st.sighted.length) hud.toast(TMS('sighted'), 'gold');
+      else if (st.entered.length) hud.toast(TMS('enter'), 'gold');
+    }
+    tmChipFrame(own ? state.self?.maps ?? [] : []);
     autosailPill.draw(state);
     passagePill.draw(state);
     drawSeaOrders($('hud-orders'), state, (m) => net.send(m), () => openHero('book'));

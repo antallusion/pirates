@@ -1,3 +1,4 @@
+import { makeMap } from './explorefx.ts'; // /tmap (forum post 34)
 import { adminWay } from './waystations.ts'; // docs/35
 import { advancePeriod, periodLeftSec, periodNow } from './priceseason.ts'; // the ports' price periods (owner, 2026-10-30)
 import { adminGift } from './dailygift.ts';
@@ -355,6 +356,17 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       p.gold = Math.max(0, p.gold + n);
       game.pushSelf(s, true);
       return `Silver: ${p.gold}.`;
+    }
+    case 'tmap': {
+      // QA (forum post 34): a treasure map off the nearest wild island ([tier] 1–3, [kind]); the answer names its spot
+      // (the admin's line only — the client's chart never gets it)
+      const tier = Math.max(1, Math.min(3, num(0, 1) || 1));
+      const kind = (['circle', 'riddle', 'drawing', 'landmark', 'cursed'] as const).find((k) => k === args[1]);
+      const is = game.world.islands.filter((i) => !i.portId && !i.minor && !i.raft && !i.hidden && i.radius > 150).sort((a, b) => Math.hypot(a.x - ship.state.x, a.y - ship.state.y) - Math.hypot(b.x - ship.state.x, b.y - ship.state.y))[0];
+      const m = makeMap(game, tier, { island: is, ...(kind ? { kind } : {}) });
+      p.explore.maps.push(m);
+      game.pushSelf(s, true);
+      return `Map ${m.id} (${m.name}): the spot ${Math.round(m.sx)} ${Math.round(m.sy)}.`;
     }
     case 'tp': {
       let x: number, y: number, where: string;
