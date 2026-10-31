@@ -250,8 +250,38 @@ for (const ev of ['keydown', 'mousedown', 'touchstart'] as const) addEventListen
 setCuePlayer((k, d) => audio.cue(k, d));
 addEventListener('click', (e) => {
   const b = (e.target as Element | null)?.closest?.('button, .btn, [role="button"], [role="switch"], .w-chip');
-  if (b && !(b as HTMLButtonElement).disabled && !b.closest('#world')) cue('click');
+  if (b && !(b as HTMLButtonElement).disabled && !b.closest('#world')) {
+    if (isTabButton(b)) cue('tab');
+    else cue('click');
+  }
 }, { capture: true, passive: true });
+// (the sound design, 2026-11-01: a tab turns a page; the mouse over a button a faint tick — never on a touch screen)
+function isTabButton(b: Element): boolean {
+  return b.getAttribute('role') === 'tab' || [...b.attributes].some((a) => /^data-\w*tab$/.test(a.name));
+}
+let hoverBtn: Element | null = null;
+addEventListener('pointerover', (e) => {
+  if (e.pointerType !== 'mouse') return;
+  const b = (e.target as Element | null)?.closest?.('button, .btn, [role="button"], .w-chip');
+  if (b === hoverBtn) return;
+  hoverBtn = b ?? null;
+  if (b && !(b as HTMLButtonElement).disabled && !b.closest('#world')) cue('hover');
+}, { capture: true, passive: true });
+// What the client asks of the server, heard as it goes (equipping, the fishing line, the sails).
+let lastSailHeard = -1;
+{
+  const send = net.send.bind(net);
+  net.send = (m) => {
+    if ((m.t === 'gear' || m.t === 'cos') && m.action === 'equip') cue('equip');
+    else if (m.t === 'fishing' && m.action === 'cast') cue('cast');
+    else if (m.t === 'fishing') cue('reel');
+    else if (m.t === 'input' && m.sail !== undefined && m.sail !== lastSailHeard) {
+      if (lastSailHeard >= 0) cue('sail');
+      lastSailHeard = m.sail;
+    }
+    send(m);
+  };
+}
 // Out of sight the whole game sleeps (owner, 2026-10-20 — VK moderation: «если свернуть игру, звук продолжает играть»;
 // lifecycle.ts, docs/36): the sound's context suspended, the films and any <audio>/<video> paused, every animation frame
 // held, the helm let go with one neutral input — on every platform when the page is hidden or put away; inside VK also
@@ -713,6 +743,7 @@ setInterval(() => {
     cue('buy');
   }
   if (pipeDocked === true && !s.dockedAt) cue('undock');
+  if (pipeDocked === false && s.dockedAt) cue('anchor');
   pipeDocked = !!s.dockedAt;
   buzzLevel = s.level;
   buzzSilver = s.gold;
@@ -2232,7 +2263,7 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'onb':
       onboarding.moment(m.kind, m.id, (msg, kind) => hud.toast(msg, kind));
-      if (m.kind === 'goal' || m.kind === 'stage') audio.coins();
+      if (m.kind === 'goal' || m.kind === 'stage') cue('quest');
       break;
     case 'port':
       if (m.view && modal !== 'port') {
@@ -2378,7 +2409,7 @@ function onMessage(m: ServerMsg): void {
       // docs/36: a campaign quest — the chapter and its place in it on the herald, its completion line as the crew's word
       hud.banner(m.campaign ? L('campaignDone', { ch: m.campaign.ch, n: m.campaign.k + 1, of: m.campaign.size }) : L('questDone'), `${serverText(m.name)} — ${parts.join(' · ')}`);
       if (m.line) hud.toast(serverText(m.line), 'info');
-      audio.bell();
+      cue('quest');
       audio.coins();
       // the campaign's last quest: its epilogue («крутой финал», owner 2026-10-19)
       if (m.campaign && m.campaign.at >= m.campaign.total) campaignLore('epilogue', false);
@@ -2477,7 +2508,12 @@ function onMessage(m: ServerMsg): void {
       else if (m.msg === PEACE_SAY) hud.tapToast(`${peaceWords().line} ${peaceWords().hint}`, 'bad', openFlagCard, 'danger');
       else if (/ harbours take no ship with \d+ skulls: /.test(m.msg)) hud.tapToast(`${serverText(m.msg)} ${portHint()}`, 'bad', openFlagCard, 'danger');
       else hud.toast(serverText(m.msg), m.kind);
-      if (m.kind === 'gold') audio.coins();
+      // (a treasure dug up: the chime of the find; any other silver or gold: the coins)
+      if (m.kind === 'gold') {
+        if (/\b(?:dig|dug|unearth|treasure|cache|hoard|buried)\b/i.test(m.msg) && !/map/i.test(m.msg)) cue('found');
+        else audio.coins();
+      }
+      if (m.kind === 'bad') cue('error');
       if (/a pirate is coming for you/.test(m.msg)) audio.bell(); // the lookout's alarm
       // the island's work finished (base.ts finish): the hammer and the chime
       if (m.kind === 'good' && (/ is finished\.$/.test(m.msg) || / on .+: level \d+\.$/.test(m.msg))) cue('built');
@@ -2502,6 +2538,8 @@ function onMessage(m: ServerMsg): void {
     }
     case 'chat':
       hud.chat(m);
+      // another captain's line: a soft pluck (never one's own, never the system's)
+      if (m.from && m.from !== state.self?.name && m.ch !== 'sys') cue('chat');
       break;
     case 'chat_hist': // docs/28: the history on coming aboard, or one conversation whole
       hud.chatPanel.history(m);
@@ -2775,6 +2813,10 @@ function openModal(m: Modal): void {
   }
   if (m === null) closeLevelUp();
   const from = modal;
+  // a window opens as a book does (the chart unfolds); one closed shuts it (2026-11-01)
+  if (m === 'map' && from === null) cue('map');
+  else if (m !== null && from === null) cue('open');
+  else if (m === null && from !== null) cue('close');
   modal = m;
   if (m === null) hideModalEl();
   else {
@@ -2820,6 +2862,7 @@ function closeModal(): void {
     net.send({ t: 'away', action: 'take' });
     state.away.gift = null;
   }
+  if (was !== null) cue('close');
   modal = null;
   hideModalEl();
   document.querySelectorAll('.gear-tip').forEach((e) => e.remove());
@@ -5591,6 +5634,16 @@ function step(t: number): void {
       else delete $('hud-target').dataset.range;
     }
     if (own) audio.listener = { x: own.x, y: own.y };
+    // the ambience's scene (2026-11-01): the harbour or the tavern in port, gulls by land at sea
+    const dockedNow = !!state.self?.dockedAt;
+    if (own && Math.floor(t / 500) !== Math.floor((t - dt * 1000) / 500)) {
+      let near = Infinity;
+      for (const isl of state.islands.values()) near = Math.min(near, dist(isl.x, isl.y, own.x, own.y) - isl.r);
+      audio.scene.land = Math.max(0, Math.min(1, 1 - near / 900));
+    }
+    audio.scene.atSea = !dockedNow && !!own;
+    audio.scene.docked = dockedNow;
+    audio.scene.tavern = dockedNow && modal === 'port' && portScreen.tab === 'tavern';
     audio.ambience(state.wind[1], state.weather, dt);
     if (own) {
       // The score follows the scene (docs/07 §10.4); the rigging creaks with the load; the bells keep the watch.
@@ -5604,6 +5657,7 @@ function step(t: number): void {
         anomaly: state.bosses.some((b) => dist(b.x, b.y, own.x, own.y) < 3000),
         isle: !document.getElementById('isle')?.classList.contains('hidden') && !!document.getElementById('isle'),
         tactical: !!state.boardTac,
+        tavern: audio.scene.tavern,
       }, state.wind[1], own.sail, Math.abs(shipHeel(own.heading, state.wind[0], state.wind[1], own.sail, SHIP_CLASSES[state.self!.loadout.classId].tier, state.you?.water ?? 0, 0)), timeOfDay(state.estServerTime()), !state.self?.dockedAt);
     }
     hud.castKey = touch.enabled ? '' : ` (${keyOfAction('land')})`; // a phone has its button, not a key
@@ -5665,7 +5719,7 @@ function step(t: number): void {
     // The chart once a second; four times while a signal flag pulses on it (docs/16 #35).
     const tick = state.signals.length && liveSignals(state).length ? 250 : 1000;
     if (modal === 'map' && Math.floor(t / tick) !== Math.floor((t - dt * 1000) / tick)) worldMap.draw(state);
-  }
+  } else audio.titleFrame(dt); // the login and the title: the main theme (once a gesture has woken the sound)
 }
 requestAnimationFrame(frame);
 // Real-device telemetry (docs/33): what the player looks at, for the frame rate's histogram.
@@ -5673,4 +5727,4 @@ startTelemetry(() => (!inGame ? 'menu' : tactical.open ? 'battle' : isleScene.is
 setInterval(() => net.send({ t: 'ping', c: performance.now() }), 5000);
 
 // Debug handle for the console.
-(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, isle: isleScene, assets: () => ({ ...assetStats(), loads: loadLog.slice(), kinds: assetKinds() }), open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), cos: { shop: (sec?: string) => openShop(false, { tab: 'cos', sec: sec as 'cos_titles' | undefined }), wardrobe: () => openWardrobe() }, promos, dailyGift, seasonPass, hero: (tab?: CaptainOpen) => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud, aim: { under: attackUnder, about: aboutAt, choices: targetChoices, menu: targetMenu }, roamNow: (id: number) => { const v = state.roams.find((x) => x.id === id); return v ? roamNow(state, v) : null; }, goal: (key: string) => startGoal(key), goalRun: () => goalRun?.key ?? null, modal: () => modal, tapGoal: (x: number, y: number) => sailToTap(x, y), portCard: (id: string) => openPortCard(state, id), portLabelAt: (x: number, y: number) => portLabelAt(x, y) };
+(globalThis as unknown as { gravetide: unknown }).gravetide = { state, renderer, net, audio, isle: isleScene, assets: () => ({ ...assetStats(), loads: loadLog.slice(), kinds: assetKinds() }), open: (m: Modal) => (m === 'company' ? openMenuItem('company') : m === 'base' ? openBase() : m === 'hero' ? openHero() : m === 'throne' ? openThrone() : m === 'shop' ? openShop() : openModal(m)), throne: (tab?: string) => openThrone(tab), shop: (topup?: boolean) => openShop(topup), cos: { shop: (sec?: string) => openShop(false, { tab: 'cos', sec: sec as 'cos_titles' | undefined }), wardrobe: () => openWardrobe() }, promos, dailyGift, seasonPass, hero: (tab?: CaptainOpen) => openHero(tab), prologue: () => playPrologue(() => {}), hud, onboarding, fight: boardFight, tactical, chart: worldMap, land: sendLand, riskOpen: () => riskOpen, target: (id: number) => pinTarget(id), seaHud, aim: { under: attackUnder, about: aboutAt, choices: targetChoices, menu: targetMenu }, roamNow: (id: number) => { const v = state.roams.find((x) => x.id === id); return v ? roamNow(state, v) : null; }, goal: (key: string) => startGoal(key), goalRun: () => goalRun?.key ?? null, modal: () => modal, tapGoal: (x: number, y: number) => sailToTap(x, y), portCard: (id: string) => openPortCard(state, id), portLabelAt: (x: number, y: number) => portLabelAt(x, y) };

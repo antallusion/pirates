@@ -1,9 +1,15 @@
-// Procedural sound (WebAudio): no files to download, every sound reacts to the scene.
-// Layers: ocean bed (wind-driven brown noise), rain, thunder, cannon fire, hull hits, splashes,
-// harbour bells, coins. Positional: gain and stereo pan from the listener (own ship).
+// The sound engine (WebAudio). Since the sound design of 2026-11-01 (owner: «эти программные … просто отстой»)
+// every event plays a real recording from assets/audio (sounds.ts: CC0 and CC-BY sources, tools/audio/recipe.ts) —
+// 2–4 variants of a frequent one, a random pitch of ±5 %, gain and pan by the distance at sea, a limit on how many play
+// at once (a broadside does not clip), the music ducked under the big ones; the ambience is looped beds by the scene
+// (waves, wind by strength, rain, the gale, the hull, gulls by land, the harbour, the tavern). Until a recording is
+// decoded (the first seconds, a slow network) the old procedural recipe below plays in its place, so nothing is silent.
+// Positional: gain and stereo pan from the listener (own ship).
 
 import type { GameEvent, WeatherKind } from '../../shared/src/protocol.ts';
 import { MusicDirector } from './music.ts';
+import type { MusicHost } from './music.ts';
+import { SampleBank } from './sounds.ts';
 import { CUES } from './sfx.ts';
 import type { SoundCue } from './sfx.ts';
 import type { MusicInput } from './music.ts';
@@ -45,6 +51,71 @@ export function direction(lx: number, ly: number, sx: number, sy: number): Capti
   return dy < 0 ? 'ahead' : 'astern';
 }
 
+/** How many of one sound may sound at once (the rest are dropped): a broadside's guns, a sweep's blows. */
+export const VOICE_LIMIT: Record<string, number> = { cannon: 6, 'cannon.heavy': 4, hull: 4, splash: 4, musket: 5, clash: 3, swing: 3, thud: 3, step: 2, coins: 2, click: 2, hover: 1, explosion: 3 };
+/** All sounds at once at most (WebAudio on a phone). */
+export const MAX_VOICES = 28;
+
+/** Whether one more of `key` may start: pure (tested). */
+export function voiceFree(key: string, perKey: number, total: number): boolean {
+  return total < MAX_VOICES && perKey < (VOICE_LIMIT[key] ?? 4);
+}
+
+/** The ambience beds' levels for the scene (0..1 each), pure (tested): waves always, rougher with the wind; the wind by
+ *  strength; the gale and rain by the weather; the hull at sea; gulls by land and in port; the harbour and the tavern. */
+export function bedLevels(wind: number, weather: string, s: AmbScene): Record<string, number> {
+  const storm = weather === 'storm' || weather === 'black_storm';
+  const rain = weather === 'rain' ? 0.65 : storm ? 0.9 : 0;
+  const w = Math.max(0, Math.min(1, wind));
+  return {
+    'amb.sea': s.tavern ? 0 : s.docked ? 0.35 : 0.55 + 0.25 * (1 - w),
+    'amb.waves': s.tavern || s.docked ? 0 : Math.max(0, w - 0.25) * 1.1 + (storm ? 0.3 : 0),
+    'amb.wind': s.tavern ? 0 : (s.docked ? 0.08 : 0.12) + w * 0.5,
+    'amb.gale': s.tavern ? 0 : storm ? (weather === 'black_storm' ? 0.95 : 0.75) : 0,
+    'amb.rain': s.tavern ? rain * 0.25 : rain,
+    'amb.creak': s.atSea && !s.tavern ? 0.25 + 0.4 * w : 0,
+    'amb.gulls': storm || s.tavern ? 0 : s.docked ? 0.45 : s.atSea ? 0.5 * s.land : 0,
+    'amb.harbour': s.docked && !s.tavern ? 0.6 : 0,
+    'amb.tavern': s.tavern ? 0.8 : 0,
+    'amb.fire': s.fire ? 0.6 : 0,
+  };
+}
+
+/** What the ambience hears of the scene (main.ts sets it each frame). */
+export interface AmbScene {
+  atSea: boolean;
+  docked: boolean;
+  tavern: boolean;
+  /** 0..1: land within sight (gulls). */
+  land: number;
+  /** Her own ship on fire. */
+  fire: boolean;
+}
+
+interface Bed {
+  src: AudioBufferSourceNode;
+  gain: GainNode;
+  /** Seconds it has been silent (stopped after a while). */
+  idle: number;
+}
+
+/** A sample's play: its level, where it is, when, how fast. */
+export interface PlayOpts {
+  gain?: number;
+  pan?: number;
+  delay?: number;
+  bus?: Bus;
+  /** Speed (pitch with it); a random ±`jitter` on top (0.05 by default). */
+  rate?: number;
+  jitter?: number;
+  /** A world position: gain and pan by the distance from the listener, out to `range` metres. */
+  x?: number;
+  y?: number;
+  range?: number;
+  /** Duck the music this deep (0..1) while it sounds (an explosion, a heavy gun). */
+  duck?: number;
+}
+
 export class AudioEngine {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
@@ -67,6 +138,12 @@ export class AudioEngine {
   private captionAt = new Map<string, number>();
   listener = { x: 0, y: 0 };
   private lastThunder = 0;
+  /** Before the game (the login, the title): the main theme alone. */
+  titleFrame(dt: number): void {
+    if (!this.ctx) return;
+    this.music.update(dt, { docked: false, combat: false, chased: false, weather: 'clear', region: 'black_coast', anomaly: false, title: true });
+  }
+
   /** The ship's own voice (options): the watch bells and pipe, the lookout's cry, the timbers on a hard turn. */
   voices = true;
   private watch = -1;
@@ -74,6 +151,17 @@ export class AudioEngine {
   private lastTurnCreak = 0;
   /** The page hidden: no cue, the context suspended (setHidden). */
   private hidden = false;
+  /** The recordings (sounds.ts), from the first gesture. */
+  bank: SampleBank | null = null;
+  /** The music under the ducking (between the music bus and the master). */
+  private duckGain: GainNode | null = null;
+  private duckUntil = 0;
+  private playing = new Map<string, number>();
+  private voicesNow = 0;
+  /** The ambience beds playing, by key. */
+  private beds = new Map<string, Bed>();
+  /** The scene the ambience follows (main.ts). */
+  scene: AmbScene = { atSea: true, docked: false, tavern: false, land: 0, fire: false };
 
   /** Must be called from a user gesture (browser autoplay policy). */
   unlock(): void {
@@ -95,6 +183,12 @@ export class AudioEngine {
       return g;
     };
     this.buses = { sea: bus('sea'), combat: bus('combat'), ui: bus('ui'), music: bus('music') };
+    // the music through the ducking
+    this.duckGain = ctx.createGain();
+    this.buses.music.disconnect();
+    this.buses.music.connect(this.duckGain).connect(this.master);
+    this.bank = new SampleBank(ctx);
+    void this.bank.preload();
     this.noise = this.makeNoise(2, false);
     this.brown = this.makeNoise(4, true);
     // Ocean bed.
@@ -119,7 +213,78 @@ export class AudioEngine {
     this.rain.gain.value = 0;
     rain.connect(hp).connect(this.rain).connect(this.buses.sea);
     rain.start();
-    this.music.attach(ctx, this.buses.music, this.noise);
+    const host: MusicHost = {
+      trackUrl: (key) => {
+        const e = this.bank?.entry(key);
+        return e ? this.bank!.url(e.files[0], this.bank!.fmt) : null;
+      },
+      play: (key, o) => this.play(key, { ...o, jitter: 0 }),
+    };
+    this.music.attach(ctx, this.buses.music, this.noise, host);
+  }
+
+  /** A recording by its key (assets/audio/index.json): true when it played (or was rightly dropped — too many at once,
+   *  too far, the page hidden); false when it is not decoded yet, so the caller plays its procedural recipe. */
+  play(key: string, o: PlayOpts = {}): boolean {
+    const ctx = this.ctx, bank = this.bank;
+    if (!ctx || !this.buses || !bank) return false;
+    if (this.hidden) return true;
+    const buf = bank.has(key) ? bank.pick(key) : null;
+    if (!buf) {
+      void bank.ensure(key);
+      return false;
+    }
+    let gain = o.gain ?? 1, pan = o.pan ?? 0;
+    if (o.x !== undefined && o.y !== undefined) {
+      const sp = spatial(this.listener.x, this.listener.y, o.x, o.y, o.range ?? HEARING);
+      gain *= sp.gain;
+      pan = sp.pan;
+    }
+    if (gain < 0.004) return true;
+    const n = this.playing.get(key) ?? 0;
+    if (!voiceFree(key, n, this.voicesNow)) return true;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const j = o.jitter ?? 0.05;
+    src.playbackRate.value = (o.rate ?? 1) * (1 + (Math.random() * 2 - 1) * j);
+    const g = ctx.createGain();
+    g.gain.value = gain;
+    const entry = bank.entry(key);
+    const busName: Bus = o.bus ?? (entry?.bus as Bus | undefined) ?? 'combat';
+    if (!this.mono && pan && typeof ctx.createStereoPanner === 'function') {
+      const p = ctx.createStereoPanner();
+      p.pan.value = Math.max(-1, Math.min(1, pan));
+      src.connect(g).connect(p).connect(this.buses[busName]);
+    } else src.connect(g).connect(this.buses[busName]);
+    const at = ctx.currentTime + Math.max(0, o.delay ?? 0);
+    this.playing.set(key, n + 1);
+    this.voicesNow++;
+    src.onended = () => {
+      this.playing.set(key, Math.max(0, (this.playing.get(key) ?? 1) - 1));
+      this.voicesNow = Math.max(0, this.voicesNow - 1);
+      g.disconnect();
+    };
+    src.start(at);
+    if (o.duck && gain > 0.15) this.duckMusic(o.duck, at, buf.duration / src.playbackRate.value);
+    return true;
+  }
+
+  /** The music dips under a big sound and comes back after it. */
+  private duckMusic(depth: number, at: number, dur: number): void {
+    const ctx = this.ctx, d = this.duckGain;
+    if (!ctx || !d) return;
+    const until = at + Math.min(3, dur);
+    if (until <= this.duckUntil && d.gain.value <= 1 - depth + 0.05) return;
+    this.duckUntil = Math.max(this.duckUntil, until);
+    d.gain.cancelScheduledValues(at);
+    d.gain.setTargetAtTime(1 - depth, at, 0.04);
+    d.gain.setTargetAtTime(1, this.duckUntil, 0.6);
+  }
+
+  /** A UI or deck sound by key, its procedural recipe when not decoded yet. */
+  private sfx(key: string, delay: number, gain: number, fallback?: () => void, o: PlayOpts = {}): void {
+    if (this.play(key, { gain, delay, ...o })) return;
+    fallback?.();
   }
 
   toggleMute(): boolean {
@@ -149,12 +314,52 @@ export class AudioEngine {
     const ctx = this.ctx;
     if (!ctx || !this.sea || !this.seaFilter || !this.rain) return;
     const t = ctx.currentTime;
+    const want = bedLevels(wind, weather, this.scene);
+    for (const [key, level] of Object.entries(want)) this.bed(key, level, dt);
+    // The synthesized sea and rain only while their recordings are not playing.
     const surge = 0.5 + 0.5 * Math.sin(t * 0.35) * Math.sin(t * 0.13 + 1);
-    this.sea.gain.setTargetAtTime(0.12 + wind * 0.22 + surge * 0.06, t, 0.5);
+    this.sea.gain.setTargetAtTime(this.beds.has('amb.sea') ? 0 : 0.12 + wind * 0.22 + surge * 0.06, t, 0.5);
     this.seaFilter.frequency.setTargetAtTime(250 + wind * 700 + surge * 150, t, 0.5);
     const rain = weather === 'rain' ? 0.05 : weather === 'storm' || weather === 'black_storm' ? 0.1 : 0;
-    this.rain.gain.setTargetAtTime(rain, t, 1.5);
-    void dt;
+    this.rain.gain.setTargetAtTime(this.beds.has('amb.rain') ? 0 : rain, t, 1.5);
+  }
+
+  /** One looped bed toward its level: started when first wanted (fetched then), stopped after 20 s silent. */
+  private bed(key: string, level: number, dt: number): void {
+    const ctx = this.ctx!;
+    let b = this.beds.get(key);
+    if (!b) {
+      if (level < 0.01 || !this.bank || this.hidden) return;
+      const buf = this.bank.has(key) ? this.bank.pick(key) : null;
+      if (!buf) {
+        void this.bank.ensure(key);
+        return;
+      }
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      const gain = ctx.createGain();
+      gain.gain.value = 0;
+      src.connect(gain).connect(this.buses![(this.bank.entry(key)?.bus as Bus | undefined) ?? 'sea']);
+      // (each bed from a different point of its loop, so two beds of a length never pulse together)
+      src.start(ctx.currentTime, Math.random() * buf.duration);
+      b = { src, gain, idle: 0 };
+      this.beds.set(key, b);
+    }
+    b.gain.gain.setTargetAtTime(level, ctx.currentTime, level > b.gain.gain.value ? 1.5 : 1);
+    b.idle = level < 0.01 ? b.idle + dt : 0;
+    if (b.idle > 20) {
+      b.src.stop();
+      b.gain.disconnect();
+      this.beds.delete(key);
+    }
+  }
+
+  /** The beds and their levels now (QA). */
+  bedsNow(): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const [k, b] of this.beds) out[k] = Math.round(b.gain.gain.value * 100) / 100;
+    return out;
   }
 
   /** Master volume, the three buses and mono, from the options. */
@@ -257,6 +462,7 @@ export class AudioEngine {
     const now = performance.now();
     if (!ctx || !this.noise || !this.voices || load <= 0 || now - this.lastTurnCreak < 1100 + Math.random() * 900) return;
     this.lastTurnCreak = now;
+    if (this.play('creak', { bus: 'sea', gain: 0.5 * Math.min(1, load), rate: 0.75 + Math.random() * 0.2 })) return;
     const v = this.voice(0.16 * Math.min(1, load), 0, 0, 'sea');
     if (!v) return;
     const dur = 0.45 + load * 0.5;
@@ -327,6 +533,7 @@ export class AudioEngine {
    *  are a ragged roll and not one sound eight times. The parts are quieter than the old two, so the peak and the
    *  loudest tenth of a second stay where they were (tools/mobile/sound.mjs, docs/23a). */
   cannon(x: number, y: number, delay: number, weight = 1): void {
+    if (this.play(weight >= 1 ? 'cannon.heavy' : 'cannon', { x, y, delay, gain: 0.85 * Math.min(1.2, weight + 0.2), duck: weight >= 1 ? 0.35 : 0.2 })) return;
     const { gain, pan } = spatial(this.listener.x, this.listener.y, x, y);
     const v = this.voice(gain * 0.55 * weight, pan, delay);
     if (!v) return;
@@ -341,6 +548,10 @@ export class AudioEngine {
   /** A ball home (docs/23 item 85): the strike's click, the timbers' crunch with splinters flying, the hull's knock — a
    *  crushing one breaks a beam under it. Its peak no higher than before. */
   hit(x: number, y: number, crit: boolean): void {
+    if (this.play('hull', { x, y, gain: 0.8 })) {
+      if (crit) this.play('hull.crit', { x, y, gain: 0.7, delay: 0.04 });
+      return;
+    }
     const { gain, pan } = spatial(this.listener.x, this.listener.y, x, y);
     const v = this.voice(gain * 0.5, pan);
     if (!v) return;
@@ -356,6 +567,7 @@ export class AudioEngine {
   }
 
   splash(x: number, y: number, big: boolean): void {
+    if (this.play(big ? 'splash.big' : 'splash', { x, y, range: big ? 2200 : 900, gain: big ? 0.8 : 0.5 })) return;
     const { gain, pan } = spatial(this.listener.x, this.listener.y, x, y, big ? 2200 : 900);
     const v = this.voice(gain * (big ? 0.5 : 0.18), pan);
     if (!v) return;
@@ -363,6 +575,7 @@ export class AudioEngine {
   }
 
   explosion(x: number, y: number): void {
+    if (this.play('explosion', { x, y, range: 3000, gain: 1, duck: 0.5 })) return;
     const { gain, pan } = spatial(this.listener.x, this.listener.y, x, y, 3000);
     const v = this.voice(gain * 0.9, pan);
     if (!v) return;
@@ -372,6 +585,10 @@ export class AudioEngine {
 
   /** Muskets along a rail: a crackle of small reports. */
   muskets(x: number, y: number, n = 8): void {
+    if (this.bank?.has('musket')) {
+      for (let i = 0; i < Math.min(n, 5); i++) this.play('musket', { x, y, range: 1400, gain: 0.45, delay: i * 0.07 + Math.random() * 0.06, rate: 0.95 });
+      return;
+    }
     const { gain, pan } = spatial(this.listener.x, this.listener.y, x, y, 1400);
     for (let i = 0; i < n; i++) {
       const v = this.voice(gain * 0.28, pan + (Math.random() - 0.5) * 0.3, i * 0.045 + Math.random() * 0.05);
@@ -383,6 +600,10 @@ export class AudioEngine {
 
   /** Steel on steel: a few bright rings over a scuffle. */
   clash(x: number, y: number, n = 5): void {
+    if (this.bank?.has('clash')) {
+      for (let i = 0; i < Math.min(n, 3); i++) this.play('clash', { x, y, range: 1100, gain: 0.5, delay: i * 0.16 + Math.random() * 0.1 });
+      return;
+    }
     const { gain, pan } = spatial(this.listener.x, this.listener.y, x, y, 1100);
     for (let i = 0; i < n; i++) {
       const v = this.voice(gain * 0.2, pan + (Math.random() - 0.5) * 0.4, i * 0.12 + Math.random() * 0.08);
@@ -396,6 +617,7 @@ export class AudioEngine {
 
   /** A crew's roar: a band of voices rising and falling. */
   shout(x: number, y: number, big: boolean): void {
+    if (this.play('crowd', { x, y, range: 1400, gain: big ? 0.6 : 0.4 })) return;
     const { gain, pan } = spatial(this.listener.x, this.listener.y, x, y, 1400);
     const v = this.voice(gain * (big ? 0.35 : 0.2), pan);
     if (!v) return;
@@ -412,6 +634,7 @@ export class AudioEngine {
       this.captionAt.set('thunder', now);
       this.onCaption('thunder', 'near', true);
     }
+    if (this.play('thunder', { bus: 'sea', gain: 0.8, pan: (Math.random() - 0.5) * 0.8, delay: 0.4 + Math.random() * 1.2, duck: 0.3 })) return;
     const v = this.voice(0.5, (Math.random() - 0.5) * 0.8, 0.4 + Math.random() * 1.2);
     if (!v) return;
     this.noiseBurst(v.out, v.at, 3.5, 'lowpass', 180, 0.4, 1);
@@ -420,6 +643,7 @@ export class AudioEngine {
 
   /** Harbour bell: inharmonic partials of a cast bronze bell. */
   bell(): void {
+    if (this.play('bell.double', { bus: 'ui', gain: 0.5 })) return;
     const v = this.voice(0.25, 0, 0, 'ui');
     if (!v) return;
     for (const [ratio, amp] of [[1, 1], [2.0, 0.5], [2.4, 0.4], [3.0, 0.25], [4.2, 0.15]] as const) this.tone(v.out, v.at, 220 * ratio, 3.5 / ratio + 0.8, amp * 0.4);
@@ -451,12 +675,14 @@ export class AudioEngine {
   }
 
   coins(): void {
+    if (this.play('coins', { bus: 'ui', gain: 0.55 })) return;
     const v = this.voice(0.2, 0, 0, 'ui');
     if (!v) return;
     for (let i = 0; i < 4; i++) this.tone(v.out, v.at + i * 0.045, 2600 + Math.random() * 900, 0.12, 0.3, 'triangle');
   }
 
   eerie(x: number, y: number): void {
+    if (this.play('whale', { x, y, range: 2500, gain: 0.8, rate: 0.85 })) return;
     const { gain, pan } = spatial(this.listener.x, this.listener.y, x, y, 2500);
     const v = this.voice(gain * 0.4, pan);
     if (!v) return;
@@ -481,12 +707,17 @@ export class AudioEngine {
     this.hidden = hidden;
     const ctx = this.ctx;
     if (!ctx) return;
+    this.music.setHidden(hidden);
     if (hidden && ctx.state === 'running') void ctx.suspend().catch(() => {});
     else if (!hidden && ctx.state === 'suspended') void ctx.resume().catch(() => {});
   }
 
   /** Steel on steel on the deck, and the knock of the blow (the hex fight). */
   blow(delay = 0): void {
+    if (this.play('clash', { gain: 0.55, delay, pan: (Math.random() - 0.5) * 0.4 })) {
+      this.play('thud', { gain: 0.45, delay: delay + 0.02 });
+      return;
+    }
     const v = this.voice(0.26, (Math.random() - 0.5) * 0.4, delay, 'combat');
     if (!v) return;
     const f = 2100 + Math.random() * 900;
@@ -499,6 +730,7 @@ export class AudioEngine {
 
   /** A musket or a pistol on the deck. */
   tacShot(delay = 0): void {
+    if (this.play('musket', { gain: 0.6, delay, pan: (Math.random() - 0.5) * 0.4 })) return;
     const v = this.voice(0.24, (Math.random() - 0.5) * 0.4, delay, 'combat');
     if (!v) return;
     this.noiseBurst(v.out, v.at, 0.03, 'highpass', 2400, 0.7, 0.6);
@@ -508,6 +740,7 @@ export class AudioEngine {
 
   /** A lucky blow: a bright two-note glint over it. */
   luck(delay = 0): void {
+    if (this.play('luck', { gain: 0.5, delay, jitter: 0 })) return;
     const v = this.voice(0.16, 0, delay, 'combat');
     if (!v) return;
     this.tone(v.out, v.at, 1568, 0.25, 0.4, 'triangle');
@@ -517,6 +750,7 @@ export class AudioEngine {
 
   /** High morale, another turn: a short rising call of three notes. */
   rally(delay = 0): void {
+    if (this.play('rally', { gain: 0.55, delay })) return;
     const v = this.voice(0.15, 0, delay, 'combat');
     if (!v) return;
     [293.66, 369.99, 440].forEach((f, i) => this.tone(v.out, v.at + i * 0.09, f, 0.3 + i * 0.08, 0.4, 'sawtooth'));
@@ -524,6 +758,7 @@ export class AudioEngine {
 
   /** A heal, a regrowth, a raise: a soft rising shimmer. */
   heal(delay = 0): void {
+    if (this.play('heal', { gain: 0.45, delay })) return;
     const v = this.voice(0.12, 0, delay, 'combat');
     if (!v) return;
     for (let i = 0; i < 4; i++) this.tone(v.out, v.at + i * 0.06, 880 * Math.pow(1.26, i), 0.4, 0.25, 'sine');
@@ -531,6 +766,7 @@ export class AudioEngine {
 
   /** A turn lost to fear: a low falling moan. */
   fear(delay = 0): void {
+    if (this.play('fear', { gain: 0.5, delay })) return;
     const v = this.voice(0.14, 0, delay, 'combat');
     if (!v) return;
     this.tone(v.out, v.at, 220, 0.7, 0.4, 'sine', 110);
@@ -539,6 +775,7 @@ export class AudioEngine {
 
   /** An order cast: the air drawn in, then let go. */
   spell(delay = 0): void {
+    if (this.play('spell', { gain: 0.55, delay })) return;
     const ctx = this.ctx;
     const v = this.voice(0.16, 0, delay, 'combat');
     if (!ctx || !v || !this.noise) return;
@@ -560,6 +797,7 @@ export class AudioEngine {
 
   /** The battle won: a short brass fanfare in D. */
   victory(delay = 0): void {
+    if (this.music.sting('mus.win')) return;
     const v = this.voice(0.2, 0, delay, 'music');
     if (!v) return;
     const notes: [number, number][] = [[293.66, 0.18], [369.99, 0.18], [440, 0.18], [587.33, 0.7]];
@@ -573,6 +811,7 @@ export class AudioEngine {
 
   /** The battle lost: two low falling notes. */
   defeat(delay = 0): void {
+    if (this.music.sting('mus.lose')) return;
     const v = this.voice(0.2, 0, delay, 'music');
     if (!v) return;
     this.tone(v.out, v.at, 196, 0.6, 0.35, 'sawtooth', 185);
@@ -581,6 +820,7 @@ export class AudioEngine {
 
   /** A button pressed: a dry wooden tick, very short and quiet. */
   click(delay = 0): void {
+    if (this.play('click', { gain: 0.35, delay })) return;
     const v = this.voice(0.08, 0, delay, 'ui');
     if (!v) return;
     this.noiseBurst(v.out, v.at, 0.025, 'bandpass', 2600, 2.5, 0.8);
@@ -589,6 +829,10 @@ export class AudioEngine {
 
   /** A purchase: the coins counted out and the till's bell. */
   purchase(delay = 0): void {
+    if (this.play('coins', { gain: 0.6, delay })) {
+      this.play('coins.big', { gain: 0.35, delay: delay + 0.12 });
+      return;
+    }
     const v = this.voice(0.18, 0, delay, 'ui');
     if (!v) return;
     for (let i = 0; i < 5; i++) this.tone(v.out, v.at + i * 0.04, 2400 + Math.random() * 1100, 0.12, 0.28, 'triangle');
@@ -598,6 +842,7 @@ export class AudioEngine {
 
   /** A new level: an arpeggio rising to the octave, the bell under it. */
   levelUp(delay = 0): void {
+    if (this.play('level', { gain: 0.6, delay, jitter: 0, duck: 0.6 })) return;
     const v = this.voice(0.18, 0, delay, 'ui');
     if (!v) return;
     [293.66, 369.99, 440, 587.33, 739.99].forEach((f, i) => this.tone(v.out, v.at + i * 0.08, f, 0.5 + i * 0.1, 0.35, 'triangle'));
@@ -606,6 +851,7 @@ export class AudioEngine {
 
   /** The island's work finished: three hammer knocks and a chime. */
   built(delay = 0): void {
+    if (this.play('build', { gain: 0.5, delay })) return;
     const v = this.voice(0.18, 0, delay, 'ui');
     if (!v) return;
     for (let i = 0; i < 3; i++) {
@@ -618,6 +864,10 @@ export class AudioEngine {
 
   /** The daily gift: a chest's chime arpeggio and the coins. */
   gift(delay = 0): void {
+    if (this.play('chest', { gain: 0.55, delay })) {
+      this.play('coins.big', { gain: 0.45, delay: delay + 0.5 });
+      return;
+    }
     const v = this.voice(0.2, 0, delay, 'ui');
     if (!v) return;
     [587.33, 739.99, 880, 1174.66].forEach((f, i) => this.tone(v.out, v.at + i * 0.07, f, 0.6, 0.3, 'triangle'));
@@ -626,11 +876,83 @@ export class AudioEngine {
 
   /** A notice: a soft two-tone. */
   notice(delay = 0): void {
+    if (this.play('notice', { gain: 0.4, delay, jitter: 0 })) return;
     const v = this.voice(0.09, 0, delay, 'ui');
     if (!v) return;
     this.tone(v.out, v.at, 880, 0.25, 0.35, 'sine');
     this.tone(v.out, v.at + 0.11, 1174.66, 0.35, 0.3, 'sine');
   }
+
+  // ------------------------------------------------------------- the sound design's new cues (2026-11-01, sfx.ts)
+  /** The pointer over a button (a mouse only): a faint tick. */
+  hover(delay = 0): void { this.sfx('hover', delay, 0.18); }
+  /** A tab: a page turned. */
+  tab(delay = 0): void { this.sfx('tab', delay, 0.4, () => this.click(delay)); }
+  /** A window opens: the book, the parchment. */
+  openWin(delay = 0): void { this.sfx('open', delay, 0.4); }
+  /** A window closes. */
+  closeWin(delay = 0): void { this.sfx('close', delay, 0.35); }
+  /** A refusal, an error. */
+  error(delay = 0): void { this.sfx('error', delay, 0.35, () => this.fear(delay)); }
+  /** A chat message from another captain. */
+  chat(delay = 0): void { this.sfx('chat', delay, 0.3); }
+  /** An item equipped: steel. */
+  equip(delay = 0): void { this.sfx('equip', delay, 0.5, () => this.click(delay)); }
+  /** A quest done, a goal reached. */
+  quest(delay = 0): void { this.sfx('quest', delay, 0.55, () => this.gift(delay), { jitter: 0, duck: 0.5 }); }
+  /** The map unfolds. */
+  mapOpen(delay = 0): void { this.sfx('map', delay, 0.45, () => this.click(delay)); }
+  /** A spade in the sand, then (found) the chime. */
+  dig(delay = 0): void { this.sfx('dig', delay, 0.55); }
+  found(delay = 0): void { this.sfx('found', delay, 0.55, () => this.gift(delay), { jitter: 0 }); }
+  /** The line cast, the reel. */
+  cast(delay = 0): void {
+    this.sfx('cast', delay, 0.4);
+    this.play('splash', { gain: 0.3, delay: delay + 0.45 });
+  }
+  reel(delay = 0): void { this.sfx('reel', delay, 0.45); }
+  /** The anchor let go (docking) or weighed (leaving port). */
+  anchorDown(delay = 0): void { this.sfx('anchor.down', delay, 0.5, () => this.bell()); }
+  anchorUp(delay = 0): void {
+    if (this.play('anchor.up', { gain: 0.5, delay })) {
+      this.bosunPipe(delay + 1.2);
+      return;
+    }
+    this.bosunPipe(delay);
+  }
+  /** Sails set or struck. */
+  sailSet(delay = 0): void { this.sfx('sail', delay, 0.45); }
+  /** Your turn on the hexes. */
+  turnPing(delay = 0): void { this.sfx('turn', delay, 0.3, () => this.notice(delay), { jitter: 0 }); }
+  /** Men fall on the hexes. */
+  death(delay = 0): void { this.sfx('death', delay, 0.45); }
+  /** Feet on the deck (a stack moves). */
+  step(delay = 0): void {
+    for (let i = 0; i < 3; i++) this.play('step', { gain: 0.3, delay: delay + i * 0.17, jitter: 0.08 });
+  }
+  /** A beast's blow: a roar, a bite; the drowned's moan. */
+  roar(delay = 0): void { this.sfx('roar', delay, 0.55, () => this.blow(delay)); }
+  bite(delay = 0): void { this.sfx('bite', delay, 0.55, () => this.blow(delay)); }
+  moan(delay = 0): void { this.sfx('moan', delay, 0.5, () => this.fear(delay)); }
+  /** The drums: a fight begins. */
+  drum(delay = 0): void { this.sfx('drum', delay, 0.6, undefined, { jitter: 0 }); }
+  /** A sea beast or a boss roars (positional). */
+  deepRoar(x: number, y: number): void {
+    if (!this.play('roar.deep', { x, y, range: 2600, gain: 0.9, duck: 0.4 })) this.eerie(x, y);
+  }
+  /** Chain shot through the rigging. */
+  sailRip(x: number, y: number): void { this.play('sail.rip', { x, y, range: 1200, gain: 0.55, delay: 0.05 }); }
+  /** A ball overhead (one that fell near her). */
+  whistle(x: number, y: number): void { this.play('whistle', { x, y, range: 500, gain: 0.45 }); }
+  /** A ship sinking: the groan and the gurgle. */
+  sink(x: number, y: number): void { this.play('sink', { x, y, range: 2200, gain: 0.8 }); }
+  /** Grapples thrown, the ropes going taut. */
+  grapple(x: number, y: number): void {
+    this.play('grapple', { x, y, range: 1200, gain: 0.6 });
+    this.play('rope', { x, y, range: 1200, gain: 0.5, delay: 0.7 });
+  }
+  /** A rocket, a firework. */
+  firework(x: number, y: number): void { this.play('firework', { x, y, range: 2500, gain: 0.7 }); }
 
   /** A caption for a sound that matters, with where it came from (at most one of a kind every 2 s). */
   private caption(kind: CaptionKind, x: number, y: number, range: number): void {
@@ -659,19 +981,37 @@ export class AudioEngine {
     }
     if (!this.ctx) return;
     switch (e.k) {
-      case 'volley':
-        for (const [x, y, , , delay] of e.balls.slice(0, 8)) this.cannon(x, y, delay / 1000, e.perfect ? 1.05 : 0.8);
+      case 'volley': {
+        // the gun by its ammunition: heavy shot and a held broadside the big guns, grape the small ones' crack
+        const heavy = e.perfect || e.ammo === 'heavy';
+        for (const [x, y, , , delay] of e.balls.slice(0, 8)) {
+          if (e.ammo === 'grape' && this.play('swivel', { x, y, delay: delay / 1000, gain: 0.7 })) continue;
+          this.cannon(x, y, delay / 1000, heavy ? 1.05 : 0.8);
+        }
         break;
+      }
       case 'dash':
         this.splash(e.x, e.y, true);
         break;
       case 'hit':
         // Only a ball that flew wide (the dash) splashes; one that struck thuds, whatever it did (docs/25 item 2).
-        if (e.evaded) this.splash(e.x, e.y, false);
-        else this.hit(e.x, e.y, !!e.crit);
+        if (e.evaded) {
+          this.splash(e.x, e.y, false);
+          if (e.ship === this.ownId) this.whistle(e.x, e.y);
+        } else {
+          this.hit(e.x, e.y, !!e.crit);
+          if (e.ammo === 'chain') this.sailRip(e.x, e.y);
+        }
         break;
       case 'sunk':
         this.splash(e.x, e.y, true);
+        this.sink(e.x, e.y);
+        break;
+      case 'grapple':
+        if (e.a === this.ownId || e.b === this.ownId) this.grapple(this.listener.x, this.listener.y);
+        break;
+      case 'board_start':
+        if (e.a === this.ownId || e.b === this.ownId) this.drum();
         break;
       case 'lance':
         this.eerie(e.x2, e.y2);
@@ -688,6 +1028,10 @@ export class AudioEngine {
       case 'fx':
         if (e.fx === 'explosion') this.explosion(e.x, e.y);
         else if (e.fx === 'deep_call' || e.fx === 'maw') this.eerie(e.x, e.y);
+        else if (e.fx === 'boss_roar' || e.fx === 'rise') this.deepRoar(e.x, e.y);
+        else if (e.fx === 'dig' && Math.hypot(e.x - this.listener.x, e.y - this.listener.y) < 400) this.dig();
+        else if (e.fx === 'rocket' || e.fx === 'firework') this.firework(e.x, e.y);
+        else if (e.fx === 'war_cry') this.shout(e.x, e.y, true);
         else if (e.fx === 'barrage') for (let i = 0; i < 6; i++) this.cannon(e.x, e.y, i * 0.1, 0.6);
         else if (e.fx === 'ram' || e.fx === 'strike') this.hit(e.x, e.y, true); // a hull on the rocks crunches as a ram does
         else if (e.fx === 'mortar_launch') this.cannon(e.x, e.y, 0, 1.4);
@@ -695,7 +1039,7 @@ export class AudioEngine {
         else if (e.fx === 'harpoon_miss' || e.fx === 'breach') this.splash(e.x, e.y, false);
         else if (e.fx === 'broken_mast' || e.fx === 'axes' || e.fx === 'ice' || e.fx === 'claws') this.hit(e.x, e.y, true);
         else if (e.fx === 'lightning') this.thunder();
-        else if (e.fx === 'boss_roar' || e.fx === 'song' || e.fx === 'rise' || e.fx === 'swallow' || e.fx === 'plankton') this.eerie(e.x, e.y);
+        else if (e.fx === 'song' || e.fx === 'swallow' || e.fx === 'plankton') this.eerie(e.x, e.y);
         else if (e.fx === 'white_water' || e.fx === 'spit' || e.fx === 'bile' || e.fx === 'ink') this.splash(e.x, e.y, true);
         break;
     }

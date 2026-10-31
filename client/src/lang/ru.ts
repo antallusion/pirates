@@ -259,4 +259,6 @@ export const RU: Record<keyof typeof EN, string> = {
   'hud.chatPhTouch': 'Сказать слово… (/g — отряду, /ш Имя — шёпотом)',
   'conn.reconnecting': 'Восстанавливаем связь с Адмиралтейством…',
   'opt.music': 'Музыка',
+  'opt.credits': 'Музыка и звуки',
+  'opt.creditsAll': 'Все авторы и лицензии',
 };

@@ -33,6 +33,17 @@ function legalLinks(): string {
   return `<nav class="opt-legal">${docs.map(([href, k]) => `<a href="${r}${href}" target="_blank" rel="noopener">${esc(W(k as Parameters<typeof W>[0]))}</a>`).join('<span aria-hidden="true">·</span>')}</nav>`;
 }
 
+/** The music's and the sound's authors (the sound design, 2026-11-01: CC BY owes them their credit; the CC0 rest by
+ *  name in assets/audio/CREDITS.md). Their names and titles are not translated. */
+const SOUND_CREDITS = [
+  '«Ocean Music Pack» — Leonardo Paz (leohpaz), CC BY 4.0',
+  '«Blackmoor Tides» — Matthew Pablo, matthewpablo.com, CC BY 3.0',
+  'Kenney.nl, Freesound, OpenGameArt — CC0',
+];
+function soundCredits(): string {
+  return `<div class="opt-credits"><p class="opt-l">${esc(t('opt.credits'))}</p><ul class="muted no-tr">${SOUND_CREDITS.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>${inVk() ? '' : `<a href="/assets/audio/CREDITS.md" target="_blank" rel="noopener">${esc(t('opt.creditsAll'))}</a>`}</div>`;
+}
+
 const TAB_ICON: Record<string, string> = { ui: 'menu_options', vision: 'ab_spotters_eye', sound: 'opt_sound', controls: 'opt_controls', notify: 'ui_bell' };
 
 type Tab = 'ui' | 'vision' | 'sound' | 'controls' | 'notify';
@@ -247,7 +258,7 @@ export class OptionsScreen {
       case 'notify':
         return tgnHtml();
       case 'sound':
-        return `${vol('master', 'opt.master')}${vol('sea', 'opt.sea')}${vol('combat', 'opt.combat')}${vol('ui', 'opt.uiVol')}${vol('music', 'opt.music')}${check('shipVoices', 'opt.shipVoices')}${check('mono', 'opt.mono')}${check('captions', 'opt.captions')}`;
+        return `${vol('master', 'opt.master')}${vol('sea', 'opt.sea')}${vol('combat', 'opt.combat')}${vol('ui', 'opt.uiVol')}${vol('music', 'opt.music')}${check('shipVoices', 'opt.shipVoices')}${check('mono', 'opt.mono')}${check('captions', 'opt.captions')}${soundCredits()}`;
       case 'controls': {
         const clash = conflicts(s.keys);
         const bad = new Set([...clash.keys()]);
