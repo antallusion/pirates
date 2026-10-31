@@ -330,42 +330,69 @@ export function mapAction(game: Game, s: PlayerSession, port: Port | null, actio
 
 // ================================================================== the view
 
-/** Where the chest of a map lies, as the chart marks it (Нефигугум, forum post 26: «карты вгоняют в депрессию» — a
- *  map marks its dig spot at once, «Плыть к кладу» takes her there and the boats dig by themselves). Every map but two:
- *  a cursed one keeps its whispering needle, and a piece of the season's legendary chart its narrowing circle (the
- *  race for the whole sea) until the pieces give the very spot. A forgery marks its empty pit just the same. */
-export function mapSpot(game: Game, s: PlayerSession, m: TreasureMap): { x: number; y: number } | null {
+/** The scroll on the water (Нефигугум, forum post 34: «точное место убило весь интерес»): a map's exact spot is never
+ *  on the chart — her lookouts see it, a scroll bobbing on the water, once she is within this of it (metres, her middle
+ *  to the spot). Until then the client gets the search circle only. */
+export const TM_SIGHT = 400;
+/** The warm/cold hint inside the circle (metres to the spot): «горячо» within the first, «теплее» within the second,
+ *  «тепло» anywhere else in the circle. Coarse on purpose — three steps, never a bearing. */
+export const TM_HEAT = [700, 1300] as const;
+
+/** Where a map sends her to search: its circle (the tier's radius, «Кладоискатель» shrinking it 20% a rank; Legend
+ *  Seeker pins a legendary map to a point), a legendary piece's narrowing circle; none for a cursed map (its needle). */
+export function searchCircle(game: Game, s: PlayerSession, m: TreasureMap): { x: number; y: number; r: number } | null {
   const kind = m.kind ?? 'circle';
   if (kind === 'cursed') return null;
-  if (kind === 'fragment') {
-    const c = legendCircle(game, s, m);
-    return c && c.r === 0 ? { x: c.x, y: c.y } : null;
-  }
-  return { x: m.sx, y: m.sy };
+  if (kind === 'fragment') return legendCircle(game, s, m);
+  return mapCircle(m, s.ship ?? null);
 }
 
-/** A map as the captain reads it: circles only where the map draws one; words, outlines, a pulled needle; and the dig
- *  spot (mapSpot). */
+/** The exact spot as the client may know it: a circle drawn down to a point (Legend Seeker, the full legendary set)
+ *  gives it at once; otherwise only her lookouts' sight of the scroll on the water (TM_SIGHT) — never through the chart.
+ *  A forgery shows its empty pit just the same. */
+export function mapSpot(game: Game, s: PlayerSession, m: TreasureMap): { x: number; y: number } | null {
+  const c = searchCircle(game, s, m);
+  if (c && c.r === 0) return { x: c.x, y: c.y };
+  if ((m.kind ?? 'circle') === 'fragment' && !c) return null; // a piece of a chart already dug or of a past season
+  const ship = s.ship;
+  if (!ship || ship.docked) return null;
+  return dist(m.sx, m.sy, ship.state.x, ship.state.y) <= TM_SIGHT ? { x: m.sx, y: m.sy } : null;
+}
+
+/** «Тепло / теплее / горячо» inside the search circle while the scroll is not yet in sight (1..3), else 0. */
+export function mapHeat(game: Game, s: PlayerSession, m: TreasureMap, c: { x: number; y: number; r: number } | null): 0 | 1 | 2 | 3 {
+  const ship = s.ship;
+  if (!c || c.r <= 0 || !ship || ship.docked) return 0;
+  if (dist(c.x, c.y, ship.state.x, ship.state.y) > c.r) return 0;
+  const d = dist(m.sx, m.sy, ship.state.x, ship.state.y);
+  if (d <= TM_SIGHT) return 0;
+  return d <= TM_HEAT[0] ? 3 : d <= TM_HEAT[1] ? 2 : 1;
+}
+
+/** A map as the captain reads it: the search circle wherever the map draws one, words, outlines, a pulled needle; the
+ *  spot only in sight of it (mapSpot); the warm/cold step inside the circle. */
 export function mapView(game: Game, s: PlayerSession, m: TreasureMap): MapView {
   const v = mapViewBase(game, s, m);
   const at = mapSpot(game, s, m);
-  if (!at) return v;
+  const heat = mapHeat(game, s, m, v.r >= 0 ? { x: v.x, y: v.y, r: v.r } : null);
   const isle = m.island !== undefined ? game.world.islands[m.island] : undefined;
-  return { ...v, spot: [Math.round(at.x), Math.round(at.y)], ...(isle ? { place: isle.name } : {}) };
+  return { ...v, ...(at ? { spot: [Math.round(at.x), Math.round(at.y)] as [number, number] } : {}), ...(isle ? { place: isle.name } : {}), ...(heat ? { heat } : {}) };
 }
 
 function mapViewBase(game: Game, s: PlayerSession, m: TreasureMap): MapView {
   const kind = m.kind ?? 'circle';
   const ship = s.ship;
   const base: MapView = { id: m.id, name: m.name, tier: m.tier, kind, x: 0, y: 0, r: -1, clue: m.clue, verdict: m.verdict, sealed: m.sealed || undefined, copy: m.copy || undefined };
-  if (kind === 'circle' || kind === 'player') return { ...base, ...round(mapCircle(m, ship)) };
   if (kind === 'fragment') {
     const c = legendCircle(game, s, m);
     return { ...base, ...(c ? round(c) : {}), piece: [(m.piece ?? 0) + 1, m.of ?? 0] };
   }
-  if (kind === 'drawing' && m.island !== undefined) {
-    const is = game.world.islands[m.island];
-    return { ...base, ...outline(is, m.sx, m.sy) };
+  // every other map but a cursed one draws its search circle (forum post 34): a riddle, a drawing, landmarks keep their
+  // words and outline on top of it
+  if (kind !== 'cursed') {
+    const c = { ...base, ...round(mapCircle(m, ship ?? null)) };
+    if (kind === 'drawing' && m.island !== undefined) return { ...c, ...outline(game.world.islands[m.island], m.sx, m.sy) };
+    return c;
   }
   if (kind === 'cursed' && ship) {
     const b = Math.atan2(m.sx - ship.state.x, -(m.sy - ship.state.y));

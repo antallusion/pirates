@@ -58,7 +58,7 @@ test('map kinds: a circle, a riddle in verse, landmarks and paces, a drawing of 
   assert.ok(circle.r > 0);
   const riddle = makeMap(game, 2, { kind: 'riddle' });
   const rv = mapView(game, s, riddle);
-  assert.equal(rv.r, -1, 'a riddle draws no circle');
+  assert.ok(rv.r > 0, 'a riddle draws its search circle too (forum post 34), its verse on top');
   assert.ok(rv.clue!.includes(REGIONS[riddle.region].name), rv.clue);
   const lm = makeMap(game, 2, { kind: 'landmark' });
   assert.ok(mapView(game, s, lm).clue!.includes(game.world.islands[lm.island!].name));

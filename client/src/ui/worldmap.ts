@@ -53,12 +53,23 @@ import { chipRow, winHead } from './kit/window.ts';
 
 const W = dict(WIN_EN, WIN_RU);
 
-/** The chart's layers (docs/23 item 73): the essentials, or everything. */
-export type MapLayer = 'ports' | 'goals' | 'lairs' | 'all' | 'yards';
+/** The chart's layers (docs/23 item 73): the essentials, or everything. «Сокровища» (Нефигугум, forum post 34): the
+ *  treasure maps' search circles and the tavern's caches, out of «Цели». */
+export type MapLayer = 'ports' | 'goals' | 'lairs' | 'treasure' | 'all' | 'yards';
 const LAYERS_KEY = 'gravetide.mapLayers';
+/** Set once the kept layers got «Сокровища» (a chart kept before the layer was: the maps were in «Цели» then). */
+const LAYERS_TR_KEY = 'gravetide.mapLayers.tr';
+/** The essentials' layers (a phone's start, and «Всё» let go). */
+const ESSENTIALS: MapLayer[] = ['ports', 'goals', 'lairs', 'treasure'];
+/** Layers kept from before «Сокровища»: the treasure goes on with them (its maps were shown under «Цели»). */
+export function keptLayers(v: MapLayer[], migrated: boolean): Set<MapLayer> {
+  const out = new Set<MapLayer>(v);
+  if (!migrated && !out.has('all') && out.has('goals')) out.add('treasure');
+  return out;
+}
 /** Where she stands on the chart by default: everything at a desk, the essentials on a phone. */
 export function defaultLayers(phone: boolean): Set<MapLayer> {
-  return new Set<MapLayer>(phone ? ['ports', 'goals', 'lairs'] : ['all']);
+  return new Set<MapLayer>(phone ? ESSENTIALS : ['all']);
 }
 /** A layer chip tapped: «Всё» alone is everything; a single layer toggles (never none). «Верфи» (Нефигугум, post 26) is
  *  a filter of its own over the rest: on or off, whatever else is shown. */
@@ -74,7 +85,7 @@ export function toggleLayer(cur: Set<MapLayer>, l: MapLayer): Set<MapLayer> {
   return out;
 }
 function toggleBase(cur: Set<MapLayer>, l: MapLayer): Set<MapLayer> {
-  if (l === 'all') return cur.has('all') ? new Set<MapLayer>(['ports', 'goals', 'lairs']) : new Set<MapLayer>(['all']);
+  if (l === 'all') return cur.has('all') ? new Set<MapLayer>(ESSENTIALS) : new Set<MapLayer>(['all']);
   const next = new Set<MapLayer>([...cur].filter((x) => x !== 'all'));
   if (cur.has('all')) return new Set<MapLayer>([l]);
   if (next.has(l)) next.delete(l);
@@ -288,7 +299,11 @@ export class WorldMap {
   layers: Set<MapLayer> = (() => {
     try {
       const v = JSON.parse(localStorage.getItem(LAYERS_KEY) ?? 'null') as MapLayer[] | null;
-      if (Array.isArray(v) && v.length) return new Set<MapLayer>(v);
+      if (Array.isArray(v) && v.length) {
+        const out = keptLayers(v, localStorage.getItem(LAYERS_TR_KEY) === '1');
+        localStorage.setItem(LAYERS_TR_KEY, '1');
+        return out;
+      }
     } catch { /* none kept */ }
     return defaultLayers(typeof matchMedia === 'function' && matchMedia('(max-height: 520px), (max-width: 699px)').matches);
   })();
@@ -311,6 +326,7 @@ export class WorldMap {
       { id: 'ports', icon: 'map_port', label: W('map.ports') },
       { id: 'goals', icon: 'goal', label: W('map.goals') },
       { id: 'lairs', icon: 'danger', label: W('map.lairs') },
+      { id: 'treasure', icon: 'map_treasure', label: L('layer.treasure'), hint: L('layer.treasureHint') },
       { id: 'all', icon: 'menu_map', label: W('map.all') },
       { id: 'yards', icon: 'build_shipyard', label: L('layer.yards'), hint: L('layer.yardsHint') },
     ].map((x) => ({ hint: W('map.layersHint'), ...x })), [...this.layers], 'mlayer');
@@ -520,14 +536,14 @@ export class WorldMap {
   }
 
   /** The bar over the chart while a scout waits for her point: what to do, and «Отмена». */
-  /** «Плыть к кладу» on the chart itself (Нефигугум, forum post 26): the nearest map with a marked spot — the log with
+  /** «Плыть к кладу» on the chart itself (Нефигугум, forum posts 26, 34): the nearest map with a circle (or its scroll in sight) — the log with
    *  the cards lies below the chart on a phone. */
   private tmSail(state: ClientState): string {
     if (!this.onGoal) return '';
     const own = state.ownDisplay;
-    const maps = (state.self?.maps ?? []).filter((m) => m.spot);
+    const maps = (state.self?.maps ?? []).filter((m) => m.spot || m.r > 0);
     if (!maps.length) return '';
-    const d = (m: (typeof maps)[number]) => (own ? Math.hypot(m.spot![0] - own.x, m.spot![1] - own.y) : 0);
+    const d = (m: (typeof maps)[number]) => (own ? (m.spot ? Math.hypot(m.spot[0] - own.x, m.spot[1] - own.y) : Math.hypot(m.x - own.x, m.y - own.y)) : 0);
     const m = maps.sort((a, b) => d(a) - d(b))[0];
     return `<button type="button" class="k-btn k-btn--primary k-btn--md map-tm-sail" data-tmsail="${esc(m.id)}" title="${esc(MP('sailTip'))}">${icon('map_treasure', '', 'k-btn-ico')}<span class="k-btn-l">${esc(MP('sail'))}</span></button>`;
   }
@@ -1043,7 +1059,8 @@ export class WorldMap {
     }
     // (treasure maps: over the fog, below)
     // The tavern's whispers she paid for (docs/16 #14) and her merchants' runs (#12).
-    hearsayMarks(g, state.self?.hearsay ?? [], tx, ty, k, ms, now, mark, label, age);
+    // (a cache's whisper is the «Сокровища» layer's, forum post 34; a caravan's stays on every chart)
+    hearsayMarks(g, (state.self?.hearsay ?? []).filter((h) => h.kind !== 'cache' || on('treasure')), tx, ty, k, ms, now, mark, label, age);
     for (const r of on('all') ? state.self?.runs ?? [] : []) {
       const p = state.ports.find((q) => q.id === r.to);
       if (!p) continue;
@@ -1107,17 +1124,21 @@ export class WorldMap {
         label(L('yard.fog', { tier: p.shipyardTier, span: anchorSpan(span) }), tx(p.x), ty(p.y) + Math.max(14, ms * 0.7), 'rgba(240,212,142,0.7)', 2);
       }
     }
-    // Treasure maps (Нефигугум, forum post 26: «карты вгоняют в депрессию»): over the fog, as her goals are — the dig
-    // spot as a red ✕ on the chest's mark with «Клад: …»; a map with no spot yet (a legendary piece) its circle.
-    for (const m of on('goals') ? state.self?.maps ?? [] : []) {
-      if (m.spot) {
-        const x = tx(m.spot[0]), y = ty(m.spot[1]);
+    // Treasure maps (Нефигугум, forum posts 26 and 34): the «Сокровища» layer, over the fog as her goals are — each
+    // map's search circle (dashed gold, a breath of gold within, the chest at its middle, «Клад: …»). The exact spot is
+    // never drawn: it is a scroll on the water, found in the world (render/treasurescroll.ts). Only a circle drawn to a
+    // point (Legend Seeker, the full legendary set) is a red ✕; a cursed map's needle draws nothing.
+    for (const m of on('treasure') ? state.self?.maps ?? [] : []) {
+      if (m.r < 0) continue;
+      const x = tx(m.x), y = ty(m.y);
+      const gold = m.tier >= 3 ? '#e8c65a' : '#d9b45a';
+      if (m.r === 0) {
         g.save();
         g.fillStyle = 'rgba(10,8,6,0.55)';
         g.beginPath();
         g.arc(x, y, ms * 0.62, 0, Math.PI * 2);
         g.fill();
-        g.strokeStyle = m.tier >= 3 ? '#e8c65a' : '#d9b45a';
+        g.strokeStyle = gold;
         g.lineWidth = 2;
         g.stroke();
         g.restore();
@@ -1138,18 +1159,32 @@ export class WorldMap {
         label(L('tm.label', { place: tmPlace(m) }), x, y - ms * 0.8, m.tier >= 3 ? '#f2d27a' : '#f0d48e', 0);
         continue;
       }
-      if (m.r < 0) continue; // a cursed map's needle draws no area
-      const rr = Math.max(8, m.r * k);
-      const area = g.createRadialGradient(tx(m.x), ty(m.y), 0, tx(m.x), ty(m.y), rr);
-      area.addColorStop(0, 'rgba(217,180,90,0.18)');
-      area.addColorStop(1, 'rgba(217,180,90,0)');
+      const rr = Math.max(10, m.r * k);
+      g.save();
+      const area = g.createRadialGradient(x, y, 0, x, y, rr);
+      area.addColorStop(0, 'rgba(217,180,90,0.05)');
+      area.addColorStop(0.75, 'rgba(217,180,90,0.13)');
+      area.addColorStop(1, 'rgba(217,180,90,0.22)');
       g.fillStyle = area;
       g.beginPath();
-      g.arc(tx(m.x), ty(m.y), rr, 0, Math.PI * 2);
+      g.arc(x, y, rr, 0, Math.PI * 2);
       g.fill();
-      mark('icon.map_treasure', tx(m.x), ty(m.y), ms);
+      g.setLineDash([7, 5]);
+      g.lineDashOffset = -(now * 6) % 12; // (a slow march round the ring: it reads as a place to search, not a coast)
+      g.strokeStyle = 'rgba(10,8,6,0.6)';
+      g.lineWidth = 3.4;
+      g.stroke();
+      g.strokeStyle = gold;
+      g.lineWidth = 1.8;
+      g.stroke();
+      g.restore();
+      mark('icon.map_treasure', x, y, ms * 0.85);
       g.font = `600 ${this.zoom > 2 ? 13 : 12}px Inter, system-ui, sans-serif`;
-      label(L('tm.label', { place: tmPlace(m) }), tx(m.x), ty(m.y) - ms * 0.65, m.tier >= 3 ? '#e8c65a' : '#c9a25a', 0);
+      label(L('tm.label', { place: tmPlace(m) }), x, y - ms * 0.7, m.tier >= 3 ? '#f2d27a' : '#f0d48e', 0);
+      if (rr > ms * 2.2) {
+        g.font = '600 11px Inter, system-ui, sans-serif';
+        label(L('tm.search', { m: Math.round(m.r) }), x, y + ms * 0.75, 'rgba(240,212,142,0.85)', 0);
+      }
     }
     drawScouts(g, state.scouts, state.scoutsAt, tx, ty, ms * 0.7);
     // A scout's pick: her reach from the island, a dashed ring.

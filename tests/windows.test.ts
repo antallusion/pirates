@@ -71,13 +71,13 @@ test(`«Надеть лучшее»: the locker's best piece for each slot it be
 });
 
 test(`the chart's layers: the essentials on a phone, everything at a desk; «Всё» alone, a layer toggles, never none`, () => {
-  assert.deepEqual([...defaultLayers(true)].sort(), ['goals', 'lairs', 'ports']);
+  assert.deepEqual([...defaultLayers(true)].sort(), ['goals', 'lairs', 'ports', 'treasure']); // («Сокровища», forum post 34)
   assert.deepEqual([...defaultLayers(false)], ['all']);
   const ess = defaultLayers(true);
   assert.deepEqual([...toggleLayer(ess, 'all')], ['all']);
   assert.deepEqual([...toggleLayer(new Set(['all'] as const), 'ports')], ['ports']);
   assert.deepEqual([...toggleLayer(new Set(['ports'] as const), 'ports')], ['ports'], 'the last layer stays');
-  assert.deepEqual([...toggleLayer(ess, 'lairs')].sort(), ['goals', 'ports']);
+  assert.deepEqual([...toggleLayer(ess, 'lairs')].sort(), ['goals', 'ports', 'treasure']);
 });
 
 test(`«Журнал»: five tabs; every company page sits under one of them`, () => {

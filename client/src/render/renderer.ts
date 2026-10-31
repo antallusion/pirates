@@ -73,6 +73,8 @@ import { FACTION_SIGN } from './relation.ts';
 import { buildRelief } from './terrain.ts';
 import type { Palette } from './terrain.ts';
 import { dict, lang } from '../i18n.ts';
+import { EN as TM_EN, RU as TM_RU } from '../lang/ui/maps.ts';
+import { drawTreasureScrolls } from './treasurescroll.ts';
 import { personName } from '../lang/names.ts';
 import { dec1 } from '../ui/dom.ts';
 import { shipCloth, shipColours } from '../ui/flags.ts'; // docs/24 D1–D2
@@ -87,6 +89,7 @@ import { EN as REN, RU as RRU } from '../lang/ui/render.ts';
 import { EN as OUT_EN, RU as OUT_RU } from '../lang/ui/outcome.ts';
 
 const L = dict(REN, RRU);
+const TMW = dict(TM_EN, TM_RU); // the treasure scroll's words (forum post 34)
 const LOUT = dict(OUT_EN, OUT_RU); // the white flag's word (owner, 2026-10-18)
 const LF = dict(FL_EN, FL_RU); // docs/24: a captain's colours
 const hasRole = (r: string): r is 'merchant' => `role.${r}` in REN;
@@ -350,6 +353,8 @@ export class Renderer {
   goal: { x: number; y: number } | null = null;
   /** Where the goal's beacon or its arrow on the screen's edge was drawn this frame (a tap there sails her to it). */
   goalMark: { x: number; y: number; r: number } | null = null;
+  /** The treasure scrolls drawn this frame (screen points): a tap on one is the goal's tap (forum post 34). */
+  private scrolls: { id: string; x: number; y: number }[] = [];
   time = 0;
   mouseX = 0;
   mouseY = 0;
@@ -672,6 +677,8 @@ export class Renderer {
     // under her own marks, names and goals.
     drawFog(g, state.seen, state.seenVer, { x0: this.camX - this.w / 2 / this.zoom, y0: this.camY - this.h / 2 / this.zoom, k: this.zoom, w: this.w, h: this.h, time: opt.reduceMotion ? 0 : this.time, q: 0.5 });
 
+    // The treasure's scroll on the water (forum post 34): in sight of it only, over the fog and the night.
+    this.scrolls = mix < 0.6 ? drawTreasureScrolls(g, state.self?.maps, { sx: (x) => this.sx(x), sy: (y) => this.sy(y), zoom: this.zoom, time: opt.reduceMotion ? 0 : this.time, w: this.w, h: this.h, own: own ? { x: own.x, y: own.y } : null, words: TMW('scroll') }) : [];
     // The far view's chart fading in over the sea (freecam.ts CHART_FROM…CHART_FULL).
     if (mix > 0) drawFarChart(g, state, this.farCtx(own, mix), this.farLayers);
     // Overlays (not affected by darkness).
@@ -690,6 +697,7 @@ export class Renderer {
     if (own) this.drawThreatMarks(ships, own, aim.target ?? null, aim.boardTarget);
     this.goalMark = null;
     if (own) this.drawQuestMark(state, own);
+    if (!this.goalMark && this.scrolls[0]) this.goalMark = { x: this.scrolls[0].x, y: this.scrolls[0].y, r: 34 }; // (close by too)
     this.drawTexts();
     this.drawVignette(state.fog, night);
     this.drawDescentDark(state);
@@ -3440,6 +3448,14 @@ export class Renderer {
     g.font = '600 11px Inter, system-ui, sans-serif';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
+    // the goal is a treasure's scroll in sight (forum post 34): the scroll is its mark — no medallion over it; a tap on it
+    // is the goal's tap (the run to it, and the boats dig)
+    const scroll = this.scrolls.find((x) => Math.hypot(x.x - px, x.y - py) < 6);
+    if (scroll) {
+      g.restore();
+      this.goalMark = { x: scroll.x, y: scroll.y, r: 34 };
+      return;
+    }
     if (px > 40 && px < this.w - 40 && py > 40 && py < this.h - 40) {
       // In sight: the HUD's own mark (the spyglass on the chart, icon.goal) in a small brass medallion afloat, a soft
       // gold light breathing on the water under it (owner, 2026-10-07: no drawn signs).
@@ -3476,6 +3492,11 @@ export class Renderer {
     g.fillText(label, -Math.cos(a) * 27, -Math.sin(a) * 27);
     g.restore();
     this.goalMark = { x, y, r: 32 }; // ux2: the arrow on the edge, a finger's width round it
+  }
+
+  /** A treasure's scroll under a tap (screen pixels): its map's id. */
+  scrollAt(px: number, py: number): string | null {
+    return this.scrolls.find((x) => Math.hypot(px - x.x, py - x.y) <= 34)?.id ?? null;
   }
 
   /** ux2: a tap on the goal's beacon or its arrow on the screen's edge (screen pixels). */

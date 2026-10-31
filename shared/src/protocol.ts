@@ -1264,11 +1264,14 @@ export interface MapView {
   copy?: boolean;
   /** A legendary fragment: which one, and how many the chart has. */
   piece?: [number, number];
-  /** Where to dig (Нефигугум, forum post 26): marked on the chart at once; «Плыть к кладу» (goal `tm:<id>`) sails there and
-   *  the boats dig by themselves. None on a cursed map (its needle) or a legendary piece until the set gives the spot. */
+  /** The exact spot (Нефигугум, forum post 34): sent only while her lookouts see it — the scroll on the water within
+   *  TM_SIGHT of her (server treasure.ts mapSpot) — or where the circle is drawn down to a point (Legend Seeker, the full
+   *  legendary set). Never drawn on the chart or the minimap otherwise: the world shows it, a floating scroll. */
   spot?: [number, number];
-  /** The island the spot lies off (with `spot`): «Клад: <остров>» on the chart. */
+  /** The island the treasure lies off: «Клад: <остров>» on the chart. */
   place?: string;
+  /** Inside the search circle with the scroll not yet in sight: 1 «тепло», 2 «теплее», 3 «горячо» (TM_HEAT). */
+  heat?: 1 | 2 | 3;
 }
 
 /** The season (seasons.ts): its theme, your path, the tables, the Pantheon. */
