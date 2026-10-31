@@ -8,7 +8,7 @@ import { quoteBuild, stepBuiltShip, woodAvailable } from '../server/src/game/shi
 import type { BuildRequest } from '../server/src/game/shipbuilding.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
-import { join, makeGame, knowHulls } from './helpers.ts';
+import { berthArrives, join, makeGame, knowHulls } from './helpers.ts';
 
 const base = (build?: ShipBuild): ShipLoadout => ({ classId: 'brig', name: 'x', guns: { port: 'long_9', starboard: 'long_9' }, modules: {}, build });
 const b = (over: Partial<ShipBuild> = {}): ShipBuild => ({ frame: 'oak', plank: 'oak', rares: [], quality: 'common', variants: [], builder: 'gravesend', ...over });
@@ -84,6 +84,7 @@ test('lay down a keel, wait for the yard, launch her; the old ship waits in her 
   // (forum 2026-10-30: the brig's men the old hull has no hammocks for are asked about first, then paid off)
   const ask = c.last('berth_ask');
   if (ask && ship.loadout.classId !== oldClass) c.push({ ...ask.again, force: true });
+  berthArrives(game, s); // (forum 40: she comes in two minutes)
   assert.equal(ship.loadout.classId, oldClass);
   assert.equal(p.berths[0].loadout.classId, 'brig');
   const g0 = p.gold;

@@ -103,7 +103,8 @@ test('the city flag: merchants, fishers and patrols never come for her — a bum
   steps(game, 20);
   assert.equal(merchant.attackers.has(me.id), false, 'no blow on the record');
   assert.equal(merchant.hull, h0, 'no hull lost');
-  assert.equal(me.hull, mh0, 'nor hers');
+  // (forum 40: a bump costs her own hull a little — never the merchant's, never a blow on the record)
+  assert.ok(me.hull < mh0 && me.hull > mh0 - me.stats.hullMax * 0.25, `hers a little: ${(mh0 - me.hull).toFixed(0)}`);
   assert.equal(s.profile!.infamy, 0, 'no skulls');
   const patrol = game.spawnNpcShip('patrol', 'brig', 'crown', me.state.x, me.state.y + 100, 0);
   contested(game, patrol);

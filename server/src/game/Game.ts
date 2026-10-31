@@ -179,7 +179,8 @@ export const XP_BOARDED = XP_UNITS.boarded;
 export const BOARD_LOSS_PURSE = 0.08;
 export const BOARD_LOSS_SHIELD = 180;
 import { stepBridges } from './bridgefx.ts';
-import { BERTH_MEN_ASK, berthsFull, buyBerth, buyFigurehead, buyPlan, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
+import { bumpBlow } from './bump.ts'; // forum 40: a bump costs her own hull
+import { BERTH_MEN_ASK, berthCallOff, berthCallSecond, berthsFull, buyBerth, buyFigurehead, buyPlan, callBerth, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
 import { ISLE_REACH, NEAR_FIGHT, abandonQuest, acceptQuest, answerOffer, bandRefusal, portBand, jobSanctions, questCargoLost, questEvent, questLandsHere, questHere, questXpOf, shareQuest, skipGuideStep, swearOath, switchPath } from './quests.ts';
 import { dailyRollover } from './dailies.ts';
 import { commonCollect, commonView, stepCommon } from './commongoal.ts';
@@ -981,6 +982,9 @@ export class Game {
         // (forum 34: a peaceful ship and a captain whose colours keep her off it — a bump, whoever meant it, both ways)
         const friends = peace || (a.ownerId !== null && a.ownerId === b.ownerId) || damageBlocked(this, a, b) === 'friendly' || peaceBlocked(this, a, b) !== null || peaceBlocked(this, b, a) !== null;
         if (closing > 3 && friends) {
+          // (forum 40: a bump costs the captain who ran into her a little of her own hull — no blow on the other, no
+          // aggression, no skull: bump.ts)
+          bumpBlow(this, a, b, closing, (va.x * nx + va.y * ny) * a.state.speed, -(vb.x * nx + vb.y * ny) * b.state.speed);
           a.state.speed *= 0.6;
           b.state.speed *= 0.6;
         } else if (closing > 3) {
@@ -1320,6 +1324,7 @@ export class Game {
       checkDeeds(this, s, 1);
       heroSecond(this, s); // the hero's will by the day and in port (docs/17 H2)
       coloursSecond(this, s); // the colours ordered in port go up (docs/24 D2)
+      berthCallSecond(this, s); // the ship sent for comes alongside (forum 40)
       onboardingSecond(this, s);
       if (this.tick % 100 < 20) isleFirstCheck(this, s); // the island's first build (owner, 2026-10-28)
       firstFightsSecond(this, s); // docs/23 item 81
@@ -3899,7 +3904,7 @@ export class Game {
           this.pushSelf(s, true);
           return;
         }
-        return portAction((pt) => (msg.action === 'sell' ? sellBerth(this, s, pt, Math.trunc(Number(msg.index))) : this.menAsk(s, swapBerth(this, s, pt, Math.trunc(Number(msg.index)), msg.force === true), { t: 'berth', action: 'swap', index: Math.trunc(Number(msg.index)) })));
+        return portAction((pt) => (msg.action === 'sell' ? sellBerth(this, s, pt, Math.trunc(Number(msg.index))) : this.menAsk(s, callBerth(this, s, pt, Math.trunc(Number(msg.index)), msg.force === true), { t: 'berth', action: 'swap', index: Math.trunc(Number(msg.index)) })));
       case 'plan_buy':
         return portAction((pt) => buyPlan(this, s, pt, msg.classId));
       case 'figurehead_buy':
@@ -5254,6 +5259,7 @@ export class Game {
     ship.protectedUntil = this.now + 20;
     bubbleOnUndock(this, s);
     coloursOnUndock(this, s); // she sailed before her new colours went up (docs/24 D2)
+    berthCallOff(this, s); // …and before the ship she sent for came (forum 40)
     onUndockEvents(this, s, port);
     this.grid.upsert(ship.id, ship.state.x, ship.state.y);
     launchFleet(this, s);

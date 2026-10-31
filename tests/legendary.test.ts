@@ -6,7 +6,7 @@ import { ensureLegendary, legendaryCalendar, legendaryViews, onFirstKill } from 
 import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import type { Port } from '../shared/src/world/worldgen.ts';
-import { join, makeGame, steps } from './helpers.ts';
+import { berthArrives, join, makeGame, steps } from './helpers.ts';
 
 function dockAt(game: Game, s: PlayerSession, port: Port): void {
   const ship = s.ship!;
@@ -68,6 +68,7 @@ test('Sunken Glory: she goes down, her wreck is marked, the fighters take relics
   o.push({ t: 'legendary', action: 'deliver', id: 'widows_lament' });
   const i = O.profile!.berths.findIndex((x) => x.loadout.legendary === 'widows_lament');
   o.push({ t: 'berth', action: 'swap', index: i });
+  berthArrives(game, O); // (forum 40: she comes in two minutes)
   assert.equal(O.ship!.loadout.legendary, 'widows_lament');
   // A rival sinks her at sea.
   const r = join(game, 'Rook Rival');

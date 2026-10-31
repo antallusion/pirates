@@ -17,6 +17,8 @@ import { quietAdv } from '../server/src/game/advmap.ts';
 import { holidayAt } from '../shared/src/data/holidays.ts';
 import { gapToShore } from '../shared/src/data/reach.ts';
 import { isLand } from '../shared/src/world/worldgen.ts';
+import { berthCallSecond } from '../server/src/game/shipbuilding.ts';
+import type { PlayerSession } from '../server/src/game/player.ts';
 
 export class FakeConn {
   onMessage: (text: string) => void = () => {};
@@ -97,6 +99,19 @@ export function join(game: Game, name: string, captain: 'corsair' | 'reaver' | '
   if (CAPTAINS[captain].premium && s.authed) grantCaptain(game, s.accountId, captain);
   conn.push({ t: 'create_captain', captain, shipName: 'Test Wake' });
   return conn;
+}
+
+/** «Пересесть» takes two minutes (forum 40): the ship she sent for comes alongside now (the clock run on to her). */
+export function berthArrives(game: Game, s: PlayerSession): void {
+  const at = s.profile?.berthCall?.at;
+  if (at === undefined) return;
+  const wall = game.wallNow;
+  game.wallNow = () => Math.max(wall(), at);
+  try {
+    berthCallSecond(game, s);
+  } finally {
+    game.wallNow = wall;
+  }
 }
 
 export function steps(game: Game, n: number): void {

@@ -856,6 +856,9 @@ export interface PrivateState {
   berths: { port: string; name: string; classId: ShipClassId; hull: number; /** Her ⚓, her fittings' levels in all, her guns (port, starboard), her deck mount (forum 2026-10-30: «Причал»). */ level?: number; mods?: number; guns?: [GunId, GunId]; mount?: MountId; trophy?: TrophyHistory }[];
   /** Her berths in all: the free ones (two) and those bought (server shipbuilding.ts berthCap). */
   berthCap?: number;
+  /** A berthed ship sent for (forum 40: «Пересесть» takes two minutes): her berth's index, her name, the harbour she
+   *  comes to, when (wall ms, the server's clock). */
+  berthCall?: { index: number; name: string; port: string; at: number } | null;
   /** The yard's tree of hulls (docs/20): each hull's experience, the free pool, the hulls researched. */
   research?: ResearchView;
   /** Ships sunk or taken in a row since she last made port (docs/16 #4), and what it adds to plunder and experience. */

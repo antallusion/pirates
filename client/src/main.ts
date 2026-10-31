@@ -171,6 +171,7 @@ import { DROP_CARD } from '../../shared/src/data/paintart.ts'; // docs/36: the c
 import { FACTIONS } from '../../shared/src/data/factions.ts';
 import { placeName } from './ui/maps.ts';
 import { initPortCard, openPortCard, portCardData } from './ui/portcard.ts'; // the port card (owner, 2026-10-30)
+import { hidePortRing, initPortRing, openPortRing, portRingFrame } from './ui/portring.ts'; // forum 40: the harbour's ring
 import { portSplash } from './ui/portsplash.ts';
 import type { Key } from './i18n.ts';
 import { EN as MAIN_EN, RU as MAIN_RU } from './lang/ui/main.ts';
@@ -1023,6 +1024,7 @@ function seaTap(px: number, py: number): void {
   renderer.mouseY = py;
   if (!inGame || !state.ownDisplay) return;
   const before = { ship: targetId, roam: state.roamMark };
+  hidePortRing(); // (forum 40: any tap puts the harbour's ring away — or opens it about the harbour tapped, below)
   const ship = shipAtScreen(px, py), roam = ship === null ? roamAtScreen(px, py) : null;
   const again = (ship !== null && ship === before.ship) || (roam !== null && roam === before.roam);
   const k = markAt(px, py);
@@ -1033,14 +1035,19 @@ function seaTap(px: number, py: number): void {
   const pl = k ? null : fingerPlace(placeAtScreen(px, py), w);
   const t = k || renderer.goalHit(px, py) ? null : tapTarget(state, w.x, w.y, renderer.zoom);
   const blocked = state.voyage ? 'voyage' : state.boardTac || state.boardFight || state.boarding ? 'battle' : null;
-  // a harbour's name: its card, «Плыть сюда» inside (owner, 2026-10-30); its town and its water still sail
+  // a harbour's name or its town: its ring — «Войти в порт», «Приблизиться», «Карточка порта», «Мой остров» (forum 40;
+  // was: the name its card, the town the run in); its water still sails
   const named = !k && !modal ? portLabelAt(px, py) : null;
-  if (named) return openPortCard(state, named);
+  if (named) {
+    selPlace = { kind: 'port', id: named };
+    if (!openPortRing(named)) openPortCard(state, named);
+    return;
+  }
   const plan = seaTapPlan({ mark: k, again, thing: !!t || renderer.goalHit(px, py), place: pl?.kind ?? null, modal: !!modal, blocked: !!blocked });
   selPlace = k === 'ship' && targetId !== null ? { kind: 'ship', id: targetId } : k ? null : pl; // (owner, 2026-10-26)
   if (plan === 'none' || plan === 'target') return;
   if (plan === 'blocked') return void hud.toast(seaTapWhy(blocked!, lang() === 'ru'), 'info');
-  if (plan === 'port') return startGoal(`p:${pl!.id}`); // (the run casts her off in port and puts her in on arrival)
+  if (plan === 'port') return void (openPortRing(String(pl!.id)) || startGoal(`p:${pl!.id}`)); // (forum 40: the ring; the run in if it has no room)
   if (plan === 'thing' && !t) return tapGoal(px, py); // the goal's beacon or rim arrow: the run (cast off by the server in port)
   if (plan === 'chase') {
     const p = ship !== null ? state.ships.get(ship)?.cur : null;
@@ -3507,6 +3514,7 @@ function fromFinger(e: MouseEvent): boolean {
 }
 canvas.addEventListener('mousedown', (e) => {
   if (!inGame || e.button !== 0 || fromFinger(e)) return;
+  hidePortRing(); // (forum 40: a click elsewhere puts the harbour's ring away)
   // A click on a ship makes her the target; on a creature stack, marks the stack and fires nothing.
   const mk = markAt(e.clientX, e.clientY);
   if (mk === 'roam') {
@@ -3520,10 +3528,12 @@ canvas.addEventListener('mousedown', (e) => {
   const named = mk ? null : portLabelAt(e.clientX, e.clientY);
   if (named) {
     selPlace = { kind: 'port', id: named };
-    return openPortCard(state, named);
+    if (!openPortRing(named)) openPortCard(state, named); // (forum 40: its ring, the card on it)
+    return;
   }
   if (pl) {
     selPlace = pl;
+    if (pl.kind === 'port' && pl.id !== state.self?.dockedAt) return void openPortRing(String(pl.id)); // (forum 40: the harbour's ring)
     if (pl.kind !== 'wreck') return; // (no broadside into a harbour clicked)
   } else if (!mk) selPlace = null;
   if (shipAtScreen(e.clientX, e.clientY) === null && sailToTap(e.clientX, e.clientY)) return; // seaux: a click on a thing on the sea sails her to it
@@ -4699,6 +4709,34 @@ function attackUnder(px: number, py: number): AttackKind | null {
  *  предлагать захват цели и преследование и бой»): ui/targetmenu.ts. Only what the server would take now is offered. */
 const targetMenu = new TargetMenu();
 targetMenu.onPick = (id, about) => pickTargetChoice(id, about);
+/** The harbour's ring (forum 40): ui/portring.ts. */
+initPortRing({
+  port: (id) => {
+    const p = state.ports.find((x) => x.id === id);
+    return p ? { name: placeName(p.name), x: p.x, y: p.y } : null;
+  },
+  sx: (x) => renderer.sx(x),
+  sy: (y) => renderer.sy(y),
+  zoom: () => renderer.zoom,
+  keepOut: () => hudKeepOut(),
+  closed: () => !inGame || modal !== null || !!state.boardTac || !!state.boardFight || !!state.voyage || seaHud.menuOpen,
+  byOwnIsle: (id) => {
+    const isl = hasIsle() ? state.islands.get(state.self!.homeIsle!) : undefined, p = state.ports.find((x) => x.id === id);
+    return !!isl && !!p && (isl.portId === id || isl.town === id || Math.hypot(p.x - isl.x, p.y - isl.y) - isl.r <= ISLE_NEAR_PORT);
+  },
+  touch: () => touch.enabled,
+  pick: (id, port) => {
+    const p = state.ports.find((x) => x.id === port);
+    if (!p) return;
+    if (id === 'card') return openPortCard(state, port);
+    if (id === 'isle') return openBase();
+    selPlace = { kind: 'port', id: port };
+    if (id === 'enter') return startGoal(`p:${port}`); // (the run casts her off in port and puts her in on arrival)
+    // «Приблизиться»: the roads off it, inside its reach — «Причалить» is hers to press there
+    sailToSpot({ x: p.x, y: p.y }, Math.round(PORT_DOCK_RADIUS * 0.75));
+    if (state.self?.dockedAt) net.send({ t: 'undock' });
+  },
+});
 /** The mouse resting this long on a target opens its choices (a desk). */
 const TM_DWELL = 140;
 /** A finger's choices go by themselves after this long untouched (a phone). */
@@ -5595,6 +5633,7 @@ function step(t: number): void {
     edgeFrame();
     touchAttackMark();
     targetMenuFrame();
+    portRingFrame(); // forum 40
     divePanel.render(state.dive);
     boardFight.render(state.boardFight);
     tactical.render(state.boardTac);
