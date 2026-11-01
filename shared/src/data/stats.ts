@@ -45,6 +45,9 @@ export type StatKey =
 export type Flag =
   | 'battle_repair' | 'market_sense' | 'honest_merchant' | 'tangled_rigging' | 'unsinkable' | 'blood_tide'
   | 'terror' | 'false_bottom' | 'dark_running' | 'hidden' | 'boarding_anywhere' | 'personal_wind'
+  // a shelter's (her island's hidden cove, a smugglers' cove): out of the sea's ships' sight, never out of a captain's —
+  // no window or mooring makes a captain untouchable at sea (forum 45)
+  | 'sheltered'
   // navigation
   | 'weather_gauge' | 'sweeps_drill' | 'wake_rider' | 'dead_reckoning' | 'lee_shore' | 'stolen_wind' | 'trade_winds' | 'second_wind'
   | 'iron_tiller' | 'storm_rider'

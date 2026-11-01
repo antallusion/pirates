@@ -688,7 +688,7 @@ export function autosailHeading(game: Game, ship: ShipEntity, run: AutoSail): nu
  *  and again; no clear water ahead, she is worked off it under little sail — only her mark reached, a fight, port, her
  *  own hand, her ship lost or a mutiny end his run. */
 export function stepAutosail(game: Game): void {
-  for (const s of game.sessions) {
+  for (const s of game.helmSessions()) {
     const ship = s.ship;
     const run = autosailOf(ship);
     if (!ship) continue;
@@ -699,10 +699,7 @@ export function stepAutosail(game: Game): void {
       if (!autosailOf(ship)) stepGuard(game, s, ship);
       continue;
     }
-    if (s.disconnectedAt !== null) {
-      stopAutosail(game, s, 'off');
-      continue;
-    }
+    // (a dropped line: the helmsman sails her on to her mark while her ship lingers — forum 45, exit.ts)
     // A prize alongside: the helmsman waits until the spoils are settled.
     if (s.pendingBoarding) {
       ship.input = { rudder: 0, sailTarget: 0 };

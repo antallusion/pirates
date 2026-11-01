@@ -21,7 +21,9 @@ test('a found cove is a secret harbour: hidden, patched to 80%, the crew steadie
   steps(game, 41); // found, then anchored
   assert.ok(s.profile!.smuggle.coves.includes(cove.id));
   steps(game, 20 * 30);
-  assert.ok(ship.hasFlag('hidden'), 'hidden from patrols');
+  // (forum 45: sheltered from patrols and hunters, never grey or untouchable to another captain)
+  assert.ok(ship.hasFlag('sheltered'), 'hidden from patrols');
+  assert.ok(!ship.hasFlag('hidden'), 'a captain still sees her');
   assert.ok(ship.hull > ship.stats.hullMax * 0.3 + 1, 'the carpenters at work');
   assert.ok(ship.sanity > 40);
   steps(game, 20 * 200);

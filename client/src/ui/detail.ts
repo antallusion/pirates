@@ -35,8 +35,9 @@ import { esc, icon } from './dom.ts';
 import { placeName } from './maps.ts';
 import { srcText } from './srctip.ts';
 import { unitIcon, armyGlance } from './army.ts';
-import { levelChip, threatTo } from './levels.ts';
+import { levelChip, maskedChip, threatTo } from './levels.ts';
 import { popLayer, pushLayer } from './kit/layer.ts';
+import { effectCard } from './fxrow.ts';
 import type { Layer } from './kit/layer.ts';
 
 const L = dict(EN, RU);
@@ -120,10 +121,12 @@ function shipCard(id: number): ClientCard | undefined {
   const fac = info.faction !== 'player' ? (DATA_RU[`factions.FACTIONS.${info.faction}.name`] && ru ? DATA_RU[`factions.FACTIONS.${info.faction}.name`] : FACTION_EN[info.faction] ?? info.faction) : '';
   const rows: ClientCard['rows'] = [];
   const tr = (s: string): Tr => [s, s];
-  if (info.isPlayer) rows.push({ k: tr(L('sh.captain')), v: tr(`${info.captainName}${info.level ? ` · ${info.level}` : ''}`), icon: 'icon.bt_captain' });
+  // (forum 46: under the pirate flag her level and ⚓ are not told — «?»)
+  if (info.isPlayer) rows.push({ k: tr(L('sh.captain')), v: tr(`${info.captainName}${info.masked ? ' · ?' : info.level ? ` · ${info.level}` : ''}`), icon: 'icon.bt_captain' });
   else if (!beast) rows.push({ k: tr(L('sh.captain')), v: tr(info.captainName || '—'), icon: 'icon.bt_captain' });
   if (!beast) rows.push({ k: tr(L('sh.class')), v: clsName, icon: 'icon.menu_ship' });
   if (info.shipLevel) rows.push({ k: tr(L('sh.level')), v: tr(`⚓${info.shipLevel}`), icon: 'icon.ui_anchor' });
+  else if (info.masked) rows.push({ k: tr(L('sh.level')), v: tr('⚓?'), icon: 'icon.ui_anchor' });
   if (fac) rows.push({ k: tr(L('sh.faction')), v: tr(fac), icon: 'icon.tab_legends' });
   if (role) rows.push({ k: tr(L('sh.role')), v: tr(role) });
   if (info.guild) rows.push({ k: tr(L('sh.guild')), v: tr(`[${info.guild}]`) });
@@ -151,7 +154,7 @@ function shipCard(id: number): ClientCard | undefined {
   return {
     name: [name, name], color: threat ? THREAT_COLOR[threat] : '#e8c872',
     sub: [[beast ? EN['sh.beast'] : info.isPlayer ? `${placeName(info.name)}` : clsName[0], role, info.elite ? EN['sh.elite'] : ''].filter(Boolean).join(' · '), [beast ? RU['sh.beast'] : info.isPlayer ? `${placeName(info.name)}` : clsName[1], role, info.elite ? RU['sh.elite'] : ''].filter(Boolean).join(' · ')],
-    art: beast ? undefined : cls?.sprite, fig: 'ship', chip: info.shipLevel ? levelChip(info.shipLevel, info.classId) : '',
+    art: beast ? undefined : cls?.sprite, fig: 'ship', chip: info.masked ? maskedChip() : info.shipLevel ? levelChip(info.shipLevel, info.classId) : '',
     rows, bars, extra, notes, acts: hooks?.shipActs(id) ?? [],
   };
 }
@@ -165,6 +168,7 @@ export function cardOf(key: string, el?: HTMLElement | null): ClientCard | undef
   if (own) return own();
   const [kind, id] = key.split(':');
   if (kind === 'ship') return shipCard(Number(id));
+  if (kind === 'effect') return effectCard(key.slice(7)); // forum 45: the effects by her portrait (fxrow.ts)
   if (kind === 'item') {
     const it = ownItem(Number(id));
     return it ? itemDetail(it, wornItems()) : undefined;

@@ -704,7 +704,9 @@ export function stepHoldings(game: Game): void {
         o.sanity = Math.min(100, o.sanity + (30 / 600) * chapel);
         o.curse = Math.max(0, o.curse - (5 / 600) * chapel);
       }
-      if (strength(h, 'hidden_cove') > 0) o.addEffect({ id: 'isle_cove', until: now + 1.6, flags: ['hidden'] }, now);
+      // (forum 45: hidden from the sea's ships, never from captains — her island's window halts her here, and she went grey
+      // and untouchable to the captain who came for her)
+      if (strength(h, 'hidden_cove') > 0) o.addEffect({ id: 'isle_cove', until: now + 1.6, flags: ['sheltered'] }, now);
     }
     // The guns.
     const guns = 8 * strength(h, 'battery') + 24 * strength(h, 'fort');

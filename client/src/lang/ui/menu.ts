@@ -18,6 +18,7 @@ export const EN = {
   research: 'Tree of hulls',
   pass: 'Season card',
   close: 'Back to the helm',
+  exit: 'Exit',
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -38,4 +39,5 @@ export const RU: Record<keyof typeof EN, string> = {
   research: 'Дерево кораблей',
   pass: 'Сезонная карта',
   close: 'К штурвалу',
+  exit: 'Выход',
 };

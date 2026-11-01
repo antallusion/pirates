@@ -503,7 +503,7 @@ export class Renderer {
     // An elite, a boss, a zone boss or one of the deep's great ones: her broadside numbers bigger (docs/25 item 11).
     this.fx.bigTarget = (id) => {
       const i = state.ships.get(id)?.info;
-      return !!i && (!!i.elite || i.npcRole === 'boss' || i.shipLevel === undefined || i.classId.startsWith('zb_'));
+      return !!i && (!!i.elite || i.npcRole === 'boss' || (i.shipLevel === undefined && !i.masked) || i.classId.startsWith('zb_'));
     };
     const opt = settings();
     // docs/23 (owner, 2026-10-09): the sea fight's view (camfight.ts). The wheel (or a pinch) since the last frame turns
@@ -4483,13 +4483,22 @@ export class Renderer {
     const label = info.isPlayer ? `${info.captainName} · ${info.name}` : named ? `☠ ${named.name}` : `${faction ? FACTION_SIGN[info.faction as FactionId] + ' ' : ''}${placeName(info.name)}`;
     const cb = settings().colorblind;
     const role = info.npcRole && hasRole(info.npcRole) ? L(`role.${info.npcRole}`) : info.npcRole;
-    const tag = guardTag(state, s.id) ?? (named ? named.tag : info.isPlayer ? `${info.title ? serverText(info.title) + ' · ' : ''}${L('level', { n: info.level ?? 1 })}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : info.npcRole === 'boss' ? L(isZoneBossClass(info.classId) ? 'zboss' : 'boss') : cls.monster ? L('hulk') : L('tag.npc', { cls: cls.name, faction: faction?.short ?? '', role: role ?? '' }).replace(/·\s*·/g, '·').replace(/\s+·?\s*$/, '').replace(/\s{2,}/g, ' '));
+    // Forum 46: a captain under the pirate flag keeps her level and ⚓ from the others' eyes (the server tells none:
+    // ShipInfo.masked) — «?» in their place; her own ship's from her own state.
+    const own = s.id === state.entityId;
+    const masked = !!info.masked && !own;
+    const capLevel: number | string = masked ? '?' : info.masked && own ? state.self?.level ?? 1 : info.level ?? 1;
+    const shipLv = info.masked && own && state.self ? shipLevelOf(state.self.loadout) : info.shipLevel;
+    const tag = guardTag(state, s.id) ?? (named ? named.tag : info.isPlayer ? `${info.title ? serverText(info.title) + ' · ' : ''}${L('level', { n: capLevel })}${info.wanted ? ' · ' + '☠'.repeat(info.wanted) : ''}` : info.npcRole === 'boss' ? L(isZoneBossClass(info.classId) ? 'zboss' : 'boss') : cls.monster ? L('hulk') : L('tag.npc', { cls: cls.name, faction: faction?.short ?? '', role: role ?? '' }).replace(/·\s*·/g, '·').replace(/\s+·?\s*$/, '').replace(/\s{2,}/g, ' '));
     // Her level (canon D12) leads the name as WoW's does: the number in a frame coloured by how far she stands above
     // your own ship, a gold frame for an elite built for a company, a skull when no shot of yours would tell.
     // Her own ships from the island's shipyard (docs/15) sail on her side: their level, never a threat's skull.
     const ownShip = info.npcRole === 'escort' && !!state.self?.fleet?.escorts.some((e) => e.own && e.atSea && e.name === info.name);
-    const threat = info.shipLevel ? (ownShip ? 'even' : levelThreat(state, info.classId, info.shipLevel)) : null;
-    const badge = info.shipLevel ? (threat === 'skull' ? '☠' : String(info.shipLevel)) : '';
+    const threat = shipLv ? (ownShip || own ? 'even' : levelThreat(state, info.classId, shipLv)) : masked ? 'even' : null;
+    const badge = masked ? '?' : shipLv ? (threat === 'skull' ? '☠' : String(shipLv)) : '';
+    // Forum 46: other captains' names in a colour of their own (never an NPC's lantern), a skulled one's bold red.
+    const skulled = info.isPlayer && (info.wanted ?? 0) > 0;
+    const nameFont = info.isPlayer ? (skulled ? '800 11px Inter, sans-serif' : '700 11px Inter, sans-serif') : '600 11px Inter, sans-serif';
     g.font = '700 10px Inter, sans-serif';
     const pillW = badge ? g.measureText(badge).width + 8 : 0;
     const badgeW = badge ? pillW + 4 : 0;
@@ -4498,6 +4507,7 @@ export class Renderer {
     // Her colours (docs/24 D1): a little flag after a captain's name, its words on the line under it.
     const col = info.isPlayer ? shipColours(s.flags, info) : null;
     const flagW = col ? (col.noBoard ? 29 : 17) : 0;
+    g.font = nameFont;
     const nameW = g.measureText(label).width + badgeW + flagW;
     g.font = '10px Inter, sans-serif';
     const lfText = info.isPlayer ? lfgLabel(info.lfg) : null;
@@ -4548,10 +4558,12 @@ export class Renderer {
       g.fillText(badge, px + pillW / 2, py + 10);
       g.font = '600 11px Inter, sans-serif';
     }
+    g.font = nameFont;
     g.fillStyle = '#000';
     g.fillText(label, lx + 1, y + 1);
-    g.fillStyle = cbColor(cb, hostile ? '#e0776b' : info.isPlayer ? '#cfe0f2' : faction ? faction.lantern : '#ccc');
+    g.fillStyle = cbColor(cb, info.isPlayer ? playerNameColor(skulled, own) : hostile ? '#e0776b' : faction ? faction.lantern : '#ccc');
     g.fillText(label, lx, y);
+    g.font = '600 11px Inter, sans-serif';
     if (col) this.colourFlag(col, lx + g.measureText(label).width / 2 + 5, y - 10);
     // Looking for company (docs/16 #31): her pennant over the name, with the goal and the levels asked.
     const lf = info.isPlayer ? parseLfgTag(info.lfg) : null;
@@ -4879,4 +4891,11 @@ function passageWake(g: CanvasRenderingContext2D, len: number, beam: number, t: 
   }
   g.setLineDash([]);
   g.restore();
+}
+
+/** Forum 46: a captain's name over her ship — a colour no NPC's lantern carries (sky blue, bold), hostile or not (her
+ *  ring and her mark say that); bold red with skulls (the law wants her); her own name pale. */
+export function playerNameColor(skulled: boolean, own = false): string {
+  if (skulled) return '#ff4b3a';
+  return own ? '#cfe0f2' : '#6fc3ff';
 }

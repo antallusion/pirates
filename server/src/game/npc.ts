@@ -458,7 +458,7 @@ export function resumeCourse(game: Game, ship: ShipEntity, brain: NpcBrain): voi
 
 function detectionRange(game: Game, npc: ShipEntity, other: ShipEntity): number {
   let r = npc.stats.detection * NPC_SIGHT * signature(other);
-  if (other.hasFlag('hidden')) return 115;
+  if (other.hasFlag('hidden') || other.hasFlag('sheltered')) return 115; // (a shelter hides her from the sea's ships: forum 45)
   if (other.hasFlag('dark_running')) r *= other.talentReady.darkSeen || 0.4; // her Dark Running's facet (docs/25 item 38)
   if (other.hasFlag('lamplighter') && npc.npcRole === 'ghost') r *= 2; // the Lamplighter's lights draw the dead
   const w = game.weatherOf(other);
@@ -656,7 +656,7 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
   // The First Watch's raider has one pupil: a merchantman passing nearer does not lure her off the lesson.
   if (brain.practice !== undefined) {
     const p = game.ships.get(brain.practice);
-    if (p && p.alive && !p.docked && !p.hasFlag('hidden')) {
+    if (p && p.alive && !p.docked && !p.hasFlag('hidden') && !p.hasFlag('sheltered')) {
       prey = p;
       preyD = dist(ship.state.x, ship.state.y, p.state.x, p.state.y);
     }
@@ -677,7 +677,7 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
   }
   if (!prey && brain.chase) {
     const c = game.ships.get(brain.chase.id);
-    if (!c || !c.alive || c.docked || now > brain.chase.until || !npcHostileTo(game, ship, c) || c.hasFlag('hidden')) brain.chase = null;
+    if (!c || !c.alive || c.docked || now > brain.chase.until || !npcHostileTo(game, ship, c) || c.hasFlag('hidden') || c.hasFlag('sheltered')) brain.chase = null;
     else {
       prey = c;
       preyD = dist(ship.state.x, ship.state.y, c.state.x, c.state.y);

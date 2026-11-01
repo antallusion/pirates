@@ -188,7 +188,8 @@ test('moorings mend and steady; the cove hides; the guns fire on pirates', () =>
   steps(game, 20 * 60);
   assert.ok(ship.hull > hull + ship.stats.hullMax * 0.004, 'the pier mends');
   assert.ok(ship.sanity > 40 + 2, 'the chapel steadies');
-  assert.ok(ship.hasFlag('hidden'), 'the cove hides her');
+  assert.ok(ship.hasFlag('sheltered'), 'the cove hides her from the sea’s ships');
+  assert.ok(!ship.hasFlag('hidden'), '…never from a captain (forum 45)');
   // The sea's own ships about the island sail off first: the battery takes the nearest hostile, and the world's dice
   // may have put one of the sea's pirates nearer than ours.
   const about: number[] = [];

@@ -135,6 +135,11 @@ function statValue(k: StatKey, v: number): string {
   return `${sign}${num(pct, pct >= 10 ? 0 : 1)}%`;
 }
 
+/** An effect's numbers as the gear's lines (forum 45: the effects' cards, fxrow.ts). */
+export function modLinesHtml(mods: Partial<Record<StatKey, number>>): string {
+  return Object.entries(mods).filter(([, v]) => Math.abs(v ?? 0) > 1e-9).map(([k, v]) => statLine(k as StatKey, v ?? 0)).join('');
+}
+
 function statLine(k: StatKey, v: number, cls = ''): string {
   const good = LOWER_BETTER.has(k) ? v < 0 : v > 0;
   return `<div class="gl ${cls} ${good ? 'g-up' : 'g-down'}"><span>${esc(statLabel(k))}</span><b>${esc(statValue(k, v))}</b></div>`;

@@ -355,11 +355,12 @@ function nearestThreat(game: Game, ship: ShipEntity, r: number): ShipEntity | nu
 /** Every tick, after the NPCs think and before the ships move: each helmsman under «Атаковать» steers. */
 export function stepPursuit(game: Game): void {
   const now = game.now;
-  for (const s of game.sessions) {
+  for (const s of game.helmSessions()) {
     const ship = s.ship;
     const run = pursuitOf(ship);
     if (!ship || !run) continue;
-    if (s.disconnectedAt !== null || !ship.alive || ship.docked) {
+    // (a dropped line: «Атаковать» goes on while her ship lingers — forum 45, exit.ts)
+    if (!ship.alive || ship.docked) {
       stopPursuit(game, s, 'off');
       continue;
     }
@@ -673,7 +674,7 @@ export const SPARE_SHOT = ['round', 'heavy', 'chain', 'grape'] as const;
 /** Every tick: the captains' gun crews with auto-fire on lay each loaded side on the mark as it bears; without the
  *  expert's hand the chasers too (docs/23 items 35, 42). */
 export function stepAutoFire(game: Game): void {
-  for (const s of game.sessions) {
+  for (const s of game.helmSessions()) {
     const ship = s.ship;
     if (!ship || !free(ship)) continue;
     // «Атаковать» is the order to fire (its words: «пушки бьют, как только она в секторе»), whatever the switch — a desk's

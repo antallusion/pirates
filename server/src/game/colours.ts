@@ -229,8 +229,11 @@ export function syncColours(game: Game, s: PlayerSession): void {
   const p = s.profile, ship = s.ship;
   if (!p || !ship) return;
   const city = coloursOf(p) === 'faction' ? cityOf(game, p) : null;
-  if (ship.city !== city) {
+  const masked = coloursOf(p) === 'pirate'; // forum 46: under the pirate flag her level is nobody's business
+  if (ship.city !== city || ship.masked !== masked || ship.shownWanted !== ship.wantedCache) {
     ship.city = city;
+    ship.masked = masked;
+    ship.shownWanted = ship.wantedCache;
     game.refreshInfo(ship);
   }
 }

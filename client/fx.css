@@ -1,0 +1,53 @@
+/* Forum 45 (Нефигугум): the effects by her portrait (client/src/ui/fxrow.ts) and «Выход» (client/src/ui/exit.ts).
+   The row stands in the row under her plate, after «⋯» (its tray folds over it while it is out); each effect a round
+   icon in a ring of the time it has left — green a boon, red a bane — its seconds or its number on its corner. */
+#hud-fx { position: absolute; z-index: 2; display: flex; align-items: center; gap: 5px; pointer-events: none;
+  top: calc(var(--sa-t, 0px) + 104px); left: calc(var(--sa-l, 0px) + 8px); --fx-s: 32px; }
+body.simple #hud-fx { top: calc(var(--lr-top) + (var(--tr-b) - var(--fx-s)) / 2); left: calc(var(--sa-l) + 8px + var(--tr-b) + var(--tr-g) + 4px); }
+body.touch #hud-fx { --fx-s: 26px; gap: 4px; }
+#hud-fx.hidden, body.simple:not(.hud-more) #hud-fx, body.more-open #hud-fx, body.tac #hud-fx { display: none; }
+#hud-fx .fx-i { --fx-c: #7fbf6a; position: relative; flex: none; width: var(--fx-s); height: var(--fx-s); min-width: 0; min-height: 0; margin: 0; padding: 0;
+  border: 0; border-radius: 50%; pointer-events: auto; cursor: pointer; background: conic-gradient(var(--fx-c) calc(var(--fx-p, 100) * 1%), rgba(10, 9, 7, 0.82) 0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(5, 6, 7, 0.9); }
+#hud-fx .fx-i.fx-bad { --fx-c: #d0584a; }
+#hud-fx .fx-i .fx-ico { position: absolute; inset: 2px; width: calc(100% - 4px); height: calc(100% - 4px); border-radius: 50%; object-fit: cover; margin: 0;
+  background: radial-gradient(circle at 50% 40%, #2a241b, #0d0c0a); box-shadow: inset 0 0 0 1px rgba(176, 141, 87, 0.55); font-size: 13px; line-height: calc(var(--fx-s) - 4px); text-align: center; color: #e8dcc0; }
+#hud-fx .fx-i.fx-bad .fx-ico { box-shadow: inset 0 0 0 1px rgba(208, 88, 74, 0.7); }
+#hud-fx .fx-t { position: absolute; right: -5px; bottom: -4px; z-index: 1; min-width: 12px; padding: 0 3px; box-sizing: border-box; border-radius: 6px; font: 700 9px/12px Inter, sans-serif;
+  color: #f2e8d2; text-align: center; white-space: nowrap; background: rgba(8, 7, 6, 0.9); box-shadow: 0 0 0 1px rgba(176, 141, 87, 0.5); pointer-events: none; }
+#hud-fx .fx-bad .fx-t { color: #ffc2b8; }
+#hud-fx .fx-end { animation: fx-end 0.6s ease-in-out infinite alternate; }
+@keyframes fx-end { to { opacity: 0.45; } }
+#hud-fx .fx-more { background: linear-gradient(180deg, rgba(30, 24, 17, 0.92), rgba(10, 9, 7, 0.92)); box-shadow: inset 0 0 0 1px rgba(176, 141, 87, 0.7), 0 1px 3px rgba(0, 0, 0, 0.8); }
+#hud-fx .fx-more b { font: 700 10px/1 Inter, sans-serif; color: #e8c872; }
+body.reduce-motion #hud-fx .fx-end { animation: none; }
+@media (prefers-reduced-motion: reduce) { #hud-fx .fx-end { animation: none; } }
+.dc-card .fx-lines { margin-top: 6px; }
+
+/* «ВЫХОД ЧЕРЕЗ 0:30»: a slim plate in the top band (the popup budget), its countdown and «Отмена». */
+#hud-exit { position: fixed; z-index: 60; top: calc(env(safe-area-inset-top, 0px) + 8px); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px;
+  padding: 6px 8px 6px 14px; border-radius: 18px; background: linear-gradient(180deg, rgba(36, 26, 18, 0.94), rgba(12, 10, 8, 0.94));
+  box-shadow: inset 0 0 0 1px rgba(208, 160, 90, 0.75), 0 4px 14px rgba(0, 0, 0, 0.6); color: #f2e2bf; pointer-events: auto; max-width: calc(100vw - 24px); box-sizing: border-box; }
+#hud-exit.hidden { display: none; }
+#hud-exit .ex-t { display: flex; flex-direction: column; line-height: 1.1; }
+#hud-exit .ex-t b { font: 700 14px/1.1 Inter, sans-serif; letter-spacing: 0.06em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+#hud-exit .ex-t small { font: 500 10px/1.2 Inter, sans-serif; color: #c9b48f; white-space: nowrap; }
+#hud-exit .ex-x { min-height: 28px; padding: 3px 12px; }
+body.touch #hud-exit { padding: 4px 6px 4px 12px; gap: 8px; }
+body.touch #hud-exit .ex-t b { font-size: 13px; }
+
+/* «Вы вышли»: the whole screen, «Вернуться» brings her back (a fresh page). */
+#screen-exit { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 40%, rgba(24, 30, 38, 0.92), rgba(4, 5, 7, 0.97)); }
+#screen-exit.hidden { display: none; }
+#screen-exit .ex-card { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 22px 30px; max-width: min(420px, calc(100vw - 32px)); box-sizing: border-box; text-align: center;
+  border-radius: 14px; background: linear-gradient(180deg, rgba(30, 24, 17, 0.95), rgba(10, 9, 7, 0.95)); box-shadow: inset 0 0 0 1px rgba(176, 141, 87, 0.7), 0 8px 30px rgba(0, 0, 0, 0.7); }
+#screen-exit h2 { margin: 0; font: 700 28px/1.1 'Cormorant Garamond', serif; color: #e8c872; }
+#screen-exit p { margin: 0; color: #d8ccb2; font: 500 14px/1.35 Inter, sans-serif; }
+#screen-exit .ex-ico { width: 56px; height: 56px; }
+
+/* «Выход» in the «⋯» tray (only there, as «Армия»): its word under it. */
+#tc-exit { display: none; }
+body.simple.hud-more.more-open #hud #touch > #tc-exit.more-fold { display: block; min-width: 0; min-height: 0; padding: 0; pointer-events: auto; }
+body.simple #hud #touch > #tc-exit .tc-crew-l { position: absolute; left: 50%; top: calc(100% + 3px); transform: translateX(-50%); font-size: 9px; line-height: 1; white-space: nowrap;
+  color: var(--bone, #e6dccb); text-shadow: 0 1px 2px #000, 0 0 4px #000; pointer-events: none; }
+body.simple #hud #touch > #tc-exit .k-btn-ico { inset: 19.8% 22% 24.2%; }

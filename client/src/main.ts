@@ -119,6 +119,10 @@ import { SeaHud, bestSpecial, pettyOf, seaWord } from './ui/seahud.ts'; // docs/
 import { adriftFacts, adriftInfo, askScuttle, juryTapText } from './ui/adrift.ts'; // owner 2026-10-20: torn sails, the jury rig, scuttling home
 import type { DeckSlot, SeaKeys } from './ui/seahud.ts';
 import { HudMore } from './ui/hudmore.ts'; // owner, 2026-10-29: the rest of the round buttons behind one «⋯»
+import { ExitUi } from './ui/exit.ts'; // «Выход» (forum 45)
+import { EN as FX_EN, RU as FX_RU } from './lang/ui/fx.ts';
+import { setFxLines } from './ui/fxrow.ts'; // forum 45: the effects' cards show their numbers as the gear's lines
+import { modLinesHtml } from './ui/gear.ts';
 import { SKILL_IDS, SeaAbil, abilWhy, skillWord } from './ui/seaabil.ts'; // the captain's abilities on a phone: «Приёмы» and its row (owner, 2026-10-26)
 import type { AbilView } from './ui/seaabil.ts';
 import { goalCount, goalSheetView } from './ui/goalsheet.ts'; // «Цели и вести»: the campaign, the quests taken, the orders
@@ -1397,6 +1401,20 @@ const hudMore = new HudMore($('touch'));
   b.addEventListener('click', () => openModal('crew'));
   $('touch').append(b);
 }
+// «Выход» (forum 45): last in the tray, and a tile in the cabin's menu (in port the tray is not out). In port she leaves
+// at once; at sea «ВЫХОД ЧЕРЕЗ 0:30» (the server's, exit.ts) — any order of hers calls it off.
+const LFX = dict(FX_EN, FX_RU);
+const exitUi = new ExitUi({ send: (m) => net.send(m), on: (f) => net.on(f), now: () => state.estServerTime(), toast: (msg, kind) => hud.toast(msg, kind) });
+net.onLeft = () => exitUi.closed();
+{
+  const t = document.createElement('template');
+  t.innerHTML = buttonHtml({ kind: 'icon', id: 'tc-exit', icon: 'sail_down', glyph: '⏻', aria: LFX('exitTip'), cls: 'sea-round' }).trim();
+  const b = t.content.firstElementChild as HTMLButtonElement;
+  b.insertAdjacentHTML('beforeend', `<span class="tc-crew-l">${LFX('exitBtn')}</span>`);
+  b.addEventListener('click', () => exitUi.ask());
+  $('touch').append(b);
+}
+setFxLines(modLinesHtml);
 // The captain's abilities on a phone (owner, 2026-10-26: «на мобиле не показаны иконки спецприёмов капитана»): «Приёмы»
 // in «Особое»'s place, its row of four — used as the desk's Z X C V are, at her mark.
 const seaAbil = new SeaAbil($('touch'), (id) => {
@@ -3162,7 +3180,10 @@ function announceInvites(): void {
 
 /** A screen from the captain's cabin or the micro menu. */
 function openMenuItem(m: MenuItem): void {
-  if (m === 'chat') {
+  if (m === 'exit') {
+    if (modal) closeModal();
+    exitUi.ask();
+  } else if (m === 'chat') {
     if (modal) closeModal();
     hud.chatPanel.open(!touch.enabled);
   } else if (m === 'company') {
@@ -4590,7 +4611,7 @@ function seaTarget(): TargetInfo | null {
     name, hull: s.cur.hull,
     ...(colours ? { colours } : {}),
     ...(beast ? {} : { crew: s.cur.crew }),
-    ...(s.info.shipLevel ? { level: s.info.shipLevel, threat: threatTo(s.info.shipLevel, s.info.classId) } : {}),
+    ...(s.info.shipLevel ? { level: s.info.shipLevel, threat: threatTo(s.info.shipLevel, s.info.classId) } : s.info.masked ? { level: '?' as const } : {}),
     ...(odds ? { chance: odds.chance } : {}),
     ...(markRange() ? { range: markRange()! } : {}),
   };

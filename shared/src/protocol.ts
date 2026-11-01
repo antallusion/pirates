@@ -478,6 +478,9 @@ export type ClientMsg =
   | { t: 'guild'; action: 'base'; island: number }
   | { t: 'guild'; action: 'lease'; island: number; days: number }
   | { t: 'guild'; action: 'say'; text: string }
+  /** «Выход» (forum 45): in port at once; at sea a safe exit in SAFE_EXIT_SEC that any order of hers calls off
+   *  (`cancel`: called off by her own hand). */
+  | { t: 'logout'; cancel?: boolean }
   | { t: 'ping'; c: number };
 
 // ------------------------------------------------------------------ server -> client
@@ -766,6 +769,8 @@ export interface PrivateState {
   /** Owner, 2026-10-29: nothing useful to hire anywhere (no hammock, no room under the might cap, no silver) — the
    *  hints never point at a hire window. */
   noHire?: boolean;
+  /** Forum 45: her account's running boosts and her ferry's cooldown, for the effects' row by her portrait. */
+  boosts?: BoostsView;
   /** The captain as a hero (docs/17 H2). */
   hero?: HeroView;
   /** Her glory past the cap, mastery and trials (docs/19 E1–E3): from five levels short of the cap. */
@@ -1184,6 +1189,9 @@ export interface ShipInfo {
   cos?: string;
   /** Her level ⚓1–⚓10 (canon D12); absent for monsters and wreck hulks, which stand outside the ladder. */
   shipLevel?: number;
+  /** A captain under the pirate flag (forum 46: «фиг поймешь на кого нападаешь, ориентация только по визуалу»): her
+   *  level, her ⚓, her army and her armour are not told — the plates, the card and the ring show «?». */
+  masked?: boolean;
   /** A strong ship built for a company (group contracts, barons): the gold frame of an elite. */
   elite?: boolean;
   /** A named pirate's id on the roster (docs/12 P5). */
@@ -2079,6 +2087,18 @@ export interface TacReplayList {
   list: { id: string; at: number; vs: string; won: boolean; pvp: boolean; rounds?: number }[];
 }
 
+/** Why a safe exit was called off or refused (forum 45). */
+export type ExitWhy = 'action' | 'fire' | 'fight' | 'cancel';
+
+/** One active effect on her ship or captain for the HUD's row by her portrait (forum 45, client fxrow.ts): the boosts
+ *  her account holds (wall ms; 0 none) — the XP elixir, the fair wind, the harvest — and her ferry's cooldown. */
+export interface BoostsView {
+  xp: number;
+  wind: number;
+  prod: number;
+  ferry: number;
+}
+
 export type ServerMsg =
   /** What a port offers the hero: its guild of orders, its artifact merchant (docs/17 H2). */
   | { t: 'hero_port'; view: HeroPortView | null }
@@ -2267,7 +2287,10 @@ export type ServerMsg =
   | WayServerMsg
   /** The marks she has worked (no more today) and the one her boats are at now (world seconds). */
   | { t: 'seamarks'; done: number[]; busy: { id: number; until: number; total: number } | null }
-  | { t: 'pong'; c: number; s: number };
+  | { t: 'pong'; c: number; s: number }
+  /** «Выход» (forum 45): her safe exit's moment (world time; 0: none or called off, `why` why), or `done`: she has
+   *  left the sea — the «Вы вышли» screen, no reconnecting. */
+  | { t: 'exit'; until: number; done?: boolean; why?: ExitWhy };
 
 // ------------------------------------------------------------------ groups, barter, letters, the market
 

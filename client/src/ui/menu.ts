@@ -8,7 +8,7 @@ import { esc, icon } from './dom.ts';
 
 const L = dict(EN, RU);
 
-export type MenuItem = 'map' | 'journal' | 'ship' | 'crew' | 'talents' | 'company' | 'shop' | 'help' | 'options' | 'chat' | 'base' | 'hero' | 'throne' | 'research' | 'pass';
+export type MenuItem = 'map' | 'journal' | 'ship' | 'crew' | 'talents' | 'company' | 'shop' | 'help' | 'options' | 'chat' | 'base' | 'hero' | 'throne' | 'research' | 'pass' | 'exit';
 export const MENU_ITEMS: { id: MenuItem; glyph: string; art?: string }[] = [
   { id: 'map', glyph: '🗺' },
   { id: 'journal', glyph: '📜', art: 'tab_letters' },
@@ -21,6 +21,8 @@ export const MENU_ITEMS: { id: MenuItem; glyph: string; art?: string }[] = [
   { id: 'chat', glyph: '✉' },
   { id: 'help', glyph: '?' },
   { id: 'options', glyph: '⚙' },
+  // «Выход» (forum 45): in port at once, at sea after 30 safe seconds (client/src/ui/exit.ts)
+  { id: 'exit', glyph: '⏻', art: 'sail_down' },
 ];
 
 export function menuLabel(id: MenuItem): string {

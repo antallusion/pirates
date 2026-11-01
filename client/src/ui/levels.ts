@@ -23,6 +23,11 @@ export function levelChip(level: number, classId?: ShipClassId, title?: string):
   return `<span class="lvl-chip lvl-${t}" style="color:${THREAT_COLOR[t]}"${title ? ` title="${esc(title)}"` : ''}>${t === 'skull' ? '☠' : ''}⚓${level}</span>`;
 }
 
+/** Forum 46: a captain under the pirate flag — her ⚓ not told: «⚓?» in a plain chip. */
+export function maskedChip(): string {
+  return '<span class="lvl-chip lvl-masked" style="color:#c8bfa8">⚓?</span>';
+}
+
 /** Your own ship's level: the chip in brass, no danger in it. */
 export function ownLevelChip(level: number): string {
   return `<span class="lvl-chip lvl-own" style="color:#e8c46a">⚓${level}</span>`;

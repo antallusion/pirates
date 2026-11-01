@@ -518,6 +518,12 @@ export class PlayerSession {
   lastSave = 0;
   disconnectedAt: number | null = null;
   lingerUntil = 0;
+  /** «Выход» at sea (forum 45, exit.ts): when her ship leaves the sea (world time; 0: no exit under way), the sail step
+   *  her helm sent as she asked (her own hand on another step calls it off), and `leaving`: she left by «Выход» — no
+   *  lingering ship. */
+  exitAt = 0;
+  exitSail = -1;
+  leaving = false;
   lastRegion = '';
   landable: { island: string; feature: string; action?: 'dig' | 'dive' | 'expedition' | 'raise' | 'descent' | 'escort' | 'keeper' | 'lair'; blocked?: string; /** docs/18 #28 */ lv?: number; danger?: 'warn' | 'deadly' } | null = null;
   siteViews: ResourceSiteView[] = [];

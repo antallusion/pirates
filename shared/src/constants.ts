@@ -41,7 +41,8 @@ export const NPC_ACTIVE_RADIUS = 3_200; // NPCs promote from abstract to full ph
 export const PORT_DOCK_RADIUS = 420; // distance from port anchor at which docking is allowed
 export const DAY_LENGTH_SEC = 48 * 60; // one in-game day = 48 real minutes
 export const LOOT_LIFETIME_SEC = 180;
-export const LOGOUT_TIMER_SEC = 30; // ship lingers at sea after disconnect (anti combat-log)
+export const LOGOUT_TIMER_SEC = 120; // ship lingers at sea after a disconnect, her last order on (anti combat-log; forum 45: 2 min)
+export const SAFE_EXIT_SEC = 30; // «Выход» at sea (forum 45): she leaves the sea safely after this, unless she acts
 export const COMBAT_TAG_SEC = 20;
 
 export const MAX_LEVEL = 60;

@@ -24,7 +24,7 @@ import { placeName } from './maps.ts';
 import { THREAT_COLOR } from '../../../shared/src/data/shiplevel.ts';
 import { levelPct } from '../../../shared/src/data/xpcurve.ts';
 import { MAX_LEVEL } from '../../../shared/src/constants.ts';
-import { levelChip, threatTo } from './levels.ts';
+import { levelChip, maskedChip, threatTo } from './levels.ts';
 import { shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
 import { DASH_COOLDOWN } from '../../../shared/src/data/gunnery.ts';
 import { dict, lang, plural, t } from '../i18n.ts';
@@ -83,6 +83,7 @@ import { escortBars, escortKey, escortRowHtml, holdKey, holdRowHtml } from './es
 import { avatar } from './kit/avatar.ts'; // her face in its ring (docs/32 §12: her frame), shared/src/data/portraitfit.ts
 import { captainDot } from './capmenu.ts'; // seaux: the bead is news not yet seen
 import { drawWrecksMini } from '../render/castaways.ts'; // seaux: her wreckage and castaways on the chart
+import { fxList, fxRowHtml, fxRowLabel, noteFx } from './fxrow.ts'; // forum 45: the effects by her portrait
 
 const L = dict(EN, RU);
 const TMW = dict(TM_EN, TM_RU); // the treasure search's words (forum post 34)
@@ -350,6 +351,9 @@ export class Hud {
   onEscort: (eid: number) => void = () => {};
   /** The overload's toast once per overload (forum 2026-10-30). */
   private overWarned = false;
+  /** The effects' row by her portrait (forum 45): when it was last reckoned and what it showed. */
+  private fxAt = 0;
+  private fxKey = '';
   /** The premium shop (owner, 2026-10-15): the doubloons' chip by her silver. */
   onShop: () => void = () => {};
   /** The exchange of doubloons into silver (owner, 2026-10-30): the «+» by her silver. */
@@ -892,6 +896,7 @@ export class Hud {
       this.overWarned = true;
       this.toast(L('holdToast', { pct: hold.pct, n: hold.slow }), 'bad');
     } else if (!hold?.over) this.overWarned = false;
+    this.drawFx(state);
     if (simpleHud()) this.drawStatus(state);
     else {
     const ckey = `${state.cos?.eq.frame ?? ''}|${lang()}|${streak ? `${streak.n}:${streak.mul}` : ''}|${pod ? `${pod.kind}:${Math.ceil(pod.left / 10)}` : ''}|${self.level}|${Math.round((self.xp / Math.max(1, self.xpNext)) * 200)}|${Math.round((self.rested / Math.max(1, self.xpNext)) * 200)}|${self.gold}|${self.wanted}|${self.talentPoints}|${you.hull}|${you.hullMax}|${you.sails}|${you.sailsMax}|${you.crew}|${you.crewMax}|${url ? 1 : 0}|${self.company.mood ?? ''}:${self.company.shantyUntil ?? 0}|${self.title ?? ''}|${self.glory ? `${self.glory.open}:${self.glory.rank}:${self.glory.pending}:${self.glory.points - self.glory.spent}` : ''}|${state.doubloons}`;
@@ -1167,6 +1172,33 @@ export class Hud {
     el.innerHTML = `${icon('tab_isles', '', 'ico-sm')}<span class="i1-m"><b>${esc(L(`i1.${v!.id}` as 'i1.dw2', { n: v!.step + 1, of: v!.of }))}</b><i>${esc(stuck ? L(`i1.stuck.${stuck}` as 'i1.stuck.room') : sub)}</i></span>${go}`;
   }
   private i1At = 0;
+
+  /** The effects by her portrait (forum 45): four times a second, redrawn when an icon, its number or its ring moves. */
+  private drawFx(state: ClientState): void {
+    const t = performance.now();
+    if (t - this.fxAt < 250) return;
+    this.fxAt = t;
+    let el = document.getElementById('hud-fx');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'hud-fx';
+      el.setAttribute('role', 'list');
+      el.setAttribute('aria-label', fxRowLabel());
+      $('hud').append(el);
+    }
+    const self = state.self, you = state.you;
+    if (!self) return;
+    const list = fxList({ self, you, now: state.estServerTime(), wall: Date.now() });
+    noteFx(list);
+    const narrow = document.body.classList.contains('touch') || innerWidth < 900;
+    const max = narrow ? 6 : 8;
+    const html = fxRowHtml(list, max);
+    const key = `${lang()}|${max}|${html}`;
+    if (key === this.fxKey) return;
+    this.fxKey = key;
+    el.innerHTML = html;
+    el.classList.toggle('hidden', !list.length);
+  }
 
   private drawStatus(state: ClientState): void {
     const self = state.self!, you = state.you!;
@@ -2379,7 +2411,7 @@ export class Hud {
     const guard = id !== null ? guardOfEntity(state, id) : null; // a guard of the adventure map (docs/17 H4): what it is, not its hull
     // A guard named as its ship (the Rotting Hulk, the Wreck of the Drowned): not its name twice (QA, 2026-10-04).
     const guardName = guard ? GUARDS[guard.kind].name[lang() === 'ru' ? 1 : 0] : '';
-    const role = guard ? (sameWords(guardName, name) ? L('tg.guard') : guardName) : info.isPlayer ? L('tg.lv', { n: info.level ?? 1 }) : info.npcRole && `role.${info.npcRole}` in REN ? RL(`role.${info.npcRole}` as 'role.merchant') : '';
+    const role = guard ? (sameWords(guardName, name) ? L('tg.guard') : guardName) : info.isPlayer ? L('tg.lv', { n: info.masked ? '?' : info.level ?? 1 }) : info.npcRole && `role.${info.npcRole}` in REN ? RL(`role.${info.npcRole}` as 'role.merchant') : '';
     const bar = (k: string, v: number) => `<span class="tg-bar tg-${k}"><i style="width:${pct(clamp(v, 0, 1))}"></i></span>`;
     // ⓘ: her detail card (owner, 2026-10-30; client/src/ui/detail.ts) — the frame's own tap still inspects a captain
     const infoBtn = `<button type="button" class="dc-info tg-info"${detailAttr(`ship:${id}`)} aria-label="${esc(DL('infoT'))}" title="${esc(DL('infoT'))}">ⓘ</button>`;
@@ -2396,7 +2428,7 @@ export class Hud {
       return;
     }
     el.className = `hud-block tg${info.elite ? ' tg-elite' : ''}${threat ? ` tg-${threat}` : ''}`;
-    el.innerHTML = `<div class="tg-head">${info.shipLevel ? levelChip(info.shipLevel, info.classId) : ''}<b class="tg-name">${esc(name)}</b><span class="tg-dist">${esc(dist)}</span>${infoBtn}</div>
+    el.innerHTML = `<div class="tg-head">${info.masked ? maskedChip() : info.shipLevel ? levelChip(info.shipLevel, info.classId) : ''}<b class="tg-name">${esc(name)}</b><span class="tg-dist">${esc(dist)}</span>${infoBtn}</div>
       <div class="tg-sub muted">${info.isPlayer && info.title ? `<span class="tg-title">${esc(sv(info.title))}</span> · ` : ''}${named ? `<span class="tg-wanted">${esc(named.tag)}</span> · ` : ''}${esc([guard || sameWords(cls?.name ?? info.classId, name) ? '' : cls?.name ?? info.classId, role].filter(Boolean).join(' · '))}${info.elite ? ` · <span class="tg-el">${esc(L('tg.elite'))}</span>` : ''}</div>
       ${info.isPlayer ? `<div class="tg-colours">${flagChip(shipColours(c.flags, info))}</div>` : ''}
       ${bar('hull', c.hull)}${bar('crew', c.crew)}${bar('sails', c.sails)}

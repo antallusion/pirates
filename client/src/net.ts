@@ -12,6 +12,8 @@ export class Net {
   private pendingName: string | null = null;
   private retry = 0;
   onStatus: (connected: boolean) => void = () => {};
+  /** She left the sea by «Выход» (forum 45, the server's close 4003): no reconnecting — the «Вы вышли» screen. */
+  onLeft: () => void = () => {};
   rtt = 0;
   bytesIn = 0;
 
@@ -86,6 +88,7 @@ export class Net {
       clearTimeout(stuck);
       // (an old socket's close, after a newer one took its place, retries nothing)
       if (this.ws !== ws) return;
+      if (ev.code === 4003) return this.onLeft(); // «Выход» (forum 45): she left — no «reconnecting» line; «Вернуться» is a fresh page
       this.onStatus(false);
       if (ev.code === 4000) return; // replaced by another login
       // Out of date (a tab kept open across a deploy, docs/23 item 96): the new client is a reload away. Once a minute

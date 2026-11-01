@@ -277,6 +277,10 @@ export class ShipEntity {
   guildTag: string | null = null;
   /** A captain under the city flag (docs/24 D1): the city whose colours she flies (colours.ts syncColours). */
   city: FactionId | null = null;
+  /** Under the pirate flag (forum 46, colours.ts syncColours): her level and ⚓ kept from the world's eyes (info). */
+  masked = false;
+  /** Her skulls as her name card last told them (forum 46: a skulled captain's name goes bold red — told anew). */
+  shownWanted = 0;
   /** A read-only mirror of a ship another zone simulates (zones/zone.ts). */
   ghost = false;
   ghostZone = '';
@@ -620,6 +624,14 @@ export class ShipEntity {
     // False Colors: a nameless merchant under a borrowed flag.
     if (this.hasFlag('false_colors')) {
       return { id: this.id, kind: 'ship', name: 'Unknown Merchant', classId: this.loadout.classId, faction: 'league', captainName: '', npcRole: 'merchant', isPlayer: false, level: 1, wanted: 0, shipLevel: this.shipLevel };
+    }
+    // Under the pirate flag (forum 46): only what the eye sees — no level, no ⚓, no army, no armour to reckon by.
+    if (this.masked) {
+      return {
+        id: this.id, kind: 'ship', name: this.name, classId: this.loadout.classId, faction: this.faction, masked: true,
+        captainName: this.captainName, captainId: this.isPlayer ? this.captain : undefined, isPlayer: this.isPlayer, wanted: this.wantedCache, guild: this.guildTag ?? undefined,
+        title: this.title ?? undefined, pennant: this.pennant ?? undefined, look: this.look ?? undefined, lfg: this.lfg ?? undefined, cos: this.cos ?? undefined,
+      };
     }
     return {
       id: this.id, kind: 'ship', name: this.name, classId: this.loadout.classId, faction: this.faction,

@@ -10,7 +10,8 @@ const L = dict(EN, RU);
 
 export interface TargetInfo {
   name: string;
-  level?: number;
+  /** Her ⚓ («?»: a captain under the pirate flag, forum 46). */
+  level?: number | '?';
   /** Her hull left, 0–1. */
   hull?: number;
   /** Her crew left, 0–1 (the sea fight's second bar, docs/23 item 31). */

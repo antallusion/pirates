@@ -201,6 +201,7 @@ import { BOARD_ABEAM, BOARD_FAR, BOARD_SPEED, canBoard, claimPrize, cutGrapples,
 import { assistPref, joinBoarding } from './boardgroup.ts'; // docs/25 block Е
 import { tacAction } from './tactical.ts';
 import { battleCardClosed, inBattle, SELF_IN_BATTLE_WHY, untouchable } from './inbattle.ts'; // owner, 2026-10-22
+import { askExit, boostsView, exitOnOrder, exitSecond } from './exit.ts'; // «Выход» and the lingering ship (forum 45)
 import { allStop, cardSent, holdSail, orderDone } from './allstop.ts'; // owner, 2026-10-22: every action stops her
 import { replayList, replayOf } from './tacreplay.ts'; // owner, 2026-10-16: «Повтор»
 import { SURRENDER_FAR, SURRENDER_RANGE, surrenderBlocked, surrenderClosed, surrenderNear } from './struck.ts';
@@ -1261,6 +1262,8 @@ export class Game {
         return;
       }
       if (!s.ship || !s.profile) return;
+      exitSecond(this, s); // «Выход» (forum 45): called off by a shot or a battle, or her moment come
+      if (s.leaving) return;
       // An order that waited for the shot to stop: given again now she is clear.
       if (s.whenClear) {
         // Its moment gone: the time out, or she boarded, grappled, sunk or in port since (a boarding is its own fight).
@@ -3616,6 +3619,7 @@ export class Game {
     // The same order pressed again supersedes the one held (no second purchase, no second landing when the first comes).
     if (s.whenClear && s.whenClear.msg !== msg && s.whenClear.msg.t === msg.t) s.whenClear = null;
     try {
+      exitOnOrder(this, s, msg); // «Выход» (forum 45): an order that does a thing calls her safe exit off
       // Her boats or her hands sent to a place end her «Атаковать» (unless shot is flying at her: then the order waits).
       const work = !!s.ship && workOrder(msg as { t: string; action?: string });
       // A long passage (owner, 2026-10-28, passage.ts): nothing that stops, turns or fights her, nothing done at sea.
@@ -3661,6 +3665,7 @@ export class Game {
     if (msg.t === 'ping') return this.sendTo(s, { t: 'pong', c: msg.c, s: this.now });
     if (msg.t === 'hello') return this.onHello(s, msg);
     if (!s.authed) return this.sendTo(s, { t: 'err', msg: 'Not authenticated' });
+    if (msg.t === 'logout') return askExit(this, s, msg.cancel === true); // «Выход» (forum 45, exit.ts)
     if (msg.t === 'create_captain') return this.onCreateCaptain(s, msg.captain, msg.shipName, msg.tutorial === true);
     if (msg.t === 'captain_shop') return captainShopMessage(this, s, msg); // premium captains cost money (owner, 2026-10-19)
     const ship = s.ship;
@@ -4882,6 +4887,10 @@ export class Game {
       s.ship = existing.ship;
       s.discovered = existing.discovered;
       s.pendingBoarding = existing.pendingBoarding;
+      // (forum 45: her lingering ship's orders are hers again — her gun crews' switches with her helmsman's course)
+      s.autoFire = existing.autoFire;
+      s.autoWeak = existing.autoWeak;
+      s.expert = existing.expert;
     }
     s.accountId = auth.accountId;
     s.name = auth.name;
@@ -5000,7 +5009,7 @@ export class Game {
     s.knownChunks.clear();
     this.lastSelf.delete(s); // the init carries the whole private state
     this.sendTo(s, {
-      t: 'init', self: toPrivateState(s, this.now, this.worldView(s)), ports, currents: this.world.currents, whirlpools: this.world.whirlpools, discovered: [...s.discovered], time: this.now, entityId: s.ship!.id,
+      t: 'init', self: { ...toPrivateState(s, this.now, this.worldView(s)), boosts: boostsView(this, s) }, ports, currents: this.world.currents, whirlpools: this.world.whirlpools, discovered: [...s.discovered], time: this.now, entityId: s.ship!.id,
       sectors: sectorGrid(this.world).map((x) => (x.pocket ? { l: x.level, p: x.pocket } : { l: x.level })), // the squares of the sea (docs/16 P2)
     });
     // Islands the captain has charted are sent up front so the world map is complete.
@@ -5059,10 +5068,34 @@ export class Game {
     }
     const barter = this.social.barters.get(s.accountId);
     if (barter) cancelBarter(this, barter, `${s.name} has gone`);
-    // Ships at sea linger (anti combat-logging); docked ships leave at once.
-    s.lingerUntil = s.ship && !s.ship.docked ? this.now + LOGOUT_TIMER_SEC : this.now;
-    if (s.ship) s.ship.input = { rudder: 0, sailTarget: 0 };
+    // Ships at sea linger (anti combat-logging; forum 45: two minutes, her last order on — exit.ts); docked ships, and a
+    // ship whose captain left by «Выход», leave at once.
+    s.lingerUntil = s.ship && !s.ship.docked && s.ship.alive && !s.leaving ? this.now + LOGOUT_TIMER_SEC : this.now;
+    s.exitAt = 0;
+    // (the helmsman's course, «Атаковать» and her gun crews go on — Game.helmSessions; by her own hand, her course held
+    // with the sails as they were)
+    if (s.ship) s.ship.input = { rudder: 0, sailTarget: s.ship.input.sailTarget };
     this.saveSession(s);
+    if (s.lingerUntil <= this.now) this.retireSession(s);
+  }
+
+  /** She leaves the sea now (forum 45, exit.ts: «Выход» in port, or its safe half-minute at sea run out): her screen told
+   *  («Вы вышли»), her ship out of the world at once — no lingering — and her line closed with no reconnect (4003). */
+  leaveWorld(s: PlayerSession): void {
+    if (s.leaving || !this.sessions.has(s)) return;
+    this.sendTo(s, { t: 'exit', until: 0, done: true });
+    s.leaving = true;
+    s.exitAt = 0;
+    s.conn.onClose = () => {};
+    this.onDisconnect(s);
+    s.conn.close(4003, 'exit');
+  }
+
+  /** The captains at their helms: those aboard and those whose ship lingers at sea after a dropped line (forum 45: her
+   *  helmsman's course, «Атаковать» and her gun crews go on for her). */
+  *helmSessions(): Iterable<PlayerSession> {
+    yield* this.sessions;
+    for (const s of this.byAccount.values()) if (s.disconnectedAt !== null && !this.sessions.has(s)) yield s;
   }
 
   private retireSession(s: PlayerSession): void {
@@ -5281,6 +5314,7 @@ export class Game {
   pushSelf(s: PlayerSession, force = false): void {
     if (!s.profile) return;
     const state = toPrivateState(s, this.now, this.worldView(s));
+    state.boosts = boostsView(this, s); // forum 45: the effects' row by her portrait
     state.advice = captainAdvice(this, s);
     state.isleFirst = isleFirstView(this, s);
     state.noHire = !!s.ship && noHire(s, state.advice?.best); // owner, 2026-10-29: no hint drives her to hire

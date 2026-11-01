@@ -48,7 +48,7 @@ export function havenSecond(game: Game, s: PlayerSession): void {
     ship.havenOf = cove.id;
     game.sendTo(s, { t: 'toast', msg: `At anchor in ${cove.name}: hidden from patrols, the carpenters at work.`, kind: 'good' });
   }
-  ship.addEffect({ id: 'haven', until: game.now + 1.6, flags: ['hidden'] }, game.now);
+  ship.addEffect({ id: 'haven', until: game.now + 1.6, flags: ['sheltered'] }, game.now); // hidden from patrols, never from captains (forum 45)
   if (ship.hull < ship.stats.hullMax * HAVEN_CAP) ship.hull = Math.min(ship.stats.hullMax * HAVEN_CAP, ship.hull + ship.stats.hullMax * 0.004);
   if (ship.sails < ship.stats.sailHpMax * HAVEN_CAP) ship.sails = Math.min(ship.stats.sailHpMax * HAVEN_CAP, ship.sails + ship.stats.sailHpMax * 0.005);
   ship.sanity = Math.min(100, ship.sanity + 0.3);
