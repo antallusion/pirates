@@ -3,6 +3,7 @@
 // Snapshot entity rows are positional arrays to keep packets small; see docs/04_TECHNICAL_ARCHITECTURE.md
 // for the planned binary encoding.
 
+import type { AwayCrewOut } from './data/crewaway.ts';
 import type { OutcomeNums } from './data/outcome.ts';
 import type { ArmyAdvice } from './data/armyadvice.ts';
 import type { BuyFail, BuySeller } from './data/buyfail.ts';
@@ -836,7 +837,8 @@ export interface PrivateState {
     /** Groupmates on the same quest (docs/11 P6), and the step each is on. */ mates?: { name: string; step: number }[];
     /** The campaign's opening (owner, 2026-10-19): the step the guide points through — `buy:<shop>`, `sink`, `board`, `neutral`, `found`. */ op?: string;
     /** owner, 2026-10-23: the step's action in port (shared/src/data/questact.ts) — its button once she lies in the right harbour. */ act?: QuestAct;
-    /** The story's step done at sea by a button of the bar (a campaign quest after the opening): the finger's way to it. */ does?: 'sink' | 'board' | 'neutral' | 'land' }[];
+    /** The story's step done at sea by a button of the bar (a campaign quest after the opening): the finger's way to it. */ does?: 'sink' | 'board' | 'neutral' | 'land';
+    /** Forum post 45: where it was taken (and is handed in) — the port's id, or the island whose people gave it. The journal groups by it. */ from?: { port?: string; island?: number } }[];
   questsDone: string[];
   /** docs/36: her place in the main campaign. */
   campaign?: CampaignView;
@@ -1394,6 +1396,10 @@ export interface AwayView {
   weekly: { kind: WeeklyKind; region: RegionId; place: number | null; value: number; leader: string | null }[];
   lastWeek: { kind: WeeklyKind; region: RegionId; winner: string }[];
   gift: { silver: number; speedups: number; provisions: number } | null;
+  /** «Расчёт за время отсутствия» (forum post 45): what her crew ate at sea or drank in port while she was away. */
+  upkeep?: AwayCrewOut & { crew: number };
+  /** Only the reckoning (away under AWAY_MIN_H: no news of the sea, no gift). */
+  brief?: boolean;
 }
 
 export interface LegendsView {

@@ -341,6 +341,18 @@ export function crewFactor(stats: ShipStats, crew: number): number {
   return Math.min(1, crew / needed);
 }
 
+/** Forum post 45: hands on the sails. Under HANDS_FULL of her berths she loses way, linearly to HANDS_LOSS at HANDS_HALF
+ *  (and no more below it: there the handling itself, crewFactor, takes over). A newcomer's sloop (20–28 of 28) is never
+ *  touched; a ship bled to half her crew in a fight is 15 % slower. */
+export const HANDS_FULL = 0.7;
+export const HANDS_HALF = 0.5;
+export const HANDS_LOSS = 0.15;
+export function handsSpeedMul(stats: Pick<ShipStats, 'crewMax'>, crew: number): number {
+  const share = Math.max(0, crew) / Math.max(1, stats.crewMax);
+  const k = Math.max(0, Math.min(1, (HANDS_FULL - share) / (HANDS_FULL - HANDS_HALF)));
+  return 1 - HANDS_LOSS * k;
+}
+
 /** Crew needed to man every gun on one side plus the sailing crew. */
 export function gunCrewFactor(stats: ShipStats, loadout: ShipLoadout, crew: number): number {
   const perGun = Math.max(GUNS[loadout.guns.port].crewPerGun, GUNS[loadout.guns.starboard].crewPerGun);

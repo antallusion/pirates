@@ -496,7 +496,7 @@ const ISLE_FROM = ['The island watch', 'Outposts'];
 const AUCTION_FROM = ['The Auction House', 'Tidewrack Auction House'];
 
 /** Back aboard: after twelve hours or more, what happened and a gift waiting. */
-export function awayReturn(game: Game, s: PlayerSession): AwayView | null {
+export function awayReturn(game: Game, s: PlayerSession, upkeep: AwayView['upkeep'] | null = null): AwayView | null {
   const p = s.profile;
   if (!p) return null;
   const r = rn(p);
@@ -504,7 +504,8 @@ export function awayReturn(game: Game, s: PlayerSession): AwayView | null {
   r.away = null;
   if (!a) return null;
   const hours = (game.wallNow() - a.at) / 3_600_000;
-  if (hours < AWAY_MIN_H) return null;
+  // forum post 45: a shorter break shows only her crew's reckoning, when there was one
+  if (hours < AWAY_MIN_H) return upkeep ? { hours: Math.round(hours * 10) / 10, isle: null, auction: [], letters: { n: 0, unread: 0, from: [] }, world: [], weekly: [], lastWeek: [], gift: null, upkeep, brief: true } : null;
   const letters = lettersSince(game, s.accountId, a.at);
   const isle = isleNow(game, s.accountId);
   const w = weeklyView(game, s);
@@ -520,6 +521,7 @@ export function awayReturn(game: Game, s: PlayerSession): AwayView | null {
     weekly: w.challenges.map((c) => ({ kind: c.kind, region: c.region, place: c.place, value: c.mine, leader: c.top[0]?.name ?? null })),
     lastWeek: hist.flatMap((h) => h.list.filter((c) => c.top.length).map((c) => ({ kind: c.kind, region: c.region, winner: c.top[0].name }))).slice(-6),
     gift: r.gift ?? null,
+    ...(upkeep ? { upkeep } : {}),
   };
   toast(game, s, `Welcome back, captain: ${view.hours} h away. A gift waits for you.`, 'info');
   return view;

@@ -24,7 +24,7 @@ import type { Aggression, ShipInfo, Side, Station } from '../../../shared/src/pr
 import { SF, curseStage } from '../../../shared/src/protocol.ts';
 import type { SailInput, SailParams, SailState } from '../../../shared/src/sim/sailing.ts';
 import type { AmmoStock, Cargo, ShipLoadout, ShipStats, TrophyHistory } from '../../../shared/src/sim/shipstats.ts';
-import { computeShipStats, crewFactor, loadFactor, sailTalents } from '../../../shared/src/sim/shipstats.ts';
+import { computeShipStats, crewFactor, handsSpeedMul, loadFactor, sailTalents } from '../../../shared/src/sim/shipstats.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { Landing } from './exploration.ts';
 import type { Tether } from './mounts.ts';
@@ -562,7 +562,7 @@ export class ShipEntity {
       crewFactor: crewFactor(st, this.crew),
       loadFactor: loadFactor(this.loadout, st, this.cargo, this.ammo) * (1 - 0.4 * Math.min(1, this.water / (st.holdWeight * 0.5 + st.length * 2))),
       // (torn rigging, the Reaver's ram: a multiplier on top of every buff of her speed — owner, 2026-10-29)
-      speedMul: (night ? 1 + st.nightSpeed : 1) * (this.hull < st.hullMax * 0.3 ? 0.85 : 1) * tornRiggingMul(this.effects, now) * this.overloadMul(),
+      speedMul: (night ? 1 + st.nightSpeed : 1) * (this.hull < st.hullMax * 0.3 ? 0.85 : 1) * tornRiggingMul(this.effects, now) * this.overloadMul() * (this.isPlayer ? handsSpeedMul(st, this.crew) : 1), // forum post 45: hands on the sails
       personalWind: st.flags.has('personal_wind'),
       weatherly: this.cls.passive.id === 'weatherly',
       sweeps: this.cls.passive.id === 'sweeps',

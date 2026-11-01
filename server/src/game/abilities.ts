@@ -13,7 +13,7 @@ import { comboCue, kitNums, skillNumber } from './seaskill.ts';
 import { siegeImpact } from './siege.ts';
 import type { Game } from './Game.ts';
 import type { ShipEntity } from './ship.ts';
-import { RECKONING_SEC, RECKONING_SPEED, charted } from './charting.ts';
+import { RECKONING_SPEED, reckoningSec } from './charting.ts';
 import { chartSeaAround } from './isles.ts';
 
 export interface DelayedStrike {
@@ -205,12 +205,11 @@ export function useAbility(game: Game, ship: ShipEntity, abilityId: string, tx?:
       // reckoning is exact — a lasting use once the map is done (charting.ts).
       const sSelf = game.sessionOf(ship);
       const marks = sSelf ? chartSeaAround(game, sSelf, ship.state.x, ship.state.y, 7000) : 0;
-      if (found > 0) game.toastShip(ship, `Star fix taken: ${found} new islands charted.`, 'good');
-      else {
-        ship.addEffect({ id: 'star_reckoning', until: now + RECKONING_SEC, mods: { maxSpeed: RECKONING_SPEED } }, now);
-        game.toastShip(ship, `Star fix taken: no new islands within 7 km. The reckoning is exact: +${Math.round(RECKONING_SPEED * 100)}% speed for ${RECKONING_SEC / 60} min; ${marks} marks of the sea on your chart.`, 'good');
-      }
-      if (sSelf) charted(game, sSelf, 'star');
+      // forum post 45: the reckoning after every fix, whatever it found — longer by the log sailed since the last
+      const sec = reckoningSec(game, sSelf);
+      ship.addEffect({ id: 'star_reckoning', until: now + sec, mods: { maxSpeed: RECKONING_SPEED } }, now);
+      if (found > 0) game.toastShip(ship, `Star fix taken: ${found} new islands charted. The reckoning is exact: +${Math.round(RECKONING_SPEED * 100)}% speed for ${sec / 60} min.`, 'good');
+      else game.toastShip(ship, `Star fix taken: no new islands within 7 km. The reckoning is exact: +${Math.round(RECKONING_SPEED * 100)}% speed for ${sec / 60} min; ${marks} marks of the sea on your chart.`, 'good');
       game.emit({ k: 'fx', fx: 'star_fix', x: Math.round(ship.state.x), y: Math.round(ship.state.y), r: 7000 }, ship.state.x, ship.state.y);
       // The weak angles of the foes within 750 m (item 31), and the combo's broadside (item 41).
       k.star = { until: now + dur, bonus: n.rake ?? 0.2, combo: true, sure: !!n.sure };

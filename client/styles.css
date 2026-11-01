@@ -1658,6 +1658,16 @@ h3 .ship-over { display: block; font-size: 13px; margin-top: 2px; }
 .jr-go { flex: none; display: grid; place-items: center; min-width: 40px; padding: 0 6px; border: 1px solid rgba(217, 178, 90, 0.55); background: rgba(217, 178, 90, 0.1); color: var(--gold); cursor: pointer; }
 .jr-go:hover { border-color: var(--gold); }
 .jr-go .ico-sm { margin: 0; }
+/* forum post 45: the quests grouped by where they were taken (and are handed in), each with its distance */
+.jr-grp { display: grid; gap: 4px; }
+.jr-grp + .jr-grp { margin-top: 6px; }
+.jr-grp-h { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; margin: 0; padding: 2px 2px 3px; border-bottom: 1px solid rgba(217, 178, 90, 0.35); font: 600 13px var(--sans); color: var(--gold); letter-spacing: 0.02em; }
+.jr-grp-h .ico-sm { margin: 0; }
+.jr-grp-hand { font-weight: 400; font-size: 12px; color: var(--bone); opacity: 0.75; }
+.jr-dist { color: var(--bone); white-space: nowrap; }
+.jr-grp-daily .map-daily { margin: 0; }
+.aw-upkeep.short { border-color: rgba(190, 90, 70, 0.6); }
+.ship-hands { display: block; }
 @media (max-width: 699px) {
   /* one column: the list first (the chosen one's card under it) — the card on top hid every quest but one below the
      fold, the journal looked empty (owner, 2026-10-16: «в журнале у меня нет заданий вообще») */

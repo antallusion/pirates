@@ -1,5 +1,6 @@
 // Player session and persistent captain profile, plus progression, reputation and wanted rules.
 
+import type { NavLog } from './charting.ts';
 import { holdView } from '../../../shared/src/data/overload.ts';
 import { SnapState } from '../../../shared/src/codec.ts';
 import { streakView } from './streak.ts';
@@ -175,6 +176,8 @@ export interface Profile {
    *  pages made. */
   soundings?: number;
   soundingPages?: number;
+  /** Forum post 45: her log — the distance sailed between distinct points (charting.ts), the navigator's perks' measure. */
+  navLog?: NavLog;
   /** Her island's scouts (fog.ts) and the last scout's number. */
   scouts?: ScoutRec[];
   scoutSeq?: number;
@@ -715,6 +718,8 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
         ...((o) => (o ? { op: o } : {}))(openingStep(def, q.step)),
         ...((a) => (a ? { act: a } : {}))(questAct(def.steps[q.step])),
         ...((d) => (d ? { does: d } : {}))(storyStep(def, q.step)),
+        // forum post 45: the journal groups the quests by where they were taken (and are handed in)
+        ...(def.island !== undefined ? { from: { island: def.island, ...(def.port ? { port: def.port } : {}) } } : def.port ? { from: { port: def.port } } : {}),
       };
     }),
     questsDone: p.quests.done,

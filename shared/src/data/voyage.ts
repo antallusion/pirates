@@ -4,6 +4,7 @@
 // asks it (client/src/ui/depart.ts), the server eats by the same rate (Game.ts shipUpkeep).
 
 import { HULL_PER_PLANK, SAILS_PER_CLOTH } from './dealings.ts';
+import { HANDS_FULL } from '../sim/shipstats.ts';
 
 /** Provisions 40 hands eat in a minute at sea (docs/30: it was 6 — a starter sloop of 28 ate 252 units, 3 000 silver, an
  *  hour, more than her whole income at levels 1–3 (seaHour 1 920), and half her hold lasted 3½ minutes, so every novice
@@ -95,9 +96,10 @@ export function voyageFood(s: Pick<VoyageShip, 'crew' | 'provisionUse' | 'holdVo
   return Math.max(1, Math.min(want, Math.floor((s.holdVolume * FOOD_HOLD_SHARE) / Math.max(0.05, s.provisionVolume))));
 }
 
-/** The hands she wants: enough to sail at her best (crewFactor 1), never past her berths. */
+/** The hands she wants: enough to sail at her best, never past her berths — forum post 45: the hands on the sails
+ *  (shipstats.ts handsSpeedMul) want HANDS_FULL of her berths; it was 0.55, the handling's own mark (crewFactor 1). */
 export function voyageCrew(s: Pick<VoyageShip, 'crewMin' | 'crewMax'>): number {
-  return Math.min(s.crewMax, Math.ceil(Math.max(s.crewMin, s.crewMax * 0.55)));
+  return Math.min(s.crewMax, Math.ceil(Math.max(s.crewMin, s.crewMax * HANDS_FULL)));
 }
 
 /** What is short for a normal voyage, most pressing first; empty when she is ready. */

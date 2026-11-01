@@ -136,3 +136,35 @@ export function pruneLog(log: LogEntry[], today: number): void {
   if (cut) log.splice(0, cut);
   if (log.length > LOG_MAX) log.splice(0, log.length - LOG_MAX);
 }
+
+// ------------------------------------------------------------------------------------------ lines for one away
+
+/** Lines waiting for a captain who is not aboard anywhere here (forum post 45: the routine notices of her island and
+ *  her automation — the week's supply, a lease renewed, a caravan's run — are written into «Хроника», not posted). */
+const QUEUE_MAX = 60;
+const queueKey = (account: number) => `chronq:${account}`;
+
+/** A line of her chronicle whether she is aboard or not: written at once when her captain is loaded here (aboard or
+ *  her ship still lingering), else kept and written when she comes back (chronicleOnLogin). */
+export function logAccount(game: Game, account: number, kind: LogKind, a: string[], n?: number): void {
+  if (account < 0) return;
+  const s = game.sessionByAccount(account);
+  if (s?.profile) return logNote(game, s, kind, a, n);
+  const q = game.db.getKv<LogEntry[]>(queueKey(account)) ?? [];
+  q.push({ at: game.wallNow(), day: 0, tod: Math.round(timeOfDay(game.now) * 1000) / 1000, kind, a, ...(n !== undefined ? { n } : {}) });
+  game.db.setKv(queueKey(account), q.slice(-QUEUE_MAX));
+}
+
+/** Back aboard: the lines kept while she was away go into her chronicle, by their own time. */
+export function chronicleOnLogin(game: Game, s: PlayerSession): void {
+  const p = s.profile;
+  if (!p) return;
+  const q = game.db.getKv<LogEntry[]>(queueKey(s.accountId));
+  if (!q?.length) return;
+  game.db.setKv(queueKey(s.accountId), []);
+  const day = voyageDay(game, p.createdAt);
+  const log = (p.log ??= []);
+  for (const e of q) log.push({ ...e, day });
+  log.sort((x, y) => x.at - y.at);
+  pruneLog(log, day);
+}

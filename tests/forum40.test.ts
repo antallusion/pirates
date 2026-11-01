@@ -137,13 +137,11 @@ test('the navigator\'s charting once every island is charted: pages of soundings
   ship.recompute(game.now);
   ship.morale = 50;
   const xp0 = s.profile!.xp + s.profile!.level * 1e9;
-  soundings(game, s, SOUNDING_PAGE - 1);
-  assert.ok(!ship.effects.some((e) => e.id === 'pathfinder'), 'not yet a page');
-  soundings(game, s, 1);
-  assert.ok(ship.effects.some((e) => e.id === 'pathfinder'), '«Первопроходец» on a page of soundings');
-  assert.equal(ship.morale, 55);
+  // forum post 45: a page of soundings is only counted now — the perks go by the log (tests/forum45.test.ts)
+  soundings(game, s, SOUNDING_PAGE);
   assert.equal(s.profile!.soundingPages, 1);
-  assert.ok(s.profile!.xp + s.profile!.level * 1e9 > xp0, '«Картограф»: a page\'s experience');
+  assert.ok(!ship.effects.some((e) => e.id === 'pathfinder'), 'no perk on soundings any more');
+  assert.equal(s.profile!.xp + s.profile!.level * 1e9, xp0);
   // Every island within 7 km charted already: the star fix's reckoning.
   for (const is of game.world.islands) if (Math.hypot(is.x - ship.state.x, is.y - ship.state.y) < 8000) s.discovered.add(is.id);
   s.profile!.cooldowns = {};
