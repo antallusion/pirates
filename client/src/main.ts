@@ -1426,9 +1426,17 @@ for (const [id, art, label, tip, go] of [
   const b = t.content.firstElementChild as HTMLButtonElement;
   b.insertAdjacentHTML('beforeend', `<span class="tc-crew-l">${label}</span>`);
   b.title = tip;
+  b.dataset.art = art;
   b.addEventListener('click', go);
   $('touch').append(b);
 }
+// (made before the art's list is in: their pictures put in as the tray opens)
+document.getElementById('tc-more')?.addEventListener('click', () => {
+  for (const b of document.querySelectorAll<HTMLElement>('#tc-foe, #tc-gohome')) {
+    const g = b.querySelector('.k-btn-ico.glyph'), art = b.dataset.art;
+    if (g && art && assetUrl(`icon.${art}`)) g.outerHTML = icon(art, '', 'k-btn-ico');
+  }
+}, true);
 /** «Плыть к своему острову» (forum 45): the course to her island's roads (the route `own`, goalroute.ts); before she
  *  holds one, to the nearest free island — said so. */
 function sailHome(): void {
