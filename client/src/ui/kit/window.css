@@ -317,7 +317,9 @@
 /* ---------- The world map (worldmap.ts, docs/23 item 73): the layers in the band; on a phone the chart alone, the
    side logs folded away (the journal has them); a tap's «Плыть туда» big, under the chart's middle. */
 #modal-panel[data-modal="map"] .map-wrap { position: relative; }
-#modal-panel[data-modal="map"] .map-wp-acts { position: absolute; left: 50%; bottom: var(--k-sp-3); transform: translateX(-50%); z-index: 3; display: flex; align-items: center; gap: var(--k-sp-2); top: auto; right: auto; }
+/* (forum 45: the buttons and the key share one wrapping row at the chart's foot — styles.css .map-bar; the centred
+   absolute row lay over the key at some sizes and zooms) */
+#modal-panel[data-modal="map"] .map-wp-acts { position: static; transform: none; z-index: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--k-sp-2); }
 #modal-panel[data-modal="map"] .map-wp-acts > .hidden { display: none; }
 .map-wp-sail .map-wp-name { font: 600 var(--k-fs-1) var(--k-font-sans); color: var(--k-bone); text-shadow: none; }
 .map-wp-sail .map-wp-name:empty { display: none; }
@@ -325,7 +327,7 @@
   #modal-panel[data-modal="map"]:has(> .map-logs) { display: flex; flex-direction: column; }
   #modal-panel[data-modal="map"] > .map-logs { display: none; }
   #modal-panel[data-modal="map"] > .map-wrap { flex: 1 1 auto; min-height: 0; }
-  #modal-panel[data-modal="map"] .map-legend { position: absolute; left: var(--k-sp-2); bottom: var(--k-sp-2); border-width: 1px; max-width: 46%; }
+  #modal-panel[data-modal="map"] .map-legend { position: static; border-width: 1px; max-width: 100%; }
 }
 
 /* ---------- The older windows on a phone (docs/23 item 78): their head in one band, every control a finger wide */

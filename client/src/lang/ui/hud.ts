@@ -225,6 +225,7 @@ export const EN = {
   "i1.wait": "the barracks rise in {t}",
   "i1.waitDw1": "the bunkhouse rises in {t}",
   "i1.first": "the Bunkhouse first — next to free",
+  "i1.own": "under construction: {t} left",
   // forum 2026-10-30 (Нефигугум): the hold's bar, the overload, the escorts' bars
   holdOver: 'OVERLOAD',
   holdT: 'Hold: {used} of {max} m³ ({pct}%). Overloaded from {at}%.',
@@ -468,4 +469,5 @@ export const RU: Record<keyof typeof EN, string> = {
   "i1.wait": "казарма будет через {t}",
   "i1.waitDw1": "кубрик будет через {t}",
   "i1.first": "сначала Кубрик — почти даром",
+  "i1.own": "строится, ещё {t}",
 };

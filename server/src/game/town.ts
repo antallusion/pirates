@@ -192,6 +192,7 @@ export function finishTown(game: Game, h: Holding, y: Yard, isl: Island, j: Base
   game.holdings.touch();
   const s = h.owner.kind === 'player' ? game.sessionByAccount(h.owner.id) : undefined;
   if (!s) return;
+  townHooks.built?.(game, s, id, j.level); // forum 45: a step counts the building once it stands
   game.sendTo(s, { t: 'toast', msg: isTree(id) ? `${townName(id, j.level)} on ${isl.name}: level ${j.level} of 5.` : `${townName(id, j.level)} rises on ${isl.name}.`, kind: 'good' });
 }
 

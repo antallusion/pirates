@@ -5976,3 +5976,31 @@ html.app-paused *, html.app-paused *::before, html.app-paused *::after { animati
 /* Forum post 40: the key explains every symbol in a line — a long one wraps inside the key, never past its edge. */
 .map-legend .lg-items > span { white-space: normal; align-items: flex-start; max-width: 100%; }
 .map-legend .lg-items > span > b, .map-legend .lg-items > span > .ico { flex: 0 0 auto; }
+
+/* Forum 45: the chart's foot — the key on the left, her mark's buttons and «Где я», «К острову», «Найти врага» on the
+   right, in one row that wraps (never one over another) at any size and any browser zoom. */
+.map-wrap .map-bar { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 2; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px; pointer-events: none; }
+.map-wrap .map-bar > * { pointer-events: auto; }
+.map-wrap .map-bar .map-legend { position: static; margin: 0 auto 0 0; max-width: 100%; min-width: 0; flex: 0 1 auto; }
+.map-wrap .map-bar .map-wp-acts { position: static; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; margin-left: auto; max-width: 100%; pointer-events: none; }
+.map-wrap .map-bar .map-wp-acts > .k-btn { pointer-events: auto; flex: 0 0 auto; }
+.map-wrap .map-bar .map-wp-acts .k-btn-l { overflow: hidden; text-overflow: ellipsis; }
+.map-wrap .map-bar .map-wp-name:empty { display: none; }
+@media (max-height: 520px), (max-width: 760px) {
+  .map-wrap .map-bar { left: 4px; right: 4px; bottom: 4px; gap: 4px; }
+  .map-wrap .map-bar .map-wp-acts { gap: 4px; }
+  .map-wrap .map-bar .k-btn { min-height: 34px; padding: 3px 8px; font-size: 12px; }
+  .map-wrap .map-bar .k-btn--lg { min-height: 38px; }
+  .map-wrap .map-bar .k-btn-ico { width: 18px; height: 18px; }
+}
+@media (max-width: 699px) {
+  .map-wrap .map-bar { position: static; padding: 4px; }
+  .map-wrap .map-bar .map-legend { flex: 1 1 100%; }
+}
+/* (a phone on its side: «Где я», «К острову», «Найти врага» as round icons — their names in the tooltip and aria — so
+   the foot keeps to one or two rows and the chart its room) */
+@media (max-height: 420px) {
+  .map-wrap .map-bar .map-x { min-width: 38px; padding: 3px 7px; }
+  .map-wrap .map-bar .map-x .k-btn-l { display: none; }
+  .map-wrap .map-bar .map-x .k-btn-ico { width: 22px; height: 22px; margin: 0; }
+}

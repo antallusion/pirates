@@ -1136,7 +1136,7 @@ export class Hud {
     const docked = !!state.self!.dockedAt;
     const btn = v!.id === 'hire' ? L(docked || state.wayView ? 'i1.hireBtn' : 'i1.toPort') : L('i1.build');
     const wait = v!.wait > 0 ? Math.ceil(v!.wait / 60) : 0;
-    const key = `${lang()}|${v!.id}|${v!.open}|${v!.step}|${v!.ready ? 1 : 0}|${wait}|${docked ? 1 : 0}|${state.wayView ? 1 : 0}|${v!.stuck ?? ''}`;
+    const key = `${lang()}|${v!.id}|${v!.open}|${v!.step}|${v!.ready ? 1 : 0}|${wait}|${docked ? 1 : 0}|${state.wayView ? 1 : 0}|${v!.stuck ?? ''}|${v!.own ? 1 : 0}`;
     // under her frame, or under the weak army's badge (measured now and then: the HUD's layout moves)
     const now = performance.now();
     if (key !== this.i1Key || now - this.i1At > 1000) {
@@ -1165,7 +1165,7 @@ export class Hud {
     this.i1Key = key;
     el.classList.remove('hidden');
     const mins = `${wait} ${lang() === 'ru' ? 'мин' : 'min'}`;
-    const sub = v!.open === 'dw1' ? L('i1.first') : wait > 0 ? L(v!.id === 'dw2' ? 'i1.waitDw1' : 'i1.wait', { t: mins }) : L('i1.reward', { n: fmt(v!.silver) });
+    const sub = v!.own && wait > 0 ? L('i1.own', { t: mins }) : v!.open === 'dw1' ? L('i1.first') : wait > 0 ? L(v!.id === 'dw2' ? 'i1.waitDw1' : 'i1.wait', { t: mins }) : L('i1.reward', { n: fmt(v!.silver) });
     // (owner, 2026-10-29: no marine to be had — a calm line and the way to the army's own hand, never «Нанять»)
     const stuck = v!.id === 'hire' ? v!.stuck : undefined;
     const go = stuck === 'silver' ? '' : stuck ? `<button type="button" class="btn btn-small" data-i1go="army">${esc(L('i1.armyBtn'))}</button>` : `<button type="button" class="btn btn-small${v!.ready ? ' btn-primary' : ''}" data-i1go="${v!.id === 'hire' ? 'hire' : v!.open}">${esc(btn)}</button>`;

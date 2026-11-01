@@ -21,11 +21,15 @@ export function rightClickAct(f: { docked: boolean; mount: boolean }): 'mount' |
  *  - the open sea: a course to the point (`sea`).
  *  A window open: nothing (the tap was not the sea's). A long passage or a boarding: `blocked` — a word why, never a
  *  silent tap. */
-export type SeaTap = 'none' | 'target' | 'chase' | 'thing' | 'port' | 'place' | 'sea' | 'blocked';
-export function seaTapPlan(f: { mark: 'ship' | 'roam' | null; again: boolean; thing: boolean; place: 'port' | 'isle' | 'wreck' | null; modal: boolean; blocked: boolean }): SeaTap {
+/** Forum 45 (topic 8: «радиальное меню по клику на всё кликабельное»): a thing of the sea or an island tapped is first
+ *  its ring (`ring`, thingring.ts) — its order, «Плыть к нему», ⓘ; tapped again while its ring is up (`ringAgain`),
+ *  its own order as before. The open sea is never a ring: it sails. */
+export type SeaTap = 'none' | 'target' | 'chase' | 'ring' | 'thing' | 'port' | 'place' | 'sea' | 'blocked';
+export function seaTapPlan(f: { mark: 'ship' | 'roam' | null; again: boolean; thing: boolean; place: 'port' | 'isle' | 'wreck' | null; modal: boolean; blocked: boolean; ring?: boolean; ringAgain?: boolean }): SeaTap {
   if (f.modal) return 'none';
   if (f.mark && !f.again) return 'target';
   if (f.blocked) return 'blocked';
+  if (f.ring && !f.ringAgain && !f.mark) return 'ring';
   if (f.mark) return 'chase';
   if (f.thing) return 'thing';
   if (f.place === 'port') return 'port';

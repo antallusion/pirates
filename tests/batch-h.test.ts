@@ -144,7 +144,7 @@ test('dead to windward he beats on sensible tacks and still makes the mark', () 
   assert.ok(inIrons < ticks * 0.1, `not stuck head to wind (${inIrons}/${ticks})`);
 });
 
-test('a steady idle helm is swallowed; a turn of the wheel or a change of sail takes the wheel back', () => {
+test('a steady idle helm is swallowed; a turn of the wheel takes the wheel back, a change of sail keeps the course (forum 45)', () => {
   const { game } = makeGame();
   fair(game);
   const is = game.world.islands[ISLE];
@@ -162,11 +162,12 @@ test('a steady idle helm is swallowed; a turn of the wheel or a change of sail t
   assert.equal(autosailOf(ship), null);
   assert.equal(lastAuto(c)!.why, 'manual');
   assert.equal(ship.input.rudder, -1, 'her own helm goes through at once');
-  // The sheets too.
+  // The sheets: a speed, the course kept (forum 45).
   c.push({ t: 'autosail', x: is.x - is.radius - 1500, y: is.y + 3000, sail: 3 });
   c.push({ t: 'input', seq: 3, rudder: 0, sail: 1 });
-  assert.equal(autosailOf(ship), null);
-  assert.equal(lastAuto(c)!.why, 'manual');
+  assert.ok(autosailOf(ship));
+  assert.equal(autosailOf(ship)!.sail, 1);
+  assert.equal(ship.input.sailTarget, SAIL_STEPS[1]);
   // And the pill's stop.
   c.push({ t: 'autosail', x: is.x - is.radius - 1500, y: is.y + 3000, sail: 3 });
   c.push({ t: 'autosail', stop: true });

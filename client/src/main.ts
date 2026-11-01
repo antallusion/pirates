@@ -24,7 +24,12 @@ import { NetHaulPanel } from './ui/nethaul.ts';
 import { departHooks, departOrAsk } from './ui/depart.ts';
 import { adviceFor, showAdvice } from './ui/buyadvice.ts';
 import { RouteRun } from './ui/goalrun.ts';
-import { mountDetail, openDetail } from './ui/detail.ts';
+import { mountDetail, openDetail, registerDetail } from './ui/detail.ts';
+import { LAIRS } from '../../shared/src/data/lairs.ts';
+import { FoeFinder } from './ui/foefind.ts'; // forum 45: «Найти врага»
+import type { Foe } from './ui/foefind.ts';
+import { EN as FF_EN, RU as FF_RU } from './lang/ui/foefind.ts';
+import { hideThingRing, initThingRing, openThingRing, thingCard, thingOf, thingRingAbout, thingRingFrame } from './ui/thingring.ts'; // forum 45: the ring on every thing
 import type { DetailAct } from './ui/detail.ts';
 import { mountSrcTip } from './ui/srctip.ts'; // «Где взять» (owner, 2026-10-30) // ux2 / route: the run to a goal's nearest place
 import { EN as UX2_EN, RU as UX2_RU } from './lang/ui/ux2.ts';
@@ -370,6 +375,8 @@ function autosailTo(wp: { x: number; y: number }, near?: number): void {
 journal.onSail = (key) => startGoal(key);
 journal.onPortTab = (tab) => { if (!state.portView) return; portScreen.showTab(tab, null, state); openModal('port'); }; // owner, 2026-10-23: a quest step's shop or table
 worldMap.onGoal = (key) => startGoal(key);
+worldMap.onFoes = () => foeFinder.open(); // forum 45
+worldMap.onHome = () => sailHome(); // forum 45
 // The fog of war's scouts (owner, 2026-10-17): «Выбрать на карте» on the shipyard's card opens the chart to take a tap
 // on the fog; the tap sends her and the chart closes back onto the island.
 worldMap.onScoutSend = (id, x, y) => {
@@ -1052,6 +1059,12 @@ function portLabelAt(px: number, py: number): string | null {
   }
   return best;
 }
+/** The ring's key of a thing or an island under a tap or a click (forum 45), or ''. */
+function thingKeyOf(t: { kind: string; id: number | string } | null, pl: { kind: string; id: number | string } | null): string {
+  if (t) return `${t.kind}:${t.id}`;
+  if (pl && (pl.kind === 'isle' || pl.kind === 'wreck')) return `${pl.kind}:${pl.id}`;
+  return '';
+}
 /** A finger's tap on the sea (seaTapPlan, deskinput.ts; owner 2026-10-29: «мне нужно тапнуть куда мне надо и начать
  *  плыть. порт или еще куда-то, куда угодно короче»): any tap sails her — at sea, and in a harbour's roads too (the
  *  «В МОРЕ» state: the course is given, then she casts off, no «В море» first). Another ship or a creature stack is the
@@ -1072,6 +1085,10 @@ function seaTap(px: number, py: number): void {
   const pl = k ? null : fingerPlace(placeAtScreen(px, py), w);
   const t = k || renderer.goalHit(px, py) ? null : tapTarget(state, w.x, w.y, renderer.zoom);
   const blocked = state.voyage ? 'voyage' : state.boardTac || state.boardFight || state.boarding ? 'battle' : null;
+  // forum 45: a thing or an island tapped — its ring first; tapped again while it is up, its own order as before
+  const ringKey = k ? '' : thingKeyOf(t, pl);
+  const ringAgain = !!ringKey && thingRingAbout() === ringKey;
+  hideThingRing();
   // a harbour's name or its town: its ring — «Войти в порт», «Приблизиться», «Карточка порта», «Мой остров» (forum 40;
   // was: the name its card, the town the run in); its water still sails
   const named = !k && !modal ? portLabelAt(px, py) : null;
@@ -1080,9 +1097,10 @@ function seaTap(px: number, py: number): void {
     if (!openPortRing(named)) openPortCard(state, named);
     return;
   }
-  const plan = seaTapPlan({ mark: k, again, thing: !!t || renderer.goalHit(px, py), place: pl?.kind ?? null, modal: !!modal, blocked: !!blocked });
+  const plan = seaTapPlan({ mark: k, again, thing: !!t || renderer.goalHit(px, py), place: pl?.kind ?? null, modal: !!modal, blocked: !!blocked, ring: !!ringKey, ringAgain });
   selPlace = k === 'ship' && targetId !== null ? { kind: 'ship', id: targetId } : k ? null : pl; // (owner, 2026-10-26)
   if (plan === 'none' || plan === 'target') return;
+  if (plan === 'ring') return void (openThingRing(ringKey) || (t ? sailToTap(px, py) : undefined));
   if (plan === 'blocked') return void hud.toast(seaTapWhy(blocked!, lang() === 'ru'), 'info');
   if (plan === 'port') return void (openPortRing(String(pl!.id)) || startGoal(`p:${pl!.id}`)); // (forum 40: the ring; the run in if it has no room)
   if (plan === 'thing' && !t) return tapGoal(px, py); // the goal's beacon or rim arrow: the run (cast off by the server in port)
@@ -1415,6 +1433,79 @@ net.onLeft = () => exitUi.closed();
   $('touch').append(b);
 }
 setFxLines(modLinesHtml);
+// Forum 45 (topic 8): «Найти врага» and «К острову» in the «⋯» tray (the chart has them too: its bottom row).
+const LFF = dict(FF_EN, FF_RU);
+for (const [id, art, label, tip, go] of [
+  ['tc-foe', 'item_black_flag', LFF('btn'), LFF('btnTip'), () => foeFinder.open()],
+  ['tc-gohome', 'tab_isles', LFF('home'), LFF('homeTip'), () => sailHome()],
+] as const) {
+  const t = document.createElement('template');
+  t.innerHTML = buttonHtml({ kind: 'icon', id, icon: art, glyph: '⚓', aria: tip, cls: 'sea-round' }).trim();
+  const b = t.content.firstElementChild as HTMLButtonElement;
+  b.insertAdjacentHTML('beforeend', `<span class="tc-crew-l">${label}</span>`);
+  b.title = tip;
+  b.dataset.art = art;
+  b.addEventListener('click', go);
+  $('touch').append(b);
+}
+// (made before the art's list is in: their pictures put in as the tray opens)
+document.getElementById('tc-more')?.addEventListener('click', () => {
+  for (const b of document.querySelectorAll<HTMLElement>('#tc-foe, #tc-gohome')) {
+    const g = b.querySelector('.k-btn-ico.glyph'), art = b.dataset.art;
+    if (g && art && assetUrl(`icon.${art}`)) g.outerHTML = icon(art, '', 'k-btn-ico');
+  }
+}, true);
+/** «Плыть к своему острову» (forum 45): the course to her island's roads (the route `own`, goalroute.ts); before she
+ *  holds one, to the nearest free island — said so. */
+function sailHome(): void {
+  if (!inGame) return;
+  if (!hasIsle()) hud.toast(LFF('noIsle'), 'info');
+  startGoal('own');
+}
+/** Every foe she may know of now (forum 45): the ships in sight — pirates, beasts, monsters — the creature stacks in
+ *  sight and the lairs on her chart; never one under the fog of war. */
+function knownFoes(): Foe[] {
+  const out: Foe[] = [];
+  const seen = (x: number, y: number) => !underFog(state.seen, x, y);
+  for (const s of state.ships.values()) {
+    const i = s.info;
+    if (!i || s.id === state.entityId || i.isPlayer || s.cur.flags & (SF.SINKING | SF.DOCKED | SF.SURRENDERED) || !seen(s.cur.x, s.cur.y)) continue;
+    const beast = beastOfClass(i.classId);
+    const monster = !!SHIP_CLASSES[i.classId]?.monster || isZoneBossClass(i.classId) || i.npcRole === 'boss' || i.npcRole === 'ghost';
+    const kind = monster ? 'monster' : beast || i.npcRole === 'beast' ? 'beast' : markKind(i) === 'pirate' ? 'pirate' : null;
+    if (!kind) continue;
+    const name = beast ? BEASTS[beast].name[lang() === 'ru' ? 1 : 0] : placeName(i.name);
+    out.push({ key: `ship:${s.id}`, kind, name, level: i.shipLevel ?? 0, x: s.cur.x, y: s.cur.y, near: 120 });
+  }
+  for (const v of state.roams) {
+    if (v.fight === 'other') continue;
+    const p = roamNow(state, v);
+    if (seen(p.x, p.y)) out.push({ key: `roam:${v.id}`, kind: 'monster', name: roamName(v.kind), level: v.level, x: p.x, y: p.y, near: 80 });
+  }
+  for (const l of state.lairs?.list ?? []) {
+    if (l.down || !seen(l.x, l.y)) continue;
+    out.push({ key: `lair:${l.id}`, kind: 'lair', name: LAIRS[l.kind]?.name[lang() === 'ru' ? 1 : 0] ?? l.kind, level: l.level, x: l.x, y: l.y, near: 200 });
+  }
+  return out;
+}
+const foeFinder = new FoeFinder({
+  foes: knownFoes,
+  own: () => (state.ownDisplay ? { x: state.ownDisplay.x, y: state.ownDisplay.y } : null),
+  level: () => (state.self ? shipLevelOf(state.self.loadout) : 1),
+  onSail: (f) => {
+    // the course there, her mark on the chart (the chart stays open on it when she chose from the chart)
+    const [kind, id] = f.key.split(':');
+    if (kind === 'ship') pinTarget(Number(id));
+    else if (kind === 'roam') {
+      state.roamMark = Number(id);
+      targetPinned = false;
+    }
+    sailToSpot({ x: f.x, y: f.y }, f.near);
+    if (state.self?.dockedAt) net.send({ t: 'undock' });
+    hud.toast(LFF('set', { name: f.name }), 'info');
+    if (modal === 'map') worldMap.focus(state, f.x, f.y);
+  },
+});
 // The captain's abilities on a phone (owner, 2026-10-26: «на мобиле не показаны иконки спецприёмов капитана»): «Приёмы»
 // in «Особое»'s place, its row of four — used as the desk's Z X C V are, at her mark.
 const seaAbil = new SeaAbil($('touch'), (id) => {
@@ -3583,6 +3674,13 @@ canvas.addEventListener('mousedown', (e) => {
   hidePortRing(); // (forum 40: a click elsewhere puts the harbour's ring away)
   // A click on a ship makes her the target; on a creature stack, marks the stack and fires nothing.
   const mk = markAt(e.clientX, e.clientY);
+  // forum 45: the ring is a click's (never the hover's) — about the ship or the stack clicked; a click off them puts it away
+  openTargetMenu(mk === 'ship' && targetId !== null ? `ship:${targetId}` : mk === 'roam' && state.roamMark !== null ? `roam:${state.roamMark}` : '');
+  const wc = renderer.toWorld(e.clientX, e.clientY);
+  const tc = mk || renderer.goalHit(e.clientX, e.clientY) ? null : tapTarget(state, wc.x, wc.y, renderer.zoom);
+  const ringKey = mk ? '' : thingKeyOf(tc, portLabelAt(e.clientX, e.clientY) ? null : placeAtScreen(e.clientX, e.clientY));
+  const ringAgain = !!ringKey && thingRingAbout() === ringKey;
+  hideThingRing();
   if (mk === 'roam') {
     selPlace = null;
     return;
@@ -3600,8 +3698,15 @@ canvas.addEventListener('mousedown', (e) => {
   if (pl) {
     selPlace = pl;
     if (pl.kind === 'port' && pl.id !== state.self?.dockedAt) return void openPortRing(String(pl.id)); // (forum 40: the harbour's ring)
-    if (pl.kind !== 'wreck') return; // (no broadside into a harbour clicked)
   } else if (!mk) selPlace = null;
+  // forum 45: a thing or an island clicked — its ring; clicked again while it is up, its own order (or the course there)
+  if (ringKey && !ringAgain && openThingRing(ringKey)) return;
+  if (ringKey && ringAgain && pl?.kind === 'isle') {
+    const sw = selWhere();
+    if (sw) sailToSpot({ x: sw.x, y: sw.y }, sw.near);
+    return;
+  }
+  if (pl && pl.kind !== 'wreck') return; // (no broadside into a harbour clicked)
   if (shipAtScreen(e.clientX, e.clientY) === null && sailToTap(e.clientX, e.clientY)) return; // seaux: a click on a thing on the sea sails her to it
   // The simple HUD fires by its keys (Space, Q, E): a click on the open sea sails her there — on the button's lift, so
   // a drag (the view panned, touch.ts) is not a course (batch-pc, owner 2026-10-26). The detailed one fires the side
@@ -4815,6 +4920,42 @@ initPortRing({
 const TM_DWELL = 140;
 /** A finger's choices go by themselves after this long untouched (a phone). */
 const TM_IDLE = 6000;
+/** A click's choices on a desk (forum 45: no longer the hover's) go after this long untouched. */
+const TM_IDLE_DESK = 15000;
+/** The ring on the sea's other things (forum 45): ui/thingring.ts. */
+initThingRing({
+  state: () => state,
+  sx: (x) => renderer.sx(x),
+  sy: (y) => renderer.sy(y),
+  zoom: () => renderer.zoom,
+  keepOut: () => hudKeepOut(),
+  closed: () => !inGame || modal !== null || !!state.boardTac || !!state.boardFight || !!state.voyage || seaHud.menuOpen,
+  touch: () => touch.enabled,
+  pick: (id, t) => {
+    const key = `${t.kind}:${t.id}`;
+    if (id === 'info') {
+      registerDetail(`thing:${key}`, () => {
+        const now = thingOf(state, key) ?? t;
+        return thingCard(now, state.ownDisplay ? { x: state.ownDisplay.x, y: state.ownDisplay.y } : null);
+      });
+      return void openDetail(`thing:${key}`);
+    }
+    if (id === 'home') return openBase();
+    const docked = !!state.self?.dockedAt;
+    if (id === 'go') {
+      if (t.kind === 'isle') {
+        selPlace = { kind: 'isle', id: Number(t.id) };
+        const sw = selWhere();
+        sailToSpot(sw ? { x: sw.x, y: sw.y } : t, sw?.near);
+      } else sailToSpot(t, Math.round(Math.max(40, t.r + 40)));
+    } else if (docked) sailToSpot(t, t.near);
+    else if (t.kind === 'find') workFind(Number(t.id));
+    else if (t.kind === 'way') net.send({ t: 'way', action: 'moor', id: Number(t.id) });
+    else if (t.kind === 'mark' && !state.markDone.has(Number(t.id))) workMark(Number(t.id));
+    else sailToSpot(t, t.near);
+    if (docked) net.send({ t: 'undock' });
+  },
+});
 
 /** «Она в бою» once a tap (not once a frame), when she would be touched. */
 let inBattleSaidAt = -1e9, inBattleSaidOf = -1;
@@ -5017,29 +5158,71 @@ addEventListener('mousemove', (e) => {
   mouseAt.x = e.clientX;
   mouseAt.y = e.clientY;
 }, { capture: true, passive: true });
-/** A desk: the mouse resting on a target opens its choices; off it (and off them) they go a moment later. */
+/** A desk: the mouse resting on a target only names it (forum 45: «по наведению только имя, кольцо — по клику»); the
+ *  ring is a click's (the canvas's mousedown). */
 function hoverTargetMenu(about: string): void {
-  if (touch.enabled) return;
+  if (touch.enabled) return hoverTag('');
   const now = performance.now();
   if (about !== hoverAbout) {
     hoverAbout = about;
     hoverSince = now;
   }
-  if (!about) return targetMenu.leave();
-  if (targetMenu.isOpen && targetMenu.about === about) return targetMenu.keep();
-  if (now - hoverSince >= TM_DWELL) openTargetMenu(about);
+  hoverTag(about && now - hoverSince >= TM_DWELL ? about : '');
+}
+/** The name under the mouse (a ship, a stack, a thing of the sea, an island), as a small tag by the cursor. */
+let hoverTagEl: HTMLElement | null = null;
+function hoverTag(about: string): void {
+  const name = about ? aboutName(about) : '';
+  if (!name || targetMenu.hovered) {
+    hoverTagEl?.classList.add('hidden');
+    return;
+  }
+  if (!hoverTagEl) {
+    hoverTagEl = document.createElement('div');
+    hoverTagEl.id = 'hover-name';
+    hoverTagEl.className = 'hover-name hidden';
+    hoverTagEl.setAttribute('aria-hidden', 'true');
+    document.body.append(hoverTagEl);
+  }
+  if (hoverTagEl.textContent !== name) hoverTagEl.textContent = name;
+  hoverTagEl.style.transform = `translate(${Math.round(Math.min(innerWidth - 160, mouseAt.x + 16))}px, ${Math.round(Math.max(4, mouseAt.y - 30))}px)`;
+  hoverTagEl.classList.remove('hidden');
+}
+/** A target's or a thing's name by its about-key (`ship:3`, `roam:2`, `wreck:7`, `isle:4`). */
+function aboutName(about: string): string {
+  const [kind, sid] = about.split(':');
+  if (kind === 'ship') {
+    const s = state.ships.get(Number(sid));
+    if (!s?.info) return '';
+    const beast = beastOfClass(s.info.classId);
+    return beast ? BEASTS[beast].name[lang() === 'ru' ? 1 : 0] : s.info.isPlayer ? s.info.captainName : placeName(s.info.name);
+  }
+  if (kind === 'roam') {
+    const v = state.roams.find((x) => x.id === Number(sid));
+    return v ? roamName(v.kind) : '';
+  }
+  return thingOf(state, about)?.name ?? '';
+}
+/** What lies under the mouse for its name tag: a target, else a thing of the sea, else an island. */
+function hoverAboutAt(px: number, py: number): string {
+  const a = aboutAt(px, py);
+  if (a) return a;
+  const w = renderer.toWorld(px, py);
+  const t = tapTarget(state, w.x, w.y, renderer.zoom);
+  return thingKeyOf(t, t ? null : placeAtScreen(px, py));
 }
 
 /** Every frame: the choices follow their target, change as she comes in reach, and go with her (sunk, gone, a window
  *  over the sea, the hex battle, port; a finger's after a while untouched). */
 function targetMenuFrame(): void {
   if (!targetMenu.isOpen) return;
-  const ok = inGame && !state.boardTac && !state.boardFight && !state.self?.dockedAt && modal === null && !seaHud.menuOpen && !(touch.enabled && targetMenu.age > TM_IDLE && !targetMenu.hovered);
+  const ok = inGame && !state.boardTac && !state.boardFight && !state.self?.dockedAt && modal === null && !seaHud.menuOpen && !(targetMenu.age > (touch.enabled ? TM_IDLE : TM_IDLE_DESK) && !targetMenu.hovered);
   const t = ok ? targetChoices(targetMenu.about) : null;
   if (!t) return targetMenu.hide();
   // A desk: the mouse near her (a sailing ship slips from under a still mouse: a little room round her) or on the
   // choices keeps them; on the choices they stand still for the click instead of following her.
-  if (!touch.enabled) targetMenu.hoverAt(mouseAt.x, mouseAt.y, Math.hypot(mouseAt.x - t.x, mouseAt.y - t.y) <= t.r + 34);
+  // (forum 45: opened by a click, it stays while the mouse wanders — a click elsewhere, or a while untouched, puts it away)
+  if (!touch.enabled) targetMenu.hoverAt(mouseAt.x, mouseAt.y, true);
   targetMenu.show(targetMenu.about, t.choices, t.name, t.info);
   if (!targetMenu.hovered) targetMenu.place(t.x, t.y, t.r, hudKeepOut());
 }
@@ -5053,7 +5236,7 @@ function hoverCursor(px: number, py: number, force = false): void {
   hoverAt = now;
   const live = inGame && !touch.enabled && !state.boardTac && !state.self?.dockedAt && modal === null;
   const kind = live ? attackUnder(px, py) : null;
-  hoverTargetMenu(live && kind ? aboutAt(px, py) : '');
+  hoverTargetMenu(live ? (kind ? aboutAt(px, py) : hoverAboutAt(px, py)) : '');
   if ((canvas.dataset.cur ?? '') === (kind ?? '')) return;
   if (kind) canvas.dataset.cur = kind;
   else delete canvas.dataset.cur;
@@ -5756,6 +5939,7 @@ function step(t: number): void {
     touchAttackMark();
     targetMenuFrame();
     portRingFrame(); // forum 40
+    thingRingFrame(); // forum 45
     divePanel.render(state.dive);
     boardFight.render(state.boardFight);
     tactical.render(state.boardTac);

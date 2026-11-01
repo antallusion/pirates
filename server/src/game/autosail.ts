@@ -521,8 +521,25 @@ export function autosailInput(game: Game, s: PlayerSession, rudder: number, sail
   }
   if (voyaging(ship)) return true; // her helm on a long passage: swallowed (passage.ts)
   if (rudder === 0 && (step === run.sail || step === before || (step === run.was && game.now - run.since < AUTOSAIL_BEAT))) return true;
+  // Forum 45: her hand on the sheets (+/−, W/S, the sail's buttons) sets the helmsman's sail — the course and the mark
+  // kept; only the rudder takes the wheel back. (Furled: hove to on her course, set sail and he sails on.)
+  if (rudder === 0 && Number.isFinite(step) && step >= 0 && step < SAIL_STEPS.length) {
+    run.sail = step;
+    run.was = step;
+    holdStill(game, run);
+    ship!.input = { rudder: ship!.input.rudder, sailTarget: SAIL_STEPS[carriedSail(game, ship!, step)] };
+    send(game, s, run);
+    return true;
+  }
   stopAutosail(game, s, 'manual');
   return false;
+}
+
+/** Her own furled sail is no headland: the stuck and round-and-round watches start afresh (forum 45). */
+function holdStill(game: Game, run: AutoSail): void {
+  run.bestAt = game.now;
+  run.gainAt = game.now;
+  run.stuck = { ...run.stuck, t: game.now };
 }
 
 /** The words for a reason he will not take the wheel (translated on the client, server.ru.h.ts). */
@@ -717,6 +734,12 @@ export function stepAutosail(game: Game): void {
     // her hull now): straight in under easy canvas while her hull's next stretch keeps clear of the coast's band, the
     // solid things and the reefs — the lead line (it sounds the coasts' own shallows) and the planner's open water
     // stopped her a cable short.
+    // furled by her own hand (forum 45): hove to on her course, the mark kept — no watch counts her stuck
+    if (run.sail === 0) {
+      holdStill(game, run);
+      ship.input = { rudder: 0, sailTarget: 0 };
+      continue;
+    }
     if (Math.min(d, toEnd) < CREEP_FROM && game.now - (run.creepAt ??= game.now) < CREEP_SEC && creepStep(game, ship, run.x, run.y)) continue;
     if (Math.min(d, toEnd) >= CREEP_FROM) run.creepAt = undefined;
     if (toEnd <= near) {

@@ -228,7 +228,49 @@ test('auto-sail always: the phone\'s beat already on its way with her old sail d
   assert.ok(autosailOf(ship), 'her old sail in flight: still his');
   c.push({ t: 'input', rudder: 0, sail: 3, seq: 50 });
   assert.ok(autosailOf(ship), 'the helmsman\'s sail: still his');
+  // Forum 45: a sail of her own choosing is a speed, not the wheel — the course and the mark kept; the rudder takes it.
+  const mark = { x: autosailOf(ship)!.x, y: autosailOf(ship)!.y };
   c.push({ t: 'input', rudder: 0, sail: 1, seq: 51 });
-  assert.equal(autosailOf(ship), null, 'a sail of her own choosing: the wheel is hers');
+  assert.ok(autosailOf(ship), 'a sail of her own choosing: the course kept');
+  assert.equal(autosailOf(ship)!.sail, 1, 'the helmsman carries her sail');
+  assert.deepEqual({ x: autosailOf(ship)!.x, y: autosailOf(ship)!.y }, mark, 'the same mark');
+  assert.equal(c.all('autosail').at(-1)!.on, true, 'her screen told the new sail, the course on');
+  game.step();
+  assert.equal(ship.input.sailTarget, 0.25);
+  c.push({ t: 'input', rudder: 0, sail: 4, seq: 52 });
+  assert.equal(autosailOf(ship)!.sail, 4, 'W: more canvas, the course kept');
+  c.push({ t: 'input', rudder: 0, sail: 4, seq: 53 });
+  assert.ok(autosailOf(ship), 'its own beat after: still his');
+  c.push({ t: 'input', rudder: -1, sail: 4, seq: 54 });
+  assert.equal(autosailOf(ship), null, 'the rudder (A/D, the wheel): the wheel is hers');
+  assert.equal(c.all('autosail').at(-1)!.why, 'manual');
+  calm();
+});
+
+test('forum 45: furled by her own hand the course is kept a long while (hove to, never «stuck»); sail set again, he sails on to the mark', () => {
+  const { game, s, c, ship, b, calm } = scene('furl');
+  const empty = emptySea(game, ship);
+  c.push({ t: 'input', rudder: 0, sail: 3, seq: 1 });
+  c.push({ t: 'autosail', x: b[0], y: b[1], sail: 3 });
+  for (let i = 0; i < 3 * TICK_RATE; i++) { empty(); game.step(); }
+  c.push({ t: 'input', rudder: 0, sail: 0, seq: 2 });
+  for (let i = 0; i < 150 * TICK_RATE; i++) {
+    if (i % 5 === 0) { s.msgCount = 0; c.push({ t: 'input', rudder: 0, sail: 0, seq: 3 + i }); }
+    empty();
+    game.step();
+  }
+  assert.ok(autosailOf(ship), 'furled for minutes: the course stands');
+  assert.equal(ship.input.sailTarget, 0);
+  assert.ok(Math.abs(ship.state.speed) < 0.5, 'hove to');
+  s.msgCount = 0;
+  c.push({ t: 'input', rudder: 0, sail: 4, seq: 99_999 });
+  let arrived = false;
+  for (let i = 0; i < 200 * TICK_RATE && !arrived; i++) {
+    if (i % 5 === 0) { s.msgCount = 0; c.push({ t: 'input', rudder: 0, sail: 4, seq: 100_000 + i }); }
+    empty();
+    game.step();
+    arrived = c.all('autosail').some((m) => !m.on && m.why === 'arrived');
+  }
+  assert.ok(arrived, 'sail set again: on to the mark');
   calm();
 });
