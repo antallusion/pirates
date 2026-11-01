@@ -364,8 +364,8 @@ export class Journal {
     const here = hereAct(q, docked);
     const own = state?.ownDisplay;
     // forum post 45: how far her current goal lies (the island, the point at sea, the port to hand it in)
-    const d = q.target && own && !q.target.region ? Math.hypot(q.target.x - own.x, q.target.y - own.y) : null;
-    const count = `${q.need > 1 ? ` · ${q.progress}/${q.need}` : ''}${d !== null ? ` · <span class="jr-dist">${esc(distWords(d))}</span>` : ''}`;
+    const d = q.target && own ? Math.hypot(q.target.x - own.x, q.target.y - own.y) : null;
+    const count = `${q.need > 1 ? ` · ${q.progress}/${q.need}` : ''}${d !== null ? ` · <span class="jr-dist">${q.target?.region ? '~' : ''}${esc(distWords(d))}</span>` : ''}`; // (a sea's waters: about)
     return `<div class="jr-item"><button class="jr-row${on ? ' on' : ''}${tracked ? ' tracked' : ''}" data-jq="${esc(q.id)}">
       <b>${tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc((q.kind === 'campaign' ? cmpText : serverText)(q.name))}${q.ship ? ` ${levelChip(q.ship)}` : ''}</b>
       <span class="muted">${esc(classWord(questClass(q)))} · ${q.step}/${q.steps}${count}${q.mates?.length ? ` · ${icon('tab_group', '⚑', 'ico-sm')}${q.mates.length}` : ''}</span></button>${here ? actButton(q.id, here, 'jr-go jr-here') : q.target ? this.goBtn(`q:${q.id}`) : ''}</div>`;

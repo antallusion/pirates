@@ -37,6 +37,14 @@ const fit = (p, sel) => p.evaluate((q) => {
   return out;
 }, sel);
 /** Takes the first few quests and contracts on the board of the port she lies in. */
+async function dockHere(p) {
+  await p.evaluate(() => globalThis.gravetide.net.send({ t: 'dock' }));
+  await L.sleep(2500);
+  await L.closeAll(p);
+  await dismiss(p);
+  await L.open(p, 'port');
+  await L.sleep(1500);
+}
 const takeWork = (p, n) => p.evaluate((k) => {
   const g = globalThis.gravetide;
   const v = g.state.portView;
@@ -61,8 +69,8 @@ try {
     // Work from two ports: the board of the first, then of another.
     await L.say(p, '/tp saltmarrow');
     await L.sleep(2500);
-    await L.closeAll(p);
-    L.log(tag, 'took', JSON.stringify(await takeWork(p, 3)));
+    await dockHere(p);
+    L.log(tag, 'took', JSON.stringify(await takeWork(p, 6)));
     await L.sleep(1500);
     const other = await p.evaluate(() => {
       const s = globalThis.gravetide.state, h = s.ports.find((x) => x.id === 'saltmarrow');
@@ -70,8 +78,8 @@ try {
     });
     await L.say(p, `/tp ${other}`);
     await L.sleep(2500);
-    await L.closeAll(p);
-    L.log(tag, 'took', JSON.stringify(await takeWork(p, 2)));
+    await dockHere(p);
+    L.log(tag, 'took', JSON.stringify(await takeWork(p, 6)));
     await L.sleep(1500);
     // Out to sea a little way.
     await p.evaluate(() => globalThis.gravetide.net.send({ t: 'undock' }));
@@ -81,6 +89,8 @@ try {
     // 1. «Журнал» → the quests, grouped
     await L.open(p, 'journal');
     await L.sleep(1500);
+    await p.mouse.move(2, H - 2);
+    await p.evaluate(() => document.querySelectorAll('#srctip').forEach((x) => (x.style.display = 'none')));
     const groups = await p.evaluate(() => [...document.querySelectorAll('.jr-grp')].map((g) => g.querySelector('.jr-grp-h')?.innerText.replace(/\s+/g, ' ').trim() + ' — ' + g.querySelectorAll('.jr-item, .map-daily').length));
     L.log(tag, 'groups', JSON.stringify(groups));
     L.log(tag, 'fit', JSON.stringify(await fit(p, '.jr-grp-h, .jr-row, .jr-go')));
@@ -137,6 +147,7 @@ try {
     // ...and in port: the silver ashore.
     await L.say(p, '/tp saltmarrow');
     await L.sleep(2500);
+    await dockHere(p);
     await L.closeAll(p);
     await L.say(p, '/away 6');
     await L.sleep(2500);

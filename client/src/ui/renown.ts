@@ -216,7 +216,7 @@ export function renderAway(root: HTMLElement, v: AwayView, send: (m: ClientMsg) 
   const parts: string[] = [];
   const up = v.upkeep ? upkeepCard(v.upkeep) : '';
   if (v.brief) {
-    root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('upTitle'))}</h2><div class="sub">${esc(L('upSubBrief', { h: v.hours }))}</div></div></div>
+    root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('awayTitle'))}</h2><div class="sub">${esc(L('upSubBrief', { h: v.hours }))}</div></div></div>
     <div class="modal-body away">${up}<div class="aw-acts"><button class="btn" data-aw-close>${esc(L('awayLater'))}</button></div></div>`;
     root.querySelector<HTMLElement>('[data-aw-close]')?.addEventListener('click', close);
     return;
@@ -248,7 +248,7 @@ function upkeepCard(u: NonNullable<AwayView['upkeep']>): string {
   const lines = [u.atSea ? L('upSea', { h, cap, food: fmt(Math.round(u.food)) }) : L('upPort', { h, cap, silver: fmt(u.silver) })];
   if (u.foodShort > 0) lines.push(L('upFoodShort', { n: fmt(Math.ceil(u.foodShort)) }));
   if (u.silverShort > 0) lines.push(L('upSilverShort', { n: fmt(u.silverShort) }));
-  if (u.deserted > 0) lines.push(L('upDeserted', { n: u.deserted, crew: u.crew }));
+  if (u.deserted > 0) lines.push(L(u.atSea ? 'upDeserted' : 'upDesertedPort', { n: u.deserted, crew: u.crew }));
   else if (u.short <= 0) lines.push(L('upAllWell'));
   lines.push(L('upMorale', { m: u.morale }));
   if (u.newcomer) lines.push(L('upNewcomer'));
