@@ -120,6 +120,8 @@ export function tellLog(e: LogEntry, captain: string): string {
     case 'quest_done': return LC('lg.quest_done', { 0: serverText(e.a[0] ?? ''), 1: e.a[1] ?? '0', n: e.n ?? 0 });
     case 'letter': return LC(e.n ? 'lg.letterSilver' : 'lg.letter', { 0: personName(e.a[0] ?? ''), 1: serverText(e.a[1] ?? ''), n: e.n ?? 0 });
     case 'encounter': return encounterLine(e);
+    // forum post 45: «Расчёт за время отсутствия»
+    case 'upkeep': return LC(e.a[0] === 'sea' ? 'lg.upkeepSea' : 'lg.upkeepPort', { h: e.a[1] ?? '0', food: e.a[2] ?? '0', silver: e.a[3] ?? '0' }) + (Number(e.a[5] ?? 0) > 0 ? LC('lg.upkeepShort', { s: e.a[5] ?? '0', n: e.a[4] ?? '0' }) : '');
     default: return LC(`lg.${e.kind}` as 'lg.sank', { 0: a(0), 1: a(1) });
   }
 }

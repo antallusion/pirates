@@ -53,6 +53,14 @@ export const SERVER_RU_ISLES18: Record<string, string> = {
   'No sandbars.': 'Нет отмелей.',
   'A sandbar is bared before you: {0}.': 'Перед вами обнажилась отмель: {0}.',
   'The week’s supply delivered.': 'Поставка недели доставлена.',
+  // forum post 45: the routine notices now lines of «Хроника»
+  "{0}: a week's rent of {1} silver was paid from the island's treasury.": '{0}: из казны острова уплачена недельная аренда — {1} серебра.',
+  'The League pays {0} silver on the insurance of {1}.': 'Лига выплатила {0} серебра страховки за караван «{1}».',
+  'Caravan {0} fought them off near {1}.': 'Караван «{0}» отбился у острова {1}.',
+  'The island’s store is full: caravan {0} lies at anchor with the rest.': 'Склад острова полон: караван «{0}» стоит на якоре с остатком груза.',
+  'Caravan {0} is lost with all hands.': 'Караван «{0}» погиб со всеми людьми.',
+  'Caravan {0} was beaten near {1}: {2} ships lost, {3}% of the cargo saved.': 'Караван «{0}» разбит у острова {1}: потеряно кораблей — {2}, спасено {3}% груза.',
+  'Caravan {0} is home.': 'Караван «{0}» вернулся домой.',
   '{0} is yours and linked to your island.': '{0} теперь ваш и связан с вашим островом.',
   '{0} is yours.': '{0} теперь ваш.',
 };

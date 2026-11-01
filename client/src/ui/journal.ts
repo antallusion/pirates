@@ -103,6 +103,14 @@ const EN = {
   dNext: 'The next page shows in {h} h.',
   dBattle: 'All five pages: he waits off {island}.',
   dWon: 'This week he went down to {name}.',
+  gStory: 'Story',
+  gContracts: 'Contracts',
+  gDaily: 'Daily',
+  gPort: 'Port {name}',
+  gIsle: 'Island {name}',
+  gHand: 'hand in here',
+  gFar: '{d} away',
+  gHere: 'you are here',
 };
 const RU: typeof EN = {
   title: 'Журнал заданий',
@@ -161,6 +169,14 @@ const RU: typeof EN = {
   dNext: 'Следующая страница появится через {h} ч.',
   dBattle: 'Все пять страниц: он ждёт у острова {island}.',
   dWon: 'На этой неделе его упокоил капитан {name}.',
+  gStory: 'Сюжет',
+  gContracts: 'Контракты',
+  gDaily: 'Ежедневные',
+  gPort: 'Порт {name}',
+  gIsle: 'Остров {name}',
+  gHand: 'сдавать здесь',
+  gFar: 'до него {d}',
+  gHere: 'вы здесь',
 };
 const L = dict(EN, RU);
 const RL = dict(REN, RRU);
@@ -223,8 +239,8 @@ export class Journal {
     }
     root.innerHTML = logFrame('quests', state, chips, '', `<div class="journal">
         <div class="jr-side">
-          ${this.campaignTop(state)}<div class="jr-list">${quests.length || contracts.length ? `${quests.map((x) => this.row(x, x.id === this.chosen, x.id === tracked, self?.dockedAt)).join('')}${contracts.map((c) => this.contractRow(c, `c:${c.id}` === this.chosen, state)).join('')}` : `<p class="muted">${esc(L('none'))}</p>`}</div>
-          <div class="jr-day">${dailyLog(self?.daily)}${weeklyLog(state.renown?.weekly)}${commonLog(self?.common)}${invasionLog(self?.invasion, false)}${worldGoalsLog(state)}${tasksLog(state, false)}${omenLog(state.omen)}${dutchmanLog(state.dutchman)}${wondersLog(state.wonders)}${nemesisLog(state.wanted?.nemeses, state.wanted?.heads ?? 0)}${hunterLog(state.wanted)}${brethrenLog(state.raid)}${fishingLog(self?.fishing)}${beastLog(self?.beasts)}${lettersLog(self?.seaLetters ?? [])}</div>
+          ${this.campaignTop(state)}<div class="jr-list">${quests.length || contracts.length ? this.groups(quests, contracts, tracked, state) : `<p class="muted">${esc(L('none'))}</p>`}${((d) => (d ? `<section class="jr-grp jr-grp-daily"><h4 class="jr-grp-h">${icon('tab_letters', '', 'ico-sm')}<b>${esc(L('gDaily'))}</b></h4>${d}</section>` : ''))(dailyLog(self?.daily))}</div>
+          <div class="jr-day">${weeklyLog(state.renown?.weekly)}${commonLog(self?.common)}${invasionLog(self?.invasion, false)}${worldGoalsLog(state)}${tasksLog(state, false)}${omenLog(state.omen)}${dutchmanLog(state.dutchman)}${wondersLog(state.wonders)}${nemesisLog(state.wanted?.nemeses, state.wanted?.heads ?? 0)}${hunterLog(state.wanted)}${brethrenLog(state.raid)}${fishingLog(self?.fishing)}${beastLog(self?.beasts)}${lettersLog(self?.seaLetters ?? [])}</div>
           ${self?.questsDone.length ? `<details class="jr-done"><summary>${esc(L('done', { n: self.questsDone.length }))}</summary><ol>${(self.questsRecent ?? []).map((n) => `<li>${esc(serverText(n))}</li>`).join('')}</ol></details>` : ''}
         </div>
         <div class="jr-detail">${q ? this.detail(q, q.id === tracked, inGroup, state) : ct ? this.contractDetail(ct, state) : ''}</div>
@@ -313,9 +329,43 @@ export class Journal {
     this.book = on;
   }
 
-  private row(q: Quest, on: boolean, tracked: boolean, docked?: string | null): string {
+  /** Forum post 45: the quests grouped by where they were taken — and so where they are handed in: «Сюжет» first,
+   *  then each port and island (the nearest first) with its distance, the givers without a place, «Контракты». */
+  private groups(quests: Quest[], contracts: Contract[], tracked: string | null, state: ClientState): string {
+    const own = state.ownDisplay;
+    const docked = state.self?.dockedAt ?? null;
+    const far = (x: number, y: number) => (own ? Math.hypot(x - own.x, y - own.y) : null);
+    type G = { key: string; icon: string; name: string; d: number | null; here: boolean; rows: string[]; order: number };
+    const gs = new Map<string, G>();
+    const put = (key: string, mk: () => Omit<G, 'rows' | 'key'>, row: string) => {
+      let g = gs.get(key);
+      if (!g) gs.set(key, (g = { key, rows: [], ...mk() }));
+      g.rows.push(row);
+    };
+    for (const q of quests) {
+      const row = this.row(q, q.id === this.chosen, q.id === tracked, docked, state);
+      const isl = q.from?.island !== undefined ? state.islands.get(q.from.island) : undefined;
+      const port = q.from?.port ? state.ports.find((p) => p.id === q.from!.port) : undefined;
+      if (q.kind === 'campaign') put('story', () => ({ icon: 'tab_legends', name: L('gStory'), d: null, here: false, order: 0 }), row);
+      else if (isl) put(`i:${isl.id}`, () => ({ icon: 'tab_isles', name: L('gIsle', { name: placeName(isl.name) }), d: far(isl.x, isl.y), here: false, order: 1 }), row);
+      else if (port) put(`p:${port.id}`, () => ({ icon: 'anchor', name: L('gPort', { name: placeName(port.name) }), d: far(port.x, port.y), here: docked === port.id, order: 1 }), row);
+      else put(`m:${q.mentor}`, () => ({ icon: 'goal', name: serverText(q.mentor), d: null, here: false, order: 2 }), row);
+    }
+    for (const c of contracts) put('contracts', () => ({ icon: 'tab_market', name: L('gContracts'), d: null, here: false, order: 3 }), this.contractRow(c, `c:${c.id}` === this.chosen, state));
+    const list = [...gs.values()].sort((a, b) => a.order - b.order || (a.here ? -1 : b.here ? 1 : (a.d ?? Infinity) - (b.d ?? Infinity)));
+    return list.map((g) => {
+      const where = g.here ? L('gHere') : g.d !== null ? L('gFar', { d: distWords(g.d) }) : '';
+      const hand = g.order === 1 ? `<span class="jr-grp-hand muted">${esc(L('gHand'))}${where ? ` · ${esc(where)}` : ''}</span>` : '';
+      return `<section class="jr-grp" data-grp="${esc(g.key)}"><h4 class="jr-grp-h">${icon(g.icon, '', 'ico-sm')}<b>${esc(g.name)}</b>${hand}</h4>${g.rows.join('')}</section>`;
+    }).join('');
+  }
+
+  private row(q: Quest, on: boolean, tracked: boolean, docked?: string | null, state?: ClientState): string {
     const here = hereAct(q, docked);
-    const count = q.need > 1 ? ` · ${q.progress}/${q.need}` : '';
+    const own = state?.ownDisplay;
+    // forum post 45: how far her current goal lies (the island, the point at sea, the port to hand it in)
+    const d = q.target && own ? Math.hypot(q.target.x - own.x, q.target.y - own.y) : null;
+    const count = `${q.need > 1 ? ` · ${q.progress}/${q.need}` : ''}${d !== null ? ` · <span class="jr-dist">${q.target?.region ? '~' : ''}${esc(distWords(d))}</span>` : ''}`; // (a sea's waters: about)
     return `<div class="jr-item"><button class="jr-row${on ? ' on' : ''}${tracked ? ' tracked' : ''}" data-jq="${esc(q.id)}">
       <b>${tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc((q.kind === 'campaign' ? cmpText : serverText)(q.name))}${q.ship ? ` ${levelChip(q.ship)}` : ''}</b>
       <span class="muted">${esc(classWord(questClass(q)))} · ${q.step}/${q.steps}${count}${q.mates?.length ? ` · ${icon('tab_group', '⚑', 'ico-sm')}${q.mates.length}` : ''}</span></button>${here ? actButton(q.id, here, 'jr-go jr-here') : q.target ? this.goBtn(`q:${q.id}`) : ''}</div>`;
@@ -340,8 +390,10 @@ export class Journal {
   private contractRow(c: Contract, on: boolean, state: ClientState): string {
     const to = c.toPort ? state.ports.find((p) => p.id === c.toPort) : undefined;
     const what = c.kind === 'bounty' ? L('bounty', { n: c.progress ?? 0, need: c.kills ?? 0 }) : L('contractTo', { port: placeName(to?.name ?? '') });
+    const own = state.ownDisplay;
+    const d = to && own ? ` · <span class="jr-dist">${esc(distWords(Math.hypot(to.x - own.x, to.y - own.y)))}</span>` : '';
     return `<div class="jr-item"><button class="jr-row${on ? ' on' : ''}" data-jq="c:${esc(c.id)}">
-      <b>${esc(serverText(c.title))}</b><span class="muted">${esc(L('contract'))} · ${esc(what)}</span></button>${to ? this.goBtn(`c:${c.id}`) : ''}</div>`;
+      <b>${esc(serverText(c.title))}</b><span class="muted">${esc(L('contract'))} · ${esc(what)}${d}</span></button>${to ? this.goBtn(`c:${c.id}`) : ''}</div>`;
   }
 
   /** A contract in full: what it asks, the pay, «Плыть», abandon. */

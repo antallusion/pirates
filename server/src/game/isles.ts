@@ -38,7 +38,6 @@ import { strength } from './holdings.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { revealAdv } from './advmap.ts';
-import { cartography, charted } from './charting.ts';
 
 interface IslesState {
   rng: Rng;
@@ -180,8 +179,7 @@ export function climbLookout(game: Game, s: PlayerSession, is: Island, share: nu
   const { reefs, marks } = sendSea(game, s, is.x, is.y, r);
   revealAdv(game, s, is.x, is.y, r); // the guards and the things on the map in its sight (docs/17 H4)
   const wrecks = marks.filter((m) => m.kind === 'wreck').length;
-  game.grantXp(s, pointsXp(s.profile!.level, 60 * share * (1 + cartography(s))), null); // «Картограф» counts here too (forum post 40)
-  charted(game, s, 'lookout'); // ...and «Первопроходец»
+  game.grantXp(s, pointsXp(s.profile!.level, 60 * share), null); // (forum post 45: the navigator's perks go by the log now, charting.ts)
   game.toastShip(ship, `From the lookout on ${is.name} the sea lies open for ${Math.round(r / 1000)} km: ${isl} islands, ${reefs.length} reefs and ${wrecks} wrecks newly on your chart.`, 'good');
   sendIsles(game, s, true);
 }

@@ -18,7 +18,7 @@ import { serverText } from '../lang/server.ts';
 import { keyLabel, settings } from '../settings.ts';
 import type { Action } from '../settings.ts';
 import { logbookHtml } from './onboarding.ts';
-import { cargoVolume, tx } from '../../../shared/src/sim/shipstats.ts';
+import { cargoVolume, gunCrewFactor, handsSpeedMul, tx } from '../../../shared/src/sim/shipstats.ts';
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import type { ClientState } from '../state.ts';
 import { assetUrl } from '../assets.ts';
@@ -212,15 +212,19 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
     `<div class="stat-tile"${key ? detailAttr(key) : ''}>${icon(pic, '', flip ? 'stat-ico flip' : 'stat-ico')}<span class="stat-l">${esc(label)}</span><b class="stat-v">${value}</b></div>`;
   const hasSale = cargo.some(([g]) => self.appraisal?.[g as GoodId]);
   const used = cargoVolume(self.cargo, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
+  // forum post 45: a crew short of hands — the way she loses (the sails) and the guns' slower loading
+  const handsCut = Math.round((1 - handsSpeedMul(st, self.crew)) * 100);
+  const gunsShort = gunCrewFactor(st, self.loadout, self.crew) < 1;
+  const hands = handsCut > 0 ? `<small class="ship-over ship-hands">${esc(L('ship.hands', { n: handsCut, v: dec1(st.maxSpeed * (1 - handsCut / 100)) }))}</small>` : '';
   root.innerHTML = `<div class="modal-head ship-head"><div class="ship-hero"${detailAttr(`hull:${cls.id}`)}>${art ? `<img src="${art}" alt="" draggable="false" />` : ''}</div><div><h2>${esc(self.loadout.trophy ? placeName(self.loadout.name) : self.loadout.name)}</h2><div class="sub">${esc(cls.name)} — ${esc(cls.role)}</div><div class="sub ship-passive">${icon('xp', '', 'ico-sm')}${esc(L('ship.passive', { name: cls.passive.name, text: cls.passive.description }))}</div>${giftLine(cls.id)}</div><div class="ship-head-r">${openGear ? `<button class="btn btn-small btn-primary" data-open-gear>${icon('menu_cabin', '', 'ico-sm')}${esc(L('ship.gear'))}</button>` : ''}${openLook ? `<button class="btn btn-small" data-open-look>${icon('faction_free', '', 'ico-sm')}${esc(L('ship.look'))}</button>` : ''}${scuttle && !self.dockedAt ? `<button class="btn btn-small btn-danger" data-scuttle title="${esc(LA('ship.scuttleT'))}">${icon('map_wreck', '', 'ico-sm')}${esc(LA('ship.scuttle'))}</button>` : ''}<div class="muted">${esc(L('ship.close', { key: kb('ship') }))}</div></div></div>
     <div class="modal-body"><div class="stat-grid">
-      ${tile('stat_sails', L('ship.speed'), `${esc(L('ship.speedVal', { v: dec1(st.maxSpeed) }))}${self.hold?.over ? `<small class="ship-over">${esc(L('ship.over', { n: self.hold.slow, v: dec1(st.maxSpeed * (1 - self.hold.slow / 100)) }))}</small>` : ''}`)}
+      ${tile('stat_sails', L('ship.speed'), `${esc(L('ship.speedVal', { v: dec1(st.maxSpeed) }))}${self.hold?.over ? `<small class="ship-over">${esc(L('ship.over', { n: self.hold.slow, v: dec1(st.maxSpeed * (1 - self.hold.slow / 100)) }))}</small>` : ''}${hands}`)}
       ${tile('menu_ship', L('ship.turn'), esc(L('ship.turnVal', { v: dec1((st.turnRate * 180) / Math.PI) })))}
       ${tile('anchor', L('ship.draft'), `${esc(L('ship.draftVal', { v: dec1(cls.draft) }))}<small>${esc(cls.passive.id === 'shallow_runner' ? L('ship.draftShallow', { name: cls.passive.name }) : L('ship.draftDeep'))}</small>`)}
       ${tile('wind', L('ship.noGo'), esc(L('ship.noGoVal', { deg: st.noGoDeg.toFixed(0), rig: L(`rig.${cls.rig}`) })))}
       ${tile('stat_hull', L('ship.hull'), `${st.hullMax} / ${Math.round(st.armor * 100)}%`)}
       ${tile('stat_sails', L('ship.sails'), String(st.sailHpMax))}
-      ${tile('stat_crew', L('ship.crew'), esc(L('ship.crewVal', { n: self.crew, min: st.crewMin, max: st.crewMax })))}
+      ${tile('stat_crew', L('ship.crew'), `${esc(L('ship.crewVal', { n: self.crew, min: st.crewMin, max: st.crewMax }))}${handsCut > 0 || gunsShort ? `<small class="ship-over ship-hands">${esc(handsCut > 0 ? L('ship.handsCrew', { n: handsCut }) : L('ship.gunsShort'))}</small>` : ''}`)}
       ${tile('tab_market', L('ship.hold'), esc(L('ship.holdVal', { used: dec1(used), max: st.holdVolume.toFixed(0), weight: st.holdWeight.toFixed(0) })))}
       ${tile(`gun_${self.loadout.guns.port}`, L('ship.port'), `${cls.gunPortsPerSide - self.gunsDisabled.port}/${cls.gunPortsPerSide}<small>${esc(GUNS[self.loadout.guns.port].name)}</small>`, true, `gun:${self.loadout.guns.port}`)}
       ${tile(`gun_${self.loadout.guns.starboard}`, L('ship.starboard'), `${cls.gunPortsPerSide - self.gunsDisabled.starboard}/${cls.gunPortsPerSide}<small>${esc(GUNS[self.loadout.guns.starboard].name)}</small>`, false, `gun:${self.loadout.guns.starboard}`)}

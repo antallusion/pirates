@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { crewAwayOnLogin } from './crewaway.ts';
 import { DOCK_SLOW, LANDING_R, REACH_DOCK, REACH_SLACK, hullOf } from '../../../shared/src/data/reach.ts';
 import { dockWithin } from '../../../shared/src/world/dock.ts';
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
@@ -285,7 +286,7 @@ import { bid as auctionBid, claimAuction, putUp, stepAuction } from './auction.t
 import { buyHearsay, forgetHearsay, stepHearsay } from './hearsay.ts';
 import { sagaNote, shareSaga } from './saga.ts';
 import { chronicleOf, logNote, sendChronicle, sunkByNote } from './captainlog.ts';
-import { charted } from './charting.ts';
+import { charted, logSecond } from './charting.ts';
 import { h3Message, stepH3 } from './h3.ts'; // docs/17 H3
 import { h4Message, stepH4 } from './h4.ts'; // docs/17 H4
 import { closeFight, installLairHooks, landFightOn, landFighting, landTac, lairBeach, lairList, lairMessage, lairPos, lairPrompt, lairUp, resendLandFight, stepLairs, stepLandFights } from './beastlairs.ts'; // docs/18 II
@@ -1283,6 +1284,7 @@ export class Game {
       this.streamChunks(s);
       this.discover(s);
       fogSecond(this, s); // the fog of war: her lookouts, her island's reach, her scouts (owner, 2026-10-17)
+      logSecond(this, s); // forum post 45: her log, the navigator's perks' measure (charting.ts)
       this.recordSightings(s);
       if (s.ship.landing) stepLanding(this, s.ship);
       stepAdrift(this, s); // torn sails, no sailcloth: the jury rig and the stranded prompt (owner, 2026-10-20)
@@ -4993,7 +4995,7 @@ export class Game {
   }
 
   private sendInit(s: PlayerSession): void {
-    const away = awayReturn(this, s); // back after a long time ashore (docs/16 #30)
+    const away = awayReturn(this, s, crewAwayOnLogin(this, s)); // back after a long time ashore (docs/16 #30); her crew's reckoning (forum post 45)
     restReturn(this, s);
     commonCollect(this, s);
     worldGoalsCollect(this, s);

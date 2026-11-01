@@ -38,7 +38,7 @@ import { isCitadelIsland } from '../../../shared/src/data/citadels.ts';
 import type { Game } from './Game.ts';
 import { changeRep } from './player.ts';
 import type { PlayerSession } from './player.ts';
-import { deliver } from './post.ts';
+import { deliver, notice } from './post.ts';
 import { repairCost } from './ports.ts';
 import type { ShipEntity } from './ship.ts';
 import { SPEED_SCALE } from '../../../shared/src/constants.ts';
@@ -820,7 +820,9 @@ function stepCalendar(game: Game, h: Holding): void {
   if (h.autoRenew && h.treasury >= price) {
     h.treasury -= price;
     h.until += 7 * DAY;
-    notify(game, h, `${isl.name}: lease renewed`, `A week's rent of ${price} silver was paid from the island's treasury.`);
+    // forum post 45: a routine report — a line of «Хроника», not a letter
+    if (h.owner.kind === 'player') notice(game, h.owner.id, { from: `Harbour office, ${REGIONS[isl.region].name}`, subject: `${isl.name}: lease renewed`, body: `${isl.name}: a week's rent of ${price} silver was paid from the island's treasury.`, gold: 0, goods: null });
+    else notify(game, h, `${isl.name}: lease renewed`, `A week's rent of ${price} silver was paid from the island's treasury.`);
     game.holdings.touch();
     return;
   }

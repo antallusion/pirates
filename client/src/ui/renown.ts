@@ -214,6 +214,13 @@ export function renderAway(root: HTMLElement, v: AwayView, send: (m: ClientMsg) 
   const sect = (ico: string, h: string, body: string) => `<div class="card aw-card"><h4 class="card-h">${icon(ico, '', 'ico-md')}${esc(h)}</h4>${body}</div>`;
   const lines = (xs: string[]) => xs.map((x) => `<p class="aw-line">${esc(sv(x))}</p>`).join('');
   const parts: string[] = [];
+  const up = v.upkeep ? upkeepCard(v.upkeep) : '';
+  if (v.brief) {
+    root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('awayTitle'))}</h2><div class="sub">${esc(L('upSubBrief', { h: v.hours }))}</div></div></div>
+    <div class="modal-body away">${up}<div class="aw-acts"><button class="btn" data-aw-close>${esc(L('awayLater'))}</button></div></div>`;
+    root.querySelector<HTMLElement>('[data-aw-close]')?.addEventListener('click', close);
+    return;
+  }
   if (v.isle) {
     const goods = `${v.isle.goods >= 0 ? '+' : ''}${fmt(v.isle.goods)}`, tr = `${v.isle.treasury >= 0 ? '+' : ''}${fmt(v.isle.treasury)}`;
     parts.push(sect('tab_isles', L('awayIsle', { name: placeName(v.isle.name) }), `<p class="aw-line">${esc(L('awayIsleGoods', { n: goods }))} · ${esc(L('awayIsleTreasury', { n: tr }))}</p>${lines(v.isle.raids)}`));
@@ -225,11 +232,25 @@ export function renderAway(root: HTMLElement, v: AwayView, send: (m: ClientMsg) 
     + (v.lastWeek.length ? `<div class="giver-h">${esc(L('awayLastWeek'))}</div>${v.lastWeek.map((w) => `<p class="aw-line">${esc(weeklyWhat(w.kind, w.region))}: <b>${esc(w.winner)}</b></p>`).join('')}` : '')));
   const gift = v.gift ? `<div class="card aw-gift"><h4 class="card-h">${icon('coin', '', 'ico-md')}${esc(L('awayGift'))}</h4><p class="aw-line">${esc(L('awayGiftText', { silver: fmt(v.gift.silver), prov: v.gift.provisions, speed: v.gift.speedups ? L('awayGiftSpeed') : '' }))}</p><button class="btn btn-primary" data-aw-take>${esc(L('awayTake'))}</button></div>` : '';
   root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('awayTitle'))}</h2><div class="sub">${esc(L('awaySub', { h: v.hours }))}</div></div></div>
-    <div class="modal-body away">${gift}<div class="aw-cards">${parts.join('')}</div><div class="aw-acts"><button class="btn" data-aw-close>${esc(L('awayLater'))}</button></div></div>`;
+    <div class="modal-body away">${gift}${up}<div class="aw-cards">${parts.join('')}</div><div class="aw-acts"><button class="btn" data-aw-close>${esc(L('awayLater'))}</button></div></div>`;
   root.querySelector<HTMLElement>('[data-aw-take]')?.addEventListener('click', () => {
     send({ t: 'away', action: 'take' });
     v.gift = null;
     close();
   });
   root.querySelector<HTMLElement>('[data-aw-close]')?.addEventListener('click', close);
+}
+
+/** «Расчёт за время отсутствия» (forum post 45): what her crew ate at sea or drank in port, what was short, who left. */
+function upkeepCard(u: NonNullable<AwayView['upkeep']>): string {
+  const cap = u.capped ? L('upCap') : '';
+  const h = Math.round(u.hours * 10) / 10;
+  const lines = [u.atSea ? L('upSea', { h, cap, food: fmt(Math.round(u.food)) }) : L('upPort', { h, cap, silver: fmt(u.silver) })];
+  if (u.foodShort > 0) lines.push(L('upFoodShort', { n: fmt(Math.ceil(u.foodShort)) }));
+  if (u.silverShort > 0) lines.push(L('upSilverShort', { n: fmt(u.silverShort) }));
+  if (u.deserted > 0) lines.push(L(u.atSea ? 'upDeserted' : 'upDesertedPort', { n: u.deserted, crew: u.crew }));
+  else if (u.short <= 0) lines.push(L('upAllWell'));
+  lines.push(L('upMorale', { m: u.morale }));
+  if (u.newcomer) lines.push(L('upNewcomer'));
+  return `<div class="card aw-card aw-upkeep${u.short > 0 ? ' short' : ''}"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('upTitle'))}</h4>${lines.map((x) => `<p class="aw-line">${esc(x)}</p>`).join('')}<p class="aw-line muted">${esc(L('upRule'))}</p></div>`;
 }

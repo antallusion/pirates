@@ -338,7 +338,7 @@ export const SEA_SKILLS: Record<string, SeaSkill> = {
   },
   star_fix: {
     id: 'star_fix', captain: 'navigator', key: 'C', by: { rake: [0.12, 0.13, 0.15, 0.17, 0.2], dur: 20 }, pow: ['rake'], fmt: { rake: 'pct', dur: 'sec' },
-    text: ['A star fix: every island within 7 km charted, and for {dur} the weak angles of enemies within 750 m shown — her broadsides on them rake, +{rake}.', 'Звёздный отсчёт: все острова в 7 км на карте, и {dur} видны слабые углы врагов в 750 м — её залпы по ним продольные, +{rake}.'],
+    text: ['A star fix: every island within 7 km charted, the reckoning exact (+8% speed for 3 min, a minute more per 10 km sailed since the last fix), and for {dur} the weak angles of enemies within 750 m shown — her broadsides on them rake, +{rake}.', 'Звёздный отсчёт: все острова в 7 км на карте, точное счисление (+8% хода на 3 мин и минута сверху за каждые 10 км пути с прошлой обсервации), и {dur} видны слабые углы врагов в 750 м — её залпы по ним продольные, +{rake}.'],
     facets: {
       3: [F('Star chart', 'Звёздная карта', '6 s longer.', 'На 6 с дольше.', { add: { dur: 6 } }),
         F('Exact fix', 'Точный отсчёт', '+8% more and range +10%.', 'Ещё +8% и дальность +10%.', { add: { rake: 0.08, range: 0.1 } })],

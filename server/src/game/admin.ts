@@ -145,6 +145,7 @@ import { lairAdmin, lairsAll } from './wanted.ts';
 import { pointAlong } from './nav.ts';
 import { deliver } from './post.ts';
 import { awayMark, awayReturn, chronicle, closeWeek, rn, sendRenown, weeklyAdd } from './renown.ts';
+import { crewAwayOnLogin } from './crewaway.ts';
 import { weekNumber, weeklyChallenges } from '../../../shared/src/data/renown.ts';
 import { FISH_IDS } from '../../../shared/src/data/fishing.ts';
 import { adminWeek } from './calendar.ts';
@@ -1525,7 +1526,13 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       a.treasury = Math.max(0, a.treasury - 600);
       deliver(game, s.accountId, { from: 'The Auction House', subject: 'Sold at Tidewrack', body: 'A lot of yours sold while you were ashore.', gold: 640, goods: null });
       chronicle(game, 'Kraken was slain by Anne Vey, Morrow Kett.');
-      const v = awayReturn(game, s);
+      // forum post 45: and her crew's reckoning for those hours, where her ship lies now (at sea: provisions; in port: silver)
+      p.ashoreAt = game.wallNow() - num(0, 36) * 3_600_000;
+      p.ashoreInPort = !!ship.docked;
+      const v = awayReturn(game, s, crewAwayOnLogin(game, s));
+      delete p.ashoreAt;
+      delete p.ashoreInPort;
+      game.pushSelf(s, true);
       if (!v) return 'Not long enough ashore.';
       game.sendTo(s, { t: 'away', view: v });
       return null;

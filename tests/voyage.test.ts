@@ -48,7 +48,7 @@ test('a ship eats FOOD_PER_40 units a minute for forty hands, a great crew less 
   }
   assert.equal(breadRoom(28, 30), 1, 'a sloop keeps her cubic metre');
   assert.ok(Math.abs(breadRoom(600, 130) - 65 / (provisionsPerMinute(600) * VOYAGE_MINUTES)) < 1e-9, 'a man-of-war: half her hold is a voyage');
-  assert.equal(voyageCrew({ crewMin: 8, crewMax: 28 }), 16, 'enough hands to sail at her best');
+  assert.equal(voyageCrew({ crewMin: 8, crewMax: 28 }), 20, 'enough hands to sail at her best (forum post 45: 70 % on the sails)');
   assert.equal(voyageCrew({ crewMin: 20, crewMax: 22 }), 20);
 });
 
@@ -59,7 +59,7 @@ test('what is short before setting sail: food, hands, shot and repairs, each wit
   const food = needs[0];
   assert.ok(food.kind === 'food' && food.want === Math.ceil(provisionsPerMinute(10) * VOYAGE_MINUTES) && food.buy === food.want, JSON.stringify(food));
   const crew = needs[1];
-  assert.ok(crew.kind === 'crew' && crew.buy === 6);
+  assert.ok(crew.kind === 'crew' && crew.buy === 10); // forum post 45: 70 % of 28 is 20
   const ammo = needs[2];
   assert.ok(ammo.kind === 'ammo' && ammo.want === 30 && ammo.buy === 30, 'ten broadsides, in tens');
   // No room in the hold: food is short but nothing can be bought.

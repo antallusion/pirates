@@ -15,7 +15,7 @@ import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { FACTION_DUTY } from './economy.ts';
 import type { Game } from './Game.ts';
-import { logNote } from './captainlog.ts';
+import { logAccount, logNote } from './captainlog.ts';
 import type { PlayerSession } from './player.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
 import { WAREHOUSE_VOLUME, warehouseVolume } from './resources.ts';
@@ -148,6 +148,24 @@ export function deliver(game: Game, accountId: number, l: Omit<Letter, 'id' | 's
     }
   }
   return letter;
+}
+
+/** A routine notice (forum post 45, «письма-спам»): the reports of her island and her automation — the week's supply,
+ *  a lease renewed, a caravan's run — are no longer letters but lines of «Хроника» (its «Остров» filter). THE RULE: a
+ *  notice with nothing enclosed (no silver, goods or men) is a line of the chronicle, never a letter; one with something
+ *  enclosed still comes as a letter (to be taken) and leaves its line as every letter does. Letters from people, gifts,
+ *  the forum's replies, rewards with an enclosure and the alarms that ask her to act (a raid on her island, a lease run
+ *  out, upkeep unpaid, a mine taken, a caravan lost) stay letters. `toast`: the word to her if she is aboard (a good one
+ *  is mirrored into the chronicle by itself). */
+export function notice(game: Game, accountId: number, l: Omit<Letter, 'id' | 'sentAt' | 'arriveAt' | 'read' | 'taken'>, toast?: 'good' | 'bad' | 'info'): void {
+  const s = game.sessionByAccount(accountId);
+  const aboard = !!s && s.disconnectedAt === null && !s.conn.closed;
+  if (aboard && toast) game.sendTo(s, { t: 'toast', msg: l.body, kind: toast });
+  if (l.gold > 0 || l.goods || l.units) {
+    deliver(game, accountId, l);
+    return;
+  }
+  if (!(aboard && toast === 'good')) logAccount(game, accountId, 'build', [l.body]);
 }
 
 function announce(game: Game, s: PlayerSession, l: Letter): void {

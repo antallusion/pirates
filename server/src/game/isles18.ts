@@ -32,7 +32,7 @@ import type { Game } from './Game.ts';
 import { takeItem } from './gear.ts';
 import { forceBank, sendIsles } from './isles.ts';
 import type { PlayerSession, Profile } from './player.ts';
-import { deliver } from './post.ts';
+import { notice } from './post.ts';
 import type { ShipEntity } from './ship.ts';
 
 const KEY = 'h18:supply';
@@ -374,9 +374,8 @@ export function supplyWeekly(game: Game, week: number, force = false): void {
       r.last = week;
       any = true;
       const body = k > 0 ? `The supply boats from ${is.name} are in: ${k} ${GOODS[w.good].name} in your island's yard.` : `The supply boats from ${is.name} are in, but your island's yard is full.`;
-      deliver(game, account, { from: 'Your supply routes', subject: 'The week’s supply', body, gold: 0, goods: null });
-      const s = game.sessionByAccount(account);
-      if (s?.ship) game.toastShip(s.ship, body, k > 0 ? 'good' : 'bad');
+      // forum post 45: a line of «Хроника» («Остров»), not a letter — the goods are in her yard already (post.ts notice)
+      notice(game, account, { from: 'Your supply routes', subject: 'The week’s supply', body, gold: 0, goods: null }, k > 0 ? 'good' : 'bad');
     }
     if (any) game.holdings.touch();
   }

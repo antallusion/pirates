@@ -35,7 +35,7 @@ import { findPath, pointAlong } from './nav.ts';
 import type { Path } from './nav.ts';
 import { sectorLevel, setPath, spawnPirate } from './npc.ts';
 import type { PlayerSession } from './player.ts';
-import { deliver } from './post.ts';
+import { deliver, notice } from './post.ts';
 import type { ShipEntity } from './ship.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { SKIPPER_RISK, SKIPPER_SALE, SKIPPER_SKIM, SKIPPER_SPEED } from '../../../shared/src/data/turncoats.ts';
@@ -427,11 +427,14 @@ function payInsurance(game: Game, c: Caravan, lost: number): void {
     if (h) h.treasury += pay;
   }
   game.db.ledger(c.owner, 'caravan_claim', pay, c.id);
-  mail(game, c, `The League pays ${pay} silver on the insurance of ${c.name}.`);
+  mail(game, c, `The League pays ${pay} silver on the insurance of ${c.name}.`, true);
 }
 
-function mail(game: Game, c: Caravan, line: string): void {
+function mail(game: Game, c: Caravan, line: string, routine = false): void {
   note(c, line);
+  // forum post 45: the skipper's routine word (beaten them off, the store full, the insurance paid) is a line of
+  // «Хроника»; a caravan lost or beaten still comes as a letter
+  if (routine) return notice(game, c.owner, { from: `Skipper ${c.skipper}`, subject: c.name, body: line, gold: 0, goods: null }, 'info');
   const s = game.sessionByAccount(c.owner);
   if (s) game.sendTo(s, { t: 'toast', msg: line, kind: 'info' });
   deliver(game, c.owner, { from: `Skipper ${c.skipper}`, subject: c.name, body: line, gold: 0, goods: null });
@@ -501,7 +504,7 @@ function resolveAttack(game: Game, c: Caravan, nameAt: string, strength = 1): vo
   const band = sectorLevel(game, x, y); // the square of the sea she is in (docs/16 P2)
   const win = defenceOdds({ escorts: c.escorts, ships: c.ships.length, level: lvl, band, pirates: S.rng.int(2, 3), flee: c.orders.onAttack === 'flee', strength });
   if (S.rng.chance(win)) {
-    mail(game, c, `Caravan ${c.name} fought them off near ${nameAt}.`);
+    mail(game, c, `Caravan ${c.name} fought them off near ${nameAt}.`, true);
     return;
   }
   const before = value(c.cargo);
@@ -717,7 +720,7 @@ export function stepCaravans(game: Game): void {
       if (Object.keys(c.cargo).length && !c.orders.repeat) {
         arriveAt(game, c, { kind: 'isle' });
         if (Object.keys(c.cargo).length) {
-          if (!c.log.some((l) => l.startsWith('The island’s store is full'))) mail(game, c, `The island’s store is full: caravan ${c.name} lies at anchor with the rest.`);
+          if (!c.log.some((l) => l.startsWith('The island’s store is full'))) mail(game, c, `The island’s store is full: caravan ${c.name} lies at anchor with the rest.`, true);
           continue;
         }
       }
@@ -757,7 +760,7 @@ export function stepCaravans(game: Game): void {
       const alive = c.attack.pirates.filter((id) => game.ships.get(id)?.alive);
       if (!alive.length) {
         c.attack = null;
-        mail(game, c, `Caravan ${c.name} fought them off near ${game.nearestIslandName(x, y)}.`);
+        mail(game, c, `Caravan ${c.name} fought them off near ${game.nearestIslandName(x, y)}.`, true);
       } else if (game.now > c.attack.until) {
         for (const id of alive) game.removeShip(id);
         c.attack = null;

@@ -39,7 +39,7 @@ import { hullResponse, newHit, resolveHull } from '../../shared/src/sim/hull.ts'
 import type { Blocker } from '../../shared/src/sim/hull.ts';
 import { clientBlockers } from './collide.ts';
 import type { SailState } from '../../shared/src/sim/sailing.ts';
-import { computeShipStats, crewFactor, loadFactor, sailTalents } from '../../shared/src/sim/shipstats.ts';
+import { computeShipStats, crewFactor, handsSpeedMul, loadFactor, sailTalents } from '../../shared/src/sim/shipstats.ts';
 import type { ShipStats } from '../../shared/src/sim/shipstats.ts';
 import { currentAt } from '../../shared/src/world/worldgen.ts';
 import { placeName } from './ui/maps.ts';
@@ -875,7 +875,7 @@ export class ClientState {
     const params = {
       rig: st.rig, maxSpeed: st.maxSpeed, accel: st.accel, turnRate: st.turnRate, noGoDeg: st.noGoDeg, sailChangeRate: st.sailChangeRate,
       currentMul: st.currentMul, sailHealth: you.sails / Math.max(1, you.sailsMax), rudderHealth: you.rudderHp, crewFactor: crewFactor(st, you.crew),
-      loadFactor: loadFactor(this.self.loadout, st, this.self.cargo, this.self.ammo), speedMul: (this.night() ? 1 + st.nightSpeed : 1) * tornRiggingMul(this.self.effects, this.estServerTime()) * overloadMul(this.self.loadout.classId, holdFill(this.self.cargo, st)),
+      loadFactor: loadFactor(this.self.loadout, st, this.self.cargo, this.self.ammo), speedMul: (this.night() ? 1 + st.nightSpeed : 1) * tornRiggingMul(this.self.effects, this.estServerTime()) * overloadMul(this.self.loadout.classId, holdFill(this.self.cargo, st)) * handsSpeedMul(st, you.crew),
       personalWind: st.flags.has('personal_wind'), weatherly: SHIP_CLASSES[this.self.loadout.classId]?.passive.id === 'weatherly', sweeps: SHIP_CLASSES[this.self.loadout.classId]?.passive.id === 'sweeps',
       talent: sailTalents(st),
     };

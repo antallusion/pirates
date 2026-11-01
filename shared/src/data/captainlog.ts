@@ -44,7 +44,10 @@ export type LogKind =
   /** A letter in: a[0] who from, a[1] the subject; n the silver enclosed. */
   | 'letter'
   /** A sea encounter's end: a[0] its id, a[1] the outcome, a[2] its numbers (JSON). */
-  | 'encounter';
+  | 'encounter'
+  /** Forum post 45, «Расчёт за время отсутствия»: her crew's reckoning for the time away — a[0] 'sea' | 'port', a[1] the
+   *  hours, a[2] provisions eaten, a[3] silver drawn, a[4] deserters, a[5] the share unmet (%). */
+  | 'upkeep';
 
 export interface LogEntry {
   /** Wall-clock ms. */
@@ -72,7 +75,7 @@ export const LOG_ICON: Record<LogKind, string> = {
   sank: 'map_wreck', prize: 'tree_boarding', storm: 'weather_storm', sea: 'map_port', port: 'anchor', boss_seen: 'danger', boss: 'danger',
   officer_dead: 'danger', crew_lost: 'stat_crew', wounded_died: 'stat_crew', level: 'xp', saga: 'tab_legends', siege: 'build_fort',
   loot: 'map_wreck', find: 'map_treasure', fight: 'tree_boarding', quest: 'goal', trade: 'tab_market', reward: 'service_crown', build: 'build_shipyard', note: 'ui_quill',
-  sunk_by: 'danger', taken_by: 'danger', boarded: 'tree_boarding', quest_done: 'goal', letter: 'tab_letters', encounter: 'map_event',
+  sunk_by: 'danger', taken_by: 'danger', boarded: 'tree_boarding', quest_done: 'goal', letter: 'tab_letters', encounter: 'map_event', upkeep: 'stat_crew',
 };
 
 /** The chronicle's filters (forum post 40): all, loot, battles, quests, the island. */
@@ -81,7 +84,7 @@ export const LOG_FILTERS: readonly LogFilter[] = ['all', 'loot', 'fight', 'quest
 const GROUP: Record<LogKind, Exclude<LogFilter, 'all'> | null> = {
   sank: 'fight', prize: 'fight', storm: null, sea: null, port: null, boss_seen: 'fight', boss: 'fight', officer_dead: 'fight', crew_lost: 'fight',
   wounded_died: 'fight', level: 'quest', saga: 'quest', siege: 'fight', loot: 'loot', find: 'loot', fight: 'fight', quest: 'quest', trade: 'loot',
-  reward: 'quest', build: 'isle', note: null, sunk_by: 'fight', taken_by: 'fight', boarded: 'fight', quest_done: 'quest', letter: null, encounter: 'loot',
+  reward: 'quest', build: 'isle', note: null, sunk_by: 'fight', taken_by: 'fight', boarded: 'fight', quest_done: 'quest', letter: null, encounter: 'loot', upkeep: null,
 };
 /** Whether a line stands under a filter. */
 export function logIn(kind: LogKind, f: LogFilter): boolean {
