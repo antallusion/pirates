@@ -110,13 +110,24 @@ test('the island’s first steps: the barracks, marines hired, the range — rew
   assert.equal(isleFirstView(game, s)!.open, 'dw2');
   assert.equal(isleFirstView(game, s)!.ready, true);
   assert.equal(buildTown(game, s, 'dw2'), null);
-  // ordered: the step is done at once, its reward the range's iron and powder
+  // forum 45: ordered is not built — the step waits for the barracks to stand, its time left shown
+  isleFirstCheck(game, s);
+  assert.equal(s.profile!.isleFirst!.step, 0, 'the barracks only ordered: the step stands');
+  const vw = isleFirstView(game, s)!;
+  assert.equal(vw.id, 'dw2');
+  assert.equal(vw.own, true);
+  assert.equal(vw.ready, false);
+  assert.ok(vw.wait > 0, 'the barracks still rising');
+  clock += 3 * 3600_000;
+  reckonBase(game, h);
+  // standing: the step is done, its reward the range's iron and powder
+  assert.equal(townLevel(y, 'dw2'), 1);
   assert.equal(s.profile!.isleFirst!.step, 1);
   assert.equal(s.profile!.gold, ISLE_FIRST[0].silver);
   assert.equal(y.res.gunpowder, ISLE_FIRST[0].goods.gunpowder);
   const v1 = isleFirstView(game, s)!;
   assert.equal(v1.id, 'hire');
-  assert.ok(v1.wait > 0, 'the barracks still rising');
+  assert.equal(v1.wait, 0);
   isleFirstHire(game, s, 3);
   assert.equal(s.profile!.isleFirst!.step, 1, 'only marines count');
   isleFirstHire(game, s, 2);
@@ -128,6 +139,9 @@ test('the island’s first steps: the barracks, marines hired, the range — rew
   y.res.iron = 50;
   s.profile!.gold += 5_000;
   assert.equal(buildTown(game, s, 'dw3'), null);
+  assert.equal(s.profile!.isleFirst!.step, 2, 'the range only ordered');
+  clock += 6 * 3600_000;
+  reckonBase(game, h);
   assert.equal(s.profile!.isleFirst!.step, 3);
   assert.equal(isleFirstView(game, s), null, 'done: the line is gone');
   // the help is once: a second check gives nothing
@@ -191,4 +205,38 @@ test('stuck with only hands aboard: a calm reason, no auto-complete', async () =
   assert.equal(isleFirstView(game, s)!.stuck, 'silver');
   isleFirstCheck(game, s);
   assert.equal(s.profile!.isleFirst!.step, 1, 'no marines aboard: the step waits');
+});
+
+// Forum 45 (topic 8): «как только начинаешь строить Казарму морпехов, морпехов уже можно нанять» — a building under way
+// opens nothing: not the island's hire, not a port's through the island's tiers, not the advice's tiers.
+test('forum 45: the barracks under construction open no marines anywhere — only once they stand', async () => {
+  const { dwellView, recruit } = await import('../server/src/game/dwell.ts');
+  const { isleOfAccount } = await import('../server/src/game/armyadvice.ts');
+  const { isleTiers } = await import('../shared/src/data/armyadvice.ts');
+  const { portDwellings } = await import('../shared/src/data/town.ts');
+  const game = world();
+  const { s, h, y } = owner(game, 'Early Barracks');
+  y.town = { b: { hall: 1, dw1: 1 }, pool: [0, 0, 0, 0, 0, 0, 0, 0], w: -1 };
+  y.res = { timber: 500, coal: 500, iron: 500 };
+  s.ship!.setArmy([{ u: 'deckhand', n: 2 }]);
+  assert.equal(buildTown(game, s, 'dw2'), null);
+  assert.equal(townLevel(y, 'dw2'), 0, 'ordered, not standing');
+  // a port with no marines of its own
+  const port = game.world.ports.find((p) => !portDwellings(p).some((d) => d.tier === 2))!;
+  assert.ok(port, 'a port without its own barracks');
+  s.ship!.docked = port.id;
+  const tier2 = () => dwellView(game, s, 'port')!.rows.find((r) => r.tier === 2);
+  assert.equal(tier2(), undefined, 'the port: no marines through the island yet');
+  assert.match(recruit(game, s, 'port', 'marine', 1)!, /No dwelling/);
+  assert.equal(isleOfAccount(game, s.accountId)!.dw2 ?? 0, 0, 'the advice reads no barracks');
+  assert.equal(isleTiers(isleOfAccount(game, s.accountId)).has(2), false);
+  s.ship!.docked = null;
+  assert.equal(dwellView(game, s, 'isle')!.rows.some((r) => r.tier === 2), false, 'the island: none yet');
+  // done: the marines are had everywhere
+  clock += 3 * 3600_000;
+  reckonBase(game, h);
+  assert.equal(townLevel(y, 'dw2'), 1);
+  s.ship!.docked = port.id;
+  assert.equal(tier2()?.isle, true, 'the port: marines through the island');
+  assert.equal(isleTiers(isleOfAccount(game, s.accountId)).has(2), true);
 });

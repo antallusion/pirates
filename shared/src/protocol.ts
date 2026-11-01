@@ -756,6 +756,8 @@ export interface IsleFirstView {
   /** The marines' step with no marine to be had (owner, 2026-10-29): no room even with the hands ashore, the army over
    *  the might cap, or no silver — a calm line, no finger. */
   stuck?: 'room' | 'might' | 'silver';
+  /** Forum 45: the step's own building is ordered and rising (`wait`: its seconds left) — nothing to press yet. */
+  own?: boolean;
 }
 
 export interface PrivateState {

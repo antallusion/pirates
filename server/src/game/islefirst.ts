@@ -1,6 +1,7 @@
 // The island's first build, guided (owner, 2026-10-28: 28 islands on the live server, 23 with nothing but the town hall —
 // «как будто никто не доплывает»). After the claim three steps, one at a time, each with its reward:
 //   1. «Постройте Казарму морпехов» (dw2) — ordered from anywhere, paid from the treasury, the yard, then the purse;
+//      done when it STANDS (forum 45: an order under way unlocked the marines' step before the barracks were up);
 //   2. «Наймите морпехов в любом порту» (any marines signed on);
 //   3. «Постройте Стрельбище» (dw3).
 // The governor's help, once: a captain whose island cannot pay its bunkhouse and its barracks gets what is missing
@@ -48,6 +49,8 @@ export const ISLE_FIRST: IsleFirstStep[] = [
 export const HELP_FOR: TownId[] = ['dw1', 'dw2'];
 
 const ordered = (y: Yard, id: TownId) => townLevel(y, id) > 0 || y.jobs.some((j) => j.what === `t:${id}`);
+/** Standing (its first level finished): forum 45 — a building under way unlocks nothing and completes no step. */
+const built = (y: Yard, id: TownId) => townLevel(y, id) > 0;
 
 /** What the island still lacks for the bunkhouse and the barracks (those not yet ordered): goods and silver. */
 export function helpNeeded(s: PlayerSession, h: Holding, y: Yard): { silver: number; goods: Partial<Record<GoodId, number>> } {
@@ -121,7 +124,7 @@ export function isleFirstCheck(game: Game, s: PlayerSession): void {
   const help = governorHelp(game, s, h, y);
   if (help) game.sendTo(s, { t: 'toast', msg: help, kind: 'good' });
   const st = ISLE_FIRST[p.isleFirst.step];
-  if (st && st.id !== 'hire' && ordered(y, st.id)) done(game, s, h, y);
+  if (st && st.id !== 'hire' && built(y, st.id)) done(game, s, h, y);
   // no marine to be had, and her army holds marines or better already: the step is hers (never a nag)
   else if (st?.id === 'hire' && holdsMarines(s) && hireStuck(s)) done(game, s, h, y);
 }
@@ -178,13 +181,16 @@ export function isleFirstView(game: Game, s: PlayerSession): IsleFirstView | nul
   // the barracks ask the bunkhouse first: its card is the one to open while it is not ordered (its work: a wait)
   const id: 'dw1' | 'dw2' | 'dw3' = st.id === 'dw2' && !ordered(y, 'dw1') ? 'dw1' : st.id;
   const before: TownId = st.id === 'dw2' ? 'dw1' : 'dw2';
+  // (forum 45: the step's own building ordered and rising — the step waits for it, the time left shown)
+  const own = left(id);
+  if (own > 0 || (id === st.id && ordered(y, id))) return { ...base, open: id, ready: false, wait: own, own: true };
   const c = townCost(id, townLevel(y, id) + 1);
   const why = townWhy(game, s, h, y, id) ?? crewFree(h, y, game);
   const goods = (Object.entries(c.goods) as [GoodId, number][]).every(([g, n]) => stock(h, y, s, false, g) >= n);
   return { ...base, open: id, ready: !why && goods && purseOf(s, h) >= c.silver, wait: left(before), ...(why ? { why } : {}) };
 }
 
-/** Wired at start (Game's constructor): a level ordered counts at once. */
+/** Wired at start (Game's constructor): a level finished counts at once (forum 45: never one only ordered). */
 export function initIsleFirst(): void {
   townHooks.built = (game, s) => isleFirstCheck(game, s);
 }
