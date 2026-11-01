@@ -20,6 +20,11 @@ import { drawWaysChart } from '../render/waystations.ts'; // docs/35
 import { EN as ROAM_EN, RU as ROAM_RU } from '../lang/ui/roamers.ts';
 /** The chart's key open or folded, as the captain left it. */
 const LEGEND_KEY = 'gravetide.mapLegend';
+// forum 45: the chart's bottom row — «Где я», «К острову», «Найти врага»
+import { EN as FF_EN, RU as FF_RU } from '../lang/ui/foefind.ts';
+const FF = dict(FF_EN, FF_RU);
+/** «Где я»: her marker pulses this long (ms). */
+export const WHERE_PULSE_MS = 2600;
 const LROAM = dict(ROAM_EN, ROAM_RU);
 import { sprite } from '../assets.ts';
 import { LAIRS } from '../../../shared/src/data/lairs.ts';
@@ -322,6 +327,11 @@ export class WorldMap {
   onPortCard: ((portId: string) => void) | null = null;
   /** The Grail's chart (docs/17 H4), once an obelisk is read. */
   onPuzzle: (() => void) | null = null;
+  /** Forum 45: «Найти врага» and «К острову» from the chart's bottom row. */
+  onFoes: (() => void) | null = null;
+  onHome: (() => void) | null = null;
+  /** «Где я» (forum 45): her marker pulses until then (performance.now()). */
+  private pulseUntil = 0;
   /** ux2: «Плыть» on a quest or a task of the sea — the course there and on through a quest's steps (main.ts). */
   onGoal: ((key: string) => void) | null = null;
 
@@ -354,6 +364,37 @@ export class WorldMap {
     return wp && this.markAt && Math.hypot(wp.x - this.markAt.x, wp.y - this.markAt.y) < 1 ? this.markName : '';
   }
 
+  /** Forum 45: «Где я», «К острову», «Найти врага» — the chart's own row at its foot (with the key and her mark's). */
+  private extraActs(state: ClientState): string {
+    const b = (attr: string, art: string, label: string, tip: string) => `<button type="button" class="k-btn k-btn--secondary k-btn--md map-x" ${attr} title="${esc(tip)}" aria-label="${esc(tip)}">${icon(art, '', 'k-btn-ico')}<span class="k-btn-l">${esc(label)}</span></button>`;
+    return (state.ownDisplay ? b('data-mwhere', 'map_ship', FF('where'), FF('whereTip')) : '')
+      + (this.onHome ? b('data-mhome', 'tab_isles', FF('home'), FF('homeTip')) : '')
+      + (this.onFoes ? b('data-mfoe', 'item_black_flag', FF('btn'), FF('btnTip')) : '');
+  }
+
+  /** The chart turned onto a spot (a foe chosen in the finder: her course there drawn on it). */
+  focus(state: ClientState, x: number, y: number): void {
+    this.cx = x;
+    this.cy = y;
+    this.zoom = Math.max(this.zoom, 4);
+    this.draw(state);
+  }
+
+  /** «Где я» (forum 45): the chart on her ship, a closer look, her marker pulsing a while. */
+  whereAmI(state: ClientState): void {
+    const own = state.ownDisplay;
+    if (!own) return;
+    this.cx = own.x;
+    this.cy = own.y;
+    this.zoom = Math.max(this.zoom, 4);
+    this.pulseUntil = performance.now() + WHERE_PULSE_MS;
+    const step = () => {
+      this.draw(state);
+      if (performance.now() < this.pulseUntil && this.canvas?.isConnected) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
   open(root: HTMLElement, state: ClientState): void {
     const tracked = trackedQuest(state.self?.quests, state.ownDisplay)?.id;
     const inGroup = (state.party?.members.length ?? 0) > 1;
@@ -368,8 +409,8 @@ export class WorldMap {
       { id: 'yards', icon: 'build_shipyard', label: L('layer.yards'), hint: L('layer.yardsHint') },
     ].map((x) => ({ hint: W('map.layersHint'), ...x })), [...this.layers], 'mlayer');
     root.innerHTML = `${winHead(L('title'), { crest: 'menu_map', chips, sub: L(document.body.classList.contains('touch') ? 'subTouch' : 'sub', { islands: `${state.discovered.size} ${plural(state.discovered.size, L('island.one'), L('island.few'), L('island.many'))}` }) })}
-      <div class="map-wrap"><canvas id="worldmap-canvas"></canvas>${this.pickBar(state)}<div class="map-wp-acts">${this.tmSail(state)}${this.onAutosail ? `<button type="button" class="k-btn k-btn--primary k-btn--lg map-wp-sail${waypoint() ? '' : ' hidden'}" data-hint="${esc(W('map.sailHint'))}" title="${esc(EL('as_goTitle'))}">${icon('stat_sails', '⛵', 'k-btn-ico')}<span class="k-btn-l">${esc(W('map.sail'))}</span><small class="map-wp-name">${esc(this.markLabel())}</small></button>` : ''}<button type="button" class="k-btn k-btn--secondary k-btn--md map-wp-clear${waypoint() ? '' : ' hidden'}" title="${esc(L('wp.clearTitle'))}">${icon('goal', '', 'k-btn-ico')}<span class="k-btn-l">${esc(L('wp.clear'))}</span></button>${this.onPuzzle && ((state.adv?.pieces ?? 0) > 0 || state.adv?.grail === 'held') ? `<button type="button" class="k-btn k-btn--secondary k-btn--md map-pz">${icon('map_treasure', '', 'k-btn-ico')}<span class="k-btn-l">${esc(H4L('puzzle.btn'))}</span></button>` : ''}</div>
-      <details class="map-legend"${localStorage.getItem(LEGEND_KEY) === '1' ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}<span><b style="color:var(--gold);font-weight:400">⚓</b>&nbsp;${L('lg.sector')}</span>${LEGEND_C.map(([id, key]) => `<span title="${esc(DL('map.demandHint'))}">${icon(id, '', 'ico')}${DL(key)}</span>`).join('')}<span><b style="color:#8fc3e8;font-weight:400">▪▪▪</b>&nbsp;${LS('key.convoy')}</span><span><b style="color:#dfe6f0;font-weight:400">➔</b>&nbsp;${LS('key.front')}</span><span><b style="color:#b0302a;font-weight:400">■</b>&nbsp;${LS('key.lair')}</span><span><b style="color:#cdb98a;font-weight:400">●</b>&nbsp;${LI('tide.legend')}</span><span><b style="color:#d0503a;font-weight:400">▲</b>&nbsp;${LI('look.legend')}</span><span><b style="color:#e8c65a;font-weight:400">◌</b>&nbsp;${L('lg.tmRing')}</span><span><b style="color:#96d2a0;font-weight:400">◌</b>&nbsp;${L('lg.rumourRing')}</span><span><b style="color:#e88c40;font-weight:400">◯</b>&nbsp;${L('lg.taskRing')}</span><span><b style="color:#cdb98a;font-weight:400">◌</b>&nbsp;${L('lg.bankRing')}</span><span><b style="color:#c8604a;font-weight:400">⬟</b>&nbsp;${L('lg.lairBeast')}</span><span><b style="color:#f5c77a;font-weight:400">✶</b>&nbsp;${LI('light.legend')}</span><span>${icon('map_treasure', '', 'ico')}${LI('cache.chart')}</span><span><b style="color:#e8ce78;font-weight:400">◆</b>&nbsp;${LROAM('lg')}</span><span><b style="color:#cfeef2;font-weight:400">▲</b>&nbsp;${LF('legend')}</span>${socialLegend()}${heroLegend()}${isleLegend()}</div></details></div>
+      <div class="map-wrap"><canvas id="worldmap-canvas"></canvas>${this.pickBar(state)}<div class="map-bar"><details class="map-legend"${localStorage.getItem(LEGEND_KEY) === '1' ? ' open' : ''}><summary>${L('legend')}</summary><div class="lg-items">${LEGEND.map(([id, key]) => `<span>${icon(id, '', 'ico')}${L(key)}</span>`).join('')}<span><b style="color:var(--gold);font-weight:400">⚓</b>&nbsp;${L('lg.sector')}</span>${LEGEND_C.map(([id, key]) => `<span title="${esc(DL('map.demandHint'))}">${icon(id, '', 'ico')}${DL(key)}</span>`).join('')}<span><b style="color:#8fc3e8;font-weight:400">▪▪▪</b>&nbsp;${LS('key.convoy')}</span><span><b style="color:#dfe6f0;font-weight:400">➔</b>&nbsp;${LS('key.front')}</span><span><b style="color:#b0302a;font-weight:400">■</b>&nbsp;${LS('key.lair')}</span><span><b style="color:#cdb98a;font-weight:400">●</b>&nbsp;${LI('tide.legend')}</span><span><b style="color:#d0503a;font-weight:400">▲</b>&nbsp;${LI('look.legend')}</span><span><b style="color:#e8c65a;font-weight:400">◌</b>&nbsp;${L('lg.tmRing')}</span><span><b style="color:#96d2a0;font-weight:400">◌</b>&nbsp;${L('lg.rumourRing')}</span><span><b style="color:#e88c40;font-weight:400">◯</b>&nbsp;${L('lg.taskRing')}</span><span><b style="color:#cdb98a;font-weight:400">◌</b>&nbsp;${L('lg.bankRing')}</span><span><b style="color:#c8604a;font-weight:400">⬟</b>&nbsp;${L('lg.lairBeast')}</span><span><b style="color:#f5c77a;font-weight:400">✶</b>&nbsp;${LI('light.legend')}</span><span>${icon('map_treasure', '', 'ico')}${LI('cache.chart')}</span><span><b style="color:#e8ce78;font-weight:400">◆</b>&nbsp;${LROAM('lg')}</span><span><b style="color:#cfeef2;font-weight:400">▲</b>&nbsp;${LF('legend')}</span>${socialLegend()}${heroLegend()}${isleLegend()}</div></details><div class="map-wp-acts">${this.tmSail(state)}${this.onAutosail ? `<button type="button" class="k-btn k-btn--primary k-btn--lg map-wp-sail${waypoint() ? '' : ' hidden'}" data-hint="${esc(W('map.sailHint'))}" title="${esc(EL('as_goTitle'))}">${icon('stat_sails', '⛵', 'k-btn-ico')}<span class="k-btn-l">${esc(W('map.sail'))}</span><small class="map-wp-name">${esc(this.markLabel())}</small></button>` : ''}<button type="button" class="k-btn k-btn--secondary k-btn--md map-wp-clear${waypoint() ? '' : ' hidden'}" title="${esc(L('wp.clearTitle'))}">${icon('goal', '', 'k-btn-ico')}<span class="k-btn-l">${esc(L('wp.clear'))}</span></button>${this.onPuzzle && ((state.adv?.pieces ?? 0) > 0 || state.adv?.grail === 'held') ? `<button type="button" class="k-btn k-btn--secondary k-btn--md map-pz">${icon('map_treasure', '', 'k-btn-ico')}<span class="k-btn-l">${esc(H4L('puzzle.btn'))}</span></button>` : ''}${this.extraActs(state)}</div></div>
+      </div>
       <div class="map-logs">${zoneHint(state)}${(state.self?.maps ?? []).length ? `<div class="map-maps">${(state.self?.maps ?? []).map((m) => mapCard(m, !!this.onGoal)).join('')}${state.self?.legendEcho.length ? `<div class="muted">${L('echo', { holders: `${state.self.legendEcho.length} ${plural(state.self.legendEcho.length, L('holder.one'), L('holder.few'), L('holder.many'))}` })}</div>` : ''}</div>` : ''}
       ${invasionLog(state.self?.invasion)}${dailyLog(state.self?.daily)}${commonLog(state.self?.common)}${worldGoalsLog(state)}${lfgLog(state)}${this.tasksLog(state)}${(state.self?.quests ?? []).length ? `<div class="map-quests"><div class="mq-head">${icon('goal', '', 'ico-sm')}${esc(L('quests'))}</div>${(state.self?.quests ?? []).map((q) => { const share = inGroup && (q.kind === 'job' || q.kind === 'story'); return `<div class="mq-item"><button class="mq-row${q.target ? '' : ' off'}${q.id === tracked ? ' tracked' : ''}${share ? ' shareable' : ''}" data-q="${esc(q.id)}" title="${esc(L('track'))}"><b>${q.id === tracked ? icon('goal', '◆', 'ico-sm') : ''}${esc(serverText(q.name))}</b><span class="muted">${q.step}/${q.steps} · ${esc(serverText(q.text))}${q.need > 1 ? ` ${q.progress}/${q.need}` : ''}</span></button>${this.onGoal ? `<button type="button" class="btn btn-small btn-primary mq-sail" data-qsail="q:${esc(q.id)}" title="${esc(W('map.sailHint'))}">${icon('stat_sails', '', 'ico-sm')}${esc(W('map.sail'))}</button>` : ''}${share ? `<button class="btn btn-small mq-share" data-share="${esc(q.id)}" title="${esc(L('shareTitle'))}">${esc(L('share'))}</button>` : ''}</div>`; }).join('')}</div>` : ''}</div>`;
     root.querySelectorAll<HTMLElement>('[data-mlayer]').forEach((b) => (b.onclick = () => {
@@ -482,6 +523,9 @@ export class WorldMap {
     let tap: { id: number; x: number; y: number; t: number } | null = null;
     const clearBtn = root.querySelector<HTMLElement>('.map-wp-clear')!;
     root.querySelector<HTMLElement>('.map-pz')?.addEventListener('click', () => this.onPuzzle?.());
+    root.querySelector<HTMLElement>('[data-mwhere]')?.addEventListener('click', () => this.whereAmI(state)); // forum 45
+    root.querySelector<HTMLElement>('[data-mhome]')?.addEventListener('click', () => this.onHome?.());
+    root.querySelector<HTMLElement>('[data-mfoe]')?.addEventListener('click', () => this.onFoes?.());
     const sailBtn = root.querySelector<HTMLElement>('.map-wp-sail');
     const showClear = () => {
       clearBtn.classList.toggle('hidden', !waypoint());
@@ -1438,7 +1482,43 @@ export class WorldMap {
       g.beginPath();
       g.arc(tx(own.x), ty(own.y), Math.max(12, 2200 * k), 0, Math.PI * 2);
       g.fill();
-      if (!mark('icon.map_ship', tx(own.x), ty(own.y), ms * 1.2, own.heading)) {
+      // Her own marker (forum 45: «сделать заметнее»): bigger, on a dark disc in a bright gold ring with a glow — the
+      // last thing drawn, over every icon and name even with «Всё»; «Где я» sends rings out of it a while.
+      const ox = tx(own.x), oy = ty(own.y), big = ms * 1.6;
+      const now = performance.now();
+      if (now < this.pulseUntil) {
+        const t = 1 - (this.pulseUntil - now) / WHERE_PULSE_MS;
+        for (const ph of [0, 0.33, 0.66]) {
+          const f = (t * 3 + ph) % 1;
+          g.save();
+          g.strokeStyle = `rgba(255,226,140,${(1 - f) * 0.9})`;
+          g.lineWidth = 3;
+          g.beginPath();
+          g.arc(ox, oy, big * 0.55 + f * big * 1.6, 0, Math.PI * 2);
+          g.stroke();
+          g.restore();
+        }
+      }
+      g.save();
+      g.shadowColor = 'rgba(255,214,110,0.95)';
+      g.shadowBlur = 14;
+      g.fillStyle = 'rgba(12,10,8,0.82)';
+      g.beginPath();
+      g.arc(ox, oy, big * 0.56, 0, Math.PI * 2);
+      g.fill();
+      g.shadowBlur = 10;
+      g.strokeStyle = '#ffe08a';
+      g.lineWidth = 3;
+      g.stroke();
+      g.restore();
+      g.save();
+      g.strokeStyle = 'rgba(10,8,6,0.9)';
+      g.lineWidth = 1.5;
+      g.beginPath();
+      g.arc(ox, oy, big * 0.56 + 2.2, 0, Math.PI * 2);
+      g.stroke();
+      g.restore();
+      if (!mark('icon.map_ship', ox, oy, big * 0.95, own.heading)) {
         g.save();
         g.translate(tx(own.x), ty(own.y));
         g.rotate(own.heading);

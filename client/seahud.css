@@ -1095,3 +1095,33 @@ body.simple.touch #tc-dashchip { top: calc(var(--stick) * 0.067 - 45.3px); right
 #tm-chip { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 98px); left: 50%; transform: translateX(-50%); z-index: 30; pointer-events: none; display: flex; gap: 8px; align-items: baseline; padding: 4px 12px; border-radius: 14px; background: rgba(12, 10, 8, 0.72); border: 1px solid rgba(217, 180, 90, 0.55); font: 600 13px Inter, system-ui, sans-serif; color: #e8d6a8; white-space: nowrap; }
 #tm-chip.hidden { display: none; }
 #tm-chip .tm-heat { font-size: 14px; }
+
+/* forum 45: the hover only names a thing (the ring is a click's) — a small plate by the cursor */
+.hover-name { position: fixed; left: 0; top: 0; z-index: 13; max-width: 220px; padding: 2px 8px; border: 1px solid rgba(176, 141, 87, 0.7); border-radius: 4px; background: rgba(13, 11, 8, 0.86); color: var(--k-bone, #e8dcc0); font: 600 13px/18px Georgia, serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6); }
+.hover-name.hidden { display: none; }
+
+/* forum 45: «Найти врага» — a panel over the sea and the chart (client/src/ui/foefind.ts) */
+.ff-root { position: fixed; inset: 0; z-index: 88; display: flex; align-items: center; justify-content: center; padding: max(8px, var(--sa-t, 0px)) max(8px, var(--sa-r, 0px)) max(8px, var(--sa-b, 0px)) max(8px, var(--sa-l, 0px)); box-sizing: border-box; }
+.ff-root.hidden { display: none; }
+.ff-scrim { position: absolute; inset: 0; background: rgba(4, 6, 8, 0.55); }
+.ff-card { position: relative; display: flex; flex-direction: column; gap: 6px; width: min(520px, 100%); max-height: 100%; box-sizing: border-box; padding: 10px 12px 10px; background: linear-gradient(180deg, rgba(24, 22, 19, 0.98), rgba(12, 12, 13, 0.98)); border: 1px solid #b08d57; border-radius: 8px; box-shadow: 0 0 0 1px #000, 0 10px 32px rgba(0, 0, 0, 0.7); color: #e8dcc0; font: 400 13px/1.35 Inter, system-ui, sans-serif; }
+.ff-title { display: flex; align-items: center; gap: 6px; margin: 0; padding-right: 48px; font: 700 18px/1.2 'Cormorant Garamond', Georgia, serif; color: #f0d48e; }
+.ff-sub { margin: 0; padding-right: 40px; font-size: 12px; }
+.ff-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.ff-chip { min-height: 30px; padding: 2px 10px; font-size: 12px; }
+.ff-list { display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.ff-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto auto auto; align-items: center; gap: 8px; min-height: 40px; padding: 4px 8px; border: 1px solid rgba(176, 141, 87, 0.45); border-radius: 5px; background: rgba(10, 10, 12, 0.7); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.ff-row:hover, .ff-row:focus-visible { border-color: #e0b862; outline: none; background: rgba(40, 32, 20, 0.8); }
+.ff-ico { width: 22px; height: 22px; }
+.ff-n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.ff-lv { color: #e8c46a; white-space: nowrap; }
+.ff-d { color: #b6a888; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ff-go { padding: 2px 8px; border: 1px solid #b08d57; border-radius: 4px; color: #f0d48e; white-space: nowrap; font-size: 12px; }
+.ff-none { margin: 8px 0; }
+@media (max-height: 520px) { .ff-card { padding: 6px 10px; gap: 4px; } .ff-title { font-size: 16px; } .ff-sub { display: none; } .ff-row { min-height: 36px; } }
+/* forum 45: «Найти врага» and «К острову» in the «⋯» tray only, their words under them as «Армия»'s */
+#tc-foe, #tc-gohome { display: none; }
+body.simple.hud-more.more-open #hud #touch > :is(#tc-foe, #tc-gohome).more-fold { display: block; min-width: 0; min-height: 0; padding: 0; pointer-events: auto; }
+body.simple #hud #touch > :is(#tc-foe, #tc-gohome) .tc-crew-l { position: absolute; left: 50%; top: calc(100% + 3px); transform: translateX(-50%); font-size: 9px; line-height: 1; white-space: nowrap;
+  color: var(--bone, #e6dccb); text-shadow: 0 1px 2px #000, 0 0 4px #000; pointer-events: none; }
+body.simple #hud #touch > :is(#tc-foe, #tc-gohome) .k-btn-ico { inset: 19.8% 22% 24.2%; }

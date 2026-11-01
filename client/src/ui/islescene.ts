@@ -215,6 +215,7 @@ export class IsleScene {
     this.topEl.addEventListener('click', (e) => {
       const b = (e.target as HTMLElement).closest<HTMLElement>('[data-isea]');
       if (b) this.onExit();
+      else if ((e.target as HTMLElement).closest('[data-isail]')) this.onSailHome(); // forum 45: «Плыть сюда» — the course to her island
       else if ((e.target as HTMLElement).closest('[data-itre]')) this.openPanel('haul'); // forum 2026-10-29: the treasury takes silver here
     });
     this.sideEl.addEventListener('click', (e) => {
@@ -592,7 +593,7 @@ export class IsleScene {
       return `<span class="is-res${full ? ' full' : ''}"${detailAttr(`good:${r.good}`)} title="${esc(`${GOODS[r.good].name}: ${fmt(r.n)}/${fmt(r.cap)}${r.rate > 0 ? ` · +${Math.round(r.rate * 10) / 10}/${ru ? 'ч' : 'h'}` : ''}`)}">${icon(`good_${r.good}`, '', 'ico-sm')}<b>${fmt(r.n)}</b><i>/${fmt(r.cap)}</i></span>`;
     }).join('') : '';
     return `${name}<div class="is-store">${res}${v ? `<button type="button" class="is-res is-tre" data-itre title="${esc(`${L('treasury')} · ${HL('deposit')}`)}">${icon('coin', '', 'ico-sm')}<b>${fmt(Math.max(0, v.claim?.treasury ?? 0))}</b><span class="is-tre-plus" aria-hidden="true">+</span></button>` : ''}<span class="is-res is-silver" title="${esc(L('silver'))}">${money(state.self?.gold ?? 0)}</span></div>
-      <button type="button" class="btn btn-primary is-sea" data-isea title="${esc(L('seaTip'))}">${icon('menu_ship', '', 'ico-sm')}<span>${esc(L('sea'))}</span></button>`;
+      ${v && !v.near ? `<button type="button" class="btn is-sea is-sail" data-isail title="${esc(L('sailHereTip'))}">${icon('stat_sails', '', 'ico-sm')}<span>${esc(L('sailHere'))}</span></button>` : ''}<button type="button" class="btn btn-primary is-sea" data-isea title="${esc(L('seaTip'))}">${icon('menu_ship', '', 'ico-sm')}<span>${esc(L('sea'))}</span></button>`;
   }
 
   private sideHtml(v: BaseView, state: ClientState): string {

@@ -21,7 +21,7 @@ import { badgeText, buttonHtml } from './kit/button.ts';
 const L = dict(EN, RU);
 
 /** What folds behind «⋯», in the tray's order. */
-export const MORE_ITEMS = ['#touch > #tc-menu', '#touch > #tc-crew', '#hud-chat > #chat-toggle', '#touch > #tc-isle', '#touch > #tc-offer', '#touch > #tc-daily', '#touch > #tc-pass', '#hud-chat > #cos-qbtn', '#hud-advice'] as const;
+export const MORE_ITEMS = ['#touch > #tc-menu', '#touch > #tc-crew', '#touch > #tc-foe', '#touch > #tc-gohome', '#hud-chat > #chat-toggle', '#touch > #tc-isle', '#touch > #tc-offer', '#touch > #tc-daily', '#touch > #tc-pass', '#hud-chat > #cos-qbtn', '#hud-advice'] as const;
 /** A wide desk keeps these out (its keys on their rims, the room under the chart). */
 const DESK_OUT = new Set<string>(['#touch > #tc-menu', '#hud-chat > #chat-toggle']);
 const DESK_WIDE = '(min-width: 1100px) and (min-height: 600px)';
