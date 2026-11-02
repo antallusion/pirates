@@ -298,6 +298,12 @@ export class TutorPointer {
     this.facts = f;
   }
 
+  /** «Показать в игре» (the guide, 2026-11-02): the finger over these selectors for a while, before any step's own. */
+  private held: { sels: string[]; until: number } | null = null;
+  hold(sels: string[], ms: number): void {
+    this.held = sels.length ? { sels, until: performance.now() + ms } : null;
+  }
+
   /** The button the finger is over now, or null. */
   get target(): HTMLElement | null {
     return this.ringed;
@@ -332,6 +338,19 @@ export class TutorPointer {
   }
 
   private find(): HTMLElement | null {
+    if (this.held && performance.now() > this.held.until) this.held = null;
+    if (this.held) {
+      for (const sel of this.held.sels) {
+        let list: NodeListOf<HTMLElement>;
+        try {
+          list = document.querySelectorAll<HTMLElement>(sel);
+        } catch {
+          continue; // (a selector the content wrote wrong: no finger, no crash)
+        }
+        for (const el of list) if (shown(el)) return el;
+      }
+      return null;
+    }
     const opening = !!this.facts.stage?.startsWith('c:');
     for (const sel of pointerTargets(this.facts)) {
       for (const el of document.querySelectorAll<HTMLElement>(sel)) {

@@ -1,0 +1,191 @@
+/* «Лоцманская книга» (client/src/ui/guide.ts, guidetip.ts): the detail card's dark panel and brass edge, made a book —
+   the sections down the left, the pane on the right, an article as a run of pictures. A phone held sideways (844×390,
+   740×360): the whole screen, the head one line, an open article the whole width; a desk: a card in the middle.
+   Every tap target 40 px at least on a phone. */
+
+#guide-over { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: rgba(4, 6, 8, 0.62);
+  padding: max(6px, var(--sa-t, 0px)) max(6px, var(--sa-r, 0px)) max(6px, var(--sa-b, 0px)) max(6px, var(--sa-l, 0px)); box-sizing: border-box; }
+#guide-over .gb { --gb-c: #e8c872; position: relative; display: flex; flex-direction: column; width: min(1120px, 100%); height: min(720px, 100%); box-sizing: border-box; overflow: hidden;
+  background: linear-gradient(180deg, rgba(24, 22, 19, 0.985), rgba(12, 12, 13, 0.985)); border: 1px solid #b08d57; border-radius: 8px;
+  box-shadow: 0 0 0 1px #000, inset 0 0 0 1px rgba(232, 196, 106, 0.12), 0 10px 32px rgba(0, 0, 0, 0.7); color: #e8dcc0; font: 400 13px/1.38 Inter, system-ui, sans-serif; }
+#guide-over .gb::before { content: ''; position: absolute; left: 10px; right: 10px; top: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--gb-c), transparent); opacity: 0.8; border-radius: 2px; }
+#guide-over button { font: inherit; color: inherit; }
+#guide-over .hidden { display: none !important; }
+
+/* the head: «Назад», the crest, the title and the crumbs, the search, «Изучено», ✕ */
+.gb-head { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 10px; border-bottom: 1px solid rgba(176, 141, 87, 0.35); background: linear-gradient(180deg, rgba(40, 33, 24, 0.6), rgba(16, 15, 14, 0.2)); }
+.gb-back, .gb-x { flex: 0 0 auto; width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 1px solid #6f5a38; border-radius: 50%; background: rgba(10, 10, 12, 0.9); cursor: pointer; }
+.gb-back .g-svg, .gb-x .g-svg { width: 20px; height: 20px; stroke: #e8dcc0; stroke-width: 2.2; fill: none; }
+.gb-back:hover, .gb-x:hover, .gb-back:focus-visible, .gb-x:focus-visible { border-color: #e0b862; outline: none; box-shadow: 0 0 10px rgba(224, 184, 98, 0.35); }
+.gb-crest { flex: 0 0 auto; width: 34px; height: 34px; display: grid; place-items: center; }
+.gb-crest-ico { width: 34px; height: 34px; object-fit: contain; }
+.gb-ht { flex: 0 1 auto; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+.gb-title { margin: 0; font: 700 19px/1.1 'Cormorant Garamond', Georgia, serif; color: #f0d48e; text-shadow: 0 1px 0 #000; white-space: nowrap; }
+.gb-crumbs { display: flex; align-items: center; flex-wrap: wrap; gap: 0 2px; font-size: 11.5px; line-height: 1.2; color: #b6a888; min-width: 0; }
+.gb-crumb { padding: 0; border: 0; background: none; cursor: pointer; color: #c9b98f; text-decoration: underline; text-decoration-color: rgba(201, 185, 143, 0.35); text-underline-offset: 2px; }
+.gb-crumb.on { color: #e8dcc0; text-decoration: none; cursor: default; overflow-wrap: anywhere; }
+.gb-sep { font-style: normal; color: #7d7564; padding: 0 3px; }
+.gb-search { flex: 1 1 200px; min-width: 140px; max-width: 380px; margin-left: auto; position: relative; display: flex; align-items: center; height: 40px; }
+.gb-loupe { position: absolute; left: 10px; width: 17px; height: 17px; fill: none; stroke: #b08d57; stroke-width: 2.2; stroke-linecap: round; pointer-events: none; }
+.gb-q { width: 100%; height: 40px; box-sizing: border-box; padding: 0 40px 0 34px; border: 1px solid #6f5a38; border-radius: 20px; background: rgba(6, 7, 8, 0.85); color: #f0e6cc; font: 400 14px/1 Inter, system-ui, sans-serif; outline: none; -webkit-appearance: none; appearance: none; }
+.gb-q::-webkit-search-cancel-button { display: none; }
+.gb-q::placeholder { color: #8a7f68; }
+.gb-q:focus { border-color: #e0b862; box-shadow: 0 0 0 2px rgba(224, 184, 98, 0.18); }
+.gb-qx { position: absolute; right: 0; top: 0; width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 0; background: none; cursor: pointer; }
+.gb-qx .g-svg { width: 16px; height: 16px; stroke: #c9b98f; stroke-width: 2.4; fill: none; }
+.gb-prog { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; font-size: 12px; color: #e0b862; white-space: nowrap; }
+.gb-prog b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.gb-prog-bar { display: block; width: 96px; height: 5px; background: #0a0c0e; border: 1px solid #000; box-shadow: inset 0 0 0 1px rgba(232, 196, 106, 0.12); position: relative; }
+.gb-prog-bar > i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #8a6a2a, #e0b862); }
+
+/* the sections and the pane */
+.gb-main { flex: 1 1 auto; min-height: 0; display: flex; }
+.gb-rail { flex: 0 0 216px; overflow-y: auto; overscroll-behavior: contain; padding: 8px 6px 10px 8px; border-right: 1px solid rgba(176, 141, 87, 0.25); display: flex; flex-direction: column; gap: 2px; }
+.gb-rail-h { margin: 0 4px 4px; font: 700 13px/1.2 'Cormorant Garamond', Georgia, serif; color: #e0b862; letter-spacing: 0.02em; }
+.gb-sec { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 8px 4px 6px; border: 1px solid transparent; border-radius: 6px; background: none; text-align: left; cursor: pointer; }
+.gb-sec:hover, .gb-sec:focus-visible { background: rgba(232, 196, 106, 0.07); border-color: rgba(176, 141, 87, 0.35); outline: none; }
+.gb-sec.on { background: linear-gradient(90deg, rgba(232, 196, 106, 0.16), rgba(232, 196, 106, 0.04)); border-color: #8a6a3a; }
+.gb-sec-ico { flex: 0 0 26px; width: 26px; height: 26px; object-fit: contain; }
+.gb-sec-n { flex: 1 1 auto; min-width: 0; font-size: 13px; line-height: 1.2; color: #e8dcc0; }
+.gb-sec-c { flex: 0 0 auto; font-size: 11.5px; font-weight: 600; color: #9a8f78; font-variant-numeric: tabular-nums; }
+.gb-sec.done .gb-sec-c { color: #9fd3a0; }
+.gb-pane { flex: 1 1 auto; min-width: 0; overflow-y: auto; overscroll-behavior: contain; padding: 10px 14px 14px; -webkit-overflow-scrolling: touch; }
+.gb-lead { margin: 0 0 8px; color: #c9bc9c; }
+.gb-empty { margin: 18px 4px; color: #9a8f78; font-style: italic; }
+.gb-list { display: flex; flex-direction: column; gap: 4px; }
+.gb-row, .gb-cont, .gb-keys { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 6px 10px; box-sizing: border-box; border: 1px solid rgba(176, 141, 87, 0.28); border-radius: 6px; background: rgba(255, 255, 255, 0.025); text-align: left; cursor: pointer; }
+.gb-row:hover, .gb-row:focus-visible, .gb-cont:hover, .gb-cont:focus-visible, .gb-keys:hover, .gb-keys:focus-visible { border-color: #b08d57; background: rgba(232, 196, 106, 0.07); outline: none; }
+.gb-row-ico { flex: 0 0 30px; width: 30px; height: 30px; object-fit: contain; }
+.gb-row-t { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.gb-row-t b { font-weight: 600; font-size: 14px; color: #f0e6cc; }
+.gb-row-t span, .gb-row-t small { font-size: 12px; color: #b6a888; }
+.gb-row-m { flex: 0 0 auto; width: 22px; display: grid; place-items: center; color: #9fd3a0; font-weight: 700; }
+.gb-row-m .g-svg { width: 16px; height: 16px; stroke: #b08d57; stroke-width: 2.2; fill: none; }
+.gb-row.read .gb-row-t b { color: #cfc4a8; }
+.gb-row mark { background: rgba(224, 184, 98, 0.3); color: #fff4d6; border-radius: 2px; padding: 0 1px; }
+.gb-cont { margin-bottom: 8px; border-color: #8a6a3a; background: linear-gradient(90deg, rgba(232, 196, 106, 0.14), rgba(232, 196, 106, 0.03)); }
+.gb-cont small { color: #e0b862; text-transform: uppercase; letter-spacing: 0.06em; font-size: 10.5px; }
+.gb-keys { margin-top: 10px; min-height: 44px; width: auto; border-style: dashed; color: #c9bc9c; }
+.gb-sh { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin: 0 0 8px; }
+.gb-sh-ico { width: 34px; height: 34px; object-fit: contain; }
+.gb-sh h3 { margin: 0; font: 700 20px/1.15 'Cormorant Garamond', Georgia, serif; color: #f0d48e; }
+.gb-sh-c { color: #9a8f78; font-variant-numeric: tabular-nums; }
+.gb-chip { margin-left: auto; padding: 3px 9px; border: 1px solid #8a6a3a; border-radius: 12px; font-size: 12px; color: #e0b862; background: rgba(232, 196, 106, 0.06); }
+.gb-chip.paid { color: #9fd3a0; border-color: #4f7a4f; }
+
+/* an article: the picture on the left, its words on the right */
+.gb-art { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(240px, 1fr); gap: 14px; height: 100%; min-height: 0; }
+.gb-stage { position: relative; min-height: 0; display: flex; flex-direction: column; gap: 6px; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.gb-pic { position: relative; flex: 1 1 auto; min-height: 140px; border: 1px solid #6f5a38; border-radius: 6px; overflow: hidden; background: radial-gradient(ellipse at 50% 40%, #1d2a33, #0a0f13 72%); }
+.gb-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1; opacity: 0; transition: opacity 160ms; }
+.gb-pic.ok .gb-img { opacity: 1; }
+.gb-pic.noimg .gb-img { display: none; }
+.gb-plate { position: absolute; inset: 0; display: grid; place-items: center; }
+.gb-pic.ok .gb-plate { display: none; }
+.gb-rose { position: absolute; width: min(70%, 260px); aspect-ratio: 1; fill: none; stroke: rgba(176, 141, 87, 0.22); stroke-width: 0.6; }
+.gb-rose-s { fill: rgba(176, 141, 87, 0.08); stroke: rgba(224, 184, 98, 0.3); }
+.gb-plate-ico { position: relative; width: min(38%, 140px); height: auto; aspect-ratio: 1; object-fit: contain; filter: drop-shadow(0 4px 10px #000); }
+.gb-nav { position: absolute; top: calc(50% - 26px); z-index: 2; width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border: 1px solid #8a6a3a; border-radius: 50%; background: rgba(10, 10, 12, 0.82); cursor: pointer; }
+.gb-nav .g-svg { width: 22px; height: 22px; stroke: #f0d48e; stroke-width: 2.4; fill: none; }
+.gb-nav:disabled { opacity: 0.3; cursor: default; }
+.gb-nav:not(:disabled):hover, .gb-nav:focus-visible { border-color: #e0b862; outline: none; box-shadow: 0 0 10px rgba(224, 184, 98, 0.35); }
+.gb-prev { left: 6px; }
+.gb-next { right: 6px; }
+.gb-dots { position: absolute; z-index: 2; left: 50%; bottom: 0; transform: translateX(-50%); display: flex; justify-content: center; gap: 0; padding: 0 6px; border-radius: 14px 14px 0 0; background: linear-gradient(180deg, rgba(8, 10, 12, 0), rgba(8, 10, 12, 0.55)); }
+.gb-dot { width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: 0; background: none; cursor: pointer; }
+.gb-dot i { display: block; width: 9px; height: 9px; border-radius: 50%; background: #4a4236; box-shadow: inset 0 0 0 1px #7d6a4a; }
+.gb-dot.on i { background: #e0b862; box-shadow: 0 0 6px rgba(224, 184, 98, 0.6); }
+.gb-side { min-width: 0; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.gb-at { margin: 0; font: 700 21px/1.15 'Cormorant Garamond', Georgia, serif; color: #f0d48e; }
+.gb-tick { margin-left: 8px; font: 700 14px/1 Inter, sans-serif; color: #9fd3a0; vertical-align: 2px; }
+.gb-cap { margin: 0; font-size: 15px; line-height: 1.45; color: #f0e6cc; }
+.gb-cap small { display: block; margin-bottom: 3px; font-size: 11px; color: #9a8f78; letter-spacing: 0.04em; }
+.gb-show { align-self: flex-start; min-height: 44px; }
+.gb-rel h4 { margin: 2px 0 6px; font: 700 14px/1.2 'Cormorant Garamond', Georgia, serif; color: #e0b862; }
+.gb-rel-l { display: flex; flex-wrap: wrap; gap: 6px; }
+.gb-relb { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 4px 10px 4px 6px; border: 1px solid rgba(176, 141, 87, 0.4); border-radius: 20px; background: rgba(255, 255, 255, 0.03); cursor: pointer; font-size: 12.5px; text-align: left; }
+.gb-relb:hover, .gb-relb:focus-visible { border-color: #e0b862; outline: none; }
+.gb-relb-ico { width: 24px; height: 24px; object-fit: contain; }
+
+/* a phone held sideways, a small window: one line of head, a narrower rail, an article the whole width */
+@media (max-height: 520px), (max-width: 900px) {
+  #guide-over { padding: max(2px, var(--sa-t, 0px)) max(2px, var(--sa-r, 0px)) max(2px, var(--sa-b, 0px)) max(2px, var(--sa-l, 0px)); }
+  #guide-over .gb { width: 100%; height: 100%; border-radius: 6px; }
+  .gb-head { gap: 6px; padding: 3px 6px; }
+  .gb-crest { display: none; }
+  .gb-title { font-size: 16px; }
+  .gb-crumbs { font-size: 11px; }
+  .gb-search { flex-basis: 150px; }
+  .gb-prog-bar { width: 72px; }
+  .gb-rail { flex-basis: 172px; padding: 6px 4px 8px 6px; }
+  .gb-rail-h { display: none; }
+  .gb-sec { gap: 6px; padding: 3px 6px 3px 4px; }
+  .gb-sec-ico { flex-basis: 22px; width: 22px; height: 22px; }
+  .gb-sec-n { font-size: 12px; }
+  .gb-pane { padding: 6px 8px 8px; }
+  .gb-row, .gb-cont { min-height: 44px; padding: 4px 8px; gap: 8px; }
+  .gb-row-ico { flex-basis: 26px; width: 26px; height: 26px; }
+  .gb-row-t b { font-size: 13px; }
+  .gb-row-t span { font-size: 11.5px; }
+  #guide-over.gb-reading .gb-rail { display: none; }
+  .gb-art { grid-template-columns: minmax(0, 1.25fr) minmax(220px, 1fr); gap: 10px; }
+  .gb-at { font-size: 18px; }
+  .gb-cap { font-size: 14px; line-height: 1.4; }
+  .gb-side { gap: 8px; }
+  .gb-dot { width: 40px; height: 40px; }
+  /* the head: the book's name at its home, the crumbs (taller, to be tapped) deeper in */
+  #guide-over:not([data-at="home"]) .gb-title { display: none; }
+  #guide-over[data-at="home"] .gb-crumbs { display: none; }
+  .gb-crumbs { flex-wrap: nowrap; }
+  .gb-crumb { min-height: 40px; min-width: 40px; padding: 0 4px; }
+  .gb-crumb.on { display: inline-flex; align-items: center; min-height: 40px; }
+}
+/* the title gives way to the crumbs when the head is short of room */
+@media (max-width: 760px) {
+  .gb-prog-bar { display: none; }
+  .gb-search { min-width: 120px; }
+}
+/* a phone held upright (the game asks to turn it, but the book should still read) */
+@media (max-width: 560px) {
+  .gb-art { grid-template-columns: 1fr; grid-template-rows: minmax(160px, 1fr) auto; }
+  .gb-rail { flex-basis: 120px; }
+  .gb-prog { display: none; }
+}
+
+/* «?» in a window's head */
+.g-help { position: relative; display: inline-grid; place-items: center; flex: 0 0 auto; width: 26px; height: 26px; margin: 0 0 0 8px; padding: 0; vertical-align: middle;
+  border: 1px solid #8a6a3a; border-radius: 50%; background: rgba(10, 10, 12, 0.85); color: #e0b862; font: 700 15px/1 Georgia, serif; cursor: pointer; pointer-events: auto; }
+.g-help::after { content: ''; position: absolute; inset: -8px; } /* a 42 px target round a small mark */
+.g-help:hover, .g-help:focus-visible { border-color: #e0b862; color: #fff; outline: none; box-shadow: 0 0 8px rgba(224, 184, 98, 0.4); }
+.w-title .g-help { margin-left: 10px; }
+#isle .is-name .g-help { margin-left: 6px; }
+.sp-head .g-help { margin-left: 8px; }
+
+/* the first-time tip: a small pill at the top edge, never in the middle */
+#guide-tip { position: fixed; z-index: 58; top: calc(var(--sa-t, 0px) + 6px); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; max-width: min(560px, calc(100vw - 340px)); min-width: 260px;
+  padding: 3px 3px 3px 8px; box-sizing: border-box; border: 1px solid #b08d57; border-radius: 22px; background: linear-gradient(180deg, rgba(30, 26, 20, 0.97), rgba(14, 13, 12, 0.97)); box-shadow: 0 0 0 1px #000, 0 6px 18px rgba(0, 0, 0, 0.6);
+  color: #f0e6cc; font: 500 12.5px/1.25 Inter, system-ui, sans-serif; animation: gt-in 220ms ease-out; }
+#guide-tip.hidden { display: none; }
+#guide-tip .gt-ico { flex: 0 0 26px; width: 26px; height: 26px; object-fit: contain; }
+#guide-tip .gt-t { flex: 1 1 auto; min-width: 0; }
+#guide-tip .gt-read { flex: 0 0 auto; min-height: 40px; padding: 0 14px; border: 1px solid #c9a15a; border-radius: 20px; background: linear-gradient(180deg, #7a5a24, #4a3514); color: #fff1cc; font: 600 13px/1 Inter, sans-serif; cursor: pointer; }
+#guide-tip .gt-x { flex: 0 0 auto; width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; }
+#guide-tip .gt-x .g-svg { width: 16px; height: 16px; stroke: #c9b98f; stroke-width: 2.4; fill: none; }
+/* a phone held sideways: clear of her bars on the left and the dial on the right */
+@media (max-height: 520px) { #guide-tip { max-width: min(380px, calc(100vw - 470px)); min-width: 0; font-size: 12px; } }
+@keyframes gt-in { from { opacity: 0; transform: translate(-50%, -8px); } }
+/* as a plate of the HUD's top stack: in its flow, first, as wide as its words */
+#hud-stack > #guide-tip.in-stack { position: relative !important; top: auto !important; left: auto !important; transform: none !important; order: -40; align-self: center; width: auto !important;
+  max-width: min(560px, 100%) !important; min-width: 0; pointer-events: auto; animation: gt-fade 220ms ease-out; }
+@keyframes gt-fade { from { opacity: 0; } }
+body.reduce-motion #guide-tip { animation: none; }
+@media (prefers-reduced-motion: reduce) { #guide-tip { animation: none; } }
+
+/* «Книга» in the «⋯» tray: only there (hudmore.ts), its word under it as «Армия»'s */
+#tc-book { display: none; }
+body.simple.hud-more.more-open #hud #touch > #tc-book.more-fold { display: block; min-width: 0; min-height: 0; padding: 0; pointer-events: auto; }
+body.simple #hud #touch > #tc-book .tc-book-l { position: absolute; left: 50%; top: calc(100% + 3px); transform: translateX(-50%); font-size: 9px; line-height: 1; white-space: nowrap;
+  color: var(--bone, #e6dccb); text-shadow: 0 1px 2px #000, 0 0 4px #000; pointer-events: none; }
+body.simple #hud #touch > #tc-book .k-btn-ico { inset: 19.8% 22% 24.2%; }
+body.simple #hud #touch > #tc-book .k-badge { top: -4px; right: -6px; left: auto; }
+body.simple #hud #touch > #tc-book .k-badge.hidden { display: none; }

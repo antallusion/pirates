@@ -72,6 +72,7 @@ import type { AdriftView } from './data/adrift.ts'; // owner 2026-10-20: torn sa
 import type { RoamClientMsg, RoamServerMsg } from './roamproto.ts'; // docs/19 D7
 import type { PremiumClientMsg, PremiumServerMsg } from './premiumproto.ts'; // the premium shop (owner, 2026-10-03)
 import type { PassClientMsg, PassServerMsg } from './spassproto.ts'; // «Сезонная карта» (owner, 2026-10-30)
+import type { GuideClientMsg, GuideServerMsg } from './guideproto.ts'; // «Лоцманская книга» (2026-11-02)
 import type { WayClientMsg, WayData, WayServerMsg } from './wayproto.ts'; // docs/35: the floating waystations, the resurrection
 import type { CosClientMsg, CosServerMsg } from './cosproto.ts'; // docs/32 §12: the cosmetics
 import type { PvpRankClientMsg, PvpRankServerMsg } from './pvprankproto.ts'; // the PvP points (owner, 2026-10-30)
@@ -410,6 +411,7 @@ export type ClientMsg =
   /** The premium shop (owner, 2026-10-03): its view, a hull or a kind bought for doubloons. */
   | PremiumClientMsg
   | PassClientMsg
+  | GuideClientMsg
   | CosClientMsg
   | PvpRankClientMsg
   | PowerClientMsg
@@ -2300,6 +2302,7 @@ export type ServerMsg =
   /** The premium shop (owner, 2026-10-03): its view, and her account's doubloons. */
   | PremiumServerMsg
   | PassServerMsg
+  | GuideServerMsg
   | CosServerMsg
   | PvpRankServerMsg
   | PowerServerMsg
