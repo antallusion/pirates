@@ -19,7 +19,19 @@ fi
 SHA=$(git rev-parse --short HEAD)
 [ -z "$(git status --porcelain -- client server shared assets package.json)" ] || echo "note: uncommitted changes are NOT shipped (the archive is of $SHA)"
 TMP=$(mktemp -d)
-git archive --format=tar.gz -o "$TMP/gravetide-$SHA.tgz" HEAD client server shared assets site package.json tsconfig.json
+git archive --format=tar.gz -o "$TMP/gravetide-$SHA.tgz" HEAD client server shared site package.json tsconfig.json
+# assets/ (art and audio, ~600 MB) shipped only when its tree changed: the server keeps the last one in
+# /opt/gravetide/assets-cache/<tree> and hard-links it into each release (2026-11-02: the whole tarball no longer got
+# through the line to the new server in Russia)
+ATREE=$(git rev-parse HEAD:assets)
+if ssh "$HOST" "test -d /opt/gravetide/assets-cache/$ATREE/assets"; then
+  echo "assets $ATREE: cached on the server"
+  AUP=""
+else
+  echo "assets $ATREE: uploading"
+  git archive --format=tar -o "$TMP/assets-$ATREE.tar" HEAD assets
+  AUP="$TMP/assets-$ATREE.tar"
+fi
 # The client's production bundle (tools/build-client.ts; prod 2026-10-25: phones on mobile data lost one of ~560 modules
 # and the game did not start): built here, from exactly the archived commit's client/ and shared/, into client/dist, and
 # shipped beside the release. The server serves it while its sources are unchanged (server/src/net/static.ts).
@@ -29,9 +41,15 @@ git archive HEAD client shared | tar -x -C "$TMP/src"
 node --disable-warning=ExperimentalWarning tools/build-client.ts "$TMP/src"
 tar -C "$TMP/src" -czf "$TMP/dist-$SHA.tgz" client/dist
 scp -q "$TMP/gravetide-$SHA.tgz" "$TMP/dist-$SHA.tgz" "$HOST:/opt/gravetide/releases/"
+if [ -n "$AUP" ]; then
+  scp -q "$AUP" "$HOST:/opt/gravetide/releases/"
+  ssh "$HOST" "set -e; mkdir -p /opt/gravetide/assets-cache/$ATREE.part; tar -xf /opt/gravetide/releases/assets-$ATREE.tar -C /opt/gravetide/assets-cache/$ATREE.part; rm /opt/gravetide/releases/assets-$ATREE.tar;
+    rm -rf /opt/gravetide/assets-cache/$ATREE; mv /opt/gravetide/assets-cache/$ATREE.part /opt/gravetide/assets-cache/$ATREE;
+    ls -1dt /opt/gravetide/assets-cache/*/ | tail -n +4 | xargs -r rm -rf"
+fi
 rm -rf "$TMP"
 # (a consistent snapshot of the live database before the restart — VACUUM INTO takes the WAL in too; the last ten kept)
-ssh "$HOST" "set -e; cd /opt/gravetide/releases; mkdir -p $SHA; tar -xzf gravetide-$SHA.tgz -C $SHA; tar -xzf dist-$SHA.tgz -C $SHA; rm gravetide-$SHA.tgz dist-$SHA.tgz;
+ssh "$HOST" "set -e; cd /opt/gravetide/releases; mkdir -p $SHA; tar -xzf gravetide-$SHA.tgz -C $SHA; tar -xzf dist-$SHA.tgz -C $SHA; rm gravetide-$SHA.tgz dist-$SHA.tgz; cp -al /opt/gravetide/assets-cache/$ATREE/assets $SHA/assets;
   mkdir -p /opt/gravetide/data/backups; B=/opt/gravetide/data/backups/gravetide-\$(date +%Y%m%d-%H%M%S)-$SHA.db;
   node --disable-warning=ExperimentalWarning -e \"new (require('node:sqlite').DatabaseSync)('/opt/gravetide/data/gravetide.db').exec(\\\"VACUUM INTO '\$B'\\\")\";
   chown gravetide:gravetide \$B; echo \"backup \$(basename \$B) \$(du -h \$B | cut -f1)\"; ls -1t /opt/gravetide/data/backups/gravetide-*.db | tail -n +11 | xargs -r rm -f;
