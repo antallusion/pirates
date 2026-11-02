@@ -1,6 +1,7 @@
 // Client entry: login → captain selection → the ocean. Wires network, state, input, renderer and UI.
 
 import './compat.ts'; // first of all: the calls Safari 15 lacks (iOS 15 is the floor)
+import { helmsmanSails, sailGauge } from './ui/sailgauge.ts';
 import { LB, menAskText } from './ui/berths.ts'; // forum 2026-10-30: «Причал»
 import { WayWindow, mountFallen, resRid } from './ui/waystation.ts'; // docs/35
 import { setWayFog, wayName } from './render/waystations.ts'; // docs/35
@@ -5929,7 +5930,9 @@ function step(t: number): void {
     // (owner, 2026-10-07: one simple interface everywhere — the desk had only the old bar, and in the First Watch nothing).
     if ((touch.enabled || simpleHud()) && state.self) {
       const dashLeft = Math.max(0, (state.self.dashReadyAt ?? 0) - state.estServerTime());
-      touch.frame(own?.heading ?? null, state.input.sail, dashLeft / DASH_COOLDOWN, state.you && !state.self.dockedAt ? knots(state.you.spd) : '');
+      // the arc: the sail she actually carries, by the server — the helmsman's and the auto-battle's too (forum 48)
+      const gauge = sailGauge({ docked: !!state.self.dockedAt, you: state.you, helmsman: helmsmanSails(state), step: state.input.sail });
+      touch.frame(own?.heading ?? null, state.input.sail, dashLeft / DASH_COOLDOWN, state.you && !state.self.dockedAt ? knots(state.you.spd) : '', gauge);
       seaFrame();
       autoMount();
     }

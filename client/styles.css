@@ -5426,15 +5426,18 @@ body.touch #hud-stack, body.touch #hud #hud-stack { left: calc(var(--sa-l) + 228
 /* (the menu keeps its place in a fight: the stack stops short of it, docs/23 item 97 — a hunt's card lay under it) */
 body.touch.sea-target #hud-stack, body.touch.sea-target #hud #hud-stack { left: calc(var(--sa-l) + 172px); right: calc(var(--sa-r) + var(--mm) + 76px); }
 
-/* The helm stick: its ring is the sail (a gauge from bottom left round to bottom right, four steps lit in gold). */
-#tc-sailring { position: absolute; inset: -9px; border-radius: 50%; pointer-events: none; --a: 0deg;
-  background: conic-gradient(from -135deg, var(--k-gold) 0 var(--a), rgba(14, 16, 19, 0.78) var(--a) 270deg, transparent 270deg);
+/* The helm stick: its ring is the sail (a gauge from bottom left round to bottom right). Forum 48: lit in gold to the sail
+   she actually carries (--a: the server's setting × her sails' bar, ui/sailgauge.ts — under the helmsman and the
+   auto-battle too), faint gold on to the setting asked for (--o: what torn canvas cannot give), red-brown when her
+   sails are shot away. */
+@property --a { syntax: '<angle>'; inherits: true; initial-value: 0deg; }
+@property --o { syntax: '<angle>'; inherits: true; initial-value: 0deg; }
+#tc-stick { --a: 0deg; --o: 0deg; --oc: rgba(224, 184, 98, 0.28); transition: --a 260ms linear, --o 160ms linear; }
+#tc-stick.torn { --oc: rgba(176, 74, 52, 0.55); }
+#tc-sailring { position: absolute; inset: -9px; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(from -135deg, var(--k-gold) 0 var(--a), var(--oc) var(--a) var(--o), rgba(14, 16, 19, 0.78) var(--o) 270deg, transparent 270deg);
   -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
   filter: drop-shadow(0 0 3px rgba(224, 184, 98, 0.45)); }
-#tc-stick[data-sail="1"] #tc-sailring { --a: 67.5deg; }
-#tc-stick[data-sail="2"] #tc-sailring { --a: 135deg; }
-#tc-stick[data-sail="3"] #tc-sailring { --a: 202.5deg; }
-#tc-stick[data-sail="4"] #tc-sailring { --a: 270deg; }
 #tc-stick.reefed #tc-sailring { animation: k-flash 400ms var(--k-ease-out); }
 /* The dash's chip (a double tap): bright when the braces are ready, a dark sweep while they are not. */
 #tc-dashchip { position: absolute; top: -4px; right: -4px; width: 24px; height: 24px; border-radius: 50%; pointer-events: none; background: rgba(16, 14, 11, 0.92); box-shadow: 0 0 0 1px var(--k-brass-dim); }

@@ -200,7 +200,13 @@ export function repairState(self: PrivateState, you: { hull: number; hullMax: nu
   const short = !(hullHurt && r.havePlanks >= 1) && !(sailsHurt && r.haveCloth >= 1);
   let line = '';
   if (repairing) line = esc(L('rep.working', { rate: num1(r.hullPerMin), min: r.minutes, planks: r.havePlanks, cloth: r.haveCloth }));
-  else if (hurt && short && !you.combat) line = esc(L('rep.short', { planks: r.havePlanks, need: r.planks, cloth: r.haveCloth, needc: r.cloth }));
+  else if (hurt && short && !you.combat) {
+    // (forum 48: «доски 4/0, парусина 0/5» — only what is short, and where it comes from)
+    const noCloth = sailsHurt && r.haveCloth < 1, noPlanks = hullHurt && r.havePlanks < 1;
+    line = esc(noCloth && !noPlanks ? L('rep.shortCloth', { needc: Math.max(1, r.cloth) })
+      : noPlanks && !noCloth ? L('rep.shortPlanks', { need: Math.max(1, r.planks) })
+      : L('rep.short', { planks: r.havePlanks, need: r.planks, cloth: r.haveCloth, needc: r.cloth }));
+  }
   return { hurt, short, line };
 }
 

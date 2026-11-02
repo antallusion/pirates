@@ -4,8 +4,8 @@
 // «Аварийный парус NN %» button and «Затопить · и в порт»), and the question before scuttling with what it costs (the
 // sinking's own reckoning, shared/src/data/adrift.ts scuttleQuote) — asked from the bar and from the ship window.
 
-import type { AdriftView } from '../../../shared/src/data/adrift.ts';
-import { scuttleQuote } from '../../../shared/src/data/adrift.ts';
+import type { AdriftView, JuryHold } from '../../../shared/src/data/adrift.ts';
+import { JURY_TO, scuttleQuote } from '../../../shared/src/data/adrift.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import { cargoValue, tx } from '../../../shared/src/sim/shipstats.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
@@ -22,37 +22,64 @@ export const LA = dict(EN, RU);
 export interface AdriftFacts {
   /** The rig's progress 0..100 (null: not rigging). */
   pct: number | null;
+  /** Her sails now, % of the bar (the rig brings them to `to`). */
+  now: number;
+  /** Where the rig stops, % of the bar (25). */
+  to: number;
   left: number;
   paused: boolean;
+  /** Why it waits (with `paused`): under fire, a fire aboard, canvas torn as fast as it is rigged. */
+  hold: JuryHold | null;
   stranded: boolean;
   /** Minutes until she may scuttle again (0: now). */
   cdMin: number;
 }
 
-/** Seconds since the view came in, taken off the rig's time and the wait (the server says only on a change). */
+/** Seconds since the view came in, taken off the rig's time and the wait (the server says only on a change). A rig
+ *  that waits keeps its time (forum 48: a rig that stood still had its clock run down to «0 с»). */
 export function adriftFacts(v: AdriftView | null, ageSec = 0): AdriftFacts | null {
   if (!v) return null;
   const left = Math.max(0, v.left - (v.paused ? 0 : Math.floor(ageSec)));
+  const pct = v.jury === null ? null : Math.round(Math.min(1, v.jury) * 100);
+  // (an older server: her sails from the rig's progress)
+  const share = v.sails ?? (v.jury === null ? 0 : Math.min(1, v.jury) * JURY_TO);
   return {
-    pct: v.jury === null ? null : Math.round(Math.min(1, v.jury) * 100),
+    pct,
+    now: Math.min(100, Math.floor(share * 100 + 1e-6)),
+    to: Math.round(JURY_TO * 100),
     left,
     paused: v.paused,
+    hold: v.paused ? v.hold ?? 'shot' : null,
     stranded: v.stranded,
     cdMin: Math.ceil(Math.max(0, v.cd - ageSec) / 60),
   };
 }
 
-/** The muted line over the bar: «Корабль без парусов · аварийный парус 40% · 31 с». */
+/** What the rig does now, in a few words: «12 из 25 % парусов · ещё 31 с», «ждёт: под огнём», «почти готов». */
+function rigState(f: AdriftFacts): string {
+  if (f.paused) return LA(f.hold === 'fire' ? 'info.fire' : f.hold === 'torn' ? 'info.torn' : 'info.paused');
+  return f.left > 0 ? LA('info.rig', { now: f.now, to: f.to, s: f.left }) : LA('info.rigSoon', { now: f.now, to: f.to });
+}
+
+/** The muted line over the bar: «Корабль без парусов · аварийный парус: 10 из 25 % парусов · ещё 31 с». */
 export function adriftInfo(f: AdriftFacts): string {
   const parts = [LA('title')];
-  if (f.pct !== null) parts.push(f.paused ? LA('info.paused') : LA('info.rig', { pct: f.pct, s: f.left }));
+  if (f.pct !== null) parts.push(rigState(f));
   else if (f.stranded) parts.push(LA('info.far'));
   return parts.join(' · ');
 }
 
-/** What the jury sail's button says when pressed (the crew is at it already: the press tells how far along). */
+/** The jury sail's button: its name, and under it its time or why it waits. */
+export function juryButton(f: AdriftFacts): { label: string; sub: string; title: string } {
+  const sub = f.paused ? LA('a.jurySubWait') : f.left > 0 ? LA('a.jurySub', { s: f.left }) : LA('a.jurySubSoon');
+  return { label: LA('a.jury'), sub, title: juryTapText(f) };
+}
+
+/** What the jury sail's button says when pressed: the crew rigs it by themselves — what it is, how far, what it waits on. */
 export function juryTapText(f: AdriftFacts): string {
-  return f.paused ? LA('a.juryPaused') : LA('a.juryTap', { pct: f.pct ?? 0, s: f.left });
+  const why = f.paused ? ` ${LA(f.hold === 'fire' ? 'a.juryFire' : f.hold === 'torn' ? 'a.juryTorn' : 'a.juryPaused')}` : '';
+  const how = f.paused ? '' : f.left > 0 ? ` ${LA('a.juryLeft', { s: f.left })}` : ` ${LA('a.jurySoon')}`;
+  return `${LA('a.juryWhat', { now: f.now, to: f.to })}${how}${why} ${LA('a.juryRest', { to: f.to })}`;
 }
 
 /** The question's body: what it costs, what is kept, where she wakes. */

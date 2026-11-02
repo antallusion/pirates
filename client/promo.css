@@ -51,11 +51,16 @@
 .po-price .po-was { font-size: 15px; }
 .po-price .po-new .ico-xs { width: 18px; height: 18px; }
 .po-why { color: var(--bad); font-size: 12px; }
-.po-acts { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
-.po-acts .btn { min-height: 36px; }
-.po-acts .po-nav { min-width: 40px; font-size: 18px; }
-.po-acts .po-buy { min-width: 110px; }
-.po-dots { display: flex; justify-content: center; gap: 6px; }
+/* The buttons' row (forum 48: «Магазин» of 2026-10-30 pushed the «›» onto a line of its own): one row that never wraps —
+   the labels give way (ellipsis) before the price on «Купить» does; the card's arrows sit at the ends of the dots' line. */
+.po-acts { display: flex; flex-wrap: nowrap; gap: 8px; justify-content: flex-end; align-items: stretch; min-width: 0; }
+.po-acts .btn { min-height: 36px; min-width: 0; flex: 0 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.po-acts .po-buy { min-width: 110px; flex: 0 0 auto; }
+.po-dots { display: flex; justify-content: center; align-items: center; gap: 6px; }
+.po-dots i { flex: none; }
+.po-dots .po-nav { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 28px; margin: 0 6px; padding: 0; border: 1px solid rgba(224, 184, 98, 0.45); border-radius: 14px; background: rgba(0, 0, 0, 0.35); color: var(--gold); cursor: pointer; }
+.po-dots .po-nav:hover, .po-dots .po-nav:focus-visible { border-color: var(--gold); background: rgba(224, 184, 98, 0.12); }
+.po-dots .po-nav .g-svg { width: 16px; height: 16px; fill: currentColor; }
 .po-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(224, 184, 98, 0.3); }
 .po-dots i.on { background: var(--gold); }
 
@@ -67,7 +72,7 @@
 .po-in-ico { width: 26px; height: 26px; flex: none; margin: 0; object-fit: contain; }
 .po-in-q { color: var(--gold); font-variant-numeric: tabular-nums; }
 .po-gain { align-self: center; padding: 1px 7px; border-radius: 9px; font: 800 12px/18px var(--sans); font-style: normal; color: #1b1308; background: linear-gradient(180deg, #f6d27a, #c99a3c); box-shadow: 0 0 8px rgba(232, 196, 106, 0.45); }
-.po-acts .po-buy { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 150px; font-size: 15px; }
+.po-acts .po-buy { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 132px; font-size: 15px; }
 .po-buy-n { display: inline-flex; align-items: center; gap: 3px; font-variant-numeric: tabular-nums; }
 .po-buy-n .ico-xs { width: 15px; height: 15px; margin: 0; }
 
@@ -105,4 +110,5 @@
   .po-acts .btn { min-height: var(--f-tap, 32px); font-size: var(--f-fs, 10px); padding: 0 calc(6px + 4 * var(--u, 1px)); }
   .po-acts .po-buy { min-width: 80px; }
   .po-dots i { width: 5px; height: 5px; }
+  .po-dots .po-nav { width: var(--f-tap, 32px); height: calc(22px + 4 * var(--u, 1px)); }
 }

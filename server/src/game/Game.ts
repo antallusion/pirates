@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { stormSails } from '../../../shared/src/data/adrift.ts';
 import { crewAwayOnLogin } from './crewaway.ts';
 import { DOCK_SLOW, LANDING_R, REACH_DOCK, REACH_SLACK, hullOf } from '../../../shared/src/data/reach.ts';
 import { dockWithin } from '../../../shared/src/world/dock.ts';
@@ -1587,8 +1588,9 @@ export class Game {
     const w = this.weatherOf(ship);
     const canvas = ship.hasFlag('storm_rider') ? 0 : Math.max(0, 1 + tval(st, 'stormSailDamage'));
     if ((w === 'storm' || w === 'black_storm') && ship.state.sail > 0.8 && ship.cls.passive.id !== 'dead_crew' && canvas > 0 && !voyaging(ship)) {
-      ship.sails = Math.max(0, ship.sails - st.sailHpMax * 0.012 * canvas);
-      if (this.tick % 200 === 0) this.toastShip(ship, 'The storm is shredding your canvas — reef the sails!', 'bad');
+      const was = ship.sails;
+      ship.sails = stormSails(ship.sails, st.sailHpMax * 0.012 * canvas, st.sailHpMax, ship.cargo.sailcloth ?? 0); // (never the jury rig: forum 48)
+      if (ship.sails < was && this.tick % 200 === 0) this.toastShip(ship, 'The storm is shredding your canvas — reef the sails!', 'bad');
     }
     // Infamy slowly fades while you behave.
     if (ship.isPlayer && !ship.inCombat(now)) {

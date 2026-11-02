@@ -13,6 +13,8 @@
 // Shown on coarse pointers or after the first touch.
 
 import { STICK_DOUBLE_MS, STICK_REEF_MS, seaWord, stickSail } from './ui/seahud.ts';
+import { gaugeDeg } from './ui/sailgauge.ts';
+import type { Gauge } from './ui/sailgauge.ts';
 
 /** A press held still this long steers (a quicker one may be a tap of the dash). */
 export const STICK_STEER_MS = 140;
@@ -93,21 +95,30 @@ export class TouchControls {
     document.body.classList.add('touch');
   }
 
-  /** Keep the wheel turned to the ship's heading, the course mark where the helm points, the sail ring lit to her
-   *  sail, the dash's readiness (1 just used – 0 ready) on its chip and her speed under the wheel (knots, as words). */
-  frame(heading: number | null, sail: number, dashLeft: number, speed = ''): void {
+  /** Keep the wheel turned to the ship's heading, the course mark where the helm points, the sail ring lit to the sail she
+   *  actually carries (`gauge`, ui/sailgauge.ts: the server's setting × her sails' bar — under the helmsman and the
+   *  auto-battle too; forum 48), the captain's step on the «−» «+» buttons (`sail`), the dash's readiness (1 just
+   *  used – 0 ready) on its chip and her speed under the wheel (knots, as words). */
+  frame(heading: number | null, sail: number, dashLeft: number, speed = '', gauge: Gauge | null = null): void {
     if (!this.enabled && !document.body.classList.contains('simple')) return;
+    const g = gauge ?? { lit: sail / 4, ordered: sail / 4, health: 1, torn: false };
+    const pct = Math.round(g.lit * 100);
     const sp = document.getElementById('tc-speed');
-    if (sp && sp.dataset.v !== `${speed}|${sail}`) {
-      sp.dataset.v = `${speed}|${sail}`;
+    if (sp && sp.dataset.v !== `${speed}|${pct}|${g.torn ? 1 : 0}`) {
+      sp.dataset.v = `${speed}|${pct}|${g.torn ? 1 : 0}`;
       sp.textContent = speed ? seaWord('speed', { n: speed }) : '';
-      sp.setAttribute('aria-label', seaWord('speedAria', { n: speed, s: sail }));
+      sp.setAttribute('aria-label', seaWord(g.torn ? 'speedAriaTorn' : 'speedAria', { n: speed, p: pct }));
     }
     if (this.stickId === null && heading !== null) this.knob.style.transform = `translate(-50%, -50%) rotate(${heading}rad)`;
     const mark = $('tc-course');
     mark.classList.toggle('hidden', this.course === null);
     if (this.course !== null) mark.style.transform = `rotate(${this.course}rad)`;
     if (this.stick.dataset.sail !== String(sail)) this.stick.dataset.sail = String(sail);
+    const a = `${gaugeDeg(g.lit)}deg`, o = `${gaugeDeg(g.ordered)}deg`;
+    if (this.stick.style.getPropertyValue('--a') !== a) this.stick.style.setProperty('--a', a);
+    if (this.stick.style.getPropertyValue('--o') !== o) this.stick.style.setProperty('--o', o);
+    this.stick.dataset.lit = String(pct);
+    this.stick.classList.toggle('torn', g.torn);
     this.showSail(sail);
     const cd = Math.max(0, Math.min(1, dashLeft)).toFixed(2);
     if (this.stick.style.getPropertyValue('--cd') !== cd) {

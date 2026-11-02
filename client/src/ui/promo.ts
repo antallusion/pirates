@@ -431,12 +431,11 @@ export class Promos {
           ${live.until ? `<div class="po-hurry">${esc(L('hurry'))} ${this.clock(live)}</div>` : ''}
           <div class="po-price">${this.priceHtml(live)}${gain}</div>${why}</div></div>
       ${insideHtml}
-      <div class="po-acts"><button type="button" class="btn btn-small po-shop" data-poshop>${esc(L('shop'))}</button>${many ? `<button type="button" class="btn btn-small po-nav g-only" data-poprev aria-label="${esc(L('prev'))}">${glyphSvg('prev')}</button>` : ''}
-        <button type="button" class="btn btn-small" data-polater>${esc(this.overPlace === 'entry' ? L('later') : L('close'))}</button>
-        ${live.special === 'first' ? '' : `<button type="button" class="btn btn-small" data-pomore>${esc(L('more'))}</button>`}
-        <button type="button" class="btn btn-small btn-primary po-buy" data-pobuy${live.why && live.why !== 'poor' ? ' disabled' : ''}>${buy}</button>
-        ${many ? `<button type="button" class="btn btn-small po-nav g-only" data-ponext aria-label="${esc(L('next'))}">${glyphSvg('next')}</button>` : ''}</div>
-      ${many ? `<div class="po-dots">${this.list.map((_, i) => `<i class="${i === this.idx ? 'on' : ''}"></i>`).join('')}</div>` : ''}</div>`;
+      <div class="po-acts"><button type="button" class="btn btn-small po-shop" data-poshop>${esc(L('shop'))}</button>
+        <button type="button" class="btn btn-small po-later" data-polater>${esc(this.overPlace === 'entry' ? L('later') : L('close'))}</button>
+        ${live.special === 'first' ? '' : `<button type="button" class="btn btn-small po-more" data-pomore>${esc(L('more'))}</button>`}
+        <button type="button" class="btn btn-small btn-primary po-buy" data-pobuy${live.why && live.why !== 'poor' ? ' disabled' : ''}>${buy}</button></div>
+      ${many ? `<div class="po-dots"><button type="button" class="po-nav g-only" data-poprev aria-label="${esc(L('prev'))}">${glyphSvg('prev')}</button>${this.list.map((_, i) => `<i class="${i === this.idx ? 'on' : ''}"></i>`).join('')}<button type="button" class="po-nav g-only" data-ponext aria-label="${esc(L('next'))}">${glyphSvg('next')}</button></div>` : ''}</div>`;
     this.tell(live, this.overPlace);
     el.querySelector<HTMLElement>('[data-poshut]')!.onclick = () => {
       if (this.overPlace !== 'entry') this.close(live, this.overPlace);

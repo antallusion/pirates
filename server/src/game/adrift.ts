@@ -12,7 +12,7 @@
 import {
   JURY_TO, STRANDED_KN, isStranded, juryLeft, juryStep, juryWanted, scuttleWhy,
 } from '../../../shared/src/data/adrift.ts';
-import type { AdriftView } from '../../../shared/src/data/adrift.ts';
+import type { AdriftView, JuryHold } from '../../../shared/src/data/adrift.ts';
 import { SCUTTLE_CD_MS } from '../../../shared/src/data/adrift.ts';
 import { dist } from '../../../shared/src/math.ts';
 import type { Game } from './Game.ts';
@@ -24,6 +24,8 @@ interface Drift {
   rig: boolean;
   slowFor: number;
   sent: string;
+  /** Her sails as the rig left them a second ago (-1: not rigging): lower now, and the canvas is torn as fast as rigged. */
+  last: number;
 }
 
 const drift = new WeakMap<ShipEntity, Drift>();
@@ -51,7 +53,7 @@ export function stepAdrift(game: Game, s: PlayerSession, dt = 1): void {
   const ship = s.ship;
   if (!ship || !s.profile) return;
   let d = drift.get(ship);
-  if (!d) drift.set(ship, (d = { rig: false, slowFor: 0, sent: '' }));
+  if (!d) drift.set(ship, (d = { rig: false, slowFor: 0, sent: '', last: -1 }));
   const atSea = ship.alive && !ship.docked && !ship.sinkingUntil && !ship.ghost;
   let view: AdriftView | null = null;
   if (atSea) {
@@ -59,7 +61,12 @@ export function stepAdrift(game: Game, s: PlayerSession, dt = 1): void {
     const cloth = ship.cargo.sailcloth ?? 0;
     let frac = ship.sails / max;
     const want = juryWanted(frac, cloth, d.rig);
-    const paused = ship.underFire(game.now) || !!ship.boarding;
+    // Why the rig waits (forum 48: a storm or a fire ate the canvas as fast as the crew rigged it, the rig stood at «2 %»
+    // and the client's clock ran down to «0 с»): the shot first, then a fire aboard, then canvas torn since the last second.
+    const hold: JuryHold | null = ship.underFire(game.now) || ship.boarding ? 'shot'
+      : ship.hasEffect('fire') ? 'fire'
+      : d.rig && d.last >= 0 && ship.sails < d.last - 1e-6 ? 'torn' : null;
+    const paused = hold === 'shot' || hold === 'fire';
     if (want && !d.rig) {
       d.rig = true;
       game.toastShip(ship, JURY_START, 'info');
@@ -73,6 +80,7 @@ export function stepAdrift(game: Game, s: PlayerSession, dt = 1): void {
         game.toastShip(ship, JURY_DONE, 'good');
       }
     }
+    d.last = d.rig ? ship.sails : -1;
     d.slowFor = Math.abs(ship.state.speed) < STRANDED_KN ? d.slowFor + dt : 0;
     const port = friendlyPort(game, s, ship);
     const stranded = isStranded({ sails: ship.sails / max, cloth, slowFor: d.slowFor, portDist: port.d });
@@ -82,7 +90,9 @@ export function stepAdrift(game: Game, s: PlayerSession, dt = 1): void {
         jury: d.rig ? Math.min(1, ship.sails / max / JURY_TO) : null,
         left: d.rig ? juryLeft(ship.sails / max) : 0,
         stranded,
-        paused: d.rig && paused,
+        paused: d.rig && hold !== null,
+        hold: d.rig ? hold : null,
+        sails: Math.min(1, ship.sails / max),
         cd: Math.max(0, Math.ceil((SCUTTLE_CD_MS - since) / 1000)),
         port: port.id,
       };
@@ -90,9 +100,10 @@ export function stepAdrift(game: Game, s: PlayerSession, dt = 1): void {
   } else {
     d.rig = false;
     d.slowFor = 0;
+    d.last = -1;
   }
   // (the progress by twentieths, the wait by minutes: a message only when something she sees changed)
-  const key = view ? `${view.jury === null ? '-' : Math.round(view.jury * 20)}|${view.stranded ? 1 : 0}|${view.paused ? 1 : 0}|${Math.ceil(view.cd / 60)}|${view.port}` : '';
+  const key = view ? `${view.jury === null ? '-' : Math.round(view.jury * 20)}|${view.stranded ? 1 : 0}|${view.paused ? 1 : 0}|${view.hold ?? ''}|${Math.ceil(view.cd / 60)}|${view.port}` : '';
   if (key === d.sent) return;
   d.sent = key;
   game.sendTo(s, { t: 'adrift', v: view });

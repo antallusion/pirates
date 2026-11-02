@@ -885,7 +885,9 @@ export class ClientState {
     const cur = currentAt(this.currents, s.x, s.y, this.estServerTime(), this.whirlpools);
     const run = (!!this.pursuit || this.roamRun !== null) && !this.helm;
     const helmsman = !!this.autosail || run;
-    const input = { rudder: helmsman ? you.rud : this.input.rudder, sailTarget: run ? you.sail : sailSteps[this.input.sail] };
+    // (under the helmsman the sail he asked for, as the server has it — forum 48: the client's own step stayed at 0 under
+    // the auto-battle, and a course to a mark kept the step of the 'autosail' message when he reefed or made sail on the way)
+    const input = { rudder: helmsman ? you.rud : this.input.rudder, sailTarget: helmsman ? you.sailT : sailSteps[this.input.sail] };
     // Her hull kept off the coasts and the solid things as the server keeps it (owner, 2026-10-08): she is reckoned up to
     // the shore and slid along it, not on into the land and snapped back by the next snapshot.
     const len = st.length, beam = st.beam;

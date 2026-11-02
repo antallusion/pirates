@@ -25,6 +25,19 @@ export const JURY_SEC = 60;
 /** Sailcloth under this (a scrap) is none. */
 export const CLOTH_SCRAP = 0.2;
 
+/** A storm shreds a full press of canvas (Game.shipUpkeep), but never the jury rig: with no sailcloth aboard it tears
+ *  her sails no lower than a quarter (forum 48: in a storm under full sail she lost 1.2 % a second and her crew rigged
+ *  0.4 % — the rig stood still at «2 %» while its clock ran down to «0 с»). Her sails after the storm's bite. */
+export function stormSails(sails: number, bite: number, max: number, cloth: number): number {
+  const after = Math.max(0, sails - bite);
+  if (cloth >= CLOTH_SCRAP) return after;
+  return Math.max(after, Math.min(sails, JURY_TO * max));
+}
+
+/** Why the rig waits (it does not go up): under fire or boarded; a fire aboard (the crew is at the buckets and the fire
+ *  eats the canvas); torn as fast as it is rigged (anything else: the clock must not run on a rig that stands still). */
+export type JuryHold = 'shot' | 'fire' | 'torn';
+
 /** Stranded: slower than this (knots) for STRANDED_SEC… */
 export const STRANDED_KN = 1;
 export const STRANDED_SEC = 20;
@@ -111,8 +124,12 @@ export interface AdriftView {
   /** Seconds the rig still needs (with `jury`). */
   left: number;
   stranded: boolean;
-  /** Paused: under fire the crew leaves the rig. */
+  /** Paused: under fire the crew leaves the rig (and a fire aboard, or canvas torn as fast as it is rigged: `hold`). */
   paused: boolean;
+  /** Why it waits (with `paused`). */
+  hold?: JuryHold | null;
+  /** Her sails now (0..1 of the bar): the rig brings them to JURY_TO. */
+  sails?: number;
   cd: number;
   /** The nearest harbour that will have her (where scuttling wakes her). */
   port: string | null;

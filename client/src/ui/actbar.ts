@@ -17,7 +17,7 @@ import { EN as SEN, RU as SRU } from '../lang/ui/seafight.ts';
 import { EN as WEN, RU as WRU } from '../lang/ui/waystation.ts';
 import type { Action } from '../settings.ts';
 import type { AdriftFacts } from './adrift.ts';
-import { LA } from './adrift.ts';
+import { LA, juryButton } from './adrift.ts';
 import { esc, icon } from './dom.ts';
 
 const L = dict(EN, RU);
@@ -137,7 +137,9 @@ export function buildActs(f: ActFacts): Act[] {
   if (!f.port && f.homeport) out.push({ id: 'homeport', icon: 'map_port', label: L('a.dock'), sub: f.homeport.name, title: `${L('a.dock')}: ${f.homeport.name}` });
   // «Корабль без парусов» (owner, 2026-10-20): the jury sail as it goes up, and — stranded — scuttling home
   const ad = f.adrift;
-  if (ad && ad.pct !== null) out.push({ id: 'jury', icon: 'stat_sails', label: `${LA('a.jury')} ${ad.pct}%`, title: ad.paused ? LA('a.juryPaused') : LA('a.juryT', { s: ad.left }) });
+  // (forum 48: «Аварийный парус 2%» read as a sail of 2 % and its «0 с» as a broken clock — now the name, under it the time
+  // or «ждёт», and a tap tells what it is: the crew rigs it by themselves, from her sails now up to a quarter)
+  if (ad && ad.pct !== null) out.push({ id: 'jury', icon: 'stat_sails', ...juryButton(ad) });
   if (ad && ad.stranded && !f.board && !at) out.push({ id: 'scuttle', icon: 'map_wreck', label: LA('a.scuttle'), sub: ad.cdMin > 0 ? LA('a.scuttleCd', { m: ad.cdMin }) : LA('a.scuttleSub'), title: LA('a.scuttleT') });
   const l = f.landable;
   if (l && !l.blocked) {
