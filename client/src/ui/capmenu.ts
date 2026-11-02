@@ -12,7 +12,7 @@ import type { SheetHandle } from './kit/sheet.ts';
 
 const L = dict(EN, RU);
 
-export type CapItem = 'hero' | 'skills' | 'talents' | 'journal' | 'replays' | 'options' | 'account';
+export type CapItem = 'hero' | 'skills' | 'talents' | 'journal' | 'replays' | 'options' | 'promo' | 'account';
 export const CAP_ITEMS: readonly { id: CapItem; art: string; glyph: string }[] = [
   { id: 'hero', art: 'set_admiralty', glyph: '⚔' }, // (owner, 2026-10-15: the painted scene was «из другой оперы» among the tiles' cut-out pictures: the bicorne, sabre and glass)
   { id: 'skills', art: 'ab_mark_target', glyph: '✦' },
@@ -20,6 +20,7 @@ export const CAP_ITEMS: readonly { id: CapItem; art: string; glyph: string }[] =
   { id: 'journal', art: 'tab_letters', glyph: '📜' },
   { id: 'replays', art: 'bt_quick', glyph: '⟲' }, // owner, 2026-10-16: «Повторы» — her last twenty kept fights
   { id: 'options', art: 'menu_options', glyph: '⚙' },
+  { id: 'promo', art: 'ui_chest', glyph: '✉' }, // «Промокод» (owner, 2026-11-02): straight to the settings' tab
   { id: 'account', art: 'menu_cabin', glyph: '☗' },
 ];
 

@@ -28,6 +28,7 @@ import { keepsDeep } from './town.ts';
 import { firstGiftOf, notePay, shopMessage, shopView } from './shop.ts';
 import { promoMessage, sendPromo } from './promo.ts';
 import { giftMessage } from './dailygift.ts';
+import { promoCodeMessage } from './promocodes.ts';
 import { tgnMessage } from './tgnotify.ts';
 import { unitPacks } from '../../../shared/src/data/shop.ts';
 import { exchangeMessage } from './exchange.ts';
@@ -402,6 +403,7 @@ export function premiumMessage(game: Game, s: PlayerSession, msg: PremiumClientM
   // Her personal offers (owner, 2026-10-15): promo.ts.
   // The daily login gift and the Telegram notices (owner, 2026-10-16): dailygift.ts, tgnotify.ts.
   if (msg.action === 'gift_view' || msg.action === 'gift_claim') return giftMessage(game, s, msg.action);
+  if (msg.action === 'promocode') return promoCodeMessage(game, s, msg.code); // owner, 2026-11-02: promocodes.ts
   if (msg.action === 'tgn_set' || msg.action === 'tgn_view' || msg.action === 'tgn_click') return tgnMessage(game, s, msg);
   if (msg.action === 'promo_view' || msg.action === 'promo_carousel' || msg.action === 'promo_buy' || msg.action === 'promo_close' || msg.action === 'promo_seen') return promoMessage(game, s, msg as { action: string; id?: string; pid?: string; where?: string });
   // Doubloons into silver (owner, 2026-10-30): exchange.ts.
