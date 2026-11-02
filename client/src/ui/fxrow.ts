@@ -251,6 +251,7 @@ export function fxRowLabel(): string {
 export function shortLeft(sec: number): string {
   if (sec < 60) return L('shortSec', { n: Math.max(1, Math.ceil(sec)) });
   if (sec < 3600) return L('shortMin', { n: Math.ceil(sec / 60) });
+  if (sec >= 48 * 3600) return L('shortDay', { n: Math.round(sec / 86400) }); // (a patent's week: «7д», not «168ч»)
   return L('shortHour', { n: Math.round(sec / 3600) });
 }
 
@@ -262,6 +263,7 @@ function longLeft(sec: number): string {
     return `${m}:${String(s).padStart(2, '0')}`;
   }
   const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
+  if (h >= 24) return `${L('day', { n: Math.floor(h / 24) })} ${L('hour', { n: h % 24 })}`; // (a patent's week)
   return `${L('hour', { n: h })} ${L('min', { n: m })}`;
 }
 
