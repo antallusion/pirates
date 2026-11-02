@@ -14,6 +14,8 @@ export interface Layer {
    *  Enter goes on to the game (WASD, Space, the hotkeys) and the layer takes no focus as it opens; once the focus is in
    *  it (Enter, a click), it owns the keyboard as any layer does. */
   passKeys?: boolean;
+  /** Any other key first (the guide's ‹ › on the arrows): true when the layer took it. */
+  onKey?: (e: KeyboardEvent) => boolean;
 }
 
 /** Whether a key goes past a layer to the game (pure, for the tests): a `passKeys` layer lets all but Esc and Enter by
@@ -51,6 +53,10 @@ function onKey(e: KeyboardEvent): void {
     return;
   }
   e.stopImmediatePropagation();
+  if (top.onKey?.(e)) {
+    e.preventDefault();
+    return;
+  }
   const field = (e.target as HTMLElement | null)?.closest?.('input, textarea, select');
   if (e.key === 'Escape') {
     e.preventDefault();

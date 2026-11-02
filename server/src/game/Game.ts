@@ -321,6 +321,7 @@ import { sendPromo, stepPromo } from './promo.ts'; // the shop's goods (owner, 2
 import { opsSilverMul, opsXpMul, stepLiveOps, trackEvent } from './liveops.ts'; // the live ops' panel and funnel (docs/34)
 import { sendGift, stepGift } from './dailygift.ts'; // the daily login gift (owner, 2026-10-16)
 import { passMessage, passOnLogin, passPvp, seasonXp as passXp, stepPass } from './seasonpass.ts'; // «Сезонная карта» (owner, 2026-10-30)
+import { guideMessage, sendGuide } from './guide.ts'; // «Лоцманская книга» (2026-11-02)
 import { noticesAboard, noticesAway, stepNotices } from './tgnotify.ts'; // the Telegram notices (owner, 2026-10-16)
 import { adviceOnLogin, stepAdvice } from './advice.ts'; // the advice mailer (owner, 2026-10-28: «подсказки рассылать по почте»)
 import { creaturesAboard, feedCreatures, stepTame } from './tame.ts'; // docs/18 IV
@@ -3736,6 +3737,7 @@ export class Game {
     if (msg.t === 'pvprank') return pvpRankMessage(this, s, msg); // the PvP points (owner, 2026-10-30)
     if (msg.t === 'power') return powerMessage(this, s, msg); // «Мощь» (owner, 2026-10-31)
     if (msg.t === 'spass') return passMessage(this, s, msg); // «Сезонная карта» (owner, 2026-10-30)
+    if (msg.t === 'guide_read' || msg.t === 'guide_seen') return guideMessage(this, s, msg); // «Лоцманская книга» (2026-11-02)
     if (msg.t === 'scout') return scoutMessage(this, s, msg); // the island's scouts (owner, 2026-10-17)
     if (msg.t === 'way') return wayMessage(this, s, msg); // docs/35: the floating waystations, the resurrection
     if (msg.t === 'army') return armyMessage(this, s, msg); // owner, 2026-10-28: split, merge, dismiss a stack
@@ -5079,6 +5081,7 @@ export class Game {
     sendWorldGoals(this, s); // the sea's goals of the week (docs/16 #32)
     sendBalance(this, s); // her account's doubloons (the premium shop)
     sendGift(this, s); // her daily login calendar (owner, 2026-10-16): first, the offers' carousel waits for it
+    sendGuide(this, s); // «Лоцманская книга»: what she has read, the tips she has seen (2026-11-02)
     passOnLogin(this, s); // «Сезонная карта» (owner, 2026-10-30): a season gone closed, last season's rewards that waited
     sendPromo(this, s); // her personal offers and the entry carousel (owner, 2026-10-15)
     // docs/32 §12: her wardrobe read afresh (another zone may have changed it), her ship dressed, the view sent

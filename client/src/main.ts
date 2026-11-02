@@ -25,7 +25,7 @@ import { NetHaulPanel } from './ui/nethaul.ts';
 import { departHooks, departOrAsk } from './ui/depart.ts';
 import { adviceFor, showAdvice } from './ui/buyadvice.ts';
 import { RouteRun } from './ui/goalrun.ts';
-import { mountDetail, openDetail, registerDetail } from './ui/detail.ts';
+import { detailOpen, mountDetail, openDetail, registerDetail } from './ui/detail.ts';
 import { LAIRS } from '../../shared/src/data/lairs.ts';
 import { FoeFinder } from './ui/foefind.ts'; // forum 45: «Найти врага»
 import type { Foe } from './ui/foefind.ts';
@@ -200,6 +200,10 @@ import { heardDoubloons, stashPending } from './ui/price.ts'; // a purchase wait
 import { Promos } from './ui/promo.ts'; // her personal offers (owner, 2026-10-15)
 import { DailyGift } from './ui/dailygift.ts'; // the daily login gift (owner, 2026-10-16)
 import { SeasonPass } from './ui/seasonpass.ts'; // «Сезонная карта» (owner, 2026-10-30)
+import { GuideBook, ensureHelp } from './ui/guide.ts'; // «Лоцманская книга» (2026-11-02)
+import { GuideTips, guideMsgTrigger, guideStateTriggers } from './ui/guidetip.ts';
+import { guideRoute, modalWindowId } from './ui/guidewin.ts';
+import { EN as GB_EN, RU as GB_RU } from './lang/ui/guide.ts';
 import { initTgNotices } from './ui/tgnotices.ts'; // «Уведомления в Телеграме» (owner, 2026-10-16)
 import { initPromoCode } from './ui/promocode.ts'; // «Промокод» (owner, 2026-11-02)
 import { webCheckouts } from './checkout.ts';
@@ -1437,6 +1441,7 @@ const hudMore = new HudMore($('touch'));
 // «Выход» (forum 45): last in the tray, and a tile in the cabin's menu (in port the tray is not out). In port she leaves
 // at once; at sea «ВЫХОД ЧЕРЕЗ 0:30» (the server's, exit.ts) — any order of hers calls it off.
 const LFX = dict(FX_EN, FX_RU);
+const LGB = dict(GB_EN, GB_RU); // «Лоцманская книга»
 const exitUi = new ExitUi({ send: (m) => net.send(m), on: (f) => net.on(f), now: () => state.estServerTime(), toast: (msg, kind) => hud.toast(msg, kind) });
 net.onLeft = () => exitUi.closed();
 {
@@ -1446,6 +1451,138 @@ net.onLeft = () => exitUi.closed();
   b.insertAdjacentHTML('beforeend', `<span class="tc-crew-l">${LFX('exitBtn')}</span>`);
   b.addEventListener('click', () => exitUi.ask());
   $('touch').append(b);
+}
+// «Лоцманская книга» (2026-11-02; client/src/ui/guide.ts, guidetip.ts, guidewin.ts): the book over everything, its
+// «Книга» in the «⋯» tray, its tile in the captain's menu, H / F1 on a desk; «Показать в игре» opens a window here and
+// points the finger; a «?» in the head of the game's windows; the first-time tips at the top edge.
+/** A window of the game opened by the book's id (null: it opened; else why not, in the book's words). */
+function guideOpenWindow(id: string): 'needPort' | 'needIsle' | 'noWindow' | null {
+  const r = guideRoute(id);
+  if (!r || !state.self) return 'noWindow';
+  if (state.boardTac || state.boardFight) return 'noWindow';
+  switch (r.k) {
+    case 'port':
+      if (!state.self.dockedAt || !state.portView) return 'needPort';
+      if (isleScene.isOpen) leaveIsle(false);
+      if (r.tab) portScreen.showTab(r.tab, null, state);
+      portReturn = true; // (the tab asked for, not the market a fresh harbour starts on)
+      openModal('port');
+      return null;
+    case 'modal':
+      if (isleScene.isOpen && r.m !== 'help') leaveIsle(false);
+      openModal(r.m);
+      return null;
+    case 'hero':
+      openHero(r.tab);
+      return null;
+    case 'isle':
+      openBase();
+      return state.self.homeIsle === null || state.self.homeIsle === undefined ? 'needIsle' : null;
+    case 'hire':
+      if (!state.self.dockedAt) return 'needPort';
+      openRecruit('port');
+      return null;
+    case 'flag':
+      openFlagCard();
+      return null;
+    case 'settings':
+      if (r.promo) openPromoCode();
+      else openModal('options');
+      return null;
+    case 'pass':
+      if (modal) closeModal();
+      seasonPass.open();
+      return null;
+    case 'company':
+      companyScreen.open();
+      openModal('company');
+      return null;
+    case 'throne':
+      openThrone();
+      return null;
+    case 'shop':
+      openShop();
+      return null;
+    case 'tame':
+      openTame();
+      return null;
+  }
+  return 'noWindow';
+}
+/** The server's view of what she has read came (the tips wait for it: a tip once an account, not once a device). */
+let guideViewCame = false;
+const guide = new GuideBook({
+  send: (m) => net.send(m),
+  on: (f) => net.on(f),
+  openWindow: guideOpenWindow,
+  point: (sel, ms) => tutorPointer.hold([sel], ms),
+  toast: (msg, kind) => hud.toast(msg, kind),
+  onShown: (open) => {
+    if (open) hudMore.set(false);
+  },
+});
+net.on((m) => {
+  if (m.t === 'guide') guideViewCame = true;
+});
+const guideTips = new GuideTips({
+  list: () => guide.list,
+  seen: () => (guideViewCame ? guide.view.seen : null),
+  markSeen: (key) => {
+    if (!guide.view.seen.includes(key)) guide.view = { ...guide.view, seen: [...guide.view.seen, key] };
+    net.send({ t: 'guide_seen', key });
+  },
+  read: (id) => guide.openArticle(id),
+  // (never in a boarding battle, over a window, the book, the season card, a lesson of the First Watch, a card)
+  blocked: () => !inGame || modal !== null || !!state.boardTac || !!state.boardFight || guide.isOpen() || seasonPass.isOpen() || !!state.onboarding?.stage || !!detailOpen() || !!document.querySelector('.k-sheet-root'),
+});
+{
+  const t = document.createElement('template');
+  t.innerHTML = buttonHtml({ kind: 'icon', id: 'tc-book', icon: 'bt_book', glyph: '✎', aria: LGB('btnAria'), cls: 'sea-round tc-book' }).trim();
+  const b = t.content.firstElementChild as HTMLButtonElement;
+  b.insertAdjacentHTML('beforeend', `<span class="tc-book-l">${esc(LGB('btn'))}</span>`);
+  b.addEventListener('click', () => guide.open());
+  $('touch').append(b);
+  onLang(() => {
+    b.setAttribute('aria-label', LGB('btnAria'));
+    b.title = LGB('btnAria');
+    b.querySelector('.tc-book-l')!.textContent = LGB('btn');
+  });
+}
+/** The «?» of the windows shown now, and the triggers of what is open (four times a second, from the frame). */
+let guideHelpAt = 0;
+function guideFrame(t: number): void {
+  guideTips.frame(t);
+  if (t - guideHelpAt < 250) return;
+  guideHelpAt = t;
+  const panel = document.getElementById('modal-panel');
+  if (panel && modal) {
+    const win = modalWindowId(modal, { portTab: portScreen.tab, heroTab: heroWindow.tab, heroPage: heroWindow.heroPage });
+    ensureHelp(panel.querySelector('.w-head .w-title') ?? panel.querySelector('.modal-head h2'), win);
+  }
+  if (isleScene.isOpen) ensureHelp(document.querySelector('#isle .is-top .is-name'), 'isle');
+  if (seasonPass.isOpen()) {
+    ensureHelp(document.querySelector('#spass-over .sp-head'), 'pass');
+    guideTips.offer('season-pass');
+  }
+  if (modal === 'recruit') guideTips.offer('first-hire');
+}
+/** What the sea about her shows, for the tips (once a second). */
+function guideStateFacts(): void {
+  const s = state.self, own = state.ownDisplay;
+  if (!s) return;
+  const atSea = !s.dockedAt && !!own;
+  let wreck = false, light = false;
+  if (atSea && own) {
+    for (const mk of state.seaMarks.values()) {
+      if (mk.kind === 'wreck' && Math.hypot(mk.x - own.x, mk.y - own.y) < mk.r + 260) {
+        wreck = true;
+        break;
+      }
+    }
+    light = (state.isles?.lights ?? []).some((l) => Math.hypot(l.x - own.x, l.y - own.y) < l.r + 800);
+  }
+  const facts = { atSea, lesson: !!state.onboarding?.stage, homeIsle: s.homeIsle !== null && s.homeIsle !== undefined, maps: s.maps.length, overload: !!s.hold?.over, skulls: s.pvp?.skulls ?? 0, storm: state.weather === 'storm' || state.weather === 'black_storm', lighthouse: light, wreck, level: s.level, quests: s.quests.length };
+  for (const key of guideStateTriggers(facts)) guideTips.offer(key);
 }
 setFxLines(modLinesHtml);
 // Forum 45 (topic 8): «Найти врага» and «К острову» in the «⋯» tray (the chart has them too: its bottom row).
@@ -2261,6 +2398,7 @@ function onMessage(m: ServerMsg): void {
   if (m.t === 'tac_replay' && m.base) battleLoad(m.base);
   if (m.t === 'tac_replay') tactical.onReplay(m);
   if (inGame) firstTips.offer(tipForMsg(m));
+  if (inGame) guideTips.offer(guideMsgTrigger(m)); // «Лоцманская книга»: the first sight of a mechanic
   switch (m.t) {
     case 'pursuit':
       // docs/23 item 33: the wheel back, and why when it is news (a mark lost, slipped away, sunk).
@@ -3299,6 +3437,7 @@ function openMenuItem(m: MenuItem): void {
   else if (m === 'hero') openHero();
   else if (m === 'throne') openThrone();
   else if (m === 'shop') openShop();
+  else if (m === 'help') guide.toggle();
   else if (m === 'pass') {
     if (modal) closeModal();
     seasonPass.open();
@@ -3610,7 +3749,7 @@ addEventListener('keydown', (e) => {
       break;
     }
     case 'help':
-      toggle('help');
+      guide.toggle(); // «Лоцманская книга» (its «Клавиши и управление» opens the old list)
       break;
     case 'mute':
       hud.toast(L(audio.toggleMute() ? 'soundOff' : 'soundOn'), 'info');
@@ -3859,7 +3998,7 @@ hud.onCaptain = () => {
   if (!self) return;
   if (modal) closeModal();
   toggleCaptainMenu({ name: self.name, level: self.level, pts: self.talentPoints }, {
-    open: (id) => (id === 'hero' || id === 'skills' ? openHero(id) : id === 'replays' ? tactical.openReplays() : id === 'promo' ? openPromoCode() : openModal(id)),
+    open: (id) => (id === 'hero' || id === 'skills' ? openHero(id) : id === 'replays' ? tactical.openReplays() : id === 'promo' ? openPromoCode() : id === 'book' ? guide.open() : openModal(id)),
     support: (email, message) => authPost('/auth/support', { email, message, token: localStorage.getItem('gravetide.token') ?? '', website: '', t: String(Math.round(performance.now())), lang: lang() }),
     logout: () => {
       net.forget();
@@ -5844,6 +5983,7 @@ function easeSecond(t: number, own: ClientState['ownDisplay']): void {
   if (t - easeAt < 1000) return;
   easeAt = t;
   firstTips.offer(tipForState(state, !!markOf()));
+  guideStateFacts();
   // The lookout's cry (docs/16 #39): a sail that comes into sight, an island seen for the first time. Not in the
   // first seconds at sea (everything is new then), nor for her own groupmates.
   if (!own || state.self?.dockedAt) {
@@ -5971,6 +6111,7 @@ function step(t: number): void {
     drawSeaOrders($('hud-orders'), state, (m) => net.send(m), () => openHero('book'));
     easeSecond(t, own);
     firstTips.frame(t);
+    guideFrame(t);
     targetId = resolveTarget();
     // The glass is turned on her mark at sea, not while her men fight on a deck.
     askGlass(state.boardTac ? null : targetId);

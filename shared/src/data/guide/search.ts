@@ -49,7 +49,8 @@ export function wordMatch(q: string, w: string): number {
   if (w === q) return 3;
   const st = guideStem(q);
   if (w.startsWith(st)) return 2;
-  if (q.length >= 5 && w.length >= st.length - 1 && oneSlip(st, w.slice(0, st.length))) return 1;
+  // (the first letter kept: a slip there finds too much)
+  if (q.length >= 5 && w[0] === q[0] && w.length >= st.length - 1 && oneSlip(st, w.slice(0, st.length))) return 1;
   return 0;
 }
 
