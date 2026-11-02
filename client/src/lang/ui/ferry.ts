@@ -24,7 +24,7 @@ export const EN = {
   questT: 'This hub is the nearest to the goal of your quest: a quarter of the price',
   pirate: 'Under the pirate flag every passage costs double.',
   haven: 'Quiet harbour',
-  havenT: 'Within 1.5 km of a hub no captain attacks another',
+  havenT: 'Within 1 km of a hub no captain attacks another',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -50,5 +50,5 @@ export const RU: Record<keyof typeof EN, string> = {
   questT: 'Этот узел ближе всех к цели вашего задания: четверть цены',
   pirate: 'Под пиратским флагом любой переход стоит вдвое дороже.',
   haven: 'Тихая гавань',
-  havenT: 'В 1,5 км от узла капитаны друг на друга не нападают',
+  havenT: 'В 1 км от узла капитаны друг на друга не нападают',
 };

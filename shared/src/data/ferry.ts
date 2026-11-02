@@ -65,7 +65,7 @@ export const FERRY_SKULLS_MAX = 1;
 // about every hub a ring of HAVEN_R where no captain may attack another (no fire, no ram, no grapple); the sea's own ships
 // — its pirates, its beasts — are what they always were. A captain who came by ferry keeps that peace HAVEN_WARD_SEC more
 // after she leaves the ring (her effects row: «Под защитой гавани»), and while she has it she attacks no captain either.
-export const HAVEN_R = 1500;
+export const HAVEN_R = 1000; // owner 2026-11-02: «1,5 км слишком много — километр максимум»
 export const HAVEN_WARD_SEC = 180;
 /** The ward's effect id (ship effects; the client's effects row). */
 export const HAVEN_WARD_FX = 'haven_ward';

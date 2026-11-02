@@ -116,12 +116,12 @@ test('ferry (post 49): the hold rule counts the trade goods only — a hold full
   assert.equal(ferryView(game, s, 'gravesend')!.why, FERRY_WORDS.laden);
 });
 
-test('«Тихая гавань»: within 1.5 km of a hub no captain attacks another; out of it they may; the sea\'s ships are as ever', () => {
+test('«Тихая гавань»: within 1 km of a hub no captain attacks another; out of it they may; the sea\'s ships are as ever', () => {
   const { game } = makeGame();
   const A = captain(game, 'Haven A', 'hollowmere'), B = captain(game, 'Haven B', 'hollowmere');
   const hub = game.portById('hollowmere')!;
   assert.notEqual(REGIONS[hub.region].safety, 'safe', 'a contested hub: captains may fight there otherwise');
-  assert.equal(HAVEN_R, 1500);
+  assert.equal(HAVEN_R, 1000);
   assert.equal(havenAt(game.world.ports, hub.x + 1000, hub.y), 'hollowmere');
   // by the hub
   seaAt(game, A, hub.x + 600, hub.y);
