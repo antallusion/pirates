@@ -109,3 +109,18 @@
 .fl-skulls .fl-sk { color: #f0a090; font-weight: 700; white-space: nowrap; }
 .fl-skulls span { flex: 1 1 260px; min-width: 0; }
 .fl-skulls .fl-pardon { min-height: 32px; }
+
+/* ---------- «Каперский патент» (owner, 2026-11-02): the fourth card under the flags — the issuer's sign, its words, buy */
+.fl-pat { cursor: default; margin-top: 4px; }
+.fl-pat:hover { border-color: var(--k-brass-dim, #6f5a38); }
+.fl-pat.on:hover { border-color: var(--k-gold, #e0b862); }
+.fl-pat .fl-pat-ico { flex: none; width: 28px; height: 28px; }
+.fl-pat .fl-t small .fl-prey { color: #e0c98a; }
+.fl-pat-buy { flex: none; min-height: 40px; white-space: nowrap; }
+.fl-pat-why { margin: 2px 0 4px !important; font-size: 12px !important; line-height: 1.3; color: var(--k-warn, #e6a04a); text-align: left; }
+.fl-chip--privateer span { color: #e0c98a; }
+@container (max-width: 560px) {
+  .fl-pat { flex-wrap: wrap; }
+  .fl-pat .fl-t { flex: 1 1 calc(100% - 44px); }
+  .fl-pat-buy { width: 100%; }
+}

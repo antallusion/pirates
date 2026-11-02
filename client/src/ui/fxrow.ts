@@ -10,6 +10,8 @@ import type { StatMods } from '../../../shared/src/data/stats.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { SF } from '../../../shared/src/protocol.ts';
+import { FACTIONS } from '../../../shared/src/data/factions.ts';
+import type { FactionId } from '../../../shared/src/data/factions.ts';
 import { assetUrl } from '../assets.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/fx.ts';
@@ -57,7 +59,7 @@ export interface FxInput {
     company?: { mood?: string | null; shantyUntil?: number };
     berthCall?: { at: number } | null;
     boosts?: { xp: number; wind: number; prod: number; ferry: number };
-    pvp?: { flag: string; next: string | null; nextAt: number; pennant: boolean; skulls?: number; washMin?: number; shameUntil: number };
+    pvp?: { flag: string; next: string | null; nextAt: number; pennant: boolean; skulls?: number; washMin?: number; shameUntil: number; patent?: { by: string; until: number } | null };
     dockedAt?: string | null;
     /** The work at a spot under way (owner, 2026-11-02): first in the row, with its countdown. */
     spot?: SpotView | null;
@@ -205,6 +207,9 @@ export function fxList(i: FxInput): Fx[] {
   if (self.pvp?.next && self.pvp.nextAt > wall) timed('flag', self.pvp.nextAt, { icon: 'cos_flags', bad: false, k: 'flag' }, 'wall');
   if (self.pvp?.flag === 'pirate') out.push({ id: 'pirate', icon: 'item_black_flag', bad: true, k: 'pirate', left: null, frac: null });
   else if (self.pvp?.pennant) out.push({ id: 'pennant', icon: 'cos_flags', bad: false, k: 'pennant', left: null, frac: null });
+  // «Каперский патент» (owner, 2026-11-02): the issuer's sign with its week running down (`effect:marque`)
+  const pt = self.pvp?.patent;
+  if (pt && pt.until > wall) timed('marque', pt.until, { icon: `faction_${pt.by}`, bad: false, k: 'marque', v: FACTIONS[pt.by as FactionId]?.short ?? pt.by }, 'wall');
   const b = self.boosts;
   if (b) {
     if (b.ferry > wall) timed('ferry', b.ferry, { icon: 'build_lighthouse', bad: true, k: 'ferry' }, 'wall');
@@ -252,6 +257,7 @@ export function fxRowLabel(): string {
 export function shortLeft(sec: number): string {
   if (sec < 60) return L('shortSec', { n: Math.max(1, Math.ceil(sec)) });
   if (sec < 3600) return L('shortMin', { n: Math.ceil(sec / 60) });
+  if (sec >= 48 * 3600) return L('shortDay', { n: Math.round(sec / 86400) }); // (a patent's week: «7д», not «168ч»)
   return L('shortHour', { n: Math.round(sec / 3600) });
 }
 
@@ -263,6 +269,7 @@ function longLeft(sec: number): string {
     return `${m}:${String(s).padStart(2, '0')}`;
   }
   const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
+  if (h >= 24) return `${L('day', { n: Math.floor(h / 24) })} ${L('hour', { n: h % 24 })}`; // (a patent's week)
   return `${L('hour', { n: h })} ${L('min', { n: m })}`;
 }
 

@@ -39,6 +39,8 @@ import { atWar, guildFriends } from './guilds.ts';
 import { cityOf, coloursBlocked, coloursOf, enemies, hasPennant, neutralRefused, setColours } from './colours.ts';
 import { PENNANT_SECONDS } from '../../../shared/src/data/colours.ts';
 import { peaceBlocked, washView } from './flaglaw.ts'; // forum 34: the three flags and the sea's peaceful ships
+import { patentFoes, patentOfferView, patentView, privateerOf } from './patent.ts'; // «Каперский патент» (owner, 2026-11-02)
+import type { PatentRec } from './patent.ts';
 import { ignores } from './friends.ts';
 import { changeRep } from './player.ts';
 import type { PlayerSession, Profile } from './player.ts';
@@ -80,6 +82,8 @@ export interface PvpState {
   duelWins: number;
   ties: Record<string, number>; // account id -> wall ms of the last barter or group together
   crownWeek: { week: number; paid: number };
+  /** «Каперский патент» (owner, 2026-11-02, patent.ts): whose, until when (wall ms). */
+  patent?: PatentRec | null;
 }
 
 export function newPvp(): PvpState {
@@ -223,6 +227,7 @@ export function legalTarget(game: Game, a: ShipEntity, b: ShipEntity): boolean {
   if (flying(pb)) return true;
   if (pa && coloursOf(pa) === 'faction' && coloursOf(pb) === 'faction' && enemies(game, a, b)) return true; // cities at enmity
   if (atWar(game, a, b)) return true; // guild war
+  if (patentFoes(game, a, b)) return true; // a privateer and her patent's enemies' city flag (patent.ts)
   if (wantedLevel(pb.infamy) >= 2) return true;
   if (pa && hunterLicence(pa) && bountyOn(game, b.accountId) > 0) return true;
   return false;
@@ -268,6 +273,7 @@ export function pvpFlags(game: Game, ship: ShipEntity): number {
     if (c === 'pirate') f |= SF.BLACK_FLAG;
     else if (c === 'neutral') f |= SF.NEUTRAL;
     else if (hasPennant(game, p) && REGIONS[ship.region].safety === 'contested') f |= SF.GREEN_PENNANT;
+    if (c === 'faction' && privateerOf(game, ship)) f |= SF.PRIVATEER; // «Каперский патент» (patent.ts)
     // «Абордаж: выкл» (docs/24 C1), shown only where it shields her from captains: under neutral colours, out of lawless
     // water (owner, 2026-10-29)
     if (p.noBoard && c === 'neutral' && REGIONS[ship.region].safety !== 'lawless') f |= SF.NO_BOARD;
@@ -658,6 +664,8 @@ export function pvpView(game: Game, s: PlayerSession): PvpView {
     pennant: hasPennant(game, p),
     pennantHoursLeft: Math.max(0, Math.round((PENNANT_SECONDS - p.pvp.played) / 360) / 10),
     ...washView(game, s),
+    patent: patentView(game, p),
+    patentOffer: patentOfferView(game, s),
     shameUntil: p.pvp.shameUntil,
     bubbleUntil: p.pvp.bubbleUntil,
     rating: p.pvp.rating,

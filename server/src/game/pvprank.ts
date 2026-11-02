@@ -30,6 +30,8 @@ import { creditPremium } from './premium.ts';
 import { battleRating, captainShip } from './pvp.ts';
 import type { ShipEntity } from './ship.ts';
 import { TEST_NAME } from './siterating.ts';
+import { privateerOf } from './patent.ts'; // «Каперский патент» (owner, 2026-11-02)
+import { PATENT_PVP_MUL } from '../../../shared/src/data/patent.ts';
 
 const DAY = 86_400_000;
 const KEY = 'pvprank';
@@ -167,7 +169,8 @@ export function pvpRankKill(game: Game, killer: ShipEntity, victim: ShipEntity, 
   const kr = rankOf(game, ks.profile);
   const ratio = vBR / Math.max(0.1, battleRating(game, killer));
   const rep = repeatsOf(kr, vs.accountId, now);
-  const pts = winPoints(how, ratio, rep, war);
+  // (a privateer's kill: three quarters of the points — the pirate flag takes the greater risk, patent.ts)
+  const pts = Math.round(winPoints(how, ratio, rep, war) * (privateerOf(game, killer) ? PATENT_PVP_MUL : 1));
   credit(kr, pts, how, vs.accountId, now);
   if (pts > 0) say(game, ks, `PvP: +${pts} points for ${vs.name}.`);
   else say(game, ks, rep >= 3 ? `PvP: no points for ${vs.name} — beaten too often today.` : `PvP: no points for ${vs.name} — she was far weaker than you.`, 'info');
@@ -181,7 +184,7 @@ export function pvpRankKill(game: Game, killer: ShipEntity, victim: ShipEntity, 
     done.add(hs.accountId);
     if (farmBlock(game, hs, vs)) continue;
     const hr = rankOf(game, hs.profile);
-    const a = assistPoints(how, vBR / Math.max(0.1, battleRating(game, cap)), repeatsOf(hr, vs.accountId, now), atWar(game, cap, victim));
+    const a = Math.round(assistPoints(how, vBR / Math.max(0.1, battleRating(game, cap)), repeatsOf(hr, vs.accountId, now), atWar(game, cap, victim)) * (privateerOf(game, cap) ? PATENT_PVP_MUL : 1));
     credit(hr, a, 'assist', vs.accountId, now);
     if (a > 0) say(game, hs, `PvP: +${a} points, an assist on ${vs.name}.`);
   }

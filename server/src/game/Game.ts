@@ -330,6 +330,7 @@ import { isle18Message, isle18Second, islandFor, isleExtras, landDanger, onHidde
 import { installHeroHooks } from './h5.ts'; // docs/17 H5
 import { mineLandable } from './mines.ts';
 import { peaceBlocked, stepHueAndCry } from './flaglaw.ts'; // forum 34: the three flags and the sea's peaceful ships
+import { buyPatent, patentKill, stepPatent, titheFor, titheOf } from './patent.ts'; // «Каперский патент» (owner, 2026-11-02)
 import { WASH_PER_SEC } from '../../../shared/src/data/colours.ts';
 import { crewOnKill, stepCrewLife } from './crewlife.ts';
 
@@ -353,6 +354,7 @@ export interface Loot {
   salvaged?: boolean;
   monster?: boolean; // left by a monster of the deep (Leviathan Lore)
   claim?: { account: number; until: number }; // the victor and their group have the first 30 s
+  tithe?: { account: number; by: import('../../../shared/src/data/patent.ts').PatentIssuer }; // a privateer's prey: the issuer's fifth of its silver when she fishes it up (patent.ts)
   task?: number; // a crate of a wreck field, a task of the sea (docs/11 P6)
   items?: Item[]; // gear a sunk ship left in the water (docs/12 P1)
   placed?: boolean; // seaux: its spot checked for open water a hull can reach (lootSpot)
@@ -1168,6 +1170,7 @@ export class Game {
     stepRaiding(this); // convoys, rockets, tips, the lanes' heat, the guarded (docs/12 P6)
     stepHires(this); // the ships of the sea hired as guards: the clock, the chip (owner, 2026-10-25)
     stepHueAndCry(this); // forum 34: the law's patrols after a skulled pirate (flaglaw.ts)
+    stepPatent(this); // «Каперский патент»: its week, its void, the enemy's harbours after her (patent.ts)
     if (sec % 10 === 0) stepEstate(this); // outposts at work, raided and robbed (docs/12 P7)
     stepCaravans(this); // one's own caravans at sea (docs/12 P8)
     stepCompanions(this); // the orca calves in their captains' wakes (docs/12 P10 #2)
@@ -2480,7 +2483,9 @@ export class Game {
     const item = frac > 0 && !(how === 'sunk' && this.boardedDown.has(ship.id)) ? rollDrop(this, ship, how) : null; // gear in the water now and then (docs/12 P1): the ship's by the guns, the captain's by boarding (docs/21 §5)
     if (!Object.keys(cargo).length && gold <= 0 && !item) return;
     const id = this.allocId();
-    this.loot.set(id, { id, x: ship.state.x, y: ship.state.y, cargo, gold, expires: this.now + LOOT_LIFETIME_SEC, wreck: ship.region, monster: isMonster(ship), claim: victor !== null ? { account: victor, until: this.now + 30 } : undefined, ...(item ? { items: [item] } : {}) });
+    const vs = victor !== null && gold > 0 ? this.sessionByAccount(victor) : null;
+    const tithe = vs ? titheFor(this, vs, ship) : null; // a privateer's prey (patent.ts)
+    this.loot.set(id, { id, x: ship.state.x, y: ship.state.y, cargo, gold, expires: this.now + LOOT_LIFETIME_SEC, wreck: ship.region, monster: isMonster(ship), claim: victor !== null ? { account: victor, until: this.now + 30 } : undefined, ...(item ? { items: [item] } : {}), ...(tithe && victor !== null ? { tithe: { account: victor, by: tithe } } : {}) });
   }
 
   /** A ship sunk by her hired guard alone: the group mate's share — the lesson's share and the quest's count, no prize,
@@ -2541,6 +2546,7 @@ export class Game {
     worldGoalKill(this, s, victim, how); // the sea's goals of the week (docs/16 #32)
     invasionKill(this, s, victim); // docs/19 E16: a ship of the Choir's invasion, her part
     serviceKill(this, s, victim, how); // a letter of marque: bounty, merit, orders; her own flag costs her the letter (docs/12 P10 #15)
+    patentKill(this, s, victim, how); // «Каперский патент»: standing with the issuer for its enemy's ship (patent.ts)
     if (how === 'boarded') grantDeed(this, s, 'deed_first_prize');
     if (victim.loadout.classId === 'man_o_war') grantDeed(this, s, 'deed_ship_of_the_line');
     eventShipLost(this, victim);
@@ -3009,7 +3015,7 @@ export class Game {
       this.boardedDown.delete(target.id);
       this.toastShip(ship, `${target.name} goes down with ${moved} units of her cargo in your hold.`, 'good');
     } else if (fate === 'ransom' && !target.isPlayer) {
-      const keptRansom = plunderShare(this, s, pend.result.ransom);
+      const keptRansom = titheOf(this, s, titheFor(this, s, target), plunderShare(this, s, pend.result.ransom)); // (patent.ts: the issuer's fifth)
       s.profile.gold += keptRansom;
       this.db.ledger(s.accountId, 'ransom', keptRansom, target.name);
       if (f) changeRep(s.profile, f, -3);
@@ -3027,7 +3033,7 @@ export class Game {
   /** Her purse to the captain who took her: the crew's share off it, the live ops' silver event on it, a group's mates
    *  within convoy range an equal part each (owner, 2026-09-29). What the captain keeps. */
   private sharePurse(s: PlayerSession, target: ShipEntity, gold: number): number {
-    let kept = plunderShare(this, s, gold);
+    let kept = titheOf(this, s, titheFor(this, s, target), plunderShare(this, s, gold)); // a privateer's: the issuer's fifth (patent.ts)
     // The live ops' silver event (docs/34): the sea's purses only, never another captain's (×1 with none scheduled).
     if (!target.isPlayer && kept > 0) kept = Math.round(kept * opsSilverMul(this));
     const g = groupOfAccount(this, s.accountId);
@@ -3221,9 +3227,11 @@ export class Game {
       got.push(`${n} ${GOODS[g].name}`);
     }
     if (l.gold > 0) {
-      s.profile.gold += l.gold;
-      this.db.ledger(s.accountId, 'loot', l.gold, 'salvage');
-      got.push(`${l.gold} silver`);
+      // (a privateer's prey: the issuer's fifth off the silver she fishes up — patent.ts)
+      const kept = l.tithe && l.tithe.account === s.accountId ? titheOf(this, s, l.tithe.by, l.gold) : l.gold;
+      s.profile.gold += kept;
+      this.db.ledger(s.accountId, 'loot', kept, 'salvage');
+      got.push(`${kept} silver`);
       l.gold = 0;
     }
     if (got.length) this.toastShip(ship, `Salvaged: ${got.join(', ')}.`, 'gold');
@@ -4720,6 +4728,8 @@ export class Game {
             return err(isColours(msg.flag) ? setColours(this, s, msg.flag) : 'No such colours');
           case 'no_board': // docs/24 C1: in port
             return err(setNoBoard(this, s, !!msg.on));
+          case 'patent': // «Каперский патент» (owner, 2026-11-02): in a lawful harbour
+            return err(buyPatent(this, s));
           case 'duel':
             return err(challengeDuel(this, s, msg.name, !!msg.fleet));
           case 'duel_answer':

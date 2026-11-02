@@ -189,7 +189,7 @@ test('letters of marque read in Russian', () => {
   const t = (x: string) => serverText(x).replace(/\u00a0/g, ' ');
   assert.equal(t('Lieutenant of the Crown'), 'Лейтенант Короны');
   assert.equal(t('Commodore of the Brethren'), 'Коммодор Братства');
-  assert.equal(t('Your letter of marque is revoked: you fired on your own flag.'), 'У вас отобрали каперский патент: вы подняли оружие на свой флаг.');
+  assert.equal(t('Your letter of marque is revoked: you fired on your own flag.'), 'Вас списали со службы: вы подняли оружие на свой флаг.');
   assert.match(t('Intercept a smuggler off Gravesend by sunset.'), /^Перехватить контрабандиста до заката — .+\.$/);
   for (const [en, ru] of servicePatterns()) {
     const holes = (x: string) => (x.match(/\{\d\}/g) ?? []).sort().join();

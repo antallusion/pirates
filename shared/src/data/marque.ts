@@ -107,7 +107,7 @@ export function servicePatterns(): [string, string][] {
   const out: [string, string][] = [
     ['You enter the service: {0}.', 'Вы поступили на службу: {0}.'],
     ['You are promoted: {0}.', 'Вас произвели в чин: {0}.'],
-    ['Your letter of marque is revoked: {0}.', 'У вас отобрали каперский патент: {0}.'],
+    ['Your letter of marque is revoked: {0}.', 'Вас списали со службы: {0}.'],
     ['you fired on your own flag', 'вы подняли оружие на свой флаг'],
     ['you are wanted', 'вас разыскивают'],
     ['You leave the service.', 'Вы уходите со службы.'],

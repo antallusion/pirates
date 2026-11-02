@@ -15,6 +15,7 @@
 // Legends, the day's group contract (elite), the Admiralty's contracts, and a voyage between ports (a delivery, a
 // courier's run, a race, a scouting of a far sea) — the quest names where it goes.
 
+import { hiddenSpot, unseen } from './questspot.ts'; // forum post 55: a quest's quarry out of sight
 import { sanction } from './flaglaw.ts';
 import { BEASTS, BEAST_IDS, inGroup } from '../../../shared/src/data/beasts.ts';
 import type { BeastGroup, BeastId } from '../../../shared/src/data/beasts.ts';
@@ -255,10 +256,10 @@ function putOut(game: Game, s: PlayerSession, key: string, step: number, home: H
   w.next = game.now + LOCAL_EVERY;
   if ('beast' in what) {
     const id = beastOfGroup(game, what.beast, home);
-    for (let k = 0; k < 10; k++) {
-      const a = game.rng.float() * Math.PI * 2, d = 500 + game.rng.float() * (LOCAL_R * 0.8 - 500);
-      const x = home.x + Math.cos(a) * d, y = home.y + Math.sin(a) * d;
-      if (!openSea(game, x, y)) continue;
+    // (forum post 55: out of every captain's sight — questspot.ts)
+    const spot = hiddenSpot(game, home, 500, LOCAL_R * 0.95, (x, y) => openSea(game, x, y));
+    for (let k = 0; k < 1 && spot; k++) {
+      const { x, y } = spot;
       const b = spawnBeast(game, id, x, y, Math.max(BEASTS[id].level[0], Math.min(BEASTS[id].level[1], lv)));
       w.ids.push(b.id);
       break;
@@ -315,10 +316,12 @@ export function callLeaderIn(game: Game, qs: QuestState, home: Home): void {
   const o = game.ships.get(qs.leader);
   if (!o || !o.alive) return;
   if (Math.hypot(o.state.x - home.x, o.state.y - home.y) <= LOCAL_R + 800) return;
-  for (let k = 0; k < 12; k++) {
-    const a = game.rng.float() * Math.PI * 2, d = 600 + game.rng.float() * (LOCAL_R * 0.7 - 600);
+  // (forum post 55: never vanishes before a captain's eyes nor appears before them — both ends out of every one's sight)
+  if (!unseen(game, o.state.x, o.state.y)) return;
+  for (let k = 0; k < 24; k++) {
+    const a = game.rng.float() * Math.PI * 2, d = 600 + game.rng.float() * (LOCAL_R * 0.95 - 600);
     const x = home.x + Math.cos(a) * d, y = home.y + Math.sin(a) * d;
-    if (!openSea(game, x, y)) continue;
+    if (!openSea(game, x, y) || !unseen(game, x, y)) continue;
     o.state = { ...o.state, x, y, speed: 0 };
     game.grid.upsert(o.id, x, y);
     const brain = game.npcs.get(o.id);

@@ -2413,7 +2413,7 @@ export class Hud {
     // «≈ N залпов» (docs/25 item 12): her broadsides to sink the mark as she stands — sink her or board her.
     const self = state.self, st = state.ownStats;
     const vol = self && st && info.hullMax && info.shipLevel ? volleysToSink(st, self.loadout, { isPlayer: true, ironRain: (self.talents.gun_iron_rain ?? 0) > 0 }, { classId: info.classId, shipLevel: info.shipLevel, isPlayer: info.isPlayer, hullMax: info.hullMax, armor: info.armor ?? 0, inc: info.inc ?? 1, hullFrac: c.hull }) : null;
-    const key = `${vol ?? ''}|${odds ? `${odds.chance}|${odds.risky}` : ''}|${lang()}|${id}|${info.shipLevel}|${threat}|${Math.round(c.hull * 50)}|${Math.round(c.crew * 50)}|${Math.round(c.sails * 50)}|${fx.join(',')}|${dist}|${info.title ?? ''}|${ap ? `${ap.value}|${ap.fill}|${ap.escorts}|${ap.dest}` : ''}|${struck}|${c.flags & (SF.BLACK_FLAG | SF.NEUTRAL | SF.NO_BOARD)}:${info.city ?? ''}`;
+    const key = `${vol ?? ''}|${odds ? `${odds.chance}|${odds.risky}` : ''}|${lang()}|${id}|${info.shipLevel}|${threat}|${Math.round(c.hull * 50)}|${Math.round(c.crew * 50)}|${Math.round(c.sails * 50)}|${fx.join(',')}|${dist}|${info.title ?? ''}|${ap ? `${ap.value}|${ap.fill}|${ap.escorts}|${ap.dest}` : ''}|${struck}|${c.flags & (SF.BLACK_FLAG | SF.NEUTRAL | SF.NO_BOARD | SF.PRIVATEER)}:${info.city ?? ''}`;
     if (key === this.lastTargetKey) return;
     this.lastTargetKey = key;
     el.classList.remove('hidden');

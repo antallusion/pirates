@@ -78,6 +78,8 @@ import type { Oath, QuestLog } from './quests.ts';
 import { clampLevel, initialLevel, shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
 import { CLEAN_SLATE_CD, FREE_RESPEC_LEVEL, cleanSlateCost, loadoutSlots } from './progression.ts';
 import type { ServiceRec } from './marque.ts';
+import { patentDockRefused } from './patent.ts'; // «Каперский патент» (owner, 2026-11-02)
+import { PATENT_SAY, isIssuer } from '../../../shared/src/data/patent.ts';
 import type { Skipper } from './turncoats.ts';
 import type { SkipperTrait } from '../../../shared/src/data/turncoats.ts';
 import type { OfficerRole, TraitId } from '../../../shared/src/data/crew.ts';
@@ -604,6 +606,8 @@ export function canDock(p: Profile, faction: FactionId): { ok: boolean; reason?:
   // (forum 34: two skulls and more shut every lawful harbour; the refusal says where she may go and how to wash them)
   if (w > def.dockMaxWanted && def.lawful) return { ok: false, reason: `${def.short} harbours take no ship with ${w} skulls: a pirate haven will (the Red Tide, the Fog Brokers, the Free Harbors) and sells pardons; or wash them off out of fights (about ${washToMin(p.infamy, def.dockMaxWanted)} min).` };
   if (w > def.dockMaxWanted) return { ok: false, reason: `${def.short} harbour masters refuse ships at Wanted ${w}: buy a pardon in a free harbour, or let the sea forget.` };
+  // «Каперский патент» (patent.ts): the harbours of the patent's enemies shut while it runs.
+  if (patentDockRefused(p, faction)) return { ok: false, reason: PATENT_SAY.enemyPort };
   // (the name carries its own article: «The The Red Tide Confederacy considers you an enemy», docs/30)
   if ((p.reputation[faction] ?? 0) <= -50) return { ok: false, reason: `${def.name} considers you an enemy.` };
   return { ok: true };
@@ -836,6 +840,9 @@ export function sanitizeProfile(raw: Profile): Profile {
   p.pvp = { ...newPvp(), ...old, flag };
   delete (p.pvp as { blackFlag?: boolean }).blackFlag;
   if (!isColours(p.pvp.next)) p.pvp.next = null;
+  // «Каперский патент» (patent.ts): a sound one kept, anything else dropped
+  const pt = p.pvp.patent;
+  if (pt && !(isIssuer(pt.by) && Number.isFinite(pt.until) && Number.isFinite(pt.since))) p.pvp.patent = null;
   p.noBoard = !!p.noBoard;
   p.reputation ??= {};
   p.contracts ??= [];
