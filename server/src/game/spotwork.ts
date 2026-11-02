@@ -32,6 +32,8 @@ import { ROB_ISLE_SEC } from '../../../shared/src/data/baseclaim.ts';
 
 /** The wheel put over this far by her own hand ends the work (a brush of the stick does not). */
 export const SPOT_HELM = 0.5;
+/** Seconds she takes to glide to a stop when the work begins (owner, 2026-11-02: «2–3 секунды»). */
+export const SPOT_BRAKE_SEC = 2.5;
 
 /** What the boats at a mark or a find, and a robbery, are told when her hand breaks them off. */
 export const SPOT_BOATS_BACK = 'The boats are called back: she made sail.';
@@ -90,7 +92,8 @@ export function holdForSpot(game: Game, s: PlayerSession): boolean {
   if (!ship) return false;
   const on = !!spotOf(game, s);
   if (on && !ship.spotHold) {
-    ship.state.speed = 0;
+    // (not dead in the water at once: she glides to a stop over SPOT_BRAKE_SEC, Game.physics)
+    ship.spotBrake = null;
     ship.input = { rudder: 0, sailTarget: 0 };
   }
   const changed = on !== ship.spotHold;

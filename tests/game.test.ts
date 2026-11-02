@@ -336,6 +336,7 @@ test('landing parties: anchor, explore a feature, bring back loot; it restocks o
   assert.ok(s.landable, 'feature within reach');
   c.push({ t: 'land' });
   assert.ok(ship.landing, 'boats away');
+  steps(game, 20 * 3); // (she glides to a stop first: SPOT_BRAKE_SEC, owner 2026-11-02)
   const x0 = ship.state.x;
   const cargo0 = (ship.cargo.planks ?? 0) + (ship.cargo.sailcloth ?? 0);
   steps(game, 20 * 45);

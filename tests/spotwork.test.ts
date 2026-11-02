@@ -59,6 +59,8 @@ function overWreck(game: Game, s: PlayerSession, speed = 7): number {
 let seq = 1;
 const helm = (c: FakeConn, sail: number, rudder = 0, hand = false) => c.push({ t: 'input', seq: seq++, rudder, sail, ...(hand ? { helm: true } : {}) });
 const toasts = (c: FakeConn) => c.all('toast').map((m) => m.msg);
+/** The glide to a stop when the work begins (SPOT_BRAKE_SEC, owner 2026-11-02: «2–3 секунды»): ~3 s of the sea. */
+const glide = (game: Game) => { for (let i = 0; i < 3 * 20; i++) game.step(); };
 const lastSpot = (c: FakeConn): SpotView | null | undefined => c.last('self')?.self.spot;
 
 test('the divers: the countdown\'s end is sent at once, and she is brought up and held at anchor until they surface', () => {
@@ -67,11 +69,10 @@ test('the divers: the countdown\'s end is sent at once, and she is brought up an
   const ship = s.ship!;
   helm(c, SAIL_STEPS.length - 1); // her phone at full sail
   overWreck(game, s, 7);
-  const x0 = ship.state.x, y0 = ship.state.y, h0 = ship.state.heading;
   const t0 = game.now;
   c.push({ t: 'land' });
   assert.equal(ship.landing?.feature, 'dive', 'the divers go down at once — no «heave to first», no wait for her way');
-  assert.equal(ship.state.speed, 0, 'the anchor brings her up');
+  assert.ok(ship.state.speed > 0, 'she glides on: not dead in the water at once');
   const v = lastSpot(c);
   assert.ok(v, 'the countdown is sent with the order');
   assert.equal(v!.kind, 'dive');
@@ -80,6 +81,9 @@ test('the divers: the countdown\'s end is sent at once, and she is brought up an
   assert.equal(Math.round(v!.until - v!.started), 25);
   assert.deepEqual(spotOf(game, s), v);
   assert.ok(!toasts(c).some((m) => WAY_WORDS.has(m)), 'nothing waits for her way');
+  glide(game);
+  assert.equal(ship.state.speed, 0, 'the anchor brings her up after a short glide');
+  const x0 = ship.state.x, y0 = ship.state.y, h0 = ship.state.heading;
   // Held: wind and current, her phone still sending its old sail — she does not move, turn or set canvas.
   for (let i = 0; i < 20; i++) {
     helm(c, SAIL_STEPS.length - 1);
@@ -166,11 +170,12 @@ test('a walk across the island: the landing begins the moment she is in reach �
   const from = c.inbox.length;
   c.push({ t: 'land' });
   assert.ok(ship.landing, 'the boats away at once at 8 m/s');
-  assert.equal(ship.state.speed, 0, 'brought up');
+  glide(game);
+  assert.equal(ship.state.speed, 0, 'brought up after a short glide');
   assert.equal(s.whenClear, null, 'nothing held for her way');
   const said = c.inbox.slice(from).filter((m) => m.t === 'toast').map((m) => (m as { msg: string }).msg);
   assert.ok(!said.some((m) => WAY_WORDS.has(m) || /Heave to/.test(m)), `no heave-to (${JSON.stringify(said)})`);
-  assert.equal(lastSpot(c)?.started, game.now, 'its countdown from now');
+  assert.ok(game.now - (lastSpot(c)?.started ?? 0) < 3.5, 'its countdown from the order');
 });
 
 test('sailed in to a beach a cable off: the boats go the moment she is within reach, at whatever way she has', () => {
@@ -189,6 +194,7 @@ test('sailed in to a beach a cable off: the boats go the moment she is within re
   }
   assert.ok(landed >= 0, 'landed');
   assert.ok(landed - inReach <= 1.05, `begun on arrival (in reach at ${inReach.toFixed(2)}, landed at ${landed.toFixed(2)})`);
+  glide(game);
   assert.equal(ship.state.speed, 0, 'and held');
 });
 
@@ -201,7 +207,7 @@ test('the boats at a small find: begun at way, held, a sail set calls them back 
   assert.ok(f);
   c.push({ t: 'seafind', action: 'work', id: f.id });
   assert.ok(findBusy(game, s), 'the boats away at once');
-  assert.equal(ship.state.speed, 0, 'brought up');
+  // (her glide to a stop is the divers' and the landings' tests: a calm find is done before she has stopped)
   assert.equal(spotOf(game, s)?.kind, 'find');
   assert.equal(lastSpot(c)?.kind, 'find', 'its countdown sent');
   helm(c, 0);

@@ -102,7 +102,7 @@ test('sail-to: arriving at full sail she is brought up at once and the boats go 
   steps(game, 1);
   assert.equal(approachOf(game, s), null, 'at 8 m/s: given at once, no waiting for her way to die');
   assert.equal(s.ship!.input.sailTarget, 0, 'sail in');
-  assert.equal(s.ship!.state.speed, 0, 'brought up: she rides at anchor while the boats are away (spotwork.ts)');
+  assert.ok(s.ship!.state.speed < 8, 'brought up: she checks her way at once and glides to her anchor (spotwork.ts, SPOT_BRAKE_SEC)');
   assert.ok(c.last('seafinds')?.busy || !findById(game, f.id), 'the boats are at the sinking boat');
   void findsOf;
 });

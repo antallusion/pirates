@@ -195,7 +195,7 @@ import { PROFESSIONS } from '../../../shared/src/data/crew.ts';
 import type { DeepZone } from './mind.ts';
 import { CURSE_MORALE, cleanse, curseAura, stepCurse } from './curse.ts';
 import { featureName, findLandable, startLanding, stepLanding } from './exploration.ts';
-import { abortSpot, holdForSpot, spotInput, spotOf, spotSecond } from './spotwork.ts'; // owner, 2026-11-02
+import { SPOT_BRAKE_SEC, abortSpot, holdForSpot, spotInput, spotOf, spotSecond } from './spotwork.ts'; // owner, 2026-11-02
 import { playMinigame, stepMinigames } from './minigames.ts';
 import { playTrek, stepTreks } from './trek.ts';
 import { islesPrompt, islesSecond, payKeeper, recallLookouts, sendIsles } from './isles.ts';
@@ -880,7 +880,18 @@ export class Game {
       // Grappled, or riding at anchor while the boats are ashore or the divers down (spotwork.ts, owner 2026-11-02:
       // «зафиксируй корабль»): no way on her, her canvas taken in, no wind or current to move her.
       if (ship.landing || ship.spotHold) {
-        ship.state.speed = 0;
+        // (owner, 2026-11-02, after a player's word: «корабль должен замедлять ход» — she glides to a stop over
+        // SPOT_BRAKE_SEC, kept off the coast as she goes; the work's clock runs from the start all the same)
+        if (ship.state.speed > 0.02) {
+          ship.spotBrake ??= ship.state.speed;
+          const v0 = ship.state.speed, v1 = Math.max(0, v0 - (ship.spotBrake / SPOT_BRAKE_SEC) * dt);
+          const f = headingVec(ship.state.heading), d = ((v0 + v1) / 2) * SPEED_SCALE * dt;
+          ship.state = { ...ship.state, x: ship.state.x + f.x * d, y: ship.state.y + f.y * d, speed: v1 };
+          hullStep(this, ship, dt);
+        } else {
+          ship.state.speed = 0;
+          ship.spotBrake = null;
+        }
         if (ship.state.sail > 0) ship.state.sail = Math.max(0, ship.state.sail - dt * 0.8);
       }
       this.grid.upsert(ship.id, ship.state.x, ship.state.y);

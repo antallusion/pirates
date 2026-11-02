@@ -241,6 +241,8 @@ export class ShipEntity {
   landing: Landing | null = null;
   /** Riding at anchor for the work at a spot (spotwork.ts): no way on her, sails furled, nothing moves her. */
   spotHold = false;
+  /** Her way when the hold began (she glides to a stop over SPOT_BRAKE_SEC, spotwork.ts). */
+  spotBrake: number | null = null;
   curse = 0; // the sea's claim on the ship, 0..100
   water = 0; // tonnes of seawater in the hold
   /** Admin god mode (GRAVETIDE_ADMIN=1 only): no damage lands, the hull is kept whole. */
