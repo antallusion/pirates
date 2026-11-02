@@ -194,6 +194,7 @@ import { PROFESSIONS } from '../../../shared/src/data/crew.ts';
 import type { DeepZone } from './mind.ts';
 import { CURSE_MORALE, cleanse, curseAura, stepCurse } from './curse.ts';
 import { featureName, findLandable, startLanding, stepLanding } from './exploration.ts';
+import { abortSpot, holdForSpot, spotInput, spotOf, spotSecond } from './spotwork.ts'; // owner, 2026-11-02
 import { playMinigame, stepMinigames } from './minigames.ts';
 import { playTrek, stepTreks } from './trek.ts';
 import { islesPrompt, islesSecond, payKeeper, recallLookouts, sendIsles } from './isles.ts';
@@ -874,9 +875,13 @@ export class Game {
       ship.state.speed *= 0.97;
       return;
     }
-    if (ship.grappled || ship.landing || ship.transferUntil > this.now) {
-      // Grappled, or riding at anchor while the boats are ashore.
-      if (ship.landing) ship.state.speed = 0;
+    if (ship.grappled || ship.landing || ship.spotHold || ship.transferUntil > this.now) {
+      // Grappled, or riding at anchor while the boats are ashore or the divers down (spotwork.ts, owner 2026-11-02:
+      // «зафиксируй корабль»): no way on her, her canvas taken in, no wind or current to move her.
+      if (ship.landing || ship.spotHold) {
+        ship.state.speed = 0;
+        if (ship.state.sail > 0) ship.state.sail = Math.max(0, ship.state.sail - dt * 0.8);
+      }
       this.grid.upsert(ship.id, ship.state.x, ship.state.y);
       return;
     }
@@ -1287,6 +1292,7 @@ export class Game {
       logSecond(this, s); // forum post 45: her log, the navigator's perks' measure (charting.ts)
       this.recordSightings(s);
       if (s.ship.landing) stepLanding(this, s.ship);
+      spotSecond(this, s); // the work at a spot: her anchor kept in step with it (spotwork.ts)
       stepAdrift(this, s); // torn sails, no sailcloth: the jury rig and the stranded prompt (owner, 2026-10-20)
       expireForwards(this, s);
       expireOptions(this, s);
@@ -3636,6 +3642,7 @@ export class Game {
         holdSail(s);
       }
       this.handleMsg(s, msg);
+      if (s.ship && holdForSpot(this, s)) this.pushSelf(s); // work at a spot begun: she is brought up at once, its countdown sent (spotwork.ts)
       // Owner, 2026-10-22 (allstop.ts): an order that did a thing at sea — not refused, not waiting for her arrival
       // (approach.ts) or for the shot to stop (holdOrder) — leaves her lying still.
       orderDone(this, s, msg, h.refused === true, approachOf(this, s)?.msg === msg || s.whenClear?.msg === msg);
@@ -3692,6 +3699,11 @@ export class Game {
     if (msg.t === 'drift') return driftMessage(this, s, msg); // docs/18 IV
     if (msg.t === 'throne') return throneMessage(this, s, msg); // docs/19 E1–E3
     if (msg.t === 'seamark') return seamarkMessage(this, s, msg);
+    if (msg.t === 'spot') {
+      // «Прервать» on the countdown (spotwork.ts)
+      if (!abortSpot(this, s)) this.pushSelf(s, true);
+      return;
+    }
     if (msg.t === 'seafind') return findMessage(this, s, msg);
     if (msg.t === 'roam') return roamMessage(this, s, msg); // docs/19 D7
     // the web game's top-up through YooKassa (owner, 2026-10-21: «подключай кассу на сайт и в игре»)
@@ -3740,6 +3752,7 @@ export class Game {
         ship.input = { rudder: clamp(msg.rudder, -1, 1), sailTarget: s.sailHold !== null ? 0 : SAIL_STEPS[step] };
         if (ship.hasFlag('unsinkable') && ship.captain !== 'drowned') ship.input.sailTarget = Math.min(ship.input.sailTarget, 0.9);
         if (Number.isInteger(msg.seq)) ship.lastInputSeq = msg.seq;
+        spotInput(this, s, msg.rudder, msg.helm === true); // a sail set or the wheel put over ends the work at a spot
         return;
       }
       case 'fire':
@@ -5317,6 +5330,7 @@ export class Game {
     if (!s.profile) return;
     const state = toPrivateState(s, this.now, this.worldView(s));
     state.boosts = boostsView(this, s); // forum 45: the effects' row by her portrait
+    state.spot = spotOf(this, s); // owner, 2026-11-02: the work at a spot's countdown (spotwork.ts)
     state.advice = captainAdvice(this, s);
     state.isleFirst = isleFirstView(this, s);
     state.noHire = !!s.ship && noHire(s, state.advice?.best); // owner, 2026-10-29: no hint drives her to hire

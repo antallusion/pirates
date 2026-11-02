@@ -104,6 +104,8 @@ export type ClientMsg =
   | { t: 'onboarding'; action: 'skip_stage' | 'skip_all' | 'hide_goals' }
   /** `helm`: the captain's own hand on the helm (the stick held, a key down) — under «Атаковать» it takes the wheel. */
   | { t: 'input'; seq: number; rudder: number; sail: number; helm?: boolean }
+  /** «Прервать» on the countdown of the work at a spot (server/src/game/spotwork.ts). */
+  | { t: 'spot'; action: 'abort' }
   | { t: 'fire'; side: Side; dist: number; x?: number; y?: number } // x, y: aim point (Improved Carriages)
   /** «Атаковать» (docs/23 item 33): the ship pursues `target` — `guns` holds her best range broadside-on, `board` runs in
    *  for the grapples; `stop` gives the wheel back. `roam` (docs/19 D7): «Атаковать» on a creature stack instead — the
@@ -774,6 +776,8 @@ export interface PrivateState {
   noHire?: boolean;
   /** Forum 45: her account's running boosts and her ferry's cooldown, for the effects' row by her portrait. */
   boosts?: BoostsView;
+  /** Owner, 2026-11-02: the work at a spot under way (the divers down, the boats ashore…), its end on the sea's clock. */
+  spot?: import('./data/spotwork.ts').SpotView | null;
   /** The captain as a hero (docs/17 H2). */
   hero?: HeroView;
   /** Her glory past the cap, mastery and trials (docs/19 E1–E3): from five levels short of the cap. */

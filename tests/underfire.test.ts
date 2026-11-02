@@ -109,9 +109,10 @@ test('every order with a beast marked nearby is answered — a sea mark, a find,
       assert.ok(offCoast(game, ship, is), 'water off its coast');
       ship.state.speed = way;
       c.push({ t: 'land' });
-      // At way under «Атаковать»: she heaves to for the boats and they go (no «Heave to first»).
+      // At way under «Атаковать»: she is brought up and the boats go at once (no «Heave to first», no wait for her way
+      // to die — owner, 2026-11-02, spotwork.ts).
       return () => {
-        steps(game, 20 * 15);
+        steps(game, 20 * 3);
         assert.ok(ship.landing, 'the boats ashore');
         assert.equal(pursuitOf(ship), null, 'the chase given up for the land');
       };

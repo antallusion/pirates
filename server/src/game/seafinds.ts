@@ -214,7 +214,7 @@ function whyNot(game: Game, s: PlayerSession, f: Find | undefined): string | nul
   if (f.kind !== 'flyfish' && findGap(hullOf(ship), f) > FIND_REACH[f.kind] + REACH_SLACK) return FIND_FAR;
   if (ship.underFire(game.now)) return 'Not under fire.';
   if (ship.boarding || ship.grappled || ship.landing || landFighting(game, s)) return 'Not now';
-  if (ship.state.speed > FIND_SLOW[f.kind]) return 'Shorten sail first: the boats cannot be lowered at speed.';
+  // (no «shorten sail first»: she is brought up at once and held while the boats are away — spotwork.ts, 2026-11-02)
   return null;
 }
 
@@ -227,7 +227,7 @@ export function startFind(game: Game, s: PlayerSession, id: number): string | nu
   const S = F(game);
   const f = S.list.get(id);
   const why = whyNot(game, s, f);
-  if (why === FIND_FAR && f) return approach(game, s, { x: f.x, y: f.y, reach: FIND_REACH[f.kind], r: OBJ_R, where: () => (S.list.has(f.id) ? f : null), ...(FIND_SLOW[f.kind] < 50 ? { slow: FIND_SLOW[f.kind] - 0.2 } : {}) }, why);
+  if (why === FIND_FAR && f) return approach(game, s, { x: f.x, y: f.y, reach: FIND_REACH[f.kind], r: OBJ_R, where: () => (S.list.has(f.id) ? f : null) }, why);
   if (why) return why;
   if (S.busy.get(s)?.id === id) return null;
   if (f!.kind === 'chest') return fightChest(game, s, f!);
@@ -239,6 +239,14 @@ export function startFind(game: Game, s: PlayerSession, id: number): string | nu
   S.busy.set(s, { id, until: game.now + secs, total: secs });
   sendFinds(game, s, true);
   return null;
+}
+
+/** Her boats at work on a small thing (spotwork.ts: the countdown, the ship held): which kind, and its time. */
+export function findBusy(game: Game, s: PlayerSession): { kind: FindKind; until: number; total: number } | null {
+  const S = F(game);
+  const b = S.busy.get(s);
+  const f = b ? S.list.get(b.id) : undefined;
+  return b && f ? { kind: f.kind, until: b.until, total: b.total } : null;
 }
 
 export function cancelFind(game: Game, s: PlayerSession, why?: string): void {

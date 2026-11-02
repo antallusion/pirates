@@ -1293,6 +1293,7 @@ $('hud-fish').addEventListener('click', (e) => {
 });
 hud.onTargetTap = (name) => net.send({ t: 'inspect', name });
 hud.onFishing = (action) => net.send({ t: 'fishing', action });
+hud.onSpotAbort = () => net.send({ t: 'spot', action: 'abort' }); // owner, 2026-11-02 (spotwork.ts)
 hud.onHunt = (action, id) => net.send(action === 'flense' ? { t: 'hunt', action, id: id ?? 0 } : { t: 'hunt', action });
 hud.onTribute = (id) => net.send({ t: 'tribute', id });
 // "Whisper" on a friend: the chat opens over the window on its private tab, addressed to them (docs/28).
@@ -4152,9 +4153,12 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   facts.ritual = !!ab && ab.shards >= 3 && dist(own.x, own.y, ab.eye.x, ab.eye.y) < 1500;
   const l = self.landable;
   if (self.landing) {
-    const now = state.estServerTime();
-    const frac = Math.max(0, Math.min(1, (now - self.landing.started) / (self.landing.until - self.landing.started)));
-    info.push(`${esc(L('ashore', { feature: sv(self.landing.name ?? self.landing.feature.replace(/_/g, ' ')), pct: Math.round(frac * 100) }))} ${esc(L('recall'))}`);
+    // (owner, 2026-11-02: the countdown's pill in the top stack says it — spotclock.ts; the old line only without it)
+    if (!self.spot) {
+      const now = state.estServerTime();
+      const frac = Math.max(0, Math.min(1, (now - self.landing.started) / (self.landing.until - self.landing.started)));
+      info.push(`${esc(L('ashore', { feature: sv(self.landing.name ?? self.landing.feature.replace(/_/g, ' ')), pct: Math.round(frac * 100) }))} ${esc(L('recall'))}`);
+    }
   } else if (l?.blocked) {
     // What stops you, after the place it is about (with a capital: it opens the line) unless it names the place itself.
     const why = sv(l.blocked), where = sv(l.feature);
@@ -4185,7 +4189,7 @@ function gatherActs(): { acts: Act[]; info: string[] } {
   if (mk) {
     const busy = state.markBusy?.id === mk.id ? state.markBusy : null;
     facts.mark = { id: mk.id, kind: mk.kind, done: state.markDone.has(mk.id), busy: !!busy };
-    if (busy) info.push(esc(markInfo(mk.kind, 'busy', busy.until - state.estServerTime())));
+    if (busy) { if (!self.spot) info.push(esc(markInfo(mk.kind, 'busy', busy.until - state.estServerTime()))); } // (the countdown's pill says it)
     else if (state.markDone.has(mk.id)) info.push(esc(markInfo(mk.kind, 'done')));
     else if (pendingMark?.id === mk.id) info.push(esc(slowWord()));
   }
@@ -4199,7 +4203,7 @@ function gatherActs(): { acts: Act[]; info: string[] } {
     const busy = state.findBusy?.id === fd.id ? state.findBusy : null;
     const far = findFar(fd);
     facts.find = { id: fd.id, kind: fd.kind, busy: !!busy, ...(fd.n ? { n: fd.n } : {}), ...(far ? { far: Math.round(far) } : {}) };
-    if (busy) info.push(esc(findInfo(fd.kind, busy.until - state.estServerTime())));
+    if (busy) { if (!self.spot) info.push(esc(findInfo(fd.kind, busy.until - state.estServerTime()))); } // (the countdown's pill says it)
     else if (pendingFind?.id === fd.id) info.push(esc(slowWord()));
   }
   const focus = roamFocus();
@@ -5331,11 +5335,7 @@ function workMark(id: number): void {
     pendingMark = null;
     return void net.send({ t: 'seamark', action: 'work', id });
   }
-  if (own && own.speed > MARK_SLOW) {
-    state.input.sail = 0;
-    pendingMark = { id, until: performance.now() + 25000 };
-    return;
-  }
+  // (owner, 2026-11-02: no waiting for her way to die — the server brings her up at once and holds her, spotwork.ts)
   pendingMark = null;
   net.send({ t: 'seamark', action: 'work', id });
 }
@@ -5347,11 +5347,8 @@ function workFind(id: number): void {
     pendingFind = null;
     return void net.send({ t: 'seafind', action: 'work', id }); // seaux: the helmsman sails her there (approach.ts)
   }
-  if (f && own && own.speed > FIND_SLOW[f.kind]) {
-    state.input.sail = 0;
-    pendingFind = { id, until: performance.now() + 25000 };
-    return;
-  }
+  // (owner, 2026-11-02: no waiting for her way to die — the server brings her up at once and holds her, spotwork.ts)
+  void own;
   pendingFind = null;
   net.send({ t: 'seafind', action: 'work', id });
 }

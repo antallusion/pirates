@@ -80,6 +80,7 @@ import { gloryChip } from './throne.ts'; // docs/19 E1
 import { Toasts } from './kit/toast.ts'; // docs/23 phase 1
 import { TOAST } from './kit/tokens.ts';
 import { escortBars, escortKey, escortRowHtml, holdKey, holdRowHtml } from './escortbars.ts'; // forum 2026-10-30: the hold's bar, the escorts' bars
+import { SpotClock } from './spotclock.ts'; // owner, 2026-11-02: the work at a spot's countdown
 import { avatar } from './kit/avatar.ts'; // her face in its ring (docs/32 §12: her frame), shared/src/data/portraitfit.ts
 import { captainDot } from './capmenu.ts'; // seaux: the bead is news not yet seen
 import { drawWrecksMini } from '../render/castaways.ts'; // seaux: her wreckage and castaways on the chart
@@ -382,6 +383,9 @@ export class Hud {
   onTargetTap: (name: string) => void = () => {};
   /** A fishing order from the panel (main.ts). */
   onFishing: (action: 'trap' | 'haul' | 'deep' | 'salt' | 'cast') => void = () => {};
+  /** «Прервать» on the work at a spot's countdown (owner, 2026-11-02, spotclock.ts). */
+  onSpotAbort: () => void = () => {};
+  private spotClock = new SpotClock(() => this.onSpotAbort());
   /** The key that casts the net (main.ts: the player may rebind it) and whether a haul is being played. */
   castKey = ' (L)';
   hauling = false;
@@ -876,6 +880,7 @@ export class Hud {
     this.drawSignals(state);
     this.drawWorldGoal(state);
     this.drawFishing(state);
+    this.spotClock.render(self.dockedAt ? null : self.spot, state.estServerTime(), lang()); // the divers', the boats' countdown
     this.drawHunt(state);
     this.drawRegatta(state);
     this.drawStorm(state);

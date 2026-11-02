@@ -100,7 +100,7 @@ function whyNot(game: Game, s: PlayerSession, m: SeaMark | undefined): string | 
   if (!markInReach(m, hullOf(ship), REACH_SLACK)) return MARK_FAR;
   if (ship.underFire(game.now)) return 'Not under fire.';
   if (markAgain(game, s.profile!, m.id) > 0) return markAgainMs(m.kind) > 86_400_000 ? 'Your boats took this wreckage already: it is yours again two days on.' : 'Your boats worked this one today already.';
-  if (ship.state.speed > MARK_SLOW) return 'Shorten sail first: the boats cannot work it at speed.';
+  // (no «shorten sail first»: she is brought up at once and held while the boats work — spotwork.ts, 2026-11-02)
   return null;
 }
 
@@ -110,7 +110,7 @@ export function startMark(game: Game, s: PlayerSession, id: number): string | nu
   const m = markById(game, id);
   const why = whyNot(game, s, m);
   // seaux: out of reach, the helmsman sails her to it and the order is given again there (approach.ts)
-  if (why === MARK_FAR && m) return approach(game, s, { x: m.x, y: m.y, reach: MARK_REACH, r: m.r, near: () => !!s.ship && markInReach(m, hullOf(s.ship), -4), slow: MARK_SLOW - 0.2 }, why);
+  if (why === MARK_FAR && m) return approach(game, s, { x: m.x, y: m.y, reach: MARK_REACH, r: m.r, near: () => !!s.ship && markInReach(m, hullOf(s.ship), -4) }, why);
   if (why) return why;
   const S = M(game);
   const cur = S.busy.get(s);

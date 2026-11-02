@@ -38,6 +38,7 @@ import { onShrine, onSpring } from './hero.ts';
 import { HAUNT_NAMES, islandHaunt } from '../../../shared/src/data/minigames.ts';
 import type { HauntId } from '../../../shared/src/data/minigames.ts';
 import { LANDING_SILVER } from '../../../shared/src/data/silverpay.ts';
+import { SPOT_HALF } from '../../../shared/src/data/spotwork.ts';
 
 /** An island feature, or one of the island's people or beasts (living islands, docs/11 P3), or an island's haunt
  * with its mini-games (2026-09-30: 'scene', on every island with nothing else ashore). */
@@ -71,7 +72,7 @@ export function featureName(is: Island, f: LandableFeature): string {
 
 const DURATION: Record<LandableFeature, number> = {
   cache: 20, wreck: 25, ruins: 40, grove: 30, mine: 35, pearl_bank: 30, shrine: 25, fort: 40, volcano: 35, bones: 30, bell: 30, hermit: 20, spring: 20,
-  fishers: 20, smugglers: 25, pirate_camp: 40, garrison: 25, seals: 20, crabs: 15, turtles: 20, scene: 12, lookout: 15,
+  fishers: 20, smugglers: 25, pirate_camp: 40, garrison: 25, seals: 20, crabs: 15, turtles: 20, scene: 6, lookout: 15, // (the walk across the island: the boats' row in, then her trek — owner, 2026-11-02)
 };
 const RESTOCK_SEC = 2 * 3600; // a feature can be worked again two real hours later
 /** An island's haunt has a new game for the same captain half an hour later. */
@@ -149,7 +150,8 @@ export function startLanding(game: Game, s: PlayerSession): string | null {
   if (ship.docked || !ship.alive || ship.boarding) return 'Not now';
   if (ship.landing) return 'The boats are already ashore';
   if (ship.underFire(game.now)) return 'Not while under fire';
-  if (ship.state.speed > 2.5) return 'Heave to first — the boats cannot be lowered at speed';
+  // (owner, 2026-11-02: «пройтись по острову … не получается сразу» — no «heave to first» and no wait for her way to
+  // die: the anchor goes down and brings her up at once, the boats go the same moment; spotwork.ts holds her there)
   const party0 = Math.max(3, Math.min(12, Math.round(ship.crew * 0.3)));
   // A treasure map whose circle covers us: the boats go digging.
   // Salvage King: raise a hull that just went down.
@@ -224,7 +226,7 @@ export function startLanding(game: Game, s: PlayerSession): string | null {
     // A beach a little way off with something to land for (owner, 2026-10-22: the boats' reach is thirty metres now):
     // the helmsman takes her in to it and the boats go there (approach.ts) — no «nothing within reach» a cable off.
     const beach = landingBeach(game, s);
-    if (beach) return approach(game, s, { x: beach.x, y: beach.y, reach: REACH_SHORE, near: () => !!s.ship && !!findLandable(game, s), slow: 2.3 }, LAND_NONE);
+    if (beach) return approach(game, s, { x: beach.x, y: beach.y, reach: REACH_SHORE, near: () => !!s.ship && !!findLandable(game, s) }, LAND_NONE);
     return LAND_NONE;
   }
   return landAt(game, s, target);
@@ -279,8 +281,8 @@ function landAt(game: Game, s: PlayerSession, target: { island: Island; feature:
   return null;
 }
 
-/** Called every second for each ship with an active landing. */
-export function stepLanding(game: Game, ship: ShipEntity): void {
+/** Called every second for each ship with an active landing; `hand`: called back by her own hand now (spotwork.ts). */
+export function stepLanding(game: Game, ship: ShipEntity, hand = false): void {
   const l = ship.landing;
   if (!l) return;
   const s = game.sessionOf(ship);
@@ -288,8 +290,10 @@ export function stepLanding(game: Game, ship: ShipEntity): void {
     ship.landing = null;
     return;
   }
-  // Recalled: the captain sets sail or the enemy arrives. The party scrambles back with less.
-  const recalled = ship.input.sailTarget > 0 || ship.underFire(game.now);
+  // Recalled: the captain sets sail (or gives the word, spotwork.ts) or the enemy arrives. The party comes back with less.
+  const fire = ship.underFire(game.now);
+  const own = !fire && (hand || ship.input.sailTarget > 0);
+  const recalled = fire || own;
   // A bared bank the sea takes back before the party is done (docs/16 #25).
   const bank = l.feature === 'tidal' ? tidalIsles(game.world)[Number(l.siteId)] : undefined;
   if (bank && !bankUp(game, bank)) {
@@ -308,7 +312,13 @@ export function stepLanding(game: Game, ship: ShipEntity): void {
   ship.landing = null;
   const island = game.world.islands[l.islandId];
   const progress = Math.min(1, (game.now - l.started) / (l.until - l.started));
-  if (recalled && progress < 0.5) {
+  if (own && progress < SPOT_HALF) {
+    // her own word: they come back in good order, with nothing
+    game.toastShip(ship, l.feature === 'dive' ? 'The divers are hauled up early: nothing brought up.' : 'The boats are called back early: nothing brought back.', 'bad');
+    return;
+  }
+  if (own) game.toastShip(ship, 'Called back past halfway: half the haul.', 'info');
+  if (recalled && progress < SPOT_HALF) {
     const lost = Math.min(l.party, Math.round(l.party * 0.3 * game.rng.float()));
     ship.crew = Math.max(1, ship.crew - lost);
     game.toastShip(ship, `The landing party is recalled empty-handed${lost ? `; ${lost} did not make it back` : ''}.`, 'bad');

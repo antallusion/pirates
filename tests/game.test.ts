@@ -362,7 +362,7 @@ test('landing parties are recalled when the captain raises sail early', () => {
   c.push({ t: 'input', seq: 5, rudder: 0, sail: 3 });
   steps(game, 25);
   assert.equal(ship.landing, null);
-  assert.ok(c.all('toast').some((t) => /recalled/.test(t.msg)));
+  assert.ok(c.all('toast').some((t) => /recalled|called back/.test(t.msg))); // (her own hand: «called back early», spotwork.ts)
 });
 
 test('tavern rumours point to unexplored features and chart them', () => {

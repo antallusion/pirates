@@ -225,7 +225,7 @@ export function autosailDanger(game: Game, s: PlayerSession, ship: ShipEntity, s
   if (!ship.alive) return 'lost';
   if (ship.docked) return 'port';
   if (s.profile?.company.mutiny || ship.seizedHelm) return 'helm';
-  if (ship.grappled || ship.boarding || ship.landing || inBattle(game, ship)) return 'attack'; // (her party's fight ashore too: owner, 2026-10-22)
+  if (ship.grappled || ship.boarding || ship.landing || ship.spotHold || inBattle(game, ship)) return 'attack'; // (her party's fight ashore too: owner, 2026-10-22)
   // A shot at her, or her own guns, since he took the wheel (or in the last seconds before) — another ship's, not the
   // sea's harm: a reef grinding her keel, a storm, a fire aboard are no fight (they were: «attack», and on a reef the
   // course never came back).

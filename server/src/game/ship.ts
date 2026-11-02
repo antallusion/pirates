@@ -239,6 +239,8 @@ export class ShipEntity {
    *  mended and the planks and sailcloth used, said when they stop; the «+N» shown over her every two seconds. */
   repairTally: { hull: number; sails: number; planks: number; cloth: number; shown: number; at: number } | null = null;
   landing: Landing | null = null;
+  /** Riding at anchor for the work at a spot (spotwork.ts): no way on her, sails furled, nothing moves her. */
+  spotHold = false;
   curse = 0; // the sea's claim on the ship, 0..100
   water = 0; // tonnes of seawater in the hold
   /** Admin god mode (GRAVETIDE_ADMIN=1 only): no damage lands, the hull is kept whole. */
