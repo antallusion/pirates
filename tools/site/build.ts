@@ -41,6 +41,7 @@ import { typo } from './typo.ts';
 import { CHALLENGES, MILESTONES, PASS_PRICES, PASS_SHIP, SUPER_TIERS, passBounds, passFullHours, passModel, passSeason, passSeasonAt } from '../../shared/src/data/seasonpass.ts';
 import type { PassReward, PassProductId } from '../../shared/src/data/seasonpass.ts';
 import { passLine } from '../../shared/src/data/passlines.ts';
+import { guideSite } from './guide.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SITE = join(ROOT, 'site');
@@ -144,7 +145,7 @@ const UI: Record<string, Tr> = {
   footer: ['A dark Pirate Gothic sea: a ship is an army, a captain is a hero, boarding is a battle.', 'Мрачное море Pirate Gothic: корабль — армия, капитан — герой, абордаж — битва.'],
   silver: ['silver', 'серебра'], doubloons: ['doubloons', 'дублонов'], guns: ['Guns a side', 'Пушек на борт'], hull: ['Hull', 'Корпус'],
   crew: ['Crew', 'Команда'], rank: ['Rank', 'Ранг'], premium: ['Premium', 'Премиум'],
-  rating: ['Rating', 'Рейтинг'], shop: ['Shop', 'Магазин'], pass: ['Season card', 'Сезонная карта'],
+  rating: ['Rating', 'Рейтинг'], shop: ['Shop', 'Магазин'], pass: ['Season card', 'Сезонная карта'], guide: ['Guide', 'Книга'],
 };
 const u = (k: string, lang: Lang) => L(lang, UI[k]);
 const root = (lang: Lang) => (lang === 'ru' ? '/site/' : '/site/en/');
@@ -162,7 +163,7 @@ interface Hero { img: string; imgM?: string; kicker: string; title: string; lead
 
 /** The header's links in the order they stand, and the order they leave the bar for the burger's drawer when the row
  *  is short (priority+, site.js): the home first (the logo leads there too), the forum last; the current page never. */
-const NAV = [['', 'home', 'ico/home', 1], ['creatures/', 'creatures', 'ico/creatures', 6], ['captains/', 'captains', 'ico/captains', 4], ['ships/', 'ships', 'ico/ships', 3], ['rating/', 'rating', 'ico/achievements', 2], ['shop/', 'shop', 'ico/doubloon', 5], ['forum/', 'forum', 'ico/forum', 7]] as const;
+const NAV = [['', 'home', 'ico/home', 1], ['creatures/', 'creatures', 'ico/creatures', 7], ['guide/', 'guide', 'ico/guides', 6], ['captains/', 'captains', 'ico/captains', 4], ['ships/', 'ships', 'ico/ships', 3], ['rating/', 'rating', 'ico/achievements', 2], ['shop/', 'shop', 'ico/doubloon', 5], ['forum/', 'forum', 'ico/forum', 8]] as const;
 const TG_MARK = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M21.9 4.3 18.7 19.4c-.2 1-.9 1.3-1.7.8l-4.8-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.5 13.2 1.8 11.7c-1-.3-1-1 .2-1.5L20.5 3c.9-.3 1.6.2 1.4 1.3z"/></svg>';
 
 /** The header (owner, 2026-10-25): logo · the links (exactly one lit: this page) · the end — the forum's member button
@@ -209,7 +210,7 @@ ${h.cta ? `<div class="hero-cta"><a class="btn-gold lg" href="/play">${u('playFr
 const ORIGIN = 'https://gravetidegame.com';
 /** A page's public address: the Russian home is the domain's root, every other page lives under /site/. */
 const pageUrl = (lang: Lang, path: string) => (lang === 'ru' && path === '' ? `${ORIGIN}/` : `${ORIGIN}${root(lang)}${path}`);
-const SECTION: Record<string, Tr> = { creatures: ['Bestiary', 'Бестиарий'], captains: ['Captains', 'Капитаны'], ships: ['Fleet', 'Флот'], forum: ['Forum', 'Форум'], rating: ['Rating', 'Рейтинг'], shop: ['Shop', 'Магазин'], pass: ['Season card', 'Сезонная карта'], terms: ['Terms', 'Оферта'], refunds: ['Refunds', 'Возврат'] };
+const SECTION: Record<string, Tr> = { guide: ['The Pilot’s Book', 'Лоцманская книга'], creatures: ['Bestiary', 'Бестиарий'], captains: ['Captains', 'Капитаны'], ships: ['Fleet', 'Флот'], forum: ['Forum', 'Форум'], rating: ['Rating', 'Рейтинг'], shop: ['Shop', 'Магазин'], pass: ['Season card', 'Сезонная карта'], terms: ['Terms', 'Оферта'], refunds: ['Refunds', 'Возврат'] };
 
 /** The head every page shares for the search engines and the social cards (owner, 2026-10-20: «настрой крутую сеошку»):
  *  canonical and hreflang pairs, Open Graph and Twitter cards, the webmasters' verification, schema.org JSON-LD. */
@@ -249,7 +250,7 @@ ${o.hero.film ? filmPreload() : ''}<link rel="preload" href="/site/fonts/cormora
 <body class="pg-${o.active}">${header(lang, o.active, o.path)}
 <main>${heroBlock(o.hero, lang)}${o.body}</main>
 <footer class="ftr"><div class="wrap ftr-in"><img src="${K('brand/logo')}" alt="GRAVETIDE" width="110" height="88" loading="lazy">
-<p>${T(u('footer', lang), lang)}</p><nav><a href="${r}creatures/">${u('creatures', lang)}</a><a href="${r}captains/">${u('captains', lang)}</a><a href="${r}ships/">${u('ships', lang)}</a><a href="${r}rating/">${u('rating', lang)}</a><a href="${r}shop/">${u('shop', lang)}</a><a href="${r}forum/">${u('forum', lang)}</a><a href="/play">${u('play', lang)}</a></nav>
+<p>${T(u('footer', lang), lang)}</p><nav><a href="${r}creatures/">${u('creatures', lang)}</a><a href="${r}guide/">${u('guide', lang)}</a><a href="${r}captains/">${u('captains', lang)}</a><a href="${r}ships/">${u('ships', lang)}</a><a href="${r}rating/">${u('rating', lang)}</a><a href="${r}shop/">${u('shop', lang)}</a><a href="${r}forum/">${u('forum', lang)}</a><a href="/play">${u('play', lang)}</a></nav>
 <nav class="ftr-legal" aria-label="${lang === 'ru' ? 'Документы' : 'Documents'}">${DOC_IDS.map((d) => `<a href="${r}${d}/">${L(lang, DOC_TITLES[d])}</a>`).join('')}</nav>
 <p class="ftr-req">${lang === 'ru' ? `${SELLER.name[1]} · ИНН&nbsp;${SELLER.inn} · ОГРНИП&nbsp;${SELLER.ogrnip}` : `${SELLER.name[0]} · INN&nbsp;${SELLER.inn} · OGRNIP&nbsp;${SELLER.ogrnip}`}<br><a href="mailto:${SELLER.info}">${SELLER.info}</a> · <a href="mailto:${SELLER.support}">${SELLER.support}</a></p>
 <small>© GRAVETIDE · gravetidegame.com</small></div></footer>
@@ -407,7 +408,7 @@ function ships(lang: Lang): string {
     const st = (k: string) => h.stats.find((x) => x.k === k)!;
     const mini = (label: string, v: string | number, cls = '') => `<div class="stat${cls ? ` ${cls}` : ''}"><span>${label}</span><b>${v}</b></div>`;
     const crew = `${st('crew').lo} / ${st('hammocks').text}`;
-    return `<article class="ship panel reveal${s.premium ? ' prem' : ''}" data-list="${h.list}" data-rank="${h.levels[0] * 100 + h.tier}" data-hold="${st('hold').lo}" data-speed="${st('speed').lo}"><div class="ship-art">${img(asset(s.sprite), h.name)}</div><div class="ship-txt">
+    return `<article class="ship panel reveal${s.premium ? ' prem' : ''}" id="${s.id}" data-list="${h.list}" data-rank="${h.levels[0] * 100 + h.tier}" data-hold="${st('hold').lo}" data-speed="${st('speed').lo}"><div class="ship-art">${img(asset(s.sprite), h.name)}</div><div class="ship-txt">
 <h3>${esc(h.name)}${s.premium ? ` <span class="badge gold">${u('premium', lang)}</span>` : ''}</h3><p class="ship-tags"><span class="tag t-${h.list}">${esc(h.listName)}</span><span class="role">${esc(h.roleName)}</span></p><p class="muted">${T(h.flavour, lang)}</p>
 <div class="stats mini">${mini(u('rank', lang), h.levelText)}${mini(fu('hold', lang), st('hold').text, 'hold')}${mini(u('hull', lang), st('hull').text)}${mini(u('speed', lang), st('speed').text)}${mini(u('guns', lang), h.guns.perSide)}${mini(fu('hammocks', lang), crew)}${mini(fu('slots', lang), st('slots').text)}${mini(fu('turn', lang), st('turn').text)}${mini(fu('calibre', lang), `${h.guns.maxLb} ${lang === 'ru' ? 'фн' : 'pdr'}`)}${mini(fu('cap', lang), fu('lv', lang, { n: h.captainLevel }))}</div>
 <p class="ship-buy"><b>${esc(h.price.text)}</b> · ${esc(h.sold.text)}</p>
@@ -835,7 +836,10 @@ for (const lang of ['ru', 'en'] as Lang[]) {
   write(`${base}pass/index.html`, passPage(lang)); // «Сезонная карта» (owner, 2026-10-30)
   for (const d of DOC_IDS) write(`${base}${d}/index.html`, legal(lang, d));
   for (const c of CREATURES) write(`${base}creatures/${c.id}.html`, creaturePage(c, lang));
-  n += 7 + DOC_IDS.length + CREATURES.length;
+  // «Лоцманская книга» (2026-11-02): the articles, the reference and the search's index (tools/site/guide.ts)
+  const guide = guideSite(lang, { page, sectionHead, asset, K, esc, T });
+  for (const [rel, body] of guide) write(`${base}${rel}`, body);
+  n += 7 + DOC_IDS.length + CREATURES.length + guide.filter(([r]) => r.endsWith('.html')).length;
 }
 // The sitemap (each page with its other tongue as an hreflang pair) and robots.txt; static.ts serves both at the root.
 {

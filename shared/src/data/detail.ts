@@ -16,7 +16,7 @@ import { unitCard } from './webdetail.ts';
 import { shipName } from './webshop.ts';
 import { giftOf } from './shipgifts.ts';
 import { levelRange } from './shiplevel.ts';
-import { ITEM_BASES, SETS, RARITY_COLOR, SLOT_NAMES } from './items.ts';
+import { ITEM_BASES, LEGENDARY_ITEMS, SETS, RARITY_COLOR, SLOT_NAMES } from './items.ts';
 import type { Item, SetId } from './items.ts';
 import { ARTIFACTS, ART_SETS, RELICS, makeArtifact } from './artifacts.ts';
 import { ORDERS, SKILLS } from './hero.ts';
@@ -28,6 +28,10 @@ import { cosItem, cosArt } from './cosmetics.ts';
 import { LAND_RES_DEF } from './bestiary.ts';
 import type { LandRes } from './bestiary.ts';
 import { FIGUREHEADS } from './shipbuild.ts';
+import { TOWN } from './town.ts';
+import type { TownId } from './town.ts';
+import { PRODUCERS } from './base.ts';
+import { BUILDINGS } from './holdings.ts';
 import {
   buildingTip, deedTip, featTip, figureheadTip, gunTip, itemTip, moduleTip, mountTip, orderTip, petTip, producerTip, relicTip, setTip, skillTip,
   talentTip, tattooTip, townTip,
@@ -56,7 +60,7 @@ export interface DCard {
 
 /** Every kind a key may name (the tests walk each). */
 export const DETAIL_KINDS = [
-  'unit', 'good', 'lres', 'hull', 'gun', 'mount', 'module', 'fh', 'ammo', 'skill', 'order', 'talent', 'relic', 'aset', 'gset', 'art', 'base',
+  'unit', 'good', 'lres', 'hull', 'gun', 'mount', 'module', 'fh', 'ammo', 'skill', 'order', 'talent', 'relic', 'aset', 'gset', 'art', 'base', 'leg',
   'town', 'producer', 'building', 'tattoo', 'pet', 'deed', 'feat', 'cos',
 ] as const;
 export type DetailKind = (typeof DETAIL_KINDS)[number];
@@ -229,6 +233,11 @@ function baseItem(id: string): Item | undefined {
   if (ARTIFACTS[id]) return makeArtifact(id);
   return ITEM_BASES[id] ? { uid: 0, base: id, ilvl: 1, rarity: 0, affixes: [], dur: 100 } : undefined;
 }
+/** A legendary as it is found (`leg:<id>`): its base at the legendary rarity, its gift. */
+function legendaryItem(id: string): Item | undefined {
+  const l = LEGENDARY_ITEMS[id];
+  return l && ITEM_BASES[l.base] ? { uid: 0, base: l.base, ilvl: 1, rarity: 4, affixes: [], dur: 100, legendary: id } : undefined;
+}
 export function itemDetail(it: Item, worn: readonly Item[] = []): DCard {
   const t = itemTip(it, worn);
   const a = it.art ? ARTIFACTS[it.art] : null;
@@ -284,9 +293,14 @@ export function detailCard(key: string): DCard | undefined {
       const it = baseItem(rest);
       return it ? itemDetail(it) : undefined;
     }
-    case 'town': return fromTip(townTip(rest, lv));
-    case 'producer': return fromTip(producerTip(rest, lv));
-    case 'building': return fromTip(buildingTip(rest, lv));
+    case 'leg': {
+      const it = legendaryItem(rest);
+      return it ? itemDetail(it) : undefined;
+    }
+    // the island's buildings in their own isometric pictures (icon.build_*, icon.outpost_*)
+    case 'town': return fromTip(townTip(rest, lv), TOWN[rest as TownId] ? `icon.build_${TOWN[rest as TownId].art}` : undefined);
+    case 'producer': return fromTip(producerTip(rest, lv), (PRODUCERS as Record<string, { art: string }>)[rest] ? `icon.${(PRODUCERS as Record<string, { art: string }>)[rest].art}` : undefined);
+    case 'building': return fromTip(buildingTip(rest, lv), (BUILDINGS as Record<string, unknown>)[rest] ? `icon.build_${rest}` : undefined);
     case 'tattoo': return fromTip(tattooTip(rest, false), TATTOO_BY_ID[rest] ? `icon.tattoo_${rest}` : undefined);
     case 'pet': return fromTip(petTip(rest, false), PETS[rest as keyof typeof PETS] ? `icon.pet_${rest}` : undefined);
     case 'deed': return fromTip(deedTip(rest));
@@ -336,5 +350,9 @@ export function allDetailKeys(): string[] {
   add('aset', Object.keys(ART_SETS));
   add('art', Object.keys(ARTIFACTS));
   add('base', Object.keys(ITEM_BASES));
+  add('leg', Object.keys(LEGENDARY_ITEMS));
+  add('town', Object.keys(TOWN));
+  add('producer', Object.keys(PRODUCERS));
+  add('building', Object.keys(BUILDINGS));
   return out;
 }
