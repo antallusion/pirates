@@ -455,6 +455,17 @@ export function outpostOrder(game: Game, s: PlayerSession, id: string, action: s
   return 'Unknown order';
 }
 
+/** Her party robbing an outpost (spotwork.ts): when they are done. */
+export function robbingOutpost(game: Game, account: number): { until: number } | null {
+  const r = es(game).robbing.get(account);
+  return r ? { until: r.until } : null;
+}
+
+/** Her party called back from an outpost (spotwork.ts): nothing taken. */
+export function cancelRobOutpost(game: Game, account: number): boolean {
+  return es(game).robbing.delete(account);
+}
+
 /** A captain in lawless water robs someone's outpost: five minutes ashore, the owner warned. */
 function robOutpost(game: Game, s: PlayerSession, o: Outpost): string | null {
   const ship = s.ship!;

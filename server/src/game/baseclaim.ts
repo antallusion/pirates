@@ -578,6 +578,17 @@ function robWhy(game: Game, s: PlayerSession, h: Holding, isl: Island): string |
   return null;
 }
 
+/** Her party robbing a captain's island (spotwork.ts): when they are done. */
+export function robbingIsle(game: Game, account: number): { until: number } | null {
+  const r = cs(game).robbing.get(account);
+  return r ? { until: r.until } : null;
+}
+
+/** Her party called back from a captain's island (spotwork.ts): nothing taken. */
+export function cancelRobIsle(game: Game, account: number): boolean {
+  return cs(game).robbing.delete(account);
+}
+
 /** Robbers ashore (every ten seconds): still off the island and stopped, and their five minutes done. */
 export function stepIsleRobbers(game: Game): void {
   const S = cs(game);

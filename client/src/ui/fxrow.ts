@@ -16,6 +16,9 @@ import { EN, RU } from '../lang/ui/fx.ts';
 import { esc, icon } from './dom.ts';
 import { detailAttr } from './detailattr.ts';
 import type { ClientCard } from './detail.ts';
+import type { SpotView } from '../../../shared/src/data/spotwork.ts';
+import { SPOT_ICON, spotClock, spotFrac } from '../../../shared/src/data/spotwork.ts';
+import { spotAnchored, spotPhaseWord, spotTitle } from './spotclock.ts';
 
 const L = dict(EN, RU);
 
@@ -54,6 +57,8 @@ export interface FxInput {
     boosts?: { xp: number; wind: number; prod: number; ferry: number };
     pvp?: { flag: string; next: string | null; nextAt: number; pennant: boolean; skulls?: number; washMin?: number; shameUntil: number };
     dockedAt?: string | null;
+    /** The work at a spot under way (owner, 2026-11-02): first in the row, with its countdown. */
+    spot?: SpotView | null;
   };
   you: { flags: number; rudderHp: number; sails: number; sailsMax: number; morale: number; leaks: number } | null;
   /** World time (s) and the wall clock (ms). */
@@ -221,8 +226,14 @@ export function fxList(i: FxInput): Fx[] {
     if (you.morale >= 80) out.push({ id: 'moraleHigh', icon: 'st_morale_up', bad: false, k: 'moraleHigh', left: null, frac: null });
     else if (you.morale <= 30) out.push({ id: 'moraleLow', icon: 'st_morale_down', bad: true, k: 'moraleLow', left: null, frac: null });
   }
-  // banes first; within each, the timed ones by what is left (the soonest gone last), the lasting ones after
-  return out.sort((a, b2) => Number(b2.bad) - Number(a.bad) || (a.left === null ? 1 : 0) - (b2.left === null ? 1 : 0) || (b2.left ?? 0) - (a.left ?? 0));
+  // banes first; within each, the timed ones by what is left (the soonest gone last), the lasting ones after — and the
+  // work at a spot before them all (its countdown is what she waits on)
+  const sp = self.spot;
+  const spot: Fx[] = sp && !self.dockedAt && sp.until > now ? [{
+    id: 'spot', icon: SPOT_ICON[sp.kind], bad: false, k: 'spot', name: spotTitle(sp), text: `${spotPhaseWord(sp, now)} · ${spotAnchored()}`,
+    left: sp.until - now, frac: 1 - spotFrac(sp, now), n: spotClock(sp.until - now),
+  }] : [];
+  return spot.concat(out.sort((a, b2) => Number(b2.bad) - Number(a.bad) || (a.left === null ? 1 : 0) - (b2.left === null ? 1 : 0) || (b2.left ?? 0) - (a.left ?? 0)));
 }
 
 /** The row's name for a screen reader. */

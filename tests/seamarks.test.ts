@@ -180,9 +180,7 @@ test('the boats go only hove to, within reach, out of the fight; making way call
   const game = world();
   const s = captain(game);
   const m = by(game, s, 'drift');
-  s.ship!.state.speed = 6;
-  assert.match(startMark(game, s, m.id) ?? '', /Shorten sail first/);
-  s.ship!.state.speed = 0;
+  // (owner, 2026-11-02: no «shorten sail first» — at way she is brought up at once and held: tests/spotwork.test.ts)
   assert.equal(startMark(game, s, 99_999_999), 'Nothing there to work.');
   s.ship!.lastHitAt = game.now; // another ship's fire on her (her own fight is no fire: owner, 2026-10-07)
   assert.equal(startMark(game, s, m.id), 'Not under fire.');

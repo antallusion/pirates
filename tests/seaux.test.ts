@@ -90,7 +90,7 @@ test('sail-to: a find out of reach is not worked from afar — the helmsman sail
   assert.ok(c.last('seafinds')?.busy || !findById(game, f.id), 'the boats are at it');
 });
 
-test('sail-to: arriving at full sail she heaves to first, then the boats go', () => {
+test('sail-to: arriving at full sail she is brought up at once and the boats go (owner, 2026-11-02)', () => {
   const { game } = makeGame();
   const { s, c } = captain(game, 'Fast Arriver');
   const at = eastOf(game, s, 800);
@@ -100,11 +100,9 @@ test('sail-to: arriving at full sail she heaves to first, then the boats go', ()
   place(game, s, at.x - 30, at.y, 8); // (her hull's thirty metres — owner, 2026-10-22, reach.ts)
   s.ship!.state.heading = Math.PI / 2;
   steps(game, 1);
-  assert.ok(approachOf(game, s), 'at 8 m/s the boats wait');
+  assert.equal(approachOf(game, s), null, 'at 8 m/s: given at once, no waiting for her way to die');
   assert.equal(s.ship!.input.sailTarget, 0, 'sail in');
-  s.ship!.state.speed = 0;
-  steps(game, 2);
-  assert.equal(approachOf(game, s), null, 'lying still: given');
+  assert.equal(s.ship!.state.speed, 0, 'brought up: she rides at anchor while the boats are away (spotwork.ts)');
   assert.ok(c.last('seafinds')?.busy || !findById(game, f.id), 'the boats are at the sinking boat');
   void findsOf;
 });

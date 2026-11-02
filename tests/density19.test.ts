@@ -281,7 +281,7 @@ test('D5: within reach and hove to; at most two of hers at a time in quiet saili
   ship.state.x = f.x - FIND_REACH.bottle + 20;
   ship.state.y = f.y;
   ship.state.speed = 8;
-  assert.match(startFind(game, s, f.id)!, /Shorten sail/);
+  assert.equal(startFind(game, s, f.id), null, 'at way: the boats go at once, she is brought up (owner, 2026-11-02, spotwork.ts)');
   // The bar's button.
   const acts = buildActs({ find: { id: f.id, kind: 'bottle' } });
   assert.equal(acts[0].id, 'find');

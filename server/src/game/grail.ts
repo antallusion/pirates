@@ -148,8 +148,7 @@ export function startDig(game: Game, s: PlayerSession): string | null {
   if (!ship || !p || ship.docked) return 'Put to sea first.';
   if (foundThis(game, p)) return 'You have found this season’s Grail already.';
   if (ship.boarding || ship.landing) return 'Not now';
-  if (ship.state.speed > 2.5) return 'Heave to first — the boats cannot be lowered at speed';
-  if (ship.input.sailTarget > 0) return 'Furl the sails first: the diggers row ashore from a ship at rest.';
+  // (no «heave to», no «furl the sails»: she is brought up at once and held while they dig — spotwork.ts, 2026-11-02)
   const G = st(game);
   if (G.digs.has(s.accountId)) return 'The boats are digging already.';
   if ((G.wait.get(s.accountId) ?? 0) > game.now) return 'The diggers are still resting from the last hole.';
@@ -160,6 +159,19 @@ export function startDig(game: Game, s: PlayerSession): string | null {
   game.toastShip(ship, `The boats go ashore with spades for the Grail (${GRAIL_DIG_SECS}s).`, 'info');
   sendPuzzle(game, s);
   return null;
+}
+
+/** Her diggers at the Grail (spotwork.ts): when they are done. */
+export function grailDig(game: Game, account: number): { until: number } | null {
+  const d = st(game).digs.get(account);
+  return d ? { until: d.until } : null;
+}
+
+/** The diggers called back by her own hand (spotwork.ts): no hole, no wait. */
+export function cancelGrailDig(game: Game, s: PlayerSession): void {
+  if (!st(game).digs.delete(s.accountId)) return;
+  if (s.ship) game.toastShip(s.ship, 'The diggers are recalled before the hole is deep enough.', 'bad');
+  sendPuzzle(game, s);
 }
 
 /** Every second: the diggers at work (recalled when she sails), and what they turn up. */
