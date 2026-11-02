@@ -81,9 +81,11 @@ import { Toasts } from './kit/toast.ts'; // docs/23 phase 1
 import { TOAST } from './kit/tokens.ts';
 import { escortBars, escortKey, escortRowHtml, holdKey, holdRowHtml } from './escortbars.ts'; // forum 2026-10-30: the hold's bar, the escorts' bars
 import { SpotClock } from './spotclock.ts'; // owner, 2026-11-02: the work at a spot's countdown
+import { BoatsClock } from './boatsclock.ts'; // owner, 2026-11-02: «Шлюпы с острова» under way
 import { avatar } from './kit/avatar.ts'; // her face in its ring (docs/32 §12: her frame), shared/src/data/portraitfit.ts
 import { captainDot } from './capmenu.ts'; // seaux: the bead is news not yet seen
 import { drawWrecksMini } from '../render/castaways.ts'; // seaux: her wreckage and castaways on the chart
+import { drawBoatsMini } from '../render/isleboats.ts'; // «Шлюпы с острова» (owner, 2026-11-02)
 import { fxList, fxRowHtml, fxRowLabel, noteFx } from './fxrow.ts'; // forum 45: the effects by her portrait
 
 const L = dict(EN, RU);
@@ -386,6 +388,7 @@ export class Hud {
   /** «Прервать» on the work at a spot's countdown (owner, 2026-11-02, spotclock.ts). */
   onSpotAbort: () => void = () => {};
   private spotClock = new SpotClock(() => this.onSpotAbort());
+  private boatsClock = new BoatsClock();
   /** The key that casts the net (main.ts: the player may rebind it) and whether a haul is being played. */
   castKey = ' (L)';
   hauling = false;
@@ -881,6 +884,7 @@ export class Hud {
     this.drawWorldGoal(state);
     this.drawFishing(state);
     this.spotClock.render(self.dockedAt ? null : self.spot, state.estServerTime(), lang()); // the divers', the boats' countdown
+    this.boatsClock.render(self.boats, state.estServerTime(), lang()); // «Шлюпы с острова» under way
     this.drawHunt(state);
     this.drawRegatta(state);
     this.drawStorm(state);
@@ -1643,6 +1647,7 @@ export class Hud {
     drawFindsMini(g, state, tx, ty, own, range); // the sea's small things (docs/19 D5)
     drawWaysMini(g, state, tx, ty, own, range); // docs/35: the floating waystations
     drawWrecksMini(g, state.wrecks, state.castaways, tx, ty, own, range); // seaux: her wreckage and castaways
+    drawBoatsMini(g, state.self?.boats, state.estServerTime(), tx, ty, own); // «Шлюпы с острова» on their way to her
     drawRoamsMini(g, state, tx, ty, own, range); // the creatures roaming the sea (docs/19 D7)
     drawCitadelsMini(g, state, tx, ty, own, range); // the citadels of the Throne war (docs/19 E4)
     // The dense sea's marks (docs/16 P3): a wreck or bones as a dun speck, a buoy red, a lantern gold. docs/19 D6: twice

@@ -17,6 +17,8 @@ import type { BaseView, ClientMsg } from '../../../shared/src/protocol.ts';
 import { assetUrl } from '../assets.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/h3.ts';
+import { EN as BOATS_EN, RU as BOATS_RU } from '../lang/ui/boats.ts'; // «Шлюпы с острова» (owner, 2026-11-02)
+import { BOATS_ICON } from './boatsclock.ts';
 import { EN as B_EN, RU as B_RU } from '../lang/ui/base.ts';
 import { serverText } from '../lang/server.ts';
 import { boostHtml } from './isleboost.ts'; // speed-ups or doubloons (owner, 2026-10-29)
@@ -41,6 +43,7 @@ import type { LandTownView } from '../../../shared/src/h3proto.ts';
 import { srcAttr } from './srctip.ts'; // «Где взять» (owner, 2026-10-30)
 
 const L = dict(EN, RU);
+const LBT = dict(BOATS_EN, BOATS_RU);
 const B = dict(B_EN, B_RU);
 const LP = dict(LP_EN, LP_RU);
 const V = dict(V_EN, V_RU);
@@ -203,10 +206,12 @@ export function townTab(v: BaseView, state: ClientState, mk: { give: string; get
   const week = `<span class="bmeta tw-week" title="${esc(WEEKS[w.kind].text[ru()])}">${esc(L('week', { n: w.n, d: w.day }))} · <b>${esc(WEEKS[w.kind].name[ru()])}</b></span>`;
   const res = t.res.map((r) => `<span class="bcost" title="${esc(GOODS[r.good].name)}">${icon(`good_${r.good}`, '', 'ico-sm')}${fmt(r.n)}</span>`).join('');
   const dwellings = t.things.filter((x) => (TOWN[x.id].tier && x.level > 0) || x.pen?.nests.some((n) => n.stage === 'grown'));
+  // far from the island at sea (owner, 2026-11-02): the same window loads the island's boats, sent to her by the hall
+  const boatsBtn = !t.near && !state.self?.dockedAt && (t.things.find((x) => x.id === 'hall')?.level ?? 0) > 0 && dwellings.some((x) => TOWN[x.id].tier);
   const head = `<div class="tw-head"><p class="muted">${esc(L('town.head'))}</p><div class="tw-meta">${week}
       <span class="bmeta" title="${esc(L('town.hall', { n: t.hall }))}">${icon('coin', '', 'ico-sm')}${esc(L('town.treasury', { n: fmt(t.treasury) }))}${t.hall ? ` <span class="good">${esc(L('town.hall', { n: fmt(t.hall) }))}</span>` : ''}</span>
       <span class="bmeta">${icon('build_fort', '', 'ico-sm')}${esc(L('town.growth', { n: dec1(t.growthMul).replace(/[.,]0$/, '') }))}</span>
-      <button class="btn btn-small btn-primary" data-trecruit${dwellings.length ? '' : ' disabled'} title="${esc(t.near ? L('town.recruit') : L('town.far'))}">${icon('prof_marine', '', 'ico-sm')}${esc(L('town.recruit'))}</button></div>
+      ${boatsBtn ? `<button class="btn btn-small btn-primary" data-trecruit="boat" title="${esc(LBT('btnTip'))}">${icon(BOATS_ICON, '', 'ico-sm')}${esc(LBT('isleBtn'))}</button>` : `<button class="btn btn-small btn-primary" data-trecruit="isle"${dwellings.length ? '' : ' disabled'} title="${esc(t.near ? L('town.recruit') : L('town.far'))}">${icon('prof_marine', '', 'ico-sm')}${esc(L('town.recruit'))}</button>`}</div>
       <div class="tw-res"><span class="muted">${esc(L('town.res'))}:</span> ${res}</div></div>`;
   // The Grail's card once it is dug up (docs/17 H4).
   const cards = t.things.filter((x) => x.id !== 'dw7' || t.deep || x.level > 0).filter((x) => x.id !== 'grail' || x.level > 0 || !!x.job || state.adv?.grail === 'held').map((x) => card(v, x, gold + Math.max(0, t.treasury), have, t.land?.res)).join(''); // (owner, 2026-10-28: the treasury pays first, then the purse)
@@ -272,10 +277,10 @@ function rateLine(m: Market, mk: { give: string; get: string }): string {
   return `${GOODS[g].name}: ${L('market.rates', { s: dec1(m.sell[g] ?? 0), b: dec1(m.buy[g] ?? 0) })}`;
 }
 
-export function bindTown(root: HTMLElement, send: (m: ClientMsg) => void, mk: { give: string; get: string; n: number }, recruit: () => void, redraw: () => void): void {
+export function bindTown(root: HTMLElement, send: (m: ClientMsg) => void, mk: { give: string; get: string; n: number }, recruit: (src: 'isle' | 'boat') => void, redraw: () => void): void {
   root.querySelectorAll<HTMLElement>('[data-tbuild]').forEach((el) => (el.onclick = () => send({ t: 'h3', action: 'build', id: el.dataset.tbuild as TownId })));
   root.querySelectorAll<HTMLElement>('[data-tlearn]').forEach((el) => (el.onclick = () => send({ t: 'h3', action: 'learn', id: el.dataset.tlearn as OrderId })));
-  root.querySelector<HTMLElement>('[data-trecruit]')?.addEventListener('click', () => recruit());
+  root.querySelector<HTMLElement>('[data-trecruit]')?.addEventListener('click', (e) => recruit((e.currentTarget as HTMLElement).dataset.trecruit === 'boat' ? 'boat' : 'isle'));
   root.querySelectorAll<HTMLElement>('[data-lcraft]').forEach((el) => (el.onclick = () => send({ t: 'h3', action: 'craft', i: Number(el.dataset.lcraft) })));
   root.querySelectorAll<HTMLElement>('[data-lfit]').forEach((el) => (el.onclick = () => send({ t: 'h3', action: 'fit', id: el.dataset.lfit as FittingId })));
   root.querySelectorAll<HTMLElement>('[data-lsell]').forEach((el) => (el.onclick = () => send({ t: 'h3', action: 'sellres', r: el.dataset.lsell as LandRes, n: 10 })));

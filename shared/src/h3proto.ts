@@ -11,6 +11,7 @@ import type { BeastId, LandRes } from './data/bestiary.ts';
 import type { FittingId, LandCost } from './data/landecon.ts';
 import type { ArtForge } from './data/artifacts.ts';
 import type { ForgeCost } from './data/forge.ts';
+import type { BoatsInfo } from './data/islandboats.ts';
 
 /** The sea's calendar: week `n` (from 1), day 1–7 of it, what the week is named for, world seconds to the next. */
 export interface WeekView {
@@ -62,7 +63,8 @@ export interface DwellUp {
 }
 
 export interface DwellView {
-  src: 'port' | 'isle' | 'lair' | 'way';
+  /** 'boat': her island's window from afar, loading the island's boats (owner, 2026-11-02, isleboats.ts). */
+  src: 'port' | 'isle' | 'lair' | 'way' | 'boat';
   place: string;
   rows: DwellRow[];
   ups: DwellUp[];
@@ -84,6 +86,8 @@ export interface DwellView {
   mightMax?: number;
   /** Owner, 2026-10-28 (armyadvice.ts): the best kind to hire here for a weak army (highlighted). */
   best?: UnitId | null;
+  /** The island's boats (src 'boat'): the town hall's load, way, fee and wait (shared/src/data/islandboats.ts). */
+  boat?: BoatsInfo;
 }
 
 export interface MineView {
@@ -180,7 +184,9 @@ export interface LandTownView {
 }
 
 export type H3ClientMsg =
-  | { t: 'h3'; action: 'dwell'; src: 'port' | 'isle' | 'lair' | 'way' }
+  | { t: 'h3'; action: 'dwell'; src: 'port' | 'isle' | 'lair' | 'way' | 'boat' }
+  /** «Отправить шлюпы» (owner, 2026-11-02): the men loaded into the island's boats, sent to her at sea. */
+  | { t: 'h3'; action: 'boats'; picks: { u: UnitId; n: number }[] }
   | { t: 'h3'; action: 'recruit' | 'train'; src: 'port' | 'isle' | 'lair' | 'way'; u: UnitId; n: number; /** train: the stack by its key (shared/src/data/army.ts stackKey) */ k?: string }
   | { t: 'h3'; action: 'build'; id: TownId }
   | { t: 'h3'; action: 'learn'; id: OrderId }

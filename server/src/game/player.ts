@@ -271,6 +271,9 @@ export interface Profile {
   homeAt?: number;
   /** Her last «Переход» between hub ports (ferry.ts), wall ms: the next one an hour after. */
   ferryAt?: number;
+  /** «Шлюпы с острова» (owner, 2026-11-02, isleboats.ts): the trip under way, and the wall clock (ms) of the last one sent. */
+  isleBoats?: import('./isleboats.ts').BoatsRec | null;
+  isleBoatsAt?: number;
   refugees?: number;
   /** Free speed-up tokens for the island's builders (docs/15 item 2): the daily welcome and the daily orders. */
   speedups?: number;

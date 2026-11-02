@@ -196,6 +196,7 @@ import type { DeepZone } from './mind.ts';
 import { CURSE_MORALE, cleanse, curseAura, stepCurse } from './curse.ts';
 import { featureName, findLandable, startLanding, stepLanding } from './exploration.ts';
 import { SPOT_BRAKE_SEC, abortSpot, holdForSpot, spotInput, spotOf, spotSecond } from './spotwork.ts'; // owner, 2026-11-02
+import { boatsView, stepIsleBoats } from './isleboats.ts'; // owner, 2026-11-02: «Шлюпы с острова»
 import { playMinigame, stepMinigames } from './minigames.ts';
 import { playTrek, stepTreks } from './trek.ts';
 import { islesPrompt, islesSecond, payKeeper, recallLookouts, sendIsles } from './isles.ts';
@@ -769,6 +770,7 @@ export class Game {
     stepRoutes(this); // route: the runs to the goals' nearest places, re-targeted (goalroute.ts)
     stepAutosail(this); // the helmsmen at their captains' wheels (docs/16 #36)
     stepVoyage(this, dt); // and the long passages under ×5 (owner, 2026-10-28, passage.ts)
+    stepIsleBoats(this, dt); // «Шлюпы с острова» running her down (owner, 2026-11-02, isleboats.ts)
     stepFerry(this); // a hub's «Переход» brought in at its end (owner, 2026-10-30, ferry.ts)
     stepPursuit(this); // and under «Атаковать» (docs/23 item 33)
     stepAutoFire(this); // the captains' gun crews laying on the mark (docs/23 items 34–35)
@@ -5344,6 +5346,7 @@ export class Game {
     const state = toPrivateState(s, this.now, this.worldView(s));
     state.boosts = boostsView(this, s); // forum 45: the effects' row by her portrait
     state.spot = spotOf(this, s); // owner, 2026-11-02: the work at a spot's countdown (spotwork.ts)
+    state.boats = boatsView(this, s); // owner, 2026-11-02: «Шлюпы с острова» under way (isleboats.ts)
     state.advice = captainAdvice(this, s);
     state.isleFirst = isleFirstView(this, s);
     state.noHire = !!s.ship && noHire(s, state.advice?.best); // owner, 2026-10-29: no hint drives her to hire

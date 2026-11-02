@@ -59,6 +59,7 @@ import { drawFindsWorld } from './seafinds.ts'; // docs/19 D5
 import { drawWaysWorld } from './waystations.ts'; // docs/35
 import { drawRoamsWorld } from './roamers.ts'; // docs/19 D7
 import { drawCastawaysWorld } from './castaways.ts'; // seaux: castaways on a spar, drawn by hand
+import { drawBoatsWorld } from './isleboats.ts'; // «Шлюпы с острова» (owner, 2026-11-02)
 import { addHot, brassRing, drawArt, drawPiece, foam, hot, icePlate, inHot, markRing, piece, shipWater } from './seaart.ts'; // the tokens on the screen: the hover aim keeps off them (owner, 2026-10-07)
 import { drawIsleLevel, drawIsleOver, drawMist, drawTurtles } from './isletype.ts'; // docs/18 III
 import { drawSurfOver, drawSurfUnder, shoreRocks } from './surf.ts'; // the surf on every coast (owner, 2026-10-08)
@@ -619,6 +620,7 @@ export class Renderer {
     drawWaysWorld(g, state, this.advCtx()); // docs/35: the floating waystations
     drawCastawaysWorld(g, state.castaways, state.castawaysAt, state.estServerTime(), { sx: (x) => this.sx(x), sy: (y) => this.sy(y), zoom: this.zoom, time: settings().reduceMotion ? 0 : this.time, w: this.w, h: this.h }); // seaux
     drawRoamsWorld(g, state, this.advCtx()); // the creatures roaming the sea (docs/19 D7)
+    drawBoatsWorld(g, state.self?.boats, state.estServerTime(), state.ownDisplay, { sx: (x) => this.sx(x), sy: (y) => this.sy(y), zoom: this.zoom, time: settings().reduceMotion ? 0 : this.time }); // «Шлюпы с острова»
     // The pirate lairs near her (docs/16 #7): the fort, its guns on the shore, the camp.
     if (this.zoom >= 0.12) {
       const ctx = { sx: (x: number) => this.sx(x), sy: (y: number) => this.sy(y), zoom: this.zoom, time: opt0.reduceMotion ? 0 : this.time, night, w: this.w, h: this.h, fx: this.fx, label: (l: LairView) => lairLabel(l) };

@@ -105,7 +105,8 @@ import { Renderer, shipHeel } from './render/renderer.ts';
 import { ClientState } from './state.ts';
 import { captainBalance, captainShopHeard, showCaptainSelect } from './ui/captain.ts';
 import { renderBoarding, renderHelp, renderShip, renderSunk } from './ui/dialogs.ts';
-import { renderCrew, renderMutiny } from './ui/crew.ts';
+import { crewHooks, renderCrew, renderMutiny } from './ui/crew.ts';
+import { boatsButton } from './ui/boatsclock.ts'; // «Шлюпы с острова» (owner, 2026-11-02)
 import { CompanyScreen, renderBarter } from './ui/company.ts';
 import type { CompanyTab } from './ui/company.ts';
 import { LOG_PAGES } from './ui/logbook.ts';
@@ -627,8 +628,8 @@ const LFC = dict(FC_EN, FC_RU); // freecam: «К кораблю»
 let isleKey = '';
 // The recruit window of the Heroes (docs/17 H3): from a port's tavern and from the island's town.
 const recruitWindow = new RecruitWindow((m) => net.send(m));
-let recruitFrom: 'port' | 'isle' | 'lair' | 'way' = 'port';
-function openRecruit(src: 'port' | 'isle' | 'lair' | 'way'): void {
+let recruitFrom: 'port' | 'isle' | 'lair' | 'way' | 'boat' = 'port';
+function openRecruit(src: 'port' | 'isle' | 'lair' | 'way' | 'boat'): void {
   recruitFrom = src;
   recruitWindow.open(src);
   openModal('recruit');
@@ -903,7 +904,9 @@ advCard.where = (ids) => {
   return pts;
 };
 worldMap.onPuzzle = openPuzzle;
-baseWindow.onRecruit = () => openRecruit('isle');
+baseWindow.onRecruit = (src) => openRecruit(src);
+recruitWindow.onSent = () => closeModal(); // the boats sent: the sea, their pill and their line (owner, 2026-11-02)
+crewHooks.boats = () => openRecruit('boat'); // «Шлюпы с острова» from the crew window (owner, 2026-11-02)
 companyScreen.onBase = () => openBase();
 companyScreen.onGo = () => closeModal();
 companyScreen.onQuests = () => openModal('journal');
@@ -5902,6 +5905,7 @@ function step(t: number): void {
     }
     hud.castKey = touch.enabled ? '' : ` (${keyOfAction('land')})`; // a phone has its button, not a key
     isleBtnFrame();
+    boatsButton(!!state.self && !state.onboarding?.stage && hasIsle() && !state.self.dockedAt, () => openRecruit('boat')); // «Шлюпы с острова» (owner, 2026-11-02)
     homeBtnFrame();
     hud.hauling = netHaul.active;
     hud.update(state, prompt);
