@@ -32,6 +32,9 @@ import { DEAL_OFF, DEAL_POOL, OFFERS, RECRUIT_KINDS, SHOP, unitPacks, worthOf } 
 import type { ShopFamily, ShopGrant, ShopOffer } from './shop.ts';
 import { SHIP_CLASSES } from './ships.ts';
 import { SHIP_BEAST_NAMES } from './shipbeasts.ts';
+import { FACTION_NAMES } from './factionunits.ts';
+import { BOSS_UNIT_NAMES } from './bossunits.ts';
+import { TITAN_NAMES } from './titans.ts';
 import type { ShipClassId } from './ships.ts';
 import { captainLevelFor, levelRange } from './shiplevel.ts';
 import { DATA_RU_FLEET } from '../../../client/src/lang/data.fleet.ru.ts';
@@ -334,8 +337,13 @@ const CAPTAIN_RU: Record<string, Tr> = {
 export const shipName = (c: ShipClassId): Tr => [SHIP_CLASSES[c].name, DATA_RU_FLEET[`ships.SHIP_CLASSES.${c}.name`] ?? DATA_RU_CORE[`ships.SHIP_CLASSES.${c}.name`] ?? SHIP_CLASSES[c].name];
 /** A creature's name (a stack's) in both languages. */
 export function unitNames(u: UnitId): Tr {
-  const p = (PREMIUM_NAMES as Record<string, [string, string, string, string]>)[u] ?? (SHIP_BEAST_NAMES as Record<string, [string, string, string, string]>)[u];
+  // (2026-11-02, «Справочник»: the faction troops, the shore bosses and the titans have their names in their own tables —
+  //  the card showed their ids)
+  const p = (PREMIUM_NAMES as Record<string, [string, string, string, string]>)[u] ?? (SHIP_BEAST_NAMES as Record<string, [string, string, string, string]>)[u]
+    ?? (FACTION_NAMES as Record<string, [string, string, string, string]>)[u];
   if (p) return [p[0], p[1]];
+  const bt = (BOSS_UNIT_NAMES as Record<string, { name: Tr }>)[u] ?? (TITAN_NAMES as Record<string, { name: Tr }>)[u];
+  if (bt) return bt.name;
   const en = (ARMY_EN as Record<string, string>)[`u.${u}`] ?? u;
   return [en, (ARMY_RU as Record<string, string>)[`u.${u}`] ?? en];
 }
