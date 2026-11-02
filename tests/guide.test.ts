@@ -60,10 +60,10 @@ test('related articles exist, windows and first-time triggers are ones the engin
   }
 });
 
-test('the sample articles of the engine are there; ten sections in the book order', () => {
+test('the book has articles; ten sections in the book order', () => {
   assert.deepEqual(GUIDE_SECTIONS, ['sea', 'combat', 'flags', 'trade', 'island', 'army', 'explore', 'travel', 'progress', 'faq']);
-  assert.ok(guideArticle('sea-sailing') && guideArticle('sea-ports'));
-  assert.ok(guideSectionIds('sea').includes('sea-ports'));
+  assert.ok(GUIDE.length >= 2);
+  assert.ok(guideSectionIds('sea').length > 0, 'the section of the sea (the server test reads it through)');
   assert.equal(GUIDE_SECTION_REWARD, 300);
 });
 

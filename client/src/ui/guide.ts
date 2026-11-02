@@ -344,6 +344,7 @@ export class GuideBook {
     const at = this.at;
     el.querySelector<HTMLElement>('.gb-title')!.textContent = L('title');
     el.classList.toggle('gb-reading', at.v === 'article');
+    el.dataset.at = at.v;
     el.querySelector('.gb-back')!.classList.toggle('hidden', at.v === 'home');
     const crumbs: string[] = [`<button type="button" class="gb-crumb" data-ghome>${esc(L('home'))}</button>`];
     if (at.v === 'section') crumbs.push(`<span class="gb-crumb on">${esc(sectionName(at.s))}</span>`);
@@ -484,7 +485,7 @@ export class GuideBook {
     this.close();
     if (sl.show.point) {
       const sel = sl.show.point;
-      setTimeout(() => this.d.point(sel, 4500), 260);
+      setTimeout(() => this.d.point(sel, 6000), 260);
     }
   }
 

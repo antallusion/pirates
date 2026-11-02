@@ -1,6 +1,6 @@
 // «Лоцманская книга»: the first-time tips (2026-11-02). The first time she meets a mechanic — a wreck in reach, her own
 // island, a ship that struck to her, a harbour, a boarding, a treasure map, an overloaded hold, a skull… — a small pill
-// comes at the top edge: «Новое: <статья> — как это работает», «Читать» and ✕. It is not modal (the sea goes on under
+// comes at the top edge (a plate of the HUD's top stack): «Новое: <статья> — как это работает», «Читать» and ✕. It is not modal (the sea goes on under
 // it), hides itself after 8 s, and comes once a trigger an account (the server keeps what was shown: `guide_seen`).
 // Never in a boarding battle, never over a window, never in the First Watch's lessons: it waits for them to end.
 // Only a trigger some article names (GuideArticle.firstTime) shows anything; the content decides which.
@@ -152,9 +152,15 @@ export class GuideTips {
           this.d.read(id);
         }
       });
-      document.body.appendChild(el);
       this.el = el;
     }
+    // a plate of the HUD's top stack when it is on the screen (it lays out with the other plates, never over them);
+    // else at the top edge by itself
+    const stack = document.getElementById('hud-stack');
+    const inStack = !!stack && stack.offsetParent !== null && getComputedStyle(stack).visibility !== 'hidden';
+    const host = inStack ? stack! : document.body;
+    if (this.el.parentElement !== host) host.prepend(this.el);
+    this.el.classList.toggle('in-stack', inStack);
     this.el.innerHTML = `${icon(SECTION_ART[a.section][0], SECTION_ART[a.section][1], 'gt-ico')}<span class="gt-t">${esc(L('tipNew', { title: T(a.title) }))}</span><button type="button" class="gt-read" data-gtr>${esc(L('tipRead'))}</button><button type="button" class="gt-x" data-gtx aria-label="${esc(L('tipClose'))}" title="${esc(L('tipClose'))}">${glyphSvg('close')}</button>`;
     this.el.classList.remove('hidden');
   }

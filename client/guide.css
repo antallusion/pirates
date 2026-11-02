@@ -91,8 +91,8 @@
 .gb-nav:not(:disabled):hover, .gb-nav:focus-visible { border-color: #e0b862; outline: none; box-shadow: 0 0 10px rgba(224, 184, 98, 0.35); }
 .gb-prev { left: 6px; }
 .gb-next { right: 6px; }
-.gb-dots { flex: 0 0 auto; display: flex; justify-content: center; gap: 0; }
-.gb-dot { width: 32px; height: 28px; display: grid; place-items: center; padding: 0; border: 0; background: none; cursor: pointer; }
+.gb-dots { position: absolute; z-index: 2; left: 50%; bottom: 0; transform: translateX(-50%); display: flex; justify-content: center; gap: 0; padding: 0 6px; border-radius: 14px 14px 0 0; background: linear-gradient(180deg, rgba(8, 10, 12, 0), rgba(8, 10, 12, 0.55)); }
+.gb-dot { width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: 0; background: none; cursor: pointer; }
 .gb-dot i { display: block; width: 9px; height: 9px; border-radius: 50%; background: #4a4236; box-shadow: inset 0 0 0 1px #7d6a4a; }
 .gb-dot.on i { background: #e0b862; box-shadow: 0 0 6px rgba(224, 184, 98, 0.6); }
 .gb-side { min-width: 0; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
@@ -132,11 +132,16 @@
   .gb-at { font-size: 18px; }
   .gb-cap { font-size: 14px; line-height: 1.4; }
   .gb-side { gap: 8px; }
-  .gb-dot { height: 24px; }
+  .gb-dot { width: 40px; height: 40px; }
+  /* the head: the book's name at its home, the crumbs (taller, to be tapped) deeper in */
+  #guide-over:not([data-at="home"]) .gb-title { display: none; }
+  #guide-over[data-at="home"] .gb-crumbs { display: none; }
+  .gb-crumbs { flex-wrap: nowrap; }
+  .gb-crumb { min-height: 40px; min-width: 40px; padding: 0 4px; }
+  .gb-crumb.on { display: inline-flex; align-items: center; min-height: 40px; }
 }
 /* the title gives way to the crumbs when the head is short of room */
 @media (max-width: 760px) {
-  .gb-title { display: none; }
   .gb-prog-bar { display: none; }
   .gb-search { min-width: 120px; }
 }
@@ -157,7 +162,7 @@
 .sp-head .g-help { margin-left: 8px; }
 
 /* the first-time tip: a small pill at the top edge, never in the middle */
-#guide-tip { position: fixed; z-index: 58; top: calc(var(--sa-t, 0px) + 6px); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; max-width: min(440px, calc(100vw - 340px)); min-width: 260px;
+#guide-tip { position: fixed; z-index: 58; top: calc(var(--sa-t, 0px) + 6px); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; max-width: min(560px, calc(100vw - 340px)); min-width: 260px;
   padding: 3px 3px 3px 8px; box-sizing: border-box; border: 1px solid #b08d57; border-radius: 22px; background: linear-gradient(180deg, rgba(30, 26, 20, 0.97), rgba(14, 13, 12, 0.97)); box-shadow: 0 0 0 1px #000, 0 6px 18px rgba(0, 0, 0, 0.6);
   color: #f0e6cc; font: 500 12.5px/1.25 Inter, system-ui, sans-serif; animation: gt-in 220ms ease-out; }
 #guide-tip.hidden { display: none; }
@@ -166,7 +171,13 @@
 #guide-tip .gt-read { flex: 0 0 auto; min-height: 40px; padding: 0 14px; border: 1px solid #c9a15a; border-radius: 20px; background: linear-gradient(180deg, #7a5a24, #4a3514); color: #fff1cc; font: 600 13px/1 Inter, sans-serif; cursor: pointer; }
 #guide-tip .gt-x { flex: 0 0 auto; width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; }
 #guide-tip .gt-x .g-svg { width: 16px; height: 16px; stroke: #c9b98f; stroke-width: 2.4; fill: none; }
+/* a phone held sideways: clear of her bars on the left and the dial on the right */
+@media (max-height: 520px) { #guide-tip { max-width: min(380px, calc(100vw - 470px)); min-width: 0; font-size: 12px; } }
 @keyframes gt-in { from { opacity: 0; transform: translate(-50%, -8px); } }
+/* as a plate of the HUD's top stack: in its flow, first, as wide as its words */
+#hud-stack > #guide-tip.in-stack { position: relative !important; top: auto !important; left: auto !important; transform: none !important; order: -40; align-self: center; width: auto !important;
+  max-width: min(560px, 100%) !important; min-width: 0; pointer-events: auto; animation: gt-fade 220ms ease-out; }
+@keyframes gt-fade { from { opacity: 0; } }
 body.reduce-motion #guide-tip { animation: none; }
 @media (prefers-reduced-motion: reduce) { #guide-tip { animation: none; } }
 
