@@ -119,7 +119,7 @@ interface Here {
 }
 
 /** Her island's dwellings, as the tiers they open (tier → the upgraded kind too). */
-function isleDwell(y: Yard): Map<number, boolean> {
+export function isleDwell(y: Yard): Map<number, boolean> {
   const dwell = new Map<number, boolean>();
   for (let t = 1; t <= 7; t++) {
     const L = townLevel(y, dwellingOf(t));
@@ -246,7 +246,7 @@ export function islePay(game: Game, s: PlayerSession, goods: Partial<Record<Good
   return null;
 }
 
-function busy(game: Game, s: PlayerSession): string | null {
+export function busy(game: Game, s: PlayerSession): string | null {
   const ship = s.ship!;
   if (!ship.alive) return 'Not now';
   if (ship.boarding || ship.grappled) return 'Not in the middle of a boarding';
@@ -354,17 +354,26 @@ export function sendAshore(army: readonly ArmyStack[], n: number): ArmyStack[] {
  *  for a higher tier, the picked men's berths, the might cap, a slot for a new stack. The hints ask this first. */
 export function roomFor(s: PlayerSession, u: UnitId): number {
   const ship = s.ship;
+  if (!ship) return 0;
+  return roomIn(ship.army, ship.shipLevel, ship.stats.crewMax, ship.armySlots, u);
+}
+
+/** roomFor over an army as it would stand (the island's boats load several kinds at once: each counted over the ones
+ *  before it, isleboats.ts). */
+export function roomIn(army: readonly ArmyStack[], level: number, crewMax: number, slots: number, u: UnitId): number {
   const d = UNITS[u];
-  if (!ship || !d) return 0;
-  if (ship.shipLevel < TIER_SHIP_LEVEL[d.tier]) return 0;
-  const free = Math.max(0, ship.stats.crewMax - ship.crew);
-  const swap = swapOf(ship.army, d.tier);
-  const picked = d.tier >= PICKED_TIER && !d.titan ? pickedRoom(s) : Infinity;
-  const might = mightRoom(swap ? sansHands(ship.army) : ship.army, u, ship.shipLevel, ship.stats.crewMax, ship.armySlots);
+  if (!d) return 0;
+  if (level < TIER_SHIP_LEVEL[d.tier]) return 0;
+  const crew = army.reduce((a, x) => a + x.n, 0);
+  const free = Math.max(0, crewMax - crew);
+  const swap = swapOf(army, d.tier);
+  const aboard = army.filter((x) => UNITS[x.u].tier >= PICKED_TIER).reduce((a, x) => a + x.n, 0);
+  const picked = d.tier >= PICKED_TIER && !d.titan ? Math.max(0, Math.floor(crewMax * pickedShare(level)) - aboard) : Infinity;
+  const might = mightRoom(swap ? sansHands(army) : army, u, level, crewMax, slots);
   const n = Math.min(free + swap, picked, might);
   if (!(n > 0)) return 0;
-  const after = n > free ? sendAshore(ship.army, n - free) : ship.army;
-  if (!after.some((x) => x.u === u && !x.g) && after.length >= ship.armySlots) return 0;
+  const after = n > free ? sendAshore(army, n - free) : army;
+  if (!after.some((x) => x.u === u && !x.g) && after.length >= slots) return 0;
   return Math.floor(n);
 }
 
@@ -408,10 +417,12 @@ const NAMES: Record<UnitId, string> = {
   ...(Object.fromEntries(TITAN_IDS.map((k) => [k, TITAN_NAMES[k].name[0]])) as Record<TitanId, string>), // docs/19 E10: the titans
 };
 const plural = (u: UnitId, _n: number) => NAMES[u];
+/** The men of a kind, as the toasts name them («marines»). */
+export const menName = (u: UnitId): string => NAMES[u];
 
 /** New men aboard: into their stack, their trade's pool; they bring the morale and the loyalty of the newly signed,
  *  and the veterancy of their tier. */
-function signOn(game: Game, s: PlayerSession, u: UnitId, n: number): void {
+export function signOn(game: Game, s: PlayerSession, u: UnitId, n: number): void {
   const ship = s.ship!;
   const c = s.profile!.company;
   reconcile(game, c, ship.crew);

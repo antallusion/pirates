@@ -167,7 +167,8 @@ export class BaseWindow {
   /** "Sail to defend": the window closes and the HUD's «Now:» points to the raiders (docs/15 item 7). */
   onSail: () => void = () => {};
   /** The town's recruit window (docs/17 H3). */
-  onRecruit: () => void = () => {};
+  /** The town's hire window: lying off the island, or (far at sea) loading its boats (owner, 2026-11-02). */
+  onRecruit: (src: 'isle' | 'boat') => void = () => {};
   /** The fog of war's «Выбрать на карте»: the world map takes a tap on the fog for this scout (owner, 2026-10-17). */
   onScoutPick: (id: string) => void = () => {};
   private scAsked = 0;
@@ -615,7 +616,7 @@ export class BaseWindow {
     root.querySelector<HTMLElement>('[data-bcollect]')?.addEventListener('click', () => this.send({ t: 'base', action: 'collect' }));
     bindScouts(root, this.send, (id) => this.onScoutPick(id)); // the shipyard's «Разведка» (owner, 2026-10-17)
     root.querySelector<HTMLElement>('[data-bbarge]')?.addEventListener('click', () => this.send({ t: 'base', action: 'barge' }));
-    bindTown(root, this.send, this.mk, () => this.onRecruit(), redraw);
+    bindTown(root, this.send, this.mk, (src) => this.onRecruit(src), redraw);
     bindSupply(root, this.send); // docs/18 #32
     root.querySelector<HTMLElement>('[data-bsail]')?.addEventListener('click', () => this.onSail());
     root.querySelector<HTMLElement>('[data-babandon]')?.addEventListener('click', () => void ask(L('abandon_confirm', { name: placeName(v.name), refund: fmt(v.claim.refund), h: 0 })).then((ok) => {

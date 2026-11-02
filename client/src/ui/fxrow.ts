@@ -11,7 +11,7 @@ import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { SF } from '../../../shared/src/protocol.ts';
 import { assetUrl } from '../assets.ts';
-import { dict } from '../i18n.ts';
+import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/fx.ts';
 import { esc, icon } from './dom.ts';
 import { detailAttr } from './detailattr.ts';
@@ -19,6 +19,8 @@ import type { ClientCard } from './detail.ts';
 import type { SpotView } from '../../../shared/src/data/spotwork.ts';
 import { SPOT_ICON, spotClock, spotFrac } from '../../../shared/src/data/spotwork.ts';
 import { spotAnchored, spotPhaseWord, spotTitle } from './spotclock.ts';
+import type { BoatsView } from '../../../shared/src/data/islandboats.ts';
+import { BOATS_ICON, boatsFx } from './boatsclock.ts'; // «Шлюпы с острова» (owner, 2026-11-02)
 
 const L = dict(EN, RU);
 
@@ -59,6 +61,8 @@ export interface FxInput {
     dockedAt?: string | null;
     /** The work at a spot under way (owner, 2026-11-02): first in the row, with its countdown. */
     spot?: SpotView | null;
+    /** «Шлюпы с острова» under way (owner, 2026-11-02): after the work at a spot. */
+    boats?: BoatsView | null;
   };
   you: { flags: number; rudderHp: number; sails: number; sailsMax: number; morale: number; leaks: number } | null;
   /** World time (s) and the wall clock (ms). */
@@ -233,6 +237,8 @@ export function fxList(i: FxInput): Fx[] {
     id: 'spot', icon: SPOT_ICON[sp.kind], bad: false, k: 'spot', name: spotTitle(sp), text: `${spotPhaseWord(sp, now)} · ${spotAnchored()}`,
     left: sp.until - now, frac: 1 - spotFrac(sp, now), n: spotClock(sp.until - now),
   }] : [];
+  const bv = self.boats;
+  if (bv) spot.push({ id: 'boats', icon: BOATS_ICON, bad: false, k: 'boats', ...boatsFx(bv, now, lang() === 'ru') });
   return spot.concat(out.sort((a, b2) => Number(b2.bad) - Number(a.bad) || (a.left === null ? 1 : 0) - (b2.left === null ? 1 : 0) || (b2.left ?? 0) - (a.left ?? 0)));
 }
 

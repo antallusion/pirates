@@ -17,14 +17,16 @@ import { isBeast } from '../../../shared/src/data/bestiary.ts';
 import { isTitan } from '../../../shared/src/data/titans.ts';
 import { titanRecruit } from './titans.ts';
 import { buyFitting, craftArtifact, forgeArtifact, forgeKeep, sellLand } from './landecon.ts';
+import { boatsDwellView, sendBoats } from './isleboats.ts'; // owner, 2026-11-02: «Шлюпы с острова»
 
 export function h3Message(game: Game, s: PlayerSession, msg: H3ClientMsg): void {
   const err = (e: string | null) => {
     if (e) game.sendTo(s, { t: 'toast', msg: e, kind: 'bad' });
   };
   const src = (x: unknown): 'port' | 'isle' | 'lair' | 'way' => (x === 'isle' ? 'isle' : x === 'lair' ? 'lair' : x === 'way' ? 'way' : 'port');
-  const view = (where: 'port' | 'isle' | 'lair' | 'way') => (where === 'lair' ? lairDwellView(game, s) : where === 'way' ? wayDwellView(game, s) : dwellView(game, s, where));
-  const refresh = (where: 'port' | 'isle' | 'lair' | 'way' | null) => {
+  type Where = 'port' | 'isle' | 'lair' | 'way' | 'boat';
+  const view = (where: Where) => (where === 'boat' ? boatsDwellView(game, s) : where === 'lair' ? lairDwellView(game, s) : where === 'way' ? wayDwellView(game, s) : dwellView(game, s, where));
+  const refresh = (where: Where | null) => {
     if (where) game.sendTo(s, { t: 'dwell', view: view(where) });
     if (where !== 'port' && where !== 'way') game.sendTo(s, { t: 'base', view: baseView(game, s) });
     if (s.ship?.docked) game.pushPort(s);
@@ -32,7 +34,11 @@ export function h3Message(game: Game, s: PlayerSession, msg: H3ClientMsg): void 
   };
   switch (msg.action) {
     case 'dwell':
-      return void game.sendTo(s, { t: 'dwell', view: view(src(msg.src)) });
+      return void game.sendTo(s, { t: 'dwell', view: view(msg.src === 'boat' ? 'boat' : src(msg.src)) });
+    case 'boats':
+      // «Отправить шлюпы» (owner, 2026-11-02, isleboats.ts)
+      err(sendBoats(game, s, Array.isArray(msg.picks) ? msg.picks : []));
+      return refresh('boat');
     case 'recruit': {
       // docs/18 II: the creatures of a dwelling flagged over a lair, and of the town's pen.
       const where = src(msg.src), u = String(msg.u) as UnitId, n = Math.trunc(Number(msg.n));

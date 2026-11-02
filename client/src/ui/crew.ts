@@ -17,8 +17,13 @@ import { ask } from './confirm.ts';
 import { dec1, esc, fmt, icon, money, officerIcon } from './dom.ts';
 import { LC, officerName, practiceHtml, woundedHtml } from './crewlife.ts';
 import { armyPanel, wireArmy } from './army.ts';
+import { EN as BOATS_EN, RU as BOATS_RU } from '../lang/ui/boats.ts'; // «Шлюпы с острова» (owner, 2026-11-02)
+import { BOATS_ICON } from './boatsclock.ts';
 
 const L = dict(EN, RU);
+const LBO = dict(BOATS_EN, BOATS_RU);
+/** «Шлюпы с острова» from the crew window (main.ts: her island's hire window in its boats' mode). */
+export const crewHooks: { boats: (() => void) | null } = { boats: null };
 const kb = (a: Action) => keyLabel(settings().keys[a][0] || settings().keys[a][1]);
 
 const stars = (v: number) => '★'.repeat(Math.floor(v)) + (v % 1 >= 0.5 ? '½' : '');
@@ -41,7 +46,8 @@ export function renderCrew(root: HTMLElement, state: ClientState, send: (m: Clie
   const souls = `${total} ${plural(total, L('soul.one'), L('soul.few'), L('soul.many'))}`;
   const tile = (pic: string, label: string, value: string) =>
     `<div class="stat-tile">${icon(pic, '', 'stat-ico')}<span class="stat-l">${esc(label)}</span><b class="stat-v">${value}</b></div>`;
-  root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('title'))}</h2></div><div class="muted">${esc(L('close', { key: kb('crew') }))}</div></div>
+  const boats = !self.dockedAt && self.homeIsle !== null && self.homeIsle !== undefined && !!crewHooks.boats;
+  root.innerHTML = `<div class="modal-head"><div><h2>${esc(L('title'))}</h2></div>${boats ? `<button class="btn btn-small" data-crewboats title="${esc(LBO('btnTip'))}">${icon(BOATS_ICON, '', 'ico-sm')}${esc(LBO('btn'))}</button>` : ''}<div class="muted">${esc(L('close', { key: kb('crew') }))}</div></div>
     <div class="modal-body"><div class="stat-grid four">
       ${tile('stat_crew', L('st.souls'), esc(souls))}
       ${tile('xp', L('st.skill'), `<span class="stars">${stars(c.skill)}</span> ${dec1(c.skill)}`)}
@@ -82,6 +88,7 @@ export function renderCrew(root: HTMLElement, state: ClientState, send: (m: Clie
   const slider = root.querySelector<HTMLInputElement>('#codex')!;
   slider.oninput = () => (root.querySelector('#codex-v')!.textContent = `${slider.value}%`);
   slider.onchange = () => send({ t: 'codex', share: Number(slider.value) });
+  root.querySelector<HTMLElement>('[data-crewboats]')?.addEventListener('click', () => crewHooks.boats?.());
   root.querySelectorAll<HTMLElement>('[data-form]').forEach((el) => (el.onclick = () => send({ t: 'formation', formation: el.dataset.form as 'line' })));
   root.querySelectorAll<HTMLElement>('[data-order]').forEach((el) => (el.onclick = () => send({ t: 'officer', action: 'order', id: el.dataset.order! })));
   root.querySelectorAll<HTMLElement>('[data-fulfil]').forEach((el) => (el.onclick = () => send({ t: 'officer', action: 'fulfil', id: el.dataset.fulfil! })));

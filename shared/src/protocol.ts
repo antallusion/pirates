@@ -778,6 +778,8 @@ export interface PrivateState {
   boosts?: BoostsView;
   /** Owner, 2026-11-02: the work at a spot under way (the divers down, the boats ashore…), its end on the sea's clock. */
   spot?: import('./data/spotwork.ts').SpotView | null;
+  /** «Шлюпы с острова» (owner, 2026-11-02): her island's boats under way to her, on the sea's clock. */
+  boats?: import('./data/islandboats.ts').BoatsView | null;
   /** The captain as a hero (docs/17 H2). */
   hero?: HeroView;
   /** Her glory past the cap, mastery and trials (docs/19 E1–E3): from five levels short of the cap. */

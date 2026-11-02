@@ -1,0 +1,63 @@
+/* «Шлюпы с острова» (owner, 2026-11-02): the hire window's boats' strip (client/src/ui/recruit.ts), the pill of the boats
+   under way in the top stack (boatsclock.ts, the work at a spot's pill's own look — seahud.css #hud-spot), the «⋯» tray's
+   round button. */
+
+/* the hire window: the boats' strip under the army row — the fill bar, the men in them, the total and «Отправить» */
+.rc-boats { margin: 6px 0 8px; padding: 6px 8px; border: 1px solid rgba(232, 196, 106, 0.45); border-radius: 4px; background: rgba(40, 32, 18, 0.45); }
+.rc-boats .rb-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.rc-boats .rb-ico { flex: none; display: inline-flex; }
+.rc-boats .rb-ico .ico-md { width: 26px; height: 26px; object-fit: contain; }
+.rc-boats .rb-load { flex: none; color: var(--gold); font-weight: 600; white-space: nowrap; }
+.rc-boats .rb-bar { flex: 1 1 60px; min-width: 40px; height: 8px; border-radius: 4px; background: rgba(232, 196, 106, 0.16); border: 1px solid rgba(232, 196, 106, 0.35); overflow: hidden; }
+.rc-boats .rb-bar > i { display: block; height: 100%; background: linear-gradient(90deg, #b88a3a, #e8c46a); transition: width 0.2s ease; }
+.rc-boats.full .rb-bar > i { background: linear-gradient(90deg, #8aa04a, #c6d86a); }
+.rc-boats .rb-row { display: flex; align-items: center; gap: 8px; margin-top: 5px; flex-wrap: wrap; }
+.rc-boats .rb-chips { flex: 1 1 auto; display: flex; gap: 5px; flex-wrap: wrap; min-width: 0; align-items: center; }
+.rc-boats .rb-chip { display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px 1px 2px; min-height: 28px; border: 1px solid rgba(232, 196, 106, 0.4); border-radius: 14px;
+  background: rgba(11, 13, 16, 0.6); color: var(--bone); font: 600 12px/1 var(--sans); cursor: pointer; }
+.rc-boats .rb-chip:hover, .rc-boats .rb-chip:focus-visible { border-color: #e8c46a; }
+.rc-boats .rb-face { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+.rc-boats .rb-x { color: var(--fog); margin-left: 2px; }
+.rc-boats .rb-pay { flex: none; display: flex; align-items: center; gap: 6px; margin-left: auto; white-space: nowrap; }
+.rc-boats .rb-send { min-height: 30px; }
+.rc-boats .rb-meta { margin: 4px 0 0; font-size: 11px; }
+.rc-boats .rb-why { margin: 3px 0 0; font-size: 11.5px; }
+.rc-unit .rc-inboat { position: absolute; top: 2px; right: 3px; display: inline-flex; align-items: center; gap: 2px; padding: 0 4px; border-radius: 8px;
+  background: rgba(232, 196, 106, 0.9); color: #1a1208; font: 700 10.5px/16px var(--sans); }
+.rc-unit .rc-inboat .ico-sm { width: 13px; height: 13px; object-fit: contain; }
+.rc-unit.inboat { box-shadow: inset 0 0 0 1px rgba(232, 196, 106, 0.7); }
+.rc-unit { position: relative; }
+@media (max-height: 520px) {
+  .rc-boats { margin: 4px 0 5px; padding: 4px 6px; }
+  .rc-boats .rb-row { margin-top: 3px; }
+  .rc-boats .rb-meta { display: none; }
+  .rc-boats .rb-send { min-height: 28px; padding-top: 3px; padding-bottom: 3px; }
+}
+
+/* the pill of the boats under way: the spot's pill's own look, its distance after the clock */
+#hud-stack > #hud-boats { order: -3; }
+#hud-boats { position: relative; display: flex; align-items: center; gap: 7px; padding: 3px 8px 5px 4px !important; font: 11.5px/1.2 var(--sans); color: var(--bone);
+  border-color: rgba(232, 196, 106, 0.6); --sp-p: 0; }
+#hud-boats.hidden { display: none; }
+#hud-boats .sp-ring { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  background: conic-gradient(#e8c46a calc(var(--sp-p) * 1%), rgba(232, 196, 106, 0.18) 0); }
+#hud-boats .sp-ring > * { width: 20px; height: 20px; border-radius: 50%; background-color: rgba(11, 13, 16, 0.92); object-fit: contain; }
+#hud-boats .sp-t { flex: 0 1 auto; min-width: 0; display: flex; align-items: baseline; gap: 5px; white-space: nowrap; overflow: hidden; }
+#hud-boats .sp-k { color: var(--gold); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+#hud-boats .sp-ph { font-style: normal; color: var(--fog); overflow: hidden; text-overflow: ellipsis; }
+#hud-boats .sp-ph::before { content: '· '; }
+#hud-boats .sp-c { flex: none; min-width: 34px; text-align: right; font: 700 14px/1 var(--sans); color: var(--bone); font-variant-numeric: tabular-nums; }
+#hud-boats .bt-d { flex: none; font: 600 12px/1 var(--sans); color: var(--fog); font-variant-numeric: tabular-nums; white-space: nowrap; }
+#hud-boats .bt-d::before { content: '· '; }
+#hud-boats .sp-bar { position: absolute; left: 4px; right: 4px; bottom: 2px; height: 2px; background: rgba(232, 196, 106, 0.18); border-radius: 1px; overflow: hidden; }
+#hud-boats .sp-bar > i { display: block; height: 100%; width: calc(var(--sp-p) * 1%); background: linear-gradient(90deg, #b88a3a, #e8c46a); }
+body.simple #hud-stack > #hud-boats { align-self: center !important; width: auto !important; max-width: min(420px, 100%) !important; box-sizing: border-box;
+  border: 1px solid rgba(232, 196, 106, 0.55) !important; border-image: none !important; border-radius: 3px !important; background: rgba(11, 13, 16, 0.8); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55); }
+
+/* the «⋯» tray's round button (hudmore.ts MORE_ITEMS #tc-boats) */
+#tc-boats { display: none; }
+#tc-boats.hidden { display: none !important; }
+body.simple.hud-more.more-open #hud #touch > #tc-boats.more-fold:not(.hidden) { display: block; min-width: 0; min-height: 0; padding: 0; pointer-events: auto; }
+body.simple #hud #touch > #tc-boats .tc-boats-l { position: absolute; left: 50%; top: calc(100% + 3px); transform: translateX(-50%); font-size: 9px; line-height: 1; white-space: nowrap;
+  color: var(--bone, #e6dccb); text-shadow: 0 1px 2px #000, 0 0 4px #000; pointer-events: none; }
+body.simple #hud #touch > #tc-boats .k-btn-ico { inset: 19.8% 22% 24.2%; }

@@ -9,6 +9,7 @@ import { LF, scoutName } from './scouts.ts';
 import { drawIslesChart, drawSupplyRoutes, isleFill, isleLegend, zoneHint } from './islemap.ts'; // docs/18 III
 import { socialLegend, drawLfgFlag, drawSignalFlag, lfgLabel, lfgLog, liveSignals, signalName, wireLfgRows, worldGoalsLog } from './social.ts';
 import { icon } from './dom.ts';
+import { drawBoatsMini } from '../render/isleboats.ts'; // «Шлюпы с острова» on the chart
 import { WORLD_SIZE } from '../../../shared/src/constants.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -1413,6 +1414,7 @@ export class WorldMap {
       const dist = d >= 1000 ? RL('dist.km', { n: dec1(d / 1000) }) : RL('dist.m', { n: Math.round(d / 10) * 10 });
       pill = { text: `${named ? placeName(named) : L('course.mark')} · ${dist}`, x: ex, y: ey - Math.max(14, ms * 0.75) };
     }
+    if (own) drawBoatsMini(g, state.self?.boats, state.estServerTime(), tx, ty, own); // «Шлюпы с острова» (owner, 2026-11-02)
     if (wp) {
       const x = tx(wp.x), y = ty(wp.y);
       if (own && !course) {
