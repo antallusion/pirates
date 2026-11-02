@@ -38,7 +38,7 @@ export const SERVICES: Record<ServiceId, ServiceDef> = {
     id: 'crown', name: ['The Crown Admiralty', 'Адмиралтейство Короны'], of: ['of the Crown', 'Короны'], rep: 10, maxWanted: 1,
     enemies: ['confederacy', 'brokers'], friends: ['crown', 'league'],
     quarry: { role: 'merchant', faction: 'brokers', what: ['a smuggler', 'контрабандиста'] },
-    wants: ['gunpowder', 'provisions', 'weapons'], orders: ['intercept', 'hunt', 'deliver', 'patrol'],
+    wants: ['gunpowder', 'salted_fish', 'weapons'] /* (salted fish, not provisions: the ship's stores are not traded — owner, 2026-11-02) */, orders: ['intercept', 'hunt', 'deliver', 'patrol'],
     livery: { field: 6, c1: 3, c2: 1, c3: 5, emblem: 42, hull: 3, sail: 4, lamp: 0 },
   },
   league: {

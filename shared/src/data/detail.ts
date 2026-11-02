@@ -142,18 +142,18 @@ export function goodDetail(id: string, local?: { buy?: number; sell?: number }):
   if (!g) return undefined;
   const rows: DRow[] = [
     { k: ['Category', 'Категория'], v: CAT_NAMES[g.category], icon: 'icon.tab_market' },
-    { k: ['Room, each', 'Место в трюме, шт.'], v: dec(g.volume, 2), icon: 'icon.bt_hold' },
+    { k: ['Room, each', 'Место в трюме, шт.'], v: both((i) => `${dec(g.volume, 3)[i]} ${i ? 'м³' : 'm³'}`), icon: 'icon.bt_hold' },
     { k: ['Weight, each', 'Вес, шт.'], v: dec(g.weight, 2) },
     { k: ['Base price', 'Базовая цена'], v: same(g.basePrice), icon: 'icon.coin' },
   ];
   if (local?.buy) rows.push({ k: ['Bought here at', 'Купить здесь'], v: same(local.buy), icon: 'icon.coin' });
-  if (local?.sell) rows.push({ k: ['Sold here at', 'Продать здесь'], v: same(local.sell), icon: 'icon.coin' });
+  if (local?.sell && !isSupply(id as GoodId)) rows.push({ k: ['Sold here at', 'Продать здесь'], v: same(local.sell), icon: 'icon.coin' });
   if (g.spoilPerHour > 0) rows.push({ k: ['Spoils at sea', 'Портится в море'], v: both((i) => `${dec(g.spoilPerHour * 100, 1)[i]}% / ${i ? 'ч' : 'h'}`), tone: 'down' });
   if (g.danger > 0) rows.push({ k: ['Danger in the hold', 'Опасность в трюме'], v: pct(g.danger), tone: 'down' });
   const notes: TipNote[] = [{ t: ru(`goods.GOODS.${id}.description`, g.description), tone: 'flavor' }];
   const use = USES[id as GoodId];
   if (use) notes.push({ t: use, tone: 'gift' });
-  else if (isSupply(id as GoodId)) notes.push({ t: ['A ship’s supply: every harbour sells it.', 'Судовой припас: продаётся в каждой гавани.'], tone: 'gift' });
+  if (isSupply(id as GoodId)) notes.push({ t: ['A ship’s store: every harbour sells it, none buys it back — it is the voyage’s supply. A twentieth of a trade good’s room; never counted against the overload, the passage or the neutral flag.', 'Судовой припас: продаётся в каждой гавани, но не покупается обратно — это запас для плавания. Занимает в двадцать раз меньше места, чем товар, и не считается ни в перегруз, ни для перехода, ни для нейтрального флага.'], tone: 'gift' });
   if (g.contraband) notes.push({ t: ['Contraband: Crown ports seize it; black markets pay best.', 'Контрабанда: в портах Короны конфискуют, лучше всего платит чёрный рынок.'], tone: 'off' });
   return { name: ru(`goods.GOODS.${id}.name`, g.name), color: CAT_COLOR[g.category], sub: both((i) => `${i ? 'Товар' : 'Trade good'} · ${CAT_NAMES[g.category][i]}`), art: `icon.good_${id}`, fig: 'icon', rows, notes, src: `g:${id}` };
 }

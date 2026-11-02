@@ -194,7 +194,7 @@ test('the opening’s shops counted when already satisfied (after the watch): sa
   assert.equal(stepMoot(s, step('trade'), game, true), null);
   ship.cargo = { sailcloth: 2 };
   assert.equal(stepMoot(s, step('sailcloth'), game, false), null, 'a job’s purchase is not the opening’s lesson');
-  ship.cargo = { provisions: 999, sailcloth: 2, rum: 3 };
+  ship.cargo = { provisions: 100, sailcloth: 2, rum: 3 }; // (100: 5 m³ since 2026-11-02 — the stores are not sold to make room, so not a hold's worth)
   assert.ok(!/aboard/.test(stepMoot(s, step('provisions'), game, true) ?? ''), 'the provisions are the buying’s lesson (owner, 2026-10-21)');
   assert.match(stepMoot(s, step('sailcloth'), game, true)!, /Sailcloth is aboard/);
   assert.match(stepMoot(s, step('trade'), game, true)!, /A good to trade is aboard/);

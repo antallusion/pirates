@@ -13,6 +13,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BERTH_PRICE, BERTHS_CAP, BERTHS_FREE } from '../shared/src/data/berths.ts';
 import { SHIP_CLASSES } from '../shared/src/data/ships.ts';
+import { GOODS } from '../shared/src/data/goods.ts';
 import { headingVec } from '../shared/src/math.ts';
 import { creditPremium } from '../server/src/game/premium.ts';
 import { berthCap, berthFit } from '../server/src/game/shipbuilding.ts';
@@ -141,7 +142,7 @@ test('«Пересесть» into a smaller hull: a hold she cannot take is refu
   ship.crew = ship.stats.crewMax;
   const fit = berthFit(s, p.berths[0].loadout);
   assert.ok(fit.menOver > 0, 'the sloop has fewer hammocks');
-  ship.cargo = { planks: Math.ceil(fit.hold * 1.5) } as never;
+  ship.cargo = { iron: Math.ceil((fit.hold * 1.5) / GOODS.iron.volume) } as never; // (2026-11-02: planks are a store of 0.075 m³ now — a trade good fills the hold)
   c.push({ t: 'berth', action: 'swap', index: 0 });
   assert.match(c.last('toast')!.msg, /Her hold takes \d+: sell or store \d+ more in the warehouse first/);
   assert.equal(ship.loadout.classId, 'brig');

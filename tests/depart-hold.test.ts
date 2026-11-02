@@ -62,7 +62,7 @@ test('the way out leaves a fifth of the hold free: the cargo after the buying is
     if (was < 80) assert.ok(now > was, `${name}: something was bought`);
   }
   // already past 80 %: nothing at all is bought into it
-  const full = harbour({ rum: 85 });
+  const full = harbour({ rum: Math.ceil(85 / GOODS.rum.volume) }); // (85 m³ of rum: 0.55 m³ each since 2026-11-02)
   assert.equal(holdRoom(full), 0);
   assert.deepEqual(departPlan(departOffers(full), 1e6, holdRoom(full)).buy.filter((o) => o.vol(o.n) > 0), []);
   // the room is the free hold less a fifth of the whole
@@ -103,7 +103,7 @@ test('what fills the hold: by the room each good takes, the most first, in her l
     const t = holdMixText(mix, 2).replace(/\s/g, ' ');
     assert.ok(!/[A-Za-z]/.test(t), t);
     assert.ok(t.includes(`${GOODS[mix[0].good].name.toLowerCase()} ${Math.floor(mix[0].n)}`), t);
-    assert.match(t, /ещё 1: \d+ м³/);
+    assert.match(t, /ещё 1: [\d,]+ м³/); // (fractional m³ since 2026-11-02)
     assert.equal(holdMixText([]), 'трюм пуст');
   } finally {
     setLang('en');

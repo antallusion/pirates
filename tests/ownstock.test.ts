@@ -72,7 +72,8 @@ test('the ship’s stores in every harbour: sold without end, at the port’s no
   assert.equal(game.world.ports.filter((pt) => SUPPLY_GOODS.every((g) => goodBuyCheck(game, s, pt, g, 500) === null)).length, game.world.ports.length);
 });
 
-test('no round trip in the stores pays: taken back under the cheapest price of any harbour, the best trader’s mods too', () => {
+// (owner, 2026-11-02: the stores are not sold at all now — the harbour gives nothing for them and refuses the sale)
+test('no round trip in the stores pays: never taken back, whatever the trader’s mods', () => {
   const { game } = makeGame();
   const { c, ship, p } = captain(game, 'Arb Abe');
   // the best trader there is: every buying and selling talent, a licence everywhere
@@ -97,14 +98,14 @@ test('no round trip in the stores pays: taken back under the cheapest price of a
       assert.ok(quoteSell(g, gm, 10, extreme) < quoteBuy(g, gm, 10, extreme), `${pt.id} ${g}: in one port`);
     }
   }
-  // through the market itself: bought and sold back at once, the purse is lighter
+  // through the market itself: bought, and the sale refused — the stores stay aboard, the purse only lighter
   const gold0 = p.gold;
   ship.cargo = {};
   for (const g of SUPPLY_GOODS) {
     c.push({ t: 'trade', good: g, qty: 100 });
     c.push({ t: 'trade', good: g, qty: -100 });
+    assert.equal(ship.cargo[g], 100, `${g}: not sold back`);
   }
-  assert.equal(Object.keys(ship.cargo).filter((g) => SUPPLY_GOODS.includes(g as GoodId)).length, 0, 'all sold back');
   assert.ok(p.gold < gold0 * 1 - 100, `round trip: ${gold0} → ${p.gold}`);
 });
 

@@ -106,6 +106,7 @@ body.simple.touch #hud-captain { pointer-events: auto; cursor: pointer; -webkit-
   border: solid transparent; border-width: 3px 8px; border-image: var(--ui-bar) 24 40 fill / 3px 8px stretch; background: linear-gradient(180deg, #08090b, #15171a); background-clip: padding-box; }
 body:not(.skinned) .cs-bar { border: 1px solid rgba(111, 90, 56, 0.6); border-radius: var(--k-r-round); }
 .cs-bar > i { position: absolute; left: 0; top: 0; bottom: 0; transition: width var(--k-dur-3) var(--k-ease-out); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22); }
+.cs-hold .cs-bar > u.cs-line { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: rgba(240, 212, 142, 0.75); text-decoration: none; pointer-events: none; } /* her hull's overload line (owner, 2026-11-02) */
 .cs-hull .cs-bar > i { background: linear-gradient(180deg, #d27a5f, #8e3326 55%, #5e2219); }
 .cs-crew .cs-bar > i { background: linear-gradient(180deg, #9cc0d4, #46677c 55%, #2f4452); }
 .cs-sails .cs-bar > i { background: linear-gradient(180deg, #e6dfc6, #988f78 55%, #5f5a4c); }

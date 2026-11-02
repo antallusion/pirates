@@ -29,7 +29,7 @@ import { personName } from '../lang/names.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { gunRange } from '../../../shared/src/data/gunnery.ts'; // owner 2026-10-30: +100 m
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
-import { GOODS, isInfStock, stockText } from '../../../shared/src/data/goods.ts';
+import { GOODS, isInfStock, isStore, stockText } from '../../../shared/src/data/goods.ts';
 import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
 import { AMMO, AMMO_IDS, GUNS, MODULES, MOUNTS, SHIP_CLASSES, defaultGunFor } from '../../../shared/src/data/ships.ts';
 import type { ModuleId, MountId, ShipClassId } from '../../../shared/src/data/ships.ts';
@@ -43,7 +43,7 @@ import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import type { ClientState } from '../state.ts';
 import { assetUrl } from '../assets.ts';
-import { dec1, esc, fishIcon, fmt, icon, money, officerIcon, quote, xpBadge } from './dom.ts';
+import { dec1, esc, fishIcon, fmt, icon, m3, money, officerIcon, quote, xpBadge } from './dom.ts';
 import { keyLabel, settings } from '../settings.ts';
 import { OFFICER_DEFS, PROFESSIONS, PROFESSION_DEFS, shareLine } from '../../../shared/src/data/crew.ts';
 import type { Profession } from '../../../shared/src/data/crew.ts';
@@ -263,7 +263,7 @@ export class PortScreen {
     // flag's generic harbour, her flag's (shared/src/data/paintart.ts) — the next one if a file fails to load.
     artVar(root, '--bg-port', harbourArt(port));
     const events = state.events.filter((e) => e.port === port.id).map((e) => `${serverText(e.title)}${e.kind === 'blockade' || e.kind === 'armada' ? L('head.blockade') : e.kind === 'epidemic' ? L('head.epidemic') : ''}`);
-    const figures = `${events.length ? `<span class="w-fig bad" data-hint="${esc(W('port.event', { what: events.join(' · ') }))}" title="${esc(events.join(' · '))}">⚑</span>` : ''}${figure('coin', fmt(self.gold), W('port.purse'), 'gold')}${figure('tab_market', `${vol.toFixed(0)}/${holdMax.toFixed(0)}`, `${W('port.hold', { vol: vol.toFixed(0), max: holdMax.toFixed(0) })}: ${holdMixText(holdMix(self.cargo, state.ownStats))}`)}${figure('stat_crew', String(self.crew), W('port.crew', { n: self.crew }))}${berthCallFigure(state, view.portId)}`;
+    const figures = `${events.length ? `<span class="w-fig bad" data-hint="${esc(W('port.event', { what: events.join(' · ') }))}" title="${esc(events.join(' · '))}">⚑</span>` : ''}${figure('coin', fmt(self.gold), W('port.purse'), 'gold')}${figure('tab_market', `${m3(vol)}/${holdMax.toFixed(0)}`, `${W('port.hold', { vol: m3(vol), max: holdMax.toFixed(0) })}: ${holdMixText(holdMix(self.cargo, state.ownStats))}`)}${figure('stat_crew', String(self.crew), W('port.crew', { n: self.crew }))}${berthCallFigure(state, view.portId)}`;
     const html = `${winHead(placeName(port.name), { crest: `faction_${port.faction}`, sub: `${faction.name} · ${REGIONS[port.region].name}`, figures })}
       <div class="w-frame">${railTabs(main, this.tab, 'ptab')}<div class="w-pane">${chipRow(second, this.tab, 'ptab')}${this.tab === 'quests' ? boardSwitches(view, state, this.qchip) : ''}
       <div class="modal-body w-body port-body" data-page="${this.tab}">${this.body(view, state)}</div></div></div>`;
@@ -390,6 +390,7 @@ export class PortScreen {
       case 'buy':
         return this.send({ t: 'trade', good: d.good as never, qty: this.qty });
       case 'sell':
+        if (isStore(d.good ?? '')) return; // (the ship's stores are not sold)
         return this.send({ t: 'trade', good: d.good as never, qty: -Math.min(this.qty, Math.floor(state.self?.cargo[d.good as never] ?? 0)) || -1 });
       case 'dice_open':
         return this.send({ t: 'dice', action: 'open', stake: Number(d.stake) });
@@ -410,6 +411,7 @@ export class PortScreen {
       case 'pet_buy':
         return this.send({ t: 'pet', action: 'buy', pet: d.pet as never });
       case 'sellall':
+        if (isStore(d.good ?? '')) return;
         return this.send({ t: 'trade', good: d.good as never, qty: -Math.floor(state.self?.cargo[d.good as never] ?? 0) });
       case 'ammo':
         return this.send({ t: 'buy_ammo', ammo: d.ammo as never, qty: Number(d.n) });
@@ -643,6 +645,7 @@ export class PortScreen {
   private market(view: PortView, state: ClientState): string {
     const self = state.self!;
     const portDef = state.ports.find((p) => p.id === view.portId)!;
+    const st = state.ownStats;
     const qtys = [1, 5, 10, 25];
     // The manual list: a finger-wide row a good — its picture, what is aboard, its two prices, «Купить» and «Продать».
     const rows = view.market.map((r) => {
@@ -650,11 +653,13 @@ export class PortScreen {
       const have = Math.floor(self.cargo[r.good] ?? 0);
       const stolen = Math.min(have, self.stolen[r.good] ?? 0);
       const trend = r.trend > 0.03 ? `<span class="up">▲</span>` : r.trend < -0.03 ? `<span class="down">▼</span>` : '';
-      const tags = [view.dealOfDay === r.good ? L('market.dealOfDay') : '', r.legal ? '' : L('market.contraband'), g.spoilPerHour ? L('market.perishable') : '', g.danger > 0.3 ? L('market.dangerous') : '', stolen ? L('market.stolen', { n: stolen }) : ''].filter(Boolean).join(' · ');
-      return `<div class="w-row mk-row${have ? ' have' : ''}" data-good="${r.good}"${detailAttr(`good:${r.good}`, { buy: r.buy, sell: r.sell })} data-hint="${esc(`${g.name}. ${g.description}`)}">${icon(`good_${r.good}`, '', 'w-row-ico')}
+      // (owner, 2026-11-02: the room a unit takes, «0,05 м³/шт»; a ship's store says it is not sold and has no «Продать»)
+      const store = isStore(r.good);
+      const tags = [W('mk.unit', { v: m3(cargoVolume({ [r.good]: 1 }, st?.contrabandVolumeMul ?? 1, st?.materialVolumeMul ?? 1, st?.provisionVolumeMul ?? 1, st?.cursedVolumeMul ?? 1)) }), store ? W('mk.store') : '', view.dealOfDay === r.good ? L('market.dealOfDay') : '', r.legal ? '' : L('market.contraband'), g.spoilPerHour ? L('market.perishable') : '', g.danger > 0.3 ? L('market.dangerous') : '', stolen ? L('market.stolen', { n: stolen }) : ''].filter(Boolean).join(' · ');
+      return `<div class="w-row mk-row${have ? ' have' : ''}${store ? ' mk-store' : ''}" data-good="${r.good}"${detailAttr(`good:${r.good}`, { buy: r.buy, sell: r.sell })} data-hint="${esc(store ? `${g.name}. ${W('mk.storeHint')}` : `${g.name}. ${g.description}`)}">${icon(`good_${r.good}`, '', 'w-row-ico')}
         <span class="w-row-t"><b class="${r.legal ? '' : 'contra'}">${esc(g.name)}</b><small>${esc(have ? (isInfStock(r.stock) ? `${W('mk.have', { n: have })} · ${W('mk.stock', { n: stockText(r.stock) })}` : W('mk.have', { n: have })) : W('mk.stock', { n: stockText(r.stock) }))}${tags ? ` · ${esc(tags)}` : ''}</small></span>
-        <span class="w-row-n" title="${esc(W('mk.priceHint', { buy: r.buy, sell: r.sell }))}">${money(r.buy)}<small>${money(r.sell)}${trend}</small></span>
-        <span class="w-row-b"><button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="buy" data-good="${r.good}" ${r.stock > 0 ? '' : 'disabled'}>${esc(L('btn.buy'))}</button><button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="sell" data-good="${r.good}" ${have ? '' : 'disabled'}>${esc(L('btn.sell'))}</button></span></div>`;
+        <span class="w-row-n" title="${esc(store ? W('mk.storeHint') : W('mk.priceHint', { buy: r.buy, sell: r.sell }))}">${money(r.buy)}<small>${store ? '—' : `${money(r.sell)}${trend}`}</small></span>
+        <span class="w-row-b"><button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="buy" data-good="${r.good}" ${r.stock > 0 ? '' : 'disabled'}>${esc(L('btn.buy'))}</button>${store ? `<button type="button" class="k-btn k-btn--secondary k-btn--md mk-nosell" disabled title="${esc(W('mk.storeHint'))}" aria-label="${esc(W('mk.storeHint'))}">${esc(W('mk.storeBtn'))}</button>` : `<button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="sell" data-good="${r.good}" ${have ? '' : 'disabled'}>${esc(L('btn.sell'))}</button>`}</span></div>`;
     }).join('');
     // How many a «Купить» moves: one chip that steps 1 → 5 → 10 → 25 (one target, not four).
     const next = qtys[(qtys.indexOf(this.qty) + 1) % qtys.length] ?? 1;
@@ -670,9 +675,8 @@ export class PortScreen {
         ${(Object.keys(self.cargo) as (keyof typeof GOODS)[]).filter((g) => GOODS[g].contraband && (self.cargo[g] ?? 0) >= 1).map((g) => `<button class="btn btn-small" data-act="fence" data-good="${g}">${esc(L('fence.sell', { n: Math.floor(self.cargo[g] ?? 0), good: GOODS[g].name }))}</button>`).join(' ') || `<span class="muted">${esc(L('fence.nothing'))}</span>`}</div>` : '';
     const note = view.duty || portDef.blackMarket ? `<p class="muted mk-note">${view.duty ? L('market.duty', { pct: Math.round(view.duty * 100) }) : ''} ${portDef.blackMarket ? esc(L('market.blackMarket')) : ''}</p>` : '';
     // what fills her hold, the most first (owner, 2026-10-19: «не понимаю как я забиваю корабль и чем»)
-    const st = state.ownStats;
     const used = cargoVolume(self.cargo, st?.contrabandVolumeMul ?? 1, st?.materialVolumeMul ?? 1, st?.provisionVolumeMul ?? 1, st?.cursedVolumeMul ?? 1);
-    const mix = `<p class="muted mk-hold">${icon('tab_market', '', 'ico-sm')}${esc(W('port.hold', { vol: used.toFixed(0), max: (st?.holdVolume ?? 0).toFixed(0) }))}: ${esc(holdMixText(holdMix(self.cargo, st)))}</p>`;
+    const mix = `<p class="muted mk-hold">${icon('tab_market', '', 'ico-sm')}${esc(W('port.hold', { vol: m3(used), max: (st?.holdVolume ?? 0).toFixed(0) }))}: ${esc(holdMixText(holdMix(self.cargo, st)))}</p>`;
     return `${this.quick(view, state, ['sell', 'supplies', 'repair', 'hire'])}${questBuyCards(view)}
       <div class="mk-head">${sec(W('mk.goods'))}${by}</div>${mix}${note}${priceClockHtml(view.priceLeft)}
       <div class="mk-list">${rows}</div>
@@ -1036,7 +1040,7 @@ ${orders}${berths}</div>` : ''}`;
           acts: o.mine ? `<button class="btn btn-small" data-act="order_cancel" data-id="${esc(o.id)}">${esc(L('btn.cancel'))}</button>` : `<button class="btn btn-small btn-primary" data-act="order_fill" data-id="${esc(o.id)}" data-n="${n}" ${n ? '' : 'disabled'}>${esc(L('order.sell', { n: n || '' }).trim())}</button>`,
         });
       }).join('');
-      const goodsOpts = view.market.map((r) => `<option value="${r.good}">${esc(GOODS[r.good].name)} (~${r.sell})</option>`).join('');
+      const goodsOpts = view.market.filter((r) => !isStore(r.good)).map((r) => `<option value="${r.good}">${esc(GOODS[r.good].name)} (~${r.sell})</option>`).join('');
       body = `<div class="card"><h4 class="card-h">${icon('tab_board', '', 'ico-md')}${esc(L('orders.title'))}</h4><p class="muted">${esc(L('orders.text'))}</p>
           ${orders ? `<div class="lr-list">${orders}</div>` : `<p class="muted">${esc(L('orders.none'))}</p>`}
           <div class="form-grid xch-form"><label class="fg-wide">${esc(L('th.goods'))}<select id="ord-good">${goodsOpts}</select></label><label>${esc(L('orders.qty'))}<input id="ord-qty" type="number" min="1" max="200" value="20"></label><label>${esc(L('orders.price'))}<input id="ord-price" type="number" min="1" value="20"></label><button class="btn btn-primary fg-wide" data-act="order_post">${esc(L('orders.post'))}</button></div></div>`;

@@ -3,9 +3,9 @@
 import { detailAttr } from './detailattr.ts'; // the detail card (owner, 2026-10-30)
 import { mountFallen } from './waystation.ts'; // docs/35
 import { bindCompanion, bottleCard, chestCard, companionCard, petsCard } from './companion.ts';
-import { GOODS } from '../../../shared/src/data/goods.ts';
+import { GOODS, isStore } from '../../../shared/src/data/goods.ts';
 import { ask, askHtml } from './confirm.ts';
-import { holdFill } from '../../../shared/src/data/overload.ts'; // forum 2026-10-30: the overload, the jettison's hold after
+import { holdFill, holdTotal } from '../../../shared/src/data/overload.ts'; // forum 2026-10-30: the overload, the jettison's hold after
 import { placeName } from './maps.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { AMMO_IDS, AMMO, KEYED_AMMO, SHIP_CLASSES, GUNS, FLEET_LISTS } from '../../../shared/src/data/ships.ts';
@@ -22,7 +22,7 @@ import { cargoVolume, gunCrewFactor, handsSpeedMul, tx } from '../../../shared/s
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import type { ClientState } from '../state.ts';
 import { assetUrl } from '../assets.ts';
-import { dec1, dec2, esc, fmt, icon, money, xpBadge } from './dom.ts';
+import { dec1, dec2, esc, fmt, icon, m3, money, xpBadge } from './dom.ts';
 import { bindColours, coloursCard } from './flags.ts'; // docs/24 C1, D1
 import { trophyCard } from './surrender.ts';
 import { giftLine } from './premium.ts'; // a premium hull's gift (docs/02 §1.A.9)
@@ -234,14 +234,14 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
       ${tile('insurance', L('ship.insurance'), esc(self.insured ? L('ship.insured') : L('ship.none')))}
     </div>
     <div class="cols" style="margin-top:12px"><div>
-      <h3 class="title-sm" style="font-size:20px">${esc(L('ship.hold'))} <small class="muted">${dec1(used)} / ${st.holdVolume.toFixed(0)}</small>${self.hold?.over ? ` <small class="ship-over">${esc(L('ship.overHold', { at: self.hold.at, n: self.hold.slow }))}</small>` : ''}</h3>
+      <h3 class="title-sm" style="font-size:20px">${esc(L('ship.hold'))} <small class="muted">${m3(used)} / ${st.holdVolume.toFixed(0)}</small>${self.hold?.over ? ` <small class="ship-over">${esc(L('ship.overHold', { at: self.hold.at, n: self.hold.slow }))}</small>` : ''}</h3>
       <div class="hold-fill" title="${esc(holdMixText(holdMix(self.cargo, st), 99))}">${holdMix(self.cargo, st).map((p) => `<i class="hf-${p.good}" style="width:${Math.max(0.5, (p.vol / Math.max(1, st.holdVolume)) * 100).toFixed(1)}%" title="${esc(GOODS[p.good].name)}"></i>`).join('')}</div>
       <div class="cargo-list${hasSale ? ' has-sale' : ''}${self.dockedAt ? '' : ' has-dump'}">${cargo.map(([g, n, v]) => {
         const a = self.appraisal?.[g as GoodId];
         const where = a ? state.ports.find((p) => p.id === a.port)?.name ?? a.port : '';
         const good = GOODS[g as GoodId];
         return `<div class="cargo-row"${detailAttr(`good:${g}`, { sell: a?.price })}>${icon(`good_${g}`, '', 'item-ico')}
-          <div class="item-text"><b class="${good.contraband ? 'contra' : ''}">${esc(good.name)}</b><span class="muted">${esc(L('ship.volume'))} ${dec1(v)} (${Math.round((v / Math.max(1, st.holdVolume)) * 100)}%) · ${esc(L('ship.weight'))} ${dec1((n ?? 0) * good.weight)}${a ? ` · ${esc(where)}` : ''}</span></div>
+          <div class="item-text"><b class="${good.contraband ? 'contra' : ''}">${esc(good.name)}</b><span class="muted">${esc(L('ship.volume'))} ${m3(v)} (${Math.round((v / Math.max(1, st.holdVolume)) * 100)}%) · ${esc(L('ship.weight'))} ${dec1((n ?? 0) * good.weight)}${a ? ` · ${esc(where)}` : ''}</span></div>
           <b class="cargo-qty">×${Math.floor(n ?? 0)}</b>
           ${hasSale ? `<span class="cargo-sale">${a ? money(a.price * Math.floor(n ?? 0)) : ''}</span>` : ''}
           ${self.dockedAt ? '' : `<button class="btn btn-small btn-danger" data-dump="${g}" title="${esc(L('ship.overboard'))}">⤓</button>`}</div>`;
@@ -270,11 +270,14 @@ export function renderShip(root: HTMLElement, state: ClientState, send?: (m: Cli
  *  any captain may fish up (server Game.ts dumpNow). Resolves the count, 0 for «no». */
 export function askJettison(g: GoodId, have: number, cargo: Cargo, st: NonNullable<ClientState['ownStats']>): Promise<number> {
   const good = GOODS[g];
-  const pctAfter = (k: number) => Math.floor(holdFill({ ...cargo, [g]: Math.max(0, (cargo[g] ?? 0) - k) }, st) * 100 + 1e-6);
-  const now = Math.floor(holdFill(cargo, st) * 100 + 1e-6);
+  // (the hold's share as the overload reckons it — the trade goods; a ship's store moves the whole hold's: owner, 2026-11-02)
+  const fill = isStore(g) ? holdTotal : holdFill;
+  const pctAfter = (k: number) => Math.floor(fill({ ...cargo, [g]: Math.max(0, (cargo[g] ?? 0) - k) }, st) * 100 + 1e-6);
+  const now = Math.floor(fill(cargo, st) * 100 + 1e-6);
+  const unit = cargoVolume({ [g]: 1 }, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
   let n = have;
   const body = `<div class="jet"><h3 class="jet-h" id="confirm-text">${esc(L('ship.jetTitle'))}</h3>
-    <div class="jet-good">${icon(`good_${g}`, '', 'item-ico')}<b>${esc(good.name)}</b><span class="muted">${esc(L('ship.jetHave', { n: have }))}</span></div>
+    <div class="jet-good">${icon(`good_${g}`, '', 'item-ico')}<b>${esc(good.name)}</b><span class="muted">${esc(L('ship.jetHave', { n: have, v: m3(unit) }))}</span></div>
     <div class="jet-n"><input type="range" id="jet-r" min="1" max="${have}" step="1" value="${have}" aria-label="${esc(good.name)}" /><input type="number" id="jet-v" min="1" max="${have}" step="1" value="${have}" inputmode="numeric" aria-label="${esc(good.name)}" /></div>
     <div class="jet-q">${[[0.25, '¼'], [0.5, '½'], [1, L('ship.jetAll')]].map(([f, t]) => `<button type="button" class="btn btn-small" data-jq="${f}">${esc(String(t))}</button>`).join('')}</div>
     <p class="jet-after" id="jet-after">${esc(L('ship.jetHold', { a: now, b: pctAfter(have) }))}</p>

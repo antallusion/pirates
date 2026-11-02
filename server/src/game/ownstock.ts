@@ -5,7 +5,7 @@
 // The port's market (economy.ts) stays the world's: its production and consumption, the NPC merchants, the events. A
 // captain trades against her own copy of it:
 //   • the ship's stores (SUPPLY_GOODS: provisions, sailcloth, planks) — without end, at the port's normal price (its
-//     price at the stock it was made with, the events' shock on it), flat; taken back at SUPPLY_BUYBACK of the base;
+//     price at the stock it was made with, the events' shock on it), flat; never taken back (goods.ts isStore: the stores are not sold);
 //   • every other good — her own stock, in «her units»: the port's market magnified so its normal stock is at least
 //     STOCK_FLOOR (×k, k = max(1, 100 / base); the price — target/stock — is the port's own at the same share). Never
 //     below STOCK_FLOOR: bought down to it, it is topped up at once (and the price walks no further). Above it, it goes

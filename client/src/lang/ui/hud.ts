@@ -228,9 +228,9 @@ export const EN = {
   "i1.own": "under construction: {t} left",
   // forum 2026-10-30 (Нефигугум): the hold's bar, the overload, the escorts' bars
   holdOver: 'OVERLOAD',
-  holdT: 'Hold: {used} of {max} m³ ({pct}%). Overloaded from {at}%.',
-  holdOverT: 'Overloaded: speed −{n}%. From {at}% of the hold this hull slows. Sell or jettison cargo.',
-  holdToast: 'OVERLOAD: the hold is {pct}% full, speed −{n}%. Jettison or sell cargo to lighten her.',
+  holdT: 'Trade goods: {used} of {max} m³ ({pct}%), the ship’s stores {stores} m³ besides (they never count). Overloaded from {at}%.',
+  holdOverT: 'Overloaded: speed −{n}%. From {at}% of the hold in trade goods this hull slows. Sell or jettison cargo.',
+  holdToast: 'OVERLOAD: trade goods fill {pct}% of the hold, speed −{n}%. Jettison or sell cargo to lighten her.',
   escT: '{name}: hull {hull}%{crew}. Tap: look at her.',
   escCrew: ', crew {n}%',
   escMore: '+{n}',
@@ -239,9 +239,9 @@ export const EN = {
 
 export const RU: Record<keyof typeof EN, string> = {
   holdOver: 'ПЕРЕГРУЗ',
-  holdT: 'Трюм: {used} из {max} м³ ({pct}%). Перегруз с {at}%.',
-  holdOverT: 'Перегруз: скорость −{n}%. С {at}% трюма этот корпус теряет ход. Продайте или сбросьте груз.',
-  holdToast: 'ПЕРЕГРУЗ: трюм заполнен на {pct}%, скорость −{n}%. Сбросьте или продайте груз, чтобы облегчить корабль.',
+  holdT: 'Товары: {used} из {max} м³ ({pct}%), судовые припасы ещё {stores} м³ (не в счёт). Перегруз с {at}%.',
+  holdOverT: 'Перегруз: скорость −{n}%. Когда товары занимают {at}% трюма, этот корпус теряет ход. Продайте или сбросьте груз.',
+  holdToast: 'ПЕРЕГРУЗ: товары занимают {pct}% трюма, скорость −{n}%. Сбросьте или продайте груз, чтобы облегчить корабль.',
   escT: '{name}: корпус {hull}%{crew}. Нажмите, чтобы посмотреть на него.',
   escCrew: ', команда {n}%',
   escMore: '+{n}',

@@ -375,7 +375,7 @@ export const PLOTS: Plot[] = [
     ],
   },
   {
-    id: 'supply', category: 'delivery', steps: ['deliver2', 'home'], goods: ['provisions', 'timber', 'iron', 'coal', 'medicine', 'sailcloth'], level: 1, pay: 320, xp: 160, flavors: [
+    id: 'supply', category: 'delivery', steps: ['deliver2', 'home'], goods: ['salted_fish', 'timber', 'iron', 'coal', 'medicine', 'tar'], level: 1, pay: 320, xp: 160, flavors: [
       F('harbour_master', 'Short in {port2}', 'Нехватка в порту {port2}', '{port2} runs short of {good}. Buy it where you will; {giver} pays well for the kindness.', 'В порту {port2} кончается {good}. Купите где угодно — {giver} хорошо заплатит за услугу.'),
       F('shipwright', 'Timber and Iron', 'Лес и железо', 'The yard at {port2} stands idle for want of {good}. {giver} vouches for the price.', 'Верфь в порту {port2} стоит без дела: нет товара «{good}». {giver} ручается за цену.'),
       F('apothecary', 'Before the Fever', 'Пока не пришла лихорадка', 'Word from {port2}: they need {good} before the fever season. {giver} asks you to go.', 'Весть из порта {port2}: там нужен товар «{good}» до сезона лихорадки. {giver} просит вас сходить.'),
@@ -402,7 +402,7 @@ export const PLOTS: Plot[] = [
     ],
   },
   {
-    id: 'outpost', category: 'delivery', steps: ['deliver2', 'land_site', 'home'], goods: ['provisions', 'rum', 'medicine'], site: 'people', level: 4, pay: 380, xp: 260, flavors: [
+    id: 'outpost', category: 'delivery', steps: ['deliver2', 'land_site', 'home'], goods: ['salted_fish', 'rum', 'medicine'], site: 'people', level: 4, pay: 380, xp: 260, flavors: [
       F('fishwife', 'The Hamlet\'s Winter', 'Зима в посёлке', 'The folk at the {site} on {island} will not last the winter. Bring {good} to {port2} and row it ashore.', 'Люди у места «{site}» на острове {island} не переживут зиму. Доставьте товар «{good}» в порт {port2} и отвезите на берег.'),
       F('priest', 'The Forgotten Shore', 'Забытый берег', '{giver} remembers the people at the {site} on {island}. Nobody else does.', '{giver} помнит людей у места «{site}» на острове {island}. Больше их не помнит никто.'),
       F('old_salt', 'Old Friends', 'Старые друзья', '{giver} has friends at the {site} on {island}. Take them something from {port2}.', 'У моряка ({giver}) друзья у места «{site}» на острове {island}. Отвезите им что-нибудь из порта {port2}.'),

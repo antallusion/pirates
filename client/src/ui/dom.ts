@@ -27,6 +27,15 @@ export function dec1(n: number): string {
   return lang() === 'ru' ? s.replace('.', ',') : s;
 }
 
+/** A hold's room in m³ as the fractional volume table wants it (owner, 2026-11-02): «0,05», «0,4», «1,3», «12,5», «140» —
+ *  no more decimals than it has (at most three below 1, one below 100, none above), a comma in Russian. */
+export function m3(n: number): string {
+  const a = Math.abs(n);
+  const d = a >= 100 ? 0 : a >= 1 ? 1 : a >= 0.1 ? 2 : 3;
+  const s = String(Math.round(n * 10 ** d) / 10 ** d);
+  return lang() === 'ru' ? s.replace('.', ',') : s;
+}
+
 /** A number with two decimals (a multiplier): 1.40 in English, 1,40 in Russian. */
 export function dec2(n: number): string {
   const s = n.toFixed(2);

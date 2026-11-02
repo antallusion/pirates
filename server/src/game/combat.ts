@@ -23,6 +23,7 @@ import { gunCrewFactor, tx as tval } from '../../../shared/src/sim/shipstats.ts'
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import { crueltyMul, inDuel, legalTarget, neutral, onPlayerAttack, pvpBlocked } from './pvp.ts';
+import { havenBlocked } from './ferry.ts'; // forum post 49: «Тихая гавань» by the ferry hubs
 import { markPvp } from './colours.ts';
 import { PEACE_SAY, skullFor, wrongBrethren } from './flaglaw.ts'; // forum 34: the three flags
 import { sameGroup } from './party.ts';
@@ -559,6 +560,9 @@ export function damageBlocked(game: Game, a: ShipEntity | null, b: ShipEntity): 
   const pv = pvpBlocked(game, a, b);
   if (pv === 'duel_ok') return null;
   if (pv) return pv;
+  // «Тихая гавань» (forum post 49, 2026-11-02): no captain attacks another by a ferry hub (ferry.ts)
+  const haven = havenBlocked(game, a, b);
+  if (haven) return haven;
   if (b.protectedUntil > game.now) return 'protected';
   if (regattaBlocked(a, b)) return 'No firing in a regatta.'; // equal waters (docs/12 P10 #5)
   if (a.isPlayer && (b.isPlayer || b.caravanId)) {

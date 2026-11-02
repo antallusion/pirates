@@ -2,7 +2,7 @@
 // from stock vs target. Goods only move when a ship (NPC or player) physically carries them, so a sunk
 // convoy literally creates a shortage at its destination. See docs/01_GDD_WORLD_ECONOMY.md §6.
 
-import { GOODS, GOOD_IDS, INF_STOCK, MARKET_ELASTICITY, SUPPLY_BUYBACK, portTrades } from '../../../shared/src/data/goods.ts';
+import { GOODS, GOOD_IDS, INF_STOCK, MARKET_ELASTICITY, isStore, portTrades } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
 import type { MarketRow } from '../../../shared/src/protocol.ts';
@@ -22,8 +22,8 @@ export interface GoodMarket {
   shock: number; // temporary multiplier from world events (1 = none)
   /** The stock the port was made with (createMarket): its normal level, its normal price. */
   base?: number;
-  /** A captain's view of one of the ship's stores (ownstock.ts): stock without end, the port's normal price flat, taken
-   *  back at SUPPLY_BUYBACK of the base price. */
+  /** A captain's view of one of the ship's stores (ownstock.ts): stock without end, the port's normal price flat, never
+   *  taken back (goods.ts isStore: the stores are not sold). */
   flat?: boolean;
   /** A captain's own stock (ownstock.ts): never below this — bought down to it, the harbour tops it up, the price stands. */
   floor?: number;
@@ -118,11 +118,10 @@ export function quoteBuy(good: GoodId, gm: GoodMarket, qty: number, mods: PriceM
   return Math.ceil(total);
 }
 
-/** What a harbour gives for one of its endless stores: SUPPLY_BUYBACK of the base price (the duty off), and never more
- *  than four fifths of what she pays for it here — under any harbour's price, so no round trip pays (docs/31 §13). */
-export function supplyBuyback(good: GoodId, gm: GoodMarket, mods: PriceMods): number {
-  const buy = midPrice(good, gm) * (1 + SPREAD) * mods.buyMul * (mods.goodBuy?.[good] ?? 1);
-  return Math.min(GOODS[good].basePrice * SUPPLY_BUYBACK, buy * 0.8) * (1 - mods.duty);
+/** What a harbour gives for one of its endless stores: nothing — the ship's stores are not sold (owner, 2026-11-02;
+ *  goods.ts isStore). It was 30 % of the base price; every sell path now refuses them before asking a price. */
+export function supplyBuyback(_good: GoodId, _gm: GoodMarket, _mods: PriceMods): number {
+  return 0;
 }
 
 export function quoteSell(good: GoodId, gm: GoodMarket, qty: number, mods: PriceMods): number {
@@ -216,6 +215,7 @@ export function bestRoute(
     for (const id in src.goods) {
       const good = id as GoodId;
       if (GOODS[good].contraband && !to.blackMarket) continue;
+      if (isStore(good)) continue; // (the ship's stores are not traded: owner, 2026-11-02)
       const a = src.goods[good]!;
       const b = dst.goods[good];
       if (!b || a.stock < 10) continue;

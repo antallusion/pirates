@@ -1,7 +1,7 @@
 // In-game HUD: captain, ship condition, combat (ammo, reloads, abilities), navigation (wind, sails),
 // minimap, prompts, toasts, banners and chat.
 
-import { drawHubMark, isFerryHub } from './ferry.ts'; // owner, 2026-10-30: «Переход» hubs
+import { drawHavenRing, drawHubMark, isFerryHub } from './ferry.ts'; // owner, 2026-10-30: «Переход» hubs
 import { artBgAttr, artBgWire } from './artfall.ts';
 import { aimArt } from './artaim.ts';
 import { zoneBossCard } from '../../../shared/src/data/paintart.ts';
@@ -49,7 +49,7 @@ import { bandOf, captainBand, SECTOR_SIZE, sectorIndex } from '../../../shared/s
 import type { SectorData } from '../../../shared/src/protocol.ts';
 import { assetUrl, sprite } from '../assets.ts';
 import type { ClientState } from '../state.ts';
-import { $, bar, dec1, decorateSums, esc, fmt, glyphSvg, icon, knots, pct } from './dom.ts';
+import { $, bar, dec1, decorateSums, esc, fmt, glyphSvg, icon, knots, m3, pct } from './dom.ts';
 import { flagChip, flagMark, shipColours, skullsTip } from './flags.ts'; // docs/24 D2: her colours on the target card
 import { compassKey, objective, questPointer, trackedQuest, waypoint, waypointHooks } from './track.ts';
 import { courseAhead, courseOf } from './course.ts';
@@ -946,7 +946,7 @@ export class Hud {
         ${self.abyss && (self.abyss.inside || self.abyss.pressure > 0) ? `<div class="row" title="${esc(L('pressureTip'))}"><span class="lbl" style="color:${self.abyss.pressure < 60 ? 'var(--fog)' : 'var(--bad)'}">${esc(L('pressure'))}</span><span class="val">${self.abyss.pressure}${self.abyss.shards ? ` · ${esc(L('shards', { n: self.abyss.shards }))}` : ''}</span></div>${bar('sanity', self.abyss.pressure / 100)}` : ''}${you.sanity < 99.5 ? `<div class="row" title="${esc(L('sanityTip'))}"><span class="lbl" style="color:${you.sanity > 50 ? 'var(--fog)' : 'var(--bad)'}">${esc(L('sanity'))}</span><span class="val">${Math.round(you.sanity)} · ${esc(sanityWord(you.sanity))}</span></div>${bar('sanity', you.sanity / 100)}` : ''}
         ${self.company.unrest ? `<div class="row" title="${esc(L('unrestTip'))}"><span class="lbl" style="color:var(--bad)">${esc(L('crew'))}</span><span class="val" style="color:var(--bad)">${esc(sv(self.company.unrest))}</span></div>` : ''}
         ${self.captain === 'drowned' ? `<div class="row" title="${esc(L('dreadTip'))}"><span class="lbl" style="color:var(--turq)">${esc(L('dread'))}</span><span class="val" style="color:var(--turq)">${Math.round(you.dread)}${you.dread >= 80 ? ` · ${esc(L('theCall'))}` : ''}</span></div>${bar('dread', you.dread / 100)}` : ''}
-        <div class="row"><span class="lbl">${icon('tab_market', '', 'ico-xs')}${esc(L('hold'))}</span><span class="val">${vol.toFixed(0)} / ${holdMax.toFixed(0)}${self.cargo.provisions ? ` · ${esc(L('food', { n: Math.floor(self.cargo.provisions) }))}` : ` · <span style="color:var(--bad)">${esc(L('noFood'))}</span>`}${self.hold?.over ? ` · <b style="color:var(--bad)" title="${esc(L('holdOverT', { n: self.hold.slow, at: self.hold.at }))}">${esc(L('holdOver'))} −${self.hold.slow}%</b>` : ''}</span></div>${bar('hold', vol / Math.max(1, holdMax))}${holdMixHtml(holdMix(self.cargo, state.ownStats), vol, holdMax)}
+        <div class="row"><span class="lbl">${icon('tab_market', '', 'ico-xs')}${esc(L('hold'))}</span><span class="val">${m3(vol)} / ${holdMax.toFixed(0)}${self.cargo.provisions ? ` · ${esc(L('food', { n: Math.floor(self.cargo.provisions) }))}` : ` · <span style="color:var(--bad)">${esc(L('noFood'))}</span>`}${self.hold?.over ? ` · <b style="color:var(--bad)" title="${esc(L('holdOverT', { n: self.hold.slow, at: self.hold.at }))}">${esc(L('holdOver'))} −${self.hold.slow}%</b>` : ''}</span></div>${bar('hold', vol / Math.max(1, holdMax))}${holdMixHtml(holdMix(self.cargo, state.ownStats), vol, holdMax)}
         ${self.curse >= 25 ? `<div class="row"><span class="lbl" style="color:var(--turq)">${esc(L('curse'))}</span><span class="val" style="color:var(--turq)">${esc(L('curseStage', { n: self.curse >= 80 ? 3 : self.curse >= 50 ? 2 : 1 }))} · ${self.curse}</span></div>` : ''}
         <div class="row" style="margin-top:4px"><span class="lbl">${icon('wind', '', 'ico-xs')}${esc(keyless(L('sail')))}</span><span class="val">${knots(you.spd)} ${esc(L('kn'))}${you.flags & SF.REPAIRING ? ` · ${esc(L('repairing'))}` : ''}</span></div>
         <div class="sail-steps">${steps}</div>`;
@@ -1750,6 +1750,8 @@ export class Hud {
       g.arc(tx(is.x), ty(is.y), dark ? 3.2 : 2.2, 0, Math.PI * 2);
       g.fill();
     }
+    // «Тихая гавань» (forum post 49): the hubs' quiet water, a faint ring under the marks
+    for (const p of state.ports) if (isFerryHub(p.id) && Math.abs(p.x - own.x) <= range + 1500 && Math.abs(p.y - own.y) <= range + 1500 && !underFog(state.seen, p.x, p.y)) drawHavenRing(g, tx(p.x), ty(p.y), k);
     for (const p of state.ports) {
       if (Math.abs(p.x - own.x) > range || Math.abs(p.y - own.y) > range) continue;
       g.fillStyle = '#e0b862';

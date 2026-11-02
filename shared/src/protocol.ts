@@ -969,9 +969,13 @@ export interface PrivateState {
  *  price, the seconds of her cooldown left, and why she cannot go now (null: she can, silver permitting). */
 export interface FerryView {
   /** `locked`: a hub she has not discovered yet (never visited, under her fog): greyed, no passage. */
-  routes: { to: string; km: number; price: number; locked?: boolean }[];
+  /** `price`: hers (the flag's ×2, the quest's ×0.25); `base`: the plain price; `quest`: the hub nearest an active
+   *  quest's goal («скидка за задание», forum post 49). */
+  routes: { to: string; km: number; price: number; base?: number; quest?: boolean; locked?: boolean }[];
   left: number;
   why: string | null;
+  /** She flies the pirate flag: every price ×2. */
+  pirate?: boolean;
 }
 
 export interface PortInfoView {

@@ -1,16 +1,17 @@
-// «Переход» between hub ports (owner, 2026-10-30; client/src/ui/ferry.ts, server/src/game/ferry.ts).
+// «Переход» between hub ports (owner, 2026-10-30; client/src/ui/ferry.ts, server/src/game/ferry.ts). Forum post 49
+// (2026-11-02): half an hour, softer prices, the pirate flag ×2, a quest's hub ×0.25, «Тихая гавань».
 
 export const EN = {
   tab: 'Passage',
-  tabHint: 'Passage to another hub port: way ×10, for silver, once an hour',
+  tabHint: 'Passage to another hub port: way ×10, for silver, once in half an hour',
   title: 'Passage',
-  text: 'A hub port: from here the ships of the passage take you to another hub at ×10 way. Nobody touches you on the way; you cannot act until you arrive. Once an hour, with the hold at most 60% full.',
+  text: 'A hub port: from here the ships of the passage take you to another hub at ×10 way. Nobody touches you on the way; you cannot act until you arrive. Once in half an hour, with trade goods in at most 60% of the hold (the ship’s stores do not count), no skulls. By every hub lies a quiet harbour: no captain attacks another there.',
   go: 'Go',
   min: '{n} min',
   hmin: '{h} h {m} min',
   km: '{km} km',
   wait: 'The next passage in {t}',
-  ready: 'Ready: one passage, then an hour of waiting',
+  ready: 'Ready: one passage, then half an hour of waiting',
   short: 'Not enough silver',
   card: 'Passage (hub)',
   cardNote: '{n} routes · {lo}–{hi} silver',
@@ -19,19 +20,24 @@ export const EN = {
   done: 'Arrived at {to}: putting in',
   hub: 'Hub of the passage',
   locked: 'Discover this port first',
+  quest: 'quest discount',
+  questT: 'This hub is the nearest to the goal of your quest: a quarter of the price',
+  pirate: 'Under the pirate flag every passage costs double.',
+  haven: 'Quiet harbour',
+  havenT: 'Within 1.5 km of a hub no captain attacks another',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
   tab: 'Переход',
-  tabHint: 'Переход в другой порт-узел: ход ×10, за серебро, раз в час',
+  tabHint: 'Переход в другой порт-узел: ход ×10, за серебро, раз в полчаса',
   title: 'Переход',
-  text: 'Порт-узел: отсюда корабль уходит в другой узел ходом ×10. В пути вас не тронуть, но и сами вы ничего не сделаете до прибытия. Раз в час, трюм — не больше чем на 60%.',
+  text: 'Порт-узел: отсюда корабль уходит в другой узел ходом ×10. В пути вас не тронуть, но и сами вы ничего не сделаете до прибытия. Раз в полчаса, товары — не больше 60% трюма (судовые припасы не в счёт), без черепов. У каждого узла — тихая гавань: там капитаны друг на друга не нападают.',
   go: 'Переход',
   min: '{n} мин',
   hmin: '{h} ч {m} мин',
   km: '{km} км',
   wait: 'Следующий переход через {t}',
-  ready: 'Готово: один переход, потом час ожидания',
+  ready: 'Готово: один переход, потом полчаса ожидания',
   short: 'Не хватает серебра',
   card: 'Переход (узел)',
   cardNote: '{n} направлений · {lo}–{hi} серебра',
@@ -40,4 +46,9 @@ export const RU: Record<keyof typeof EN, string> = {
   done: 'Прибыли в {to}: заходим в порт',
   hub: 'Узел перехода',
   locked: 'Сначала откройте этот порт',
+  quest: 'скидка за задание',
+  questT: 'Этот узел ближе всех к цели вашего задания: четверть цены',
+  pirate: 'Под пиратским флагом любой переход стоит вдвое дороже.',
+  haven: 'Тихая гавань',
+  havenT: 'В 1,5 км от узла капитаны друг на друга не нападают',
 };

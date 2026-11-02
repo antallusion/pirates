@@ -3,7 +3,7 @@
 
 import { FACTIONS, FACTION_IDS, factionRelation } from '../../../shared/src/data/factions.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
-import { GOODS } from '../../../shared/src/data/goods.ts';
+import { GOODS, isStore } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import { PRIZE_COURT } from '../../../shared/src/data/silverpay.ts';
@@ -36,7 +36,7 @@ export function prizeCrewNeeded(a: ShipEntity, b: ShipEntity): number | null {
  *  price. */
 export function prizeValue(prize: ShipEntity, owner: ShipEntity | null): number {
   let v = SHIP_CLASSES[prize.loadout.classId].price * PRIZE_COURT * Math.max(0.2, prize.hull / prize.stats.hullMax);
-  for (const id in prize.cargo) v += (prize.cargo[id as GoodId] ?? 0) * GOODS[id as GoodId].basePrice * 0.5;
+  for (const id in prize.cargo) if (!isStore(id)) v += (prize.cargo[id as GoodId] ?? 0) * GOODS[id as GoodId].basePrice * 0.5; // (her stores: not sold)
   const broker = owner?.rank('trd_prize_broker') ? 1.15 : 1;
   return Math.round(v * broker);
 }

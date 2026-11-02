@@ -6,7 +6,7 @@
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { wantedLevel } from '../../../shared/src/data/factions.ts';
-import { GOODS } from '../../../shared/src/data/goods.ts';
+import { GOODS, STORE_NO_SALE, isStore } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import { dist } from '../../../shared/src/math.ts';
@@ -61,6 +61,7 @@ export function forwardOffers(game: Game, port: Port): Forward[] {
       const g = id as GoodId;
       const gm = m.goods[g]!;
       if (GOODS[g].contraband && portIsLawful(to)) continue;
+      if (isStore(g)) continue; // (the ship's stores are not traded)
       if (list.some((f) => f.good === g)) continue;
       const s = (gm.target - gm.stock) / Math.max(1, gm.target);
       if (s > short) {
@@ -170,6 +171,7 @@ export function postOrder(game: Game, s: PlayerSession, port: Port, good: GoodId
   const p = s.profile!;
   if (!hasExchange(port)) return 'This harbour has no exchange';
   if (!GOODS[good] || !Number.isInteger(qty) || qty < 1 || qty > 200) return 'Bad order';
+  if (isStore(good)) return STORE_NO_SALE;
   if (GOODS[good].contraband && portIsLawful(port)) return 'Lawful exchanges do not list contraband';
   const base = GOODS[good].basePrice;
   if (!Number.isInteger(price) || price < Math.ceil(base * 0.3) || price > Math.floor(base * 3)) return `Price must be between ${Math.ceil(base * 0.3)} and ${Math.floor(base * 3)}`;
@@ -193,6 +195,7 @@ export function fillOrder(game: Game, s: PlayerSession, port: Port, id: string, 
   const o = game.orders.find((x) => x.id === id && x.portId === port.id && !x.closed);
   if (!o) return 'That order is gone';
   if (o.accountId === s.accountId) return 'You cannot fill your own order';
+  if (isStore(o.good)) return STORE_NO_SALE; // (an order from before the stores were withdrawn from sale)
   if (!Number.isInteger(qty) || qty < 1) return 'Bad quantity';
   const have = Math.floor(ship.cargo[o.good] ?? 0);
   const clean = portIsLawful(port) ? Math.max(0, have - Math.ceil(p.stolen[o.good] ?? 0)) : have;

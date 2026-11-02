@@ -5,7 +5,7 @@ import { ITEM_BASES, MODULE_OF_SLOT, SHIP_SLOTS, SLOT_OPENS, gearSource } from '
 import type { Item, ShipSlot } from '../data/items.ts';
 import { CAPTAINS } from '../data/captains.ts';
 import type { CaptainId } from '../data/captains.ts';
-import { GOODS } from '../data/goods.ts';
+import { GOODS, isStore } from '../data/goods.ts';
 import type { GoodId } from '../data/goods.ts';
 import { AMMO, GUNS, MODULES, SHIP_CLASSES } from '../data/ships.ts';
 import type { AmmoId, GunId, ModuleId, MountId, Rig, ShipClassId } from '../data/ships.ts';
@@ -306,6 +306,18 @@ export function cargoVolume(cargo: Cargo, contrabandVolumeMul = 1, materialVolum
     const g = GOODS[id as GoodId];
     const n = cargo[id as GoodId] ?? 0;
     v += n * g.volume * (g.contraband ? contrabandVolumeMul : id === 'planks' || id === 'sailcloth' ? materialVolumeMul : id === 'provisions' ? provisionVolumeMul : 1) * (id === 'cursed_relics' ? cursedVolumeMul : 1);
+  }
+  return v;
+}
+
+/** The hold's TRADE cargo (m³): every good but the ship's stores (goods.ts isStore — provisions, sailcloth, planks).
+ *  The hold's rules reckon this (owner, 2026-11-02): the overload (overload.ts), the ferry's FERRY_HOLD_MAX and the
+ *  neutral flag's NEUTRAL_HOLD_FREE — the stores take their (small) room but never count against them. */
+export function tradeVolume(cargo: Cargo, contrabandVolumeMul = 1, materialVolumeMul = 1, provisionVolumeMul = 1, cursedVolumeMul = 1): number {
+  let v = 0;
+  for (const id in cargo) {
+    if (isStore(id)) continue;
+    v += cargoVolume({ [id]: cargo[id as GoodId] }, contrabandVolumeMul, materialVolumeMul, provisionVolumeMul, cursedVolumeMul);
   }
   return v;
 }

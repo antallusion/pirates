@@ -5,7 +5,7 @@
 import { itemDetailAttr } from './detail.ts'; // the detail card (owner, 2026-10-30)
 import { detailAttr } from './detailattr.ts';
 import { STALL_FEE, STALL_GOODS, STALL_ITEMS } from '../../../shared/src/data/bazaar.ts';
-import { GOODS } from '../../../shared/src/data/goods.ts';
+import { GOODS, isStore } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { SLOT_NAMES, itemName, itemSlot, itemValue } from '../../../shared/src/data/items.ts';
 import type { BazaarStallView, ClientMsg, PortView } from '../../../shared/src/protocol.ts';
@@ -87,7 +87,7 @@ export function bazaarCard(state: ClientState, view: PortView): string {
   let mine = '';
   if (bz.mine) {
     const st = bz.mine;
-    const hold = (Object.keys(self.cargo) as GoodId[]).filter((g) => Math.floor(self.cargo[g] ?? 0) >= 1 && GOODS[g]);
+    const hold = (Object.keys(self.cargo) as GoodId[]).filter((g) => Math.floor(self.cargo[g] ?? 0) >= 1 && GOODS[g] && !isStore(g)); // (the ship's stores are not sold)
     const sell = new Map(view.market.map((r) => [r.good, r.sell]));
     const locker = self.stash.filter((it) => !it.bound);
     mine = `<div class="bz-stall bz-mine"><div class="bz-head"><b>${esc(L('mineTitle'))}</b><span class="muted">${esc(L('sold', { n: st.sold }))} · ${esc(L('days', { n: st.daysLeft }))}</span></div>${lines(st, true)}

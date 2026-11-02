@@ -20,7 +20,7 @@
 // boarding the money back.
 
 import { hullOf, hullsGap } from '../../../shared/src/data/reach.ts';
-import { GOODS } from '../../../shared/src/data/goods.ts';
+import { GOODS, isStore } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { REFUSED_SEC, TALK_COOLDOWN, TALK_R, TRUCE_SEC, TURN_AWAY_SEC, refuseChance, trucePrice } from '../../../shared/src/data/ceasefire.ts';
 import type { CeasefireView, TruceShip } from '../../../shared/src/data/ceasefire.ts';
@@ -126,7 +126,7 @@ export function quote(game: Game, s: PlayerSession, focus?: number): CeasefireVi
 function goodsFor(ship: ShipEntity, goods: readonly GoodId[], owed: number): { take: Cargo; value: number } {
   const take: Cargo = {};
   let value = 0;
-  const list = [...new Set(goods)].filter((g) => GOODS[g] && (ship.cargo[g] ?? 0) >= 1).sort((a, b) => GOODS[b].basePrice - GOODS[a].basePrice);
+  const list = [...new Set(goods)].filter((g) => GOODS[g] && !isStore(g) && (ship.cargo[g] ?? 0) >= 1).sort((a, b) => GOODS[b].basePrice - GOODS[a].basePrice);
   for (const g of list) {
     if (value >= owed) break;
     const per = GOODS[g].basePrice;

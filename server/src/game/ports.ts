@@ -28,7 +28,7 @@ import { sectorAt } from '../../../shared/src/world/sectors.ts';
 import { onEventSale } from './events.ts';
 import { levyFor, noteSale, payLevy, saleMul } from './empires.ts';
 import { seasonStat, shanty } from './seasons.ts';
-import { GOODS, GOOD_IDS } from '../../../shared/src/data/goods.ts';
+import { GOODS, GOOD_IDS, STORE_NO_SALE, isStore } from '../../../shared/src/data/goods.ts';
 import { linked } from '../../../shared/src/data/questgen.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { FACTIONS } from '../../../shared/src/data/factions.ts';
@@ -344,6 +344,8 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
     renownTrade(game, s, port, price); // the flag's deeds, the week's trade (docs/16 #26–27)
     return null;
   }
+  // the ship's stores are never sold (owner, 2026-11-02): no buy-here-sell-there in them
+  if (isStore(good)) return STORE_NO_SALE;
   let n = -qty;
   const have = ship.cargo[good] ?? 0;
   if (have < n) return 'You do not carry that much';
@@ -639,7 +641,7 @@ export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: S
       while (excess > 0 && (ship.cargo[id] ?? 0) > 0) {
         ship.cargo[id]! -= 1;
         excess -= GOODS[id].volume;
-        const back = Math.floor(GOODS[id].basePrice * 0.5);
+        const back = isStore(id) ? 0 : Math.floor(GOODS[id].basePrice * 0.5); // (the stores: not sold, only left)
         p.gold += back;
         dumped += back;
       }
@@ -748,7 +750,7 @@ export function generateContracts(game: Game, port: Port): Contract[] {
       });
       continue;
     }
-    const wants = Object.keys(dest.profile.consumes).filter((g) => !GOODS[g as GoodId].contraband) as GoodId[];
+    const wants = Object.keys(dest.profile.consumes).filter((g) => !GOODS[g as GoodId].contraband && !isStore(g)) as GoodId[]; // (no stores: they are not traded)
     if (!wants.length) continue;
     const good = rng.pick(wants);
     const qty = rng.int(6, 18);

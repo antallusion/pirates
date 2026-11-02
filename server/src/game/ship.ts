@@ -32,7 +32,7 @@ import type { SanityState } from './mind.ts';
 import type { Formation } from './fleet.ts';
 import type { TacBattle } from './tacbattle.ts';
 import type { Rng } from '../../../shared/src/rng.ts';
-import { holdFill, overloadMul } from '../../../shared/src/data/overload.ts'; // forum 2026-10-30: «ПЕРЕГРУЗ»
+import { holdSpeedMul } from '../../../shared/src/data/overload.ts'; // forum 2026-10-30: «ПЕРЕГРУЗ»
 
 /** A captain's sea abilities at work on her ship (docs/25 items 13–41): what the next broadsides carry and when. */
 export interface KitState {
@@ -580,7 +580,7 @@ export class ShipEntity {
 
   /** A captain's hold filled to her hull's line slows her (shared/src/data/overload.ts); the sea's own ships sail as loaded. */
   overloadMul(): number {
-    return this.isPlayer ? overloadMul(this.loadout.classId, holdFill(this.cargo, this.stats)) : 1;
+    return this.isPlayer ? holdSpeedMul(this.loadout.classId, this.cargo, this.stats) : 1;
   }
 
   inCombat(now: number): boolean {

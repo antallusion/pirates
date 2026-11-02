@@ -4,6 +4,7 @@
 // fought for real near her), insured by the League, protected by the law of the waters; the Counting House's place.
 
 import { test } from 'node:test';
+import { GOODS } from '../shared/src/data/goods.ts';
 import assert from 'node:assert/strict';
 import { caravanPatterns } from '../shared/src/data/caravans.ts';
 import { OUTPOST_BUILD } from '../shared/src/data/estate.ts';
@@ -67,7 +68,8 @@ function sail(game: Game, id: string, maxSec: number): void {
 test('a haul caravan brings the outposts’ stores home to the island without its captain, and the hull back to her berth', () => {
   const { game } = makeGame();
   const { s, home, outpost } = estate(game, 'Caravan Cora');
-  outpostById(game, outpost)!.store = { fish: 50 };
+  // (200 fish: 50 m³ since the volume table of 2026-11-02 — more than the bare island's cache of 30 m³)
+  outpostById(game, outpost)!.store = { fish: 200 };
   assert.equal(launchCaravan(game, s, order({ ships: [0], task: 'haul', outposts: [outpost] })), null);
   assert.equal(s.profile!.berths.length, 0, 'the fluyt sails');
   const id = Object.keys(caravans(game))[0];
@@ -77,11 +79,11 @@ test('a haul caravan brings the outposts’ stores home to the island without it
   // The bare island keeps only a small cache: she waits at anchor with the rest until there is room.
   const h = ownIsland(game, s.accountId)!;
   assert.ok(caravanById(game, id), 'at anchor');
-  assert.equal(h.store.fish, 30);
+  assert.equal(h.store.fish, Math.floor(30 / GOODS.fish.volume));
   h.buildings.push({ id: 'warehouse', condition: 1, unpaid: false });
   sail(game, id, 5);
   assert.equal(caravanById(game, id), undefined, 'home');
-  assert.equal(h.store.fish, 50, 'the outpost’s fish in the island’s store');
+  assert.equal(h.store.fish, 200, 'the outpost’s fish in the island’s store');
   assert.equal(outpostById(game, outpost)!.store.fish ?? 0, 0);
   assert.equal(s.profile!.berths.length, 1, 'the fluyt at her berth again');
   void home;

@@ -102,7 +102,7 @@ test('a ship sent for from another harbour «плывёт к вам»; the serve
   c.push({ t: 'berth', action: 'swap', index: 0 });
   assert.match(c.last('toast')!.msg, new RegExp(`The Test Wake sails to you from ${game.portById(home)!.name}: she comes in 2 min, if you are still in port\\.`));
   // her hold filled past the sloop's while she waited: refused when the ship comes, said why
-  ship.cargo = { planks: 400 } as never;
+  ship.cargo = { iron: 400 } as never; // (a trade good: planks are a light store since 2026-11-02)
   wall.t += BERTH_CALL_MS;
   berthCallSecond(game, s);
   assert.equal(ship.loadout.classId, 'cutter', 'refused');

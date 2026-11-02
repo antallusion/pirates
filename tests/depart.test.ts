@@ -17,7 +17,7 @@ import { EN, RU } from '../client/src/lang/ui/port.ts';
 const src = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8').replace(/\r/g, '');
 
 /** A sloop in a harbour: her hold, her purse, her hull — and what the harbour sells. */
-function harbour(over: { gold?: number; provisions?: number; round?: number; crew?: number; hull?: number; sails?: number; planks?: number; repair?: number; market?: string[] } = {}): ClientState {
+function harbour(over: { gold?: number; provisions?: number; round?: number; crew?: number; hull?: number; sails?: number; planks?: number; cloth?: number; repair?: number; market?: string[] } = {}): ClientState {
   const sells = over.market ?? ['provisions', 'planks', 'sailcloth'];
   const prices: Record<string, number> = { provisions: 10, planks: 12, sailcloth: 15 };
   return {
@@ -28,7 +28,7 @@ function harbour(over: { gold?: number; provisions?: number; round?: number; cre
       contracts: [], questOffers: [],
     },
     ports: [{ id: 'p1', blackMarket: false }],
-    self: { gold: over.gold ?? 5000, crew: over.crew ?? 20, cargo: { provisions: over.provisions ?? 0, planks: over.planks ?? 0 }, ammo: { round: over.round ?? 20 }, dockedAt: 'p1', contracts: [], quests: [], loadout: { classId: 'sloop' } },
+    self: { gold: over.gold ?? 5000, crew: over.crew ?? 20, cargo: { provisions: over.provisions ?? 0, planks: over.planks ?? 0, ...(over.cloth ? { sailcloth: over.cloth } : {}) }, ammo: { round: over.round ?? 20 }, dockedAt: 'p1', contracts: [], quests: [], loadout: { classId: 'sloop' } },
     you: { hull: (over.hull ?? 0.55) * 900, hullMax: 900, sails: (over.sails ?? 0.75) * 300, sailsMax: 300, rudderHp: 1 },
     ownStats: { crewMin: 12, crewMax: 60, provisionUse: 1, holdVolume: 120, contrabandVolumeMul: 1, materialVolumeMul: 1, provisionVolumeMul: 1, cursedVolumeMul: 1, gunsPerSide: 6, x: {} },
   } as unknown as ClientState;
@@ -123,7 +123,8 @@ test('a row’s own button: the whole when it fits, else the part her purse reac
 
 test('nothing short is no window; nothing bought by itself; the words in both tongues', () => {
   // All aboard: no needs, so casting off goes straight to sea.
-  const full = harbour({ provisions: 200, round: 200, crew: 60, hull: 1, sails: 1 });
+  // (2026-11-02: 200 provisions are 10 m³ now, not a full hold — so a repair's sailcloth aboard too, for «all aboard»)
+  const full = harbour({ provisions: 200, cloth: 50, round: 200, crew: 60, hull: 1, sails: 1 });
   assert.deepEqual(voyageNeeds(voyageShip(full)!), []);
   assert.deepEqual(departOffers(full), []);
   const dp = src('client/src/ui/depart.ts');

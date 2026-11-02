@@ -3,6 +3,7 @@
 // the ship paid really stops (server/src/game/ceasefire.ts).
 
 import { test } from 'node:test';
+import { GOODS } from '../shared/src/data/goods.ts';
 import assert from 'node:assert/strict';
 import { RELEASE_CREW, RELEASE_SILVER, SCUTTLE_SINK_SEC, SINK_CREW, wreckTimber } from '../shared/src/data/outcome.ts';
 import { REFUSED_SEC, TALK_COOLDOWN, TRUCE_SEC, TRUCE_SHARE, refuseChance, trucePrice } from '../shared/src/data/ceasefire.ts';
@@ -107,7 +108,8 @@ test('(A) take all and sink her: her hold as fits, her purse, a share of her men
   const crew0 = ship.crew;
   // Her hold nearly full: room for 10 units of rum (a unit's volume each), the rest stays in the wreck.
   const room = 10;
-  ship.cargo = { iron: Math.max(0, Math.floor(ship.stats.holdVolume - room)) };
+  // (the fractional volume table of 2026-11-02: the hold filled with iron to leave the room of ten rum)
+  ship.cargo = { iron: Math.max(0, Math.floor((ship.stats.holdVolume - room * GOODS.rum.volume) / GOODS.iron.volume)) };
   const used = (game as unknown as { holdFit: (a: ShipEntity, c: object) => Record<string, number> }).holdFit(ship, { rum: 1000 }).rum ?? 0;
   const npc = npcAt(game, 'merchant', at.x + 60, at.y);
   npc.crew = 40;

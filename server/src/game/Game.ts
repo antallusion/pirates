@@ -219,7 +219,7 @@ import { sendWorldGoals, stepWorldGoals, worldGoalKill, worldGoalsCollect } from
 import { sendSignal } from './signals.ts';
 import { autosailInput, autosailOf, dropPaused, startAutosail, stepAutosail, stopAutosail } from './autosail.ts';
 import { VOYAGE_BUSY, finishVoyage, stepVoyage, voyageBlocks, voyageResend, voyaging } from './passage.ts'; // owner, 2026-10-28: «дальний переход»
-import { ferryGo, stepFerry } from './ferry.ts'; // owner, 2026-10-30: «Переход» between hub ports
+import { ferryGo, havenBlocked, stepFerry } from './ferry.ts'; // owner, 2026-10-30: «Переход» between hub ports
 import { approach, approachInput, approachOf, cancelApproach, stepApproach } from './approach.ts'; // seaux: sail-to on tap
 import { cancelRoute, gotoGoal, stepRoutes } from './goalroute.ts'; // route: tap a goal, sail to its nearest place
 import { LootMap, stepWrecks } from './wrecks.ts'; // seaux: wreckage per captain
@@ -988,7 +988,7 @@ export class Game {
         // infamy, no quarrel, no escort's answer from a brush.)
         const peace = !this.meantRam(a, b) && !this.meantRam(b, a) && !this.isHostile(a, b) && !this.isHostile(b, a);
         // (forum 34: a peaceful ship and a captain whose colours keep her off it — a bump, whoever meant it, both ways)
-        const friends = peace || (a.ownerId !== null && a.ownerId === b.ownerId) || damageBlocked(this, a, b) === 'friendly' || peaceBlocked(this, a, b) !== null || peaceBlocked(this, b, a) !== null;
+        const friends = peace || (a.ownerId !== null && a.ownerId === b.ownerId) || damageBlocked(this, a, b) === 'friendly' || havenBlocked(this, a, b) !== null || peaceBlocked(this, a, b) !== null || peaceBlocked(this, b, a) !== null;
         if (closing > 3 && friends) {
           // (forum 40: a bump costs the captain who ran into her a little of her own hull — no blow on the other, no
           // aggression, no skull: bump.ts)

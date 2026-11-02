@@ -29,7 +29,8 @@ function fillUp(s: PlayerSession, crew = true, hold = true, kept = true): void {
   const ship = s.ship!;
   if (crew) ship.crew = ship.stats.crewMax;
   if (hold) {
-    const big = (Object.keys(GOODS) as GoodId[]).filter((g) => GOODS[g].category !== 'supply' && !GOODS[g].contraband).sort((a, b) => GOODS[b].volume - GOODS[a].volume)[0];
+    // (a good every harbour trades — the bulkiest of the old table, timber, is a light one now: 2026-11-02)
+    const big: GoodId = 'baleen';
     const n = Math.ceil(ship.stats.holdVolume / GOODS[big].volume) + 1;
     ship.cargo = { [big]: n };
     s.profile!.stolen = kept ? { [big]: n } : {};

@@ -35,33 +35,37 @@ function atSea(game: Game, s: PlayerSession, x = 56000, y = 70000): void {
   game.grid.upsert(ship.id, x, y);
 }
 
-/** Fill her hold to a share with one good of volume 1 (its multipliers untouched). */
+/** Fill her hold to a share with one plain trade good (its multipliers untouched). */
 function fillTo(ship: { cargo: Partial<Record<GoodId, number>>; stats: { holdVolume: number } }, share: number): GoodId {
-  const g: GoodId = 'sugar'; // a plain good of volume 1 nobody aboard eats or drinks
-  assert.equal(GOODS[g].volume, 1);
-  ship.cargo = { [g]: Math.ceil(ship.stats.holdVolume * share) };
+  const g: GoodId = 'sugar'; // a plain good nobody aboard eats or drinks (0.35 m³ since the volume table of 2026-11-02)
+  ship.cargo = { [g]: Math.ceil((ship.stats.holdVolume * share) / GOODS[g].volume) };
   return g;
 }
 
 const priv = (game: Game, s: PlayerSession) => toPrivateState(s, game.now, (game as unknown as { worldView(x: PlayerSession): WorldView }).worldView(s));
 
-test('overload: the merchantmen (trade, hauler) at 99 %, every other hull at 90 %; −20 % then −35 % over the brim', () => {
+// (owner, 2026-11-02: the line is half the hold — it was 90 % — and the merchantmen's three quarters — it was 99 %;
+// only the trade goods count, the ship's stores never)
+test('overload: the merchantmen (trade, hauler) at 75 %, every other hull at 50 %; −20 % then −35 % over the brim', () => {
   const trade = (Object.keys(SHIP_CLASSES) as ShipClassId[]).filter((id) => SHIP_CLASSES[id].list === 'trade' || SHIP_CLASSES[id].list === 'hauler');
   assert.ok(trade.includes('fluyt') && trade.includes('galleon'), 'the fluyt and the galleon are merchantmen');
   for (const id of trade) assert.equal(overloadAt(id), OVERLOAD_AT_TRADE, id);
   for (const id of ['sloop', 'brig', 'frigate', 'war_galley', 'schooner', 'man_o_war'] as ShipClassId[]) assert.equal(overloadAt(id), OVERLOAD_AT, id);
-  assert.equal(OVERLOAD_AT, 0.9);
-  assert.equal(OVERLOAD_AT_TRADE, 0.99);
-  // A warship: free under 90 %, −20 % from it, −35 % over the brim.
-  assert.equal(overloadMul('frigate', 0.89), 1);
-  assert.equal(overloadMul('frigate', 0.9), 0.8);
+  assert.equal(OVERLOAD_AT, 0.5);
+  assert.equal(OVERLOAD_AT_TRADE, 0.75);
+  // A warship: free under 50 %, −20 % from it, −35 % over the brim.
+  assert.equal(overloadMul('frigate', 0.49), 1);
+  assert.equal(overloadMul('frigate', 0.5), 0.8);
   assert.equal(overloadMul('frigate', 1), 0.8);
   assert.equal(overloadMul('frigate', 1.05), 0.65);
-  // A trader at 92 % sails free; from 99 % she is slowed as well.
-  assert.equal(overloadMul('fluyt', 0.92), 1);
-  assert.equal(overloadMul('fluyt', 0.98), 1);
-  assert.equal(overloadMul('fluyt', 0.99), 0.8);
+  // A trader at 60 % sails free; from 75 % she is slowed as well.
+  assert.equal(overloadMul('fluyt', 0.6), 1);
+  assert.equal(overloadMul('fluyt', 0.74), 1);
+  assert.equal(overloadMul('fluyt', 0.75), 0.8);
   assert.equal(overloadMul('fluyt', 1.02), 0.65);
+  // Over the brim counts all she carries (the stores too): the trade goods at 40 %, the hold past full — −35 %.
+  assert.equal(overloadMul('frigate', 0.4, 1.02), 0.65);
+  assert.equal(overloadMul('frigate', 0.4, 0.98), 1);
 });
 
 test('overload slows her at sea (the server\'s sail params), not a ship of the sea; the hold view says so', () => {
@@ -71,17 +75,25 @@ test('overload slows her at sea (the server\'s sail params), not a ship of the s
   atSea(game, s);
   ship.cargo = {};
   const free = ship.sailParams(false).speedMul;
-  fillTo(ship, 0.92);
+  fillTo(ship, 0.55);
   const v = holdView(ship.loadout.classId, ship.cargo, ship.stats);
   assert.equal(v.over, 1);
   assert.equal(v.slow, 20);
-  assert.equal(v.at, 90);
-  assert.ok(v.pct >= 92 && v.pct <= 93, `pct ${v.pct}`);
+  assert.equal(v.at, 50);
+  assert.equal(v.warn, 40, 'amber from 80 % of her line');
+  assert.ok(v.pct >= 55 && v.pct <= 56, `pct ${v.pct}`);
   assert.ok(Math.abs(ship.sailParams(false).speedMul - free * 0.8) < 1e-9, 'speed ×0.8');
+  // the ship's stores never count (owner, 2026-11-02): 45 % of trade goods and a hold's worth of stores — free
+  fillTo(ship, 0.45);
+  ship.cargo.provisions = Math.floor((ship.stats.holdVolume * 0.5) / (GOODS.provisions.volume * ship.stats.provisionVolumeMul));
+  const vs = holdView(ship.loadout.classId, ship.cargo, ship.stats);
+  assert.equal(vs.over, 0, 'stores do not overload her');
+  assert.ok(vs.stores > ship.stats.holdVolume * 0.45, `the stores' room shown apart: ${vs.stores}`);
+  assert.ok(Math.abs(ship.sailParams(false).speedMul - free) < 1e-9, 'no slowdown from the stores');
   // A merchant hull at the same fill sails free.
   onHull(game, ship, 'fluyt');
-  fillTo(ship, 0.92);
-  assert.ok(Math.abs(ship.sailParams(false).speedMul - free) < 1e-9, 'a fluyt at 92 % is not overloaded');
+  fillTo(ship, 0.6);
+  assert.ok(Math.abs(ship.sailParams(false).speedMul - free) < 1e-9, 'a fluyt at 60 % is not overloaded');
   assert.equal(holdView(ship.loadout.classId, ship.cargo, ship.stats).over, 0);
 });
 
@@ -90,7 +102,7 @@ test('the self state carries the hold\'s bar and her escorts\' bars (entity, hul
   const { s, ship, p } = captain(game, 'Flagship');
   onHull(game, ship, 'brig');
   atSea(game, s);
-  fillTo(ship, 0.92);
+  fillTo(ship, 0.55);
   p.fleet = newFleet();
   p.fleet.escorts.push({ id: 'e1', classId: 'cutter', name: 'Tenacity', hull: 1 }, { id: 'e2', classId: 'brig', name: 'Warrant', hull: 1 });
   const ships = p.fleet.escorts.map((e, i) => spawnEscortShip(game, s, e, i));
@@ -99,7 +111,7 @@ test('the self state carries the hold\'s bar and her escorts\' bars (entity, hul
   assert.ok(st.hold, 'hold view');
   assert.equal(st.hold!.over, 1);
   assert.equal(st.hold!.slow, 20);
-  assert.ok(st.hold!.pct >= 92);
+  assert.ok(st.hold!.pct >= 55);
   const es = st.fleet.escorts;
   assert.equal(es.length, 2);
   assert.deepEqual(es.map((e) => e.eid), ships.map((x) => x.id));
@@ -113,7 +125,7 @@ test('jettison: the cargo floats astern in a crate anyone may fish up; its throw
   const { c, s, ship } = captain(game, 'Lightener');
   onHull(game, ship, 'brig');
   atSea(game, s);
-  const g = fillTo(ship, 0.95);
+  const g = fillTo(ship, 0.55);
   const had = ship.cargo[g]!;
   const over0 = holdView(ship.loadout.classId, ship.cargo, ship.stats).over;
   assert.equal(over0, 1);
@@ -123,7 +135,7 @@ test('jettison: the cargo floats astern in a crate anyone may fish up; its throw
   c.push({ t: 'jettison', good: g, qty: 5 });
   assert.equal(ship.cargo[g], had, 'not in port');
   ship.docked = null;
-  const k = Math.ceil(ship.stats.holdVolume * 0.1);
+  const k = Math.ceil((ship.stats.holdVolume * 0.1) / GOODS[g].volume);
   c.push({ t: 'jettison', good: g, qty: k });
   steps(game, 20 * 6); // five seconds of heaving
   assert.equal(ship.cargo[g], had - k);
@@ -159,7 +171,7 @@ test('jettison: her own crate comes back aboard once the wait is over; a full ho
   const { c, s, ship } = captain(game, 'Second Thoughts');
   onHull(game, ship, 'brig');
   atSea(game, s);
-  const g = fillTo(ship, 0.5);
+  const g = fillTo(ship, 0.3);
   const had = ship.cargo[g]!;
   c.push({ t: 'jettison', good: g, qty: 10 });
   steps(game, 20 * 6);
@@ -167,7 +179,7 @@ test('jettison: her own crate comes back aboard once the wait is over; a full ho
   assert.ok(crate);
   // A full hold: it stays afloat, not broken up for silver.
   const keep = ship.cargo;
-  ship.cargo = { [g]: Math.floor(ship.stats.holdVolume) };
+  ship.cargo = { [g]: Math.floor(ship.stats.holdVolume / GOODS[g].volume) };
   const gold = s.profile!.gold;
   ship.state.x = crate.x;
   ship.state.y = crate.y;

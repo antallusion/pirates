@@ -12,7 +12,7 @@ import type { Guard, OutpostKind, Profession } from '../../../shared/src/data/es
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { BOSSES } from '../../../shared/src/data/bosses.ts';
 import type { BossId } from '../../../shared/src/data/bosses.ts';
-import { GOODS, GOOD_IDS } from '../../../shared/src/data/goods.ts';
+import { GOODS, GOOD_IDS, isStore } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { GUILD_COST } from '../../../shared/src/data/social.ts';
 import { BUILDINGS, BUILDING_IDS } from '../../../shared/src/data/holdings.ts';
@@ -69,8 +69,9 @@ const left = (ms: number) => {
   const m = Math.max(0, Math.round((ms - Date.now()) / 60_000));
   return m < 60 ? L('left_min', { n: m }) : L('left_hm', { h: Math.floor(m / 60), m: m % 60 });
 };
-const goodOptions = (have?: Cargo) =>
-  GOOD_IDS.filter((g) => !have || (have[g] ?? 0) > 0).map((g) => `<option value="${g}">${esc(GOODS[g].name)}${have ? ` (${have[g]})` : ''}</option>`).join('');
+/** `trade`: the goods that are sold (the market board, a guild's contract) — never the ship's stores (owner, 2026-11-02). */
+const goodOptions = (have?: Cargo, trade = false) =>
+  GOOD_IDS.filter((g) => (!have || (have[g] ?? 0) > 0) && (!trade || !isStore(g))).map((g) => `<option value="${g}">${esc(GOODS[g].name)}${have ? ` (${have[g]})` : ''}</option>`).join('');
 
 const RANK_ORDER: GuildRank[] = ['admiral', 'vice', 'commodore', 'captain', 'bosun', 'sailor', 'cabin_boy'];
 const RANK_NAMES = (r: GuildRank) => L(`rank_${r}`);
@@ -500,7 +501,7 @@ export class CompanyScreen {
     else if (w.step === 2) {
       body = `<div class="row" style="gap:6px;flex-wrap:wrap">${CARAVAN_TASKS.map((t) => `<label class="cv-pick"><input type="radio" name="cv-task" data-wz-task="${t}"${w.task === t ? ' checked' : ''}> ${esc(TASK_NAMES[t][ru])}</label>`).join('')}</div>`;
       if (w.task === 'haul') body += e.outposts.map((o) => `<label class="cv-pick"><input type="checkbox" data-wz-op="${esc(o.id)}"${w.outposts.has(o.id) ? ' checked' : ''}> ${esc(OUTPOSTS[o.kind].name[ru])} · ${esc(placeName(o.name))} · ${o.store}/${o.cap}</label>`).join('') || `<p class="muted">${esc(L('cv_no_ops'))}</p>`;
-      else if (w.task === 'sell') body += `<p>${esc(L('cv_port'))} ${portSel('port', w.port)}</p><div>${(Object.keys(store) as GoodId[]).map((g) => `<label class="cv-pick"><input type="checkbox" data-wz-good="${g}"${w.goods.has(g) ? ' checked' : ''}> ${esc(GOODS[g].name)} (${store[g]})</label>`).join('') || `<p class="muted">${esc(L('cv_store_empty'))}</p>`}</div><p>${esc(L('cv_floor'))} <select data-wz="minPrice">${[0.8, 0.9, 1, 1.1, 1.2].map((v) => `<option value="${v}"${v === w.minPrice ? ' selected' : ''}>${Math.round(v * 100)}%</option>`).join('')}</select></p>`;
+      else if (w.task === 'sell') body += `<p>${esc(L('cv_port'))} ${portSel('port', w.port)}</p><div>${(Object.keys(store) as GoodId[]).filter((g) => !isStore(g)).map((g) => `<label class="cv-pick"><input type="checkbox" data-wz-good="${g}"${w.goods.has(g) ? ' checked' : ''}> ${esc(GOODS[g].name)} (${store[g]})</label>`).join('') || `<p class="muted">${esc(L('cv_store_empty'))}</p>`}</div><p>${esc(L('cv_floor'))} <select data-wz="minPrice">${[0.8, 0.9, 1, 1.1, 1.2].map((v) => `<option value="${v}"${v === w.minPrice ? ' selected' : ''}>${Math.round(v * 100)}%</option>`).join('')}</select></p>`;
       else if (w.task === 'supply') body += `<p>${esc(L('cv_port'))} ${portSel('port', w.port)}</p><div>${(['planks', 'iron', 'tar', 'salt', 'provisions', 'gunpowder', 'timber', 'coal'] as GoodId[]).map((g) => `<label class="cv-pick"><input type="checkbox" data-wz-good="${g}"${w.goods.has(g) ? ' checked' : ''}> ${esc(GOODS[g].name)}</label>`).join('')}</div>`;
       else body += `<p>${esc(L('cv_buy_at'))} ${portSel('port', w.port)}</p><p>${esc(L('cv_sell_at'))} ${portSel('port2', w.port2)}</p>`;
     } else if (w.step === 3) {
@@ -617,7 +618,7 @@ export class CompanyScreen {
           : `<p class="muted">${docked ? L('g_no_office') : L('g_office_in_port')}</p>${docked && at('vice') ? `<button class="btn btn-small" id="g-office">${L('g_rent_office', { cost: fmt(2000) })}</button>` : ''}`}
         ${g.offices.length ? `<p class="muted">${L('g_offices', { list: g.offices.map((o) => esc(portName(o.port))).join(', ') })}</p>` : ''}
         ${g.contracts.map((c) => `<p>${L('g_contract_line', { qty: c.qty, good: esc(GOODS[c.good].name), port: esc(portName(c.port)), reward: c.reward })} <span class="muted">(${esc(c.by)})</span>${at('vice') ? ` <button class="btn btn-small" data-gdrop="${c.id}">${L('withdraw')}</button>` : ''}</p>`).join('')}
-        ${store && at('vice') ? `<div class="row"><span class="muted">${L('g_contract')}</span><select id="g-cgood">${goodOptions()}</select><input type="number" id="g-cqty" value="100" style="width:70px"><input type="number" id="g-crew" value="30" style="width:60px"><button class="btn btn-small" id="g-contract">${L('post')}</button></div>` : ''}</div>
+        ${store && at('vice') ? `<div class="row"><span class="muted">${L('g_contract')}</span><select id="g-cgood">${goodOptions(undefined, true)}</select><input type="number" id="g-cqty" value="100" style="width:70px"><input type="number" id="g-crew" value="30" style="width:60px"><button class="btn btn-small" id="g-contract">${L('post')}</button></div>` : ''}</div>
       <div class="card"><h4 class="card-h">${icon('menu_ship', '', 'ico-md')}${L('g_fleet')}</h4>${g.fleet.map((f) => `<p>${esc(f.name)} <span class="muted">${L('g_fleet_meta', { cls: esc(SHIP_CLASSES[f.classId].name), hull: f.hull, where: f.lentTo ? L('g_out_with', { name: esc(f.lentTo) }) : L('g_at', { port: esc(portName(f.port)) }), giver: esc(f.giver) })}</span>${!f.lentTo && f.port === docked && at('captain') ? ` <button class="btn btn-small" data-gborrow="${f.id}">${L('g_borrow')}</button>` : ''}</p>`).join('') || `<p class="muted">${L('g_no_hulls')}</p>`}
         ${docked && at('captain') ? myBerths.map(({ b, i }) => `<button class="btn btn-small" data-ggive="${i}">${L('g_give', { name: esc(b.name) })}</button>`).join(' ') + ` <button class="btn btn-small" id="g-return">${L('g_return')}</button>` : ''}</div>
     </div><div>
@@ -779,7 +780,7 @@ export class CompanyScreen {
     </div><div>
       <div class="card"><h4 class="card-h" data-hint="${esc(L('mk_text', { fee: Math.round(mk.listFee * 100), tax: Math.round(mk.saleTax * 100) }).replace(/<[^>]+>/g, ''))}">${icon('tab_board', '', 'ico-md')}${L('mk_post_title')}</h4>
         <div class="row"><select id="k-kind"><option value="sell">${L('mk_opt_sell')}</option><option value="sellw">${L('mk_opt_sellw')}</option><option value="buy">${L('mk_opt_buy')}</option>${mk.auction ? `<option value="auction">${L('mk_opt_auction')}</option>` : ''}</select>
-          <select id="k-good">${goodOptions()}</select></div>
+          <select id="k-good">${goodOptions(undefined, true)}</select></div>
         <div class="row"><label>${L('mk_qty')} <input id="k-qty" type="number" min="1" value="10" style="width:80px"></label><label id="k-price-l">${L('mk_price')} <input id="k-price" type="number" min="1" value="${GOODS.sugar.basePrice}" style="width:90px"></label></div>
         <div class="row hidden" id="k-auction"><label>${L('mk_buyout_l')} <input id="k-buyout" type="number" min="0" value="0" style="width:90px"></label><label>${L('mk_hours')} <select id="k-hours"><option>2</option><option selected>8</option><option>24</option></select></label></div>
         <button class="btn btn-primary" id="k-post">${L('post')}</button>

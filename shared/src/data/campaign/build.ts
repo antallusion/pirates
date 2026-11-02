@@ -21,7 +21,7 @@ import { navLen } from '../../world/navlen.ts';
 import { hashString } from '../../rng.ts';
 import { GOODS, portTrades } from '../goods.ts';
 import type { GoodId } from '../goods.ts';
-import { SITE_NAMES } from '../questgen.ts';
+import { QUEST_HOLD, SITE_NAMES } from '../questgen.ts';
 import { CHAIN_LEG, legTo, nearestSellerByRoute, questLegs } from '../questlegs.ts';
 import type { At } from '../questlegs.ts';
 import type { QuestDef, QuestStep } from '../quests.ts';
@@ -645,7 +645,10 @@ function buildQuest(c: QuestCtx, src: { t: T; b: T; d: T; s: StepSrc[]; lane?: {
       const sold = nearestSellerByRoute(pl.world, c.at, s.good!, undefined, CHAIN_LEG);
       if (!sold || navLen(pl.world, sold.port.x, sold.port.y, home.x, home.y, CHAIN_LEG) > CHAIN_LEG) waits = between(c.at, home) ?? home;
     }
-    const n = s.kind === 'dive' ? 1 : s.n ?? defaultCount(s.kind, band); // (one wreck is laid for a dive at a location)
+    const n0 = s.kind === 'dive' ? 1 : s.n ?? defaultCount(s.kind, band); // (one wreck is laid for a dive at a location)
+    // (a cargo's load held to a quest's hold, QUEST_HOLD m³, at least two: the volume table of 2026-11-02 made the dear
+    // goods bulky — sixteen of ambergris would fill a frigate's line)
+    const n = (s.kind === 'carry' || s.kind === 'bring') && s.good ? Math.max(2, Math.min(n0, Math.floor(QUEST_HOLD / GOODS[s.good].volume))) : n0;
     const sv: Record<string, string> = { ...v, n: String(n), ...(s.good ? { good: GOODS[s.good].name } : {}) };
     if (s.kind === 'land' && i1.site) sv.site = SITE_NAMES[i1.site] ?? i1.site;
     if (s.kind === 'land2' && i2.site) sv.site = SITE_NAMES[i2.site] ?? i2.site;

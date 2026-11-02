@@ -12,7 +12,7 @@
 //   lock      — a level, a standing, a licence wanted (its words).
 // Pure: the server words and sends it (server/src/game/buyfail.ts), the client draws it (client/src/ui/buyadvice.ts).
 
-import { GOODS } from './goods.ts';
+import { GOODS, isStore } from './goods.ts';
 import type { GoodId } from './goods.ts';
 
 export type BuyWhy = 'notsold' | 'stock' | 'room' | 'hammocks' | 'slots' | 'silver' | 'doubloons' | 'lock';
@@ -85,7 +85,7 @@ export const GOOD_PRICE = 1;
  *  pays well for (dearest against their base first), then the cheapest for their room, her own stores last; never what
  *  is kept, never the good being bought. The last line sells only as many as the room still wants. */
 export function roomPlan(items: RoomItem[], need: number, buying?: GoodId): { lines: SellLine[]; freed: number } {
-  const ok = items.filter((i) => i.good !== buying && i.sell > 0 && i.unitVol > 0 && Math.floor(i.have - i.keep) >= 1);
+  const ok = items.filter((i) => i.good !== buying && !isStore(i.good) && i.sell > 0 && i.unitVol > 0 && Math.floor(i.have - i.keep) >= 1);
   const ratio = (i: RoomItem) => i.sell / Math.max(1, GOODS[i.good]?.basePrice ?? 1);
   // (her own stores — provisions past the voyage's, sailcloth past a repair's, the carpenters' planks — last of all)
   const store = (i: RoomItem) => GOODS[i.good]?.category === 'supply';
@@ -121,7 +121,8 @@ export function bindingLimit(want: number, fit: number, avail: number, afford: n
 
 // ------------------------------------------------------------------ the words (English; the client's TABLE has the Russian)
 
-const r1 = (n: number) => Math.round(n * 10) / 10;
+// (the fractional volume table of 2026-11-02: a store of 0.05 m³ is said as 0.05, not rounded to nothing)
+const r1 = (n: number) => (Math.abs(n) > 0 && Math.abs(n) < 1 ? Math.round(n * 100) / 100 : Math.round(n * 10) / 10);
 
 /** «Not enough silver: N more needed» — what is missing, never a bare «not enough». */
 export function lackSilver(cost: number, have: number): string {

@@ -6,8 +6,7 @@
 
 import type { ClientState } from '../state.ts';
 import type { HoldView } from '../../../shared/src/data/overload.ts';
-import { HOLD_WARN } from '../../../shared/src/data/overload.ts';
-import { esc } from './dom.ts';
+import { esc, m3 } from './dom.ts';
 
 export const ESC_SHOWN = 3;
 
@@ -50,9 +49,9 @@ export function holdKey(h: HoldView | null | undefined): string {
   return h ? `${h.pct}:${h.over}:${h.slow}:${h.at}` : '';
 }
 
-/** The hold's state for its colour: ok, warn (amber from HOLD_WARN) or over (her hull's line). */
+/** The hold's state for its colour: ok, warn (amber from HOLD_WARN of her line: `warn`) or over (her hull's line). */
 export function holdTone(h: HoldView): 'ok' | 'warn' | 'over' {
-  return h.over ? 'over' : h.pct >= HOLD_WARN * 100 ? 'warn' : 'ok';
+  return h.over ? 'over' : h.pct >= (h.warn ?? h.at * 0.8) ? 'warn' : 'ok';
 }
 
 type Say = (k: 'hold' | 'holdOver' | 'holdT' | 'holdOverT' | 'escT' | 'escCrew' | 'escMore' | 'escMoreT', v?: Record<string, string | number>) => string;
@@ -60,8 +59,10 @@ type Say = (k: 'hold' | 'holdOver' | 'holdT' | 'holdOverT' | 'escT' | 'escCrew' 
 /** The fourth row of the plate. */
 export function holdRowHtml(h: HoldView, ico: string, L: Say): string {
   const tone = holdTone(h);
-  const title = h.over ? `${L('holdOverT', { n: h.slow, at: h.at })} ${L('holdT', { used: h.used, max: h.max, pct: h.pct, at: h.at })}` : L('holdT', { used: h.used, max: h.max, pct: h.pct, at: h.at });
-  return `<div class="cs-row cs-hold cs-hold-${tone}" title="${esc(title)}" aria-label="${esc(title)}">${ico}<span class="cs-bar"><i style="width:${Math.min(100, h.pct)}%"></i>${h.over ? `<b class="cs-over">${esc(L('holdOver'))}</b>` : ''}</span><span class="cs-v">${h.pct}%</span></div>`;
+  const words = { used: m3(h.used), max: h.max, pct: h.pct, at: h.at, stores: m3(h.stores ?? 0) };
+  const title = h.over ? `${L('holdOverT', { n: h.slow, at: h.at })} ${L('holdT', words)}` : L('holdT', words);
+  // (owner, 2026-11-02: the bar is the trade goods' share; a tick marks her hull's line — half the hold, ¾ on a merchantman)
+  return `<div class="cs-row cs-hold cs-hold-${tone}" title="${esc(title)}" aria-label="${esc(title)}">${ico}<span class="cs-bar"><i style="width:${Math.min(100, h.pct)}%"></i><u class="cs-line" style="left:${h.at}%"></u>${h.over ? `<b class="cs-over">${esc(L('holdOver'))}</b>` : ''}</span><span class="cs-v">${h.pct}%</span></div>`;
 }
 
 /** The escorts' chips: up to ESC_SHOWN, then «+N». */

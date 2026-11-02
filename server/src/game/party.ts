@@ -19,7 +19,7 @@ import type { LfgGoal } from '../../../shared/src/data/social.ts';
 import { STASH_SIZE, itemName } from '../../../shared/src/data/items.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
-import { GOODS } from '../../../shared/src/data/goods.ts';
+import { GOODS, STORE_NO_SALE, isStore } from '../../../shared/src/data/goods.ts';
 import { cargoVolume, computeShipStats, tx } from '../../../shared/src/sim/shipstats.ts';
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
 import { dist } from '../../../shared/src/math.ts';
@@ -571,6 +571,7 @@ export function barterOffer(game: Game, s: PlayerSession, gold: number, cargo: C
   for (const [k, v] of Object.entries(cargo ?? {})) {
     const n = Math.floor(Number(v));
     if (!GOODS[k as GoodId] || !Number.isFinite(n) || n <= 0) continue;
+    if (isStore(k)) return STORE_NO_SALE; // (the ship's stores do not change hands for silver: owner, 2026-11-02)
     if (n > (ship.cargo[k as GoodId] ?? 0)) return `You carry only ${ship.cargo[k as GoodId] ?? 0} ${GOODS[k as GoodId].name}`;
     clean[k as GoodId] = n;
     if (++lines > TRADE_GOODS_MAX) return 'Twelve kinds of goods at most';

@@ -13,7 +13,7 @@ import { liveNamed, putToSea } from './wanted.ts';
 import { COUNTING_HOUSE_PROFIT, INSURANCE_COVER, INSURANCE_PREMIUM, MAX_ESCORTS, RESCUE_R, RESCUE_SEC, RISK, SKIPPER_COST, TASK_NAMES, defenceOdds, escortCost } from '../../../shared/src/data/caravans.ts';
 import type { CaravanTask, OnAttack } from '../../../shared/src/data/caravans.ts';
 import { ISLE_LEVELS } from '../../../shared/src/data/estate.ts';
-import { GOODS } from '../../../shared/src/data/goods.ts';
+import { GOODS, isStore } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { hullRole, hullsFor, levelPower, levelScale, shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
@@ -263,7 +263,7 @@ export function launchCaravan(game: Game, s: PlayerSession, o: LaunchOrder): str
   if (p.gold < cost) return lackMore(`Needs ${cost} silver`, cost, p.gold);
   // What the island sends: the goods to sell.
   if (c.task === 'sell') {
-    const list = c.goods.length ? c.goods : (Object.keys(h.store) as GoodId[]);
+    const list = (c.goods.length ? c.goods : (Object.keys(h.store) as GoodId[])).filter((g) => !isStore(g)); // (the stores are not sold)
     for (const g of list) {
       const per = GOODS[g].volume;
       const k = Math.min(h.store[g] ?? 0, Math.floor(room(c) / per));
@@ -591,7 +591,7 @@ function arriveAt(game: Game, c: Caravan, stop: Stop): void {
   const sellAll = (floor: number, profitMul = 1) => {
     for (const [g, n] of Object.entries(c.cargo) as [GoodId, number][]) {
       const gm = market.goods[g];
-      if (!gm || n <= 0) continue;
+      if (!gm || n <= 0 || isStore(g)) continue; // (the ship's stores are never sold: they come home)
       if (midPrice(g, gm) < GOODS[g].basePrice * floor) {
         note(c, `${c.name} will not sell below ${Math.round(GOODS[g].basePrice * floor)}: the goods come home.`);
         continue;
@@ -663,6 +663,7 @@ function finish(game: Game, c: Caravan): void {
       // A standing sale takes the island's goods again.
       const h = game.holdings.get(game, c.island, c.owner);
       if (h) for (const g of c.goods.length ? c.goods : (Object.keys(h.store) as GoodId[])) {
+        if (isStore(g)) continue; // (the stores are not sold)
         const k = Math.min(h.store[g] ?? 0, Math.floor(room(c) / GOODS[g].volume));
         if (k <= 0) continue;
         c.cargo[g] = (c.cargo[g] ?? 0) + k;

@@ -10,6 +10,7 @@ import type { ArmyStack, UnitId } from '../shared/src/data/army.ts';
 import { COLOURS, COLOURS_FIGHT_MS, NEUTRAL_PIRATE_RATE, citiesHostile } from '../shared/src/data/colours.ts';
 import type { Colours } from '../shared/src/data/colours.ts';
 import { WANTED_THRESHOLDS } from '../shared/src/data/factions.ts';
+import { GOODS } from '../shared/src/data/goods.ts';
 import type { FactionId } from '../shared/src/data/factions.ts';
 import { SF } from '../shared/src/protocol.ts';
 import type { RegionId } from '../shared/src/world/regions.ts';
@@ -222,11 +223,13 @@ test('colours change only in port, a minute after the order and never within ten
   A.profile!.docked = port.id;
   // Neutral colours only with the hold at least 85% empty (owner, 2026-10-29).
   const hold = A.ship!.stats.holdVolume;
-  A.ship!.cargo = { timber: Math.ceil(hold * 0.5) } as NonNullable<typeof A.ship>["cargo"];
+  // (2026-11-02: timber is 0.25 m³ a unit; and only the trade goods count — the ship's stores never)
+  A.ship!.cargo = { timber: Math.ceil((hold * 0.5) / GOODS.timber.volume) } as NonNullable<typeof A.ship>["cargo"];
   a.push({ t: 'pvp', action: 'colours', flag: 'neutral' });
-  assert.match(a.last('toast')!.msg, /85% empty/);
+  assert.match(a.last('toast')!.msg, /85% free of trade goods/);
   assert.equal(A.profile!.pvp.next, null);
-  A.ship!.cargo = {} as NonNullable<typeof A.ship>["cargo"];
+  // a hold half full of the ship's stores is no bar
+  A.ship!.cargo = { provisions: Math.ceil((hold * 0.5) / GOODS.provisions.volume), sailcloth: 40 } as NonNullable<typeof A.ship>["cargo"];
   a.push({ t: 'pvp', action: 'colours', flag: 'neutral' });
   assert.equal(A.profile!.pvp.next, 'neutral');
   assert.equal(A.profile!.pvp.nextAt, wall + COLOURS_FIGHT_MS);

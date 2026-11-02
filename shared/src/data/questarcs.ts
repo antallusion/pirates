@@ -75,7 +75,7 @@ export const ARCS: Arc[] = [
     C(['The Wolf at Bay', 'Волк загнан'], ['Without his stores he must fight. Take his ships by boarding and bring the tale to {giver}.', 'Без припасов ему придётся драться. Возьмите его корабли на абордаж и расскажите обо всём капитану ({giver}).'], ['board', 'home']),
   ]),
   A('gravewater', 'sugar_blood', 'Dagny Holt', 'widow', [
-    C(['Sugar and Blood', 'Сахар и кровь'], ['{giver}\'s plantation on the coast burns every night. She needs {good} for the field hands from {port2}.', 'Плантация вдовы ({giver}) горит каждую ночь. Ей нужен товар «{good}» для работников из порта {port2}.'], ['deliver2', 'home'], { good: 'provisions' }),
+    C(['Sugar and Blood', 'Сахар и кровь'], ['{giver}\'s plantation on the coast burns every night. She needs {good} for the field hands from {port2}.', 'Плантация вдовы ({giver}) горит каждую ночь. Ей нужен товар «{good}» для работников из порта {port2}.'], ['deliver2', 'home'], { good: 'salted_fish' }), // (not provisions: the ship's stores are not traded — owner, 2026-11-02)
     C(['Who Lights the Fires', 'Кто поджигает'], ['The fires come from the sea. {giver} saw a boat make for {island}.', 'Огонь приходит с моря. {giver} видела, как лодка шла к острову {island}.'], ['land_any', 'home']),
     C(['The Neighbour', 'Сосед'], ['The neighbour in {port3} wanted her land. {giver} wants him to know she will keep it — carry her answer.', 'Сосед из порта {port3} хотел её землю. {giver} хочет, чтобы он знал: она её не отдаст. Отвезите ответ.'], ['visit3', 'home']),
   ]),
@@ -180,7 +180,7 @@ export const ARCS: Arc[] = [
   ]),
   A('dead_mans_expanse', 'castaway_king', 'Quint Orme', 'hermit', [
     C(['The Castaway King', 'Король робинзонов'], ['A castaway calls himself king of {island}. {giver} was his subject once. Land and meet him.', 'Один робинзон называет себя королём острова {island}. {giver} когда-то был его подданным. Высадитесь и встретьтесь с ним.'], ['land_any', 'home']),
-    C(['Royal Supplies', 'Королевские припасы'], ['The king needs {good}. {giver} says he pays in pearls.', 'Королю нужен товар «{good}». {giver} говорит, что он платит жемчугом.'], ['deliver2', 'home'], { good: 'provisions' }),
+    C(['Royal Supplies', 'Королевские припасы'], ['The king needs {good}. {giver} says he pays in pearls.', 'Королю нужен товар «{good}». {giver} говорит, что он платит жемчугом.'], ['deliver2', 'home'], { good: 'salted_fish' }), // (not provisions: the ship's stores are not traded — owner, 2026-11-02)
     C(['Abdication', 'Отречение'], ['The king wants to go home to {port3}. Carry him.', 'Король хочет домой, в порт {port3}. Отвезите его.'], ['visit3', 'home']),
   ]),
   A('dead_mans_expanse', 'salt_pans', 'Edda Jessop', 'fishwife', [

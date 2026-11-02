@@ -3,7 +3,7 @@
 // sell here to make room, and «Продать и купить» done at once on the server (sellAndBuy: everything checked first, then
 // the sales and the purchase in the same handler; nothing half done).
 
-import { GOODS } from '../../../shared/src/data/goods.ts';
+import { GOODS, isStore } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { bindingLimit, roomPlan } from '../../../shared/src/data/buyfail.ts';
 import type { BuyFail, BuySeller, RoomItem } from '../../../shared/src/data/buyfail.ts';
@@ -72,7 +72,7 @@ export function canMakeRoom(s: PlayerSession, good: GoodId): boolean {
   const stolen = s.profile!.stolen;
   let spare = 0;
   for (const g of Object.keys(ship.cargo) as GoodId[]) {
-    if (g === good || !GOODS[g]) continue;
+    if (g === good || !GOODS[g] || isStore(g)) continue; // (the stores are not sold: no room is made of them)
     const n = Math.floor((ship.cargo[g] ?? 0) - (keep[g] ?? 0) - (stolen[g] ?? 0));
     if (n > 0) spare += n * unitVolume(ship, g);
   }
@@ -96,6 +96,11 @@ export function roomItems(game: Game, s: PlayerSession, port: Port): RoomItem[] 
     // plundered goods: customs may seize them in a lawful harbour, a fence takes his cut in another — never put on the
     // counter by the advisor (its price would not be sure)
     const stolen = Math.min(have, p.stolen[g] ?? 0);
+    // (the ship's stores: never sold — all of them kept, no price: owner, 2026-11-02)
+    if (isStore(g)) {
+      out.push({ good: g, have, keep: have, unitVol: unitVolume(ship, g), sell: 0 });
+      continue;
+    }
     out.push({ good: g, have, keep: Math.min(have, (keep[g] ?? 0) + stolen), unitVol: unitVolume(ship, g), sell: traded ? r!.sell : 0 });
   }
   return out;

@@ -1,6 +1,6 @@
 // World map: a dark nautical chart. Only what the captain has charted is drawn — information is a resource.
 
-import { drawHubMark, isFerryHub } from './ferry.ts'; // owner, 2026-10-30: «Переход» hubs
+import { drawHavenRing, drawHubMark, isFerryHub } from './ferry.ts'; // owner, 2026-10-30: «Переход» hubs
 import { anchorSpan, yardSpan } from '../../../shared/src/data/yardhulls.ts'; // the «Верфи» filter (Нефигугум, post 26)
 import { EN as HIRE_EN, RU as HIRE_RU } from '../lang/ui/seahire.ts';
 import { portMark } from '../../../shared/src/data/paintart.ts';
@@ -894,6 +894,8 @@ export class WorldMap {
     // (docs/29: the harbour towns of step 9 — ids `<sea>_t<n>` — are found as the villages are)
     const found = new Set([...state.discovered].map((id) => state.islands.get(id)?.portId ?? state.islands.get(id)?.town));
     const yards = on('yards'); // «Верфи» (Нефигугум, post 26): the ports with a shipyard, its rank and its hulls' ⚓
+    // «Тихая гавань» (forum post 49): the hubs' quiet water, faint, under the marks
+    if (on('ports')) for (const p of visibleOnChart(state.seen, state.ports)) if (isFerryHub(p.id)) drawHavenRing(g, tx(p.x), ty(p.y), k);
     for (const p of on('ports') || yards ? visibleOnChart(state.seen, state.ports) : []) {
       const known = (!p.id.includes('_v') && !/_t[0-9]+$/.test(p.id)) || found.has(p.id);
       if (!known) continue;

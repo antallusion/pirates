@@ -8,7 +8,10 @@ export const SERVER_RU_PASSAGE: Record<string, string> = {
   'No passage to that port.': 'В этот порт перехода нет.',
   'The ferry masters will not carry a wanted captain.': 'Разыскиваемого капитана на переход не берут.',
   'Settle the mutiny first.': 'Сначала усмирите бунт.',
-  'No passage with the hold more than 60% full: sell or store the cargo first.': 'Переход только если трюм заполнен не больше чем на 60%: сначала продайте груз или сдайте его на склад.',
+  'No passage with trade goods filling more than 60% of the hold (the ship’s stores do not count): sell or store the cargo first.': 'Переход только если товары занимают не больше 60% трюма (судовые припасы не в счёт): сначала продайте груз или сдайте его на склад.',
+  // forum post 49 (2026-11-02): skulls, «Тихая гавань»
+  'With skulls on you the ferry will not take you: wash them off first.': 'С черепами переход не возьмёт — сначала отмойтесь.',
+  'Quiet harbour: no captain attacks another by a ferry hub.': 'Тихая гавань: у порта-узла капитаны друг на друга не нападают.',
   'No open water leads there now: the passage is off, nothing paid.': 'Чистой воды туда сейчас нет: переход отменён, серебро не списано.',
   'Discover that port first.': 'Сначала откройте этот порт.',
   'The next passage in {0} min.': 'Следующий переход через {0} мин.',

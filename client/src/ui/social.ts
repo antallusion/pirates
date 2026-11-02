@@ -9,7 +9,7 @@ import { unitIcon, unitName } from './army.ts';
 import { EN as DEN, RU as DRU } from '../lang/ui/drifts.ts';
 import { GUILD_PROJECTS, GUILD_PROJECT_DEFS, LFG_GOALS, LFG_GOAL_DEFS, SIGNALS, SIGNAL_DEFS, SIGNAL_TTL, TRADE_ITEMS_MAX, WORLD_GOAL_DEFS, parseLfgTag } from '../../../shared/src/data/social.ts';
 import type { LfgGoal, SignalKind } from '../../../shared/src/data/social.ts';
-import { GOODS } from '../../../shared/src/data/goods.ts';
+import { GOODS, isStore } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
 import { itemSlot } from '../../../shared/src/data/items.ts';
@@ -221,7 +221,7 @@ export function renderTrade(root: HTMLElement, state: ClientState, send: (m: Cli
   const mineBody = me.locked
     ? `<div class="barter-row">${icon('coin', '', 'item-ico')}<span>${esc(L('tr_silver'))}</span><b>${money(me.gold)}</b></div>${listCargo(me.cargo)}${listBeasts(me.beasts)}${(me.items ?? []).map((it) => gearChip(it, false, true)).join('')}${!me.gold && !Object.keys(me.cargo).length && !(me.items ?? []).length ? `<p class="muted">${esc(L('tr_nothing'))}</p>` : ''}`
     : `<div class="barter-row">${icon('coin', '', 'item-ico')}<span>${esc(L('tr_silver'))}</span><input id="b-gold" class="field" type="number" min="0" value="${me.gold}"></div>
-      ${Object.entries(hold).filter(([, n]) => (n ?? 0) >= 1).map(([g, n]) => `<div class="barter-row">${icon(`good_${g}`, '', 'item-ico')}<span>${esc(goodName(g as GoodId))} <span class="muted">(${fmt(Math.floor(n ?? 0))})</span></span><input class="field" type="number" min="0" max="${Math.floor(n ?? 0)}" value="${me.cargo[g as GoodId] ?? 0}" data-give="${g}"></div>`).join('')}
+      ${Object.entries(hold).filter(([g, n]) => (n ?? 0) >= 1 && !isStore(g)).map(([g, n]) => `<div class="barter-row">${icon(`good_${g}`, '', 'item-ico')}<span>${esc(goodName(g as GoodId))} <span class="muted">(${fmt(Math.floor(n ?? 0))})</span></span><input class="field" type="number" min="0" max="${Math.floor(n ?? 0)}" value="${me.cargo[g as GoodId] ?? 0}" data-give="${g}"></div>`).join('')}
       ${beastRows}
       <div class="tr-sub">${esc(L('tr_gear', { n: TRADE_ITEMS_MAX }))}</div>
       <div class="tr-gears">${stash.length ? stash.map((it) => gearChip(it, true, offered.has(it.uid) || picked.has(it.uid))).join('') : `<p class="muted">${esc(L('tr_no_gear'))}</p>`}</div>

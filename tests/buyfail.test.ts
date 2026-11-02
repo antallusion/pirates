@@ -15,7 +15,7 @@ import { bindingLimit, roomPlan } from '../shared/src/data/buyfail.ts';
 import { voyageFood } from '../shared/src/data/voyage.ts';
 import type { ClientMsg, ServerMsg } from '../shared/src/protocol.ts';
 import type { PremiumView } from '../shared/src/premiumproto.ts';
-import { holdFree, keptCargo } from '../server/src/game/buyfail.ts';
+import { holdFree, keptCargo, unitVolume } from '../server/src/game/buyfail.ts';
 import { startQuest } from '../server/src/game/quests.ts';
 import { buildPortView } from '../server/src/game/ports.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
@@ -48,10 +48,13 @@ function fillHold(game: G, s: PlayerSession, portId: string, but: GoodId = 'rum'
   const not = new Set<GoodId>(['rum', but]);
   const ship = s.ship!;
   const m = game.markets.get(portId)!;
-  const g = (Object.keys(m.goods) as GoodId[]).find((x) => !not.has(x) && GOODS[x].category !== 'supply' && !GOODS[x].contraband && GOODS[x].volume === 1)!;
+  // (2026-11-02, the fractional volume table: a plain trade good of 0.3–1 m³ a unit, the last crumbs of room topped up
+  // with provisions — a store of 0.05 m³ — so the hold is full to the last twentieth)
+  const g = (Object.keys(m.goods) as GoodId[]).find((x) => !not.has(x) && GOODS[x].category !== 'supply' && !GOODS[x].contraband && GOODS[x].volume >= 0.3 && GOODS[x].volume <= 1)!;
   ship.cargo = { provisions: ship.cargo.provisions ?? 0 };
   ship.cargo[g] = Math.floor(holdFree(ship) / GOODS[g].volume);
-  assert.ok(holdFree(ship) < 1, 'the hold full');
+  ship.cargo.provisions = (ship.cargo.provisions ?? 0) + Math.floor(holdFree(ship) / unitVolume(ship, 'provisions'));
+  assert.ok(holdFree(ship) < 0.05, 'the hold full');
   return g;
 }
 
@@ -82,21 +85,22 @@ test('the owner’s case: a full hold buying rum is told «нет места» w
   assert.ok(rum, 'rum sold here');
   fillHold(game, s, port.id);
   s.profile!.gold = 1e6;
-  c.push({ t: 'trade', good: 'rum', qty: 5 });
+  // (2026-11-02, the volume table: rum is 0.55 m³ a unit — twenty of them want 11 m³)
+  c.push({ t: 'trade', good: 'rum', qty: 20 });
   const f = c.last('buyfail')!;
   assert.equal(f.fail.why, 'room');
-  assert.equal(f.fail.need, 5);
+  assert.equal(f.fail.need, 11);
   assert.equal(f.fail.free, 0);
-  assert.equal(f.msg, 'No room in the hold: 5 m³ needed, 0 free');
+  assert.equal(f.msg, 'No room in the hold: 11 m³ needed, 0 free');
   assert.ok(c.all('toast').some((t) => t.msg === f.msg), 'the toast says the same');
   assert.ok(!c.all('toast').some((t) => /stock/i.test(t.msg)), 'never «stock»');
-  assert.equal(nb(ru(() => serverText(f.msg))), 'Нет места в трюме: нужно 5 м³, свободно 0');
+  assert.equal(nb(ru(() => serverText(f.msg))), 'Нет места в трюме: нужно 11 м³, свободно 0');
   assert.ok(adviceFor(f.fail), 'the advisor opens for it');
-  assert.equal(f.fail.buy, undefined, 'her own stock is never under 100 (ownstock.ts): room is made for all five');
-  assert.ok(f.fail.plan!.length > 0 && (f.fail.planFree ?? 0) >= 5, 'what to sell here for the room');
-  // «Продать и купить» for the five: sold and bought, at once
-  c.push({ t: 'sellbuy', good: 'rum', qty: 5 });
-  assert.equal(s.ship!.cargo.rum, 5);
+  assert.equal(f.fail.buy, undefined, 'her own stock is never under 100 (ownstock.ts): room is made for all twenty');
+  assert.ok(f.fail.plan!.length > 0 && (f.fail.planFree ?? 0) >= 11, 'what to sell here for the room');
+  // «Продать и купить» for the twenty: sold and bought, at once
+  c.push({ t: 'sellbuy', good: 'rum', qty: 20 });
+  assert.equal(s.ship!.cargo.rum, 20);
 });
 
 test('each reason its own words: stock (how many there are), silver (how much is missing), not sold here (the nearest ports)', () => {
@@ -146,7 +150,7 @@ test('«Продать и купить»: sells only what is needed — never qu
   const { c, s, ship, p, port } = captain(game, 'Sell First');
   p.gold = 1e6;
   // quest cargo aboard: a delivery under way of a good this harbour buys (a contract's: kept as a quest's is)
-  const good = (Object.keys(game.markets.get(port.id)!.goods) as GoodId[]).find((g) => g !== 'rum' && GOODS[g].category !== 'supply' && !GOODS[g].contraband && GOODS[g].volume === 1)!;
+  const good = (Object.keys(game.markets.get(port.id)!.goods) as GoodId[]).find((g) => g !== 'rum' && GOODS[g].category !== 'supply' && !GOODS[g].contraband && GOODS[g].volume >= 0.3 && GOODS[g].volume <= 1)!;
   p.contracts.push({ id: 'k1', kind: 'delivery', title: 'Cargo', fromPort: port.id, toPort: game.world.ports.find((x) => x.id !== port.id)!.id, good, qty: 6, reward: 1, xp: 1, expiresAt: game.now + 9999, description: '' });
   const st = { good, qty: 6 };
   const food = voyageFood({ crew: ship.crew, provisionUse: ship.stats.provisionUse, holdVolume: ship.stats.holdVolume, provisionVolume: GOODS.provisions.volume * ship.stats.provisionVolumeMul });
@@ -156,6 +160,7 @@ test('«Продать и купить»: sells only what is needed — never qu
   ship.cargo[st.good] = st.qty;
   ship.cargo[filler] = Math.floor(holdFree(ship) / GOODS[filler].volume) + (ship.cargo[filler] ?? 0);
   assert.ok(holdFree(ship) < 1);
+  const f0 = holdFree(ship);
   const keep = keptCargo(s);
   assert.ok((keep[st.good] ?? 0) >= st.qty, 'the quest’s goods kept');
   assert.ok((keep.provisions ?? 0) >= food, 'the voyage’s food kept');
@@ -168,7 +173,7 @@ test('«Продать и купить»: sells only what is needed — never qu
   assert.equal(ship.cargo.rum, 4, 'bought');
   assert.equal(ship.cargo[st.good], before[st.good], 'the quest’s cargo untouched');
   assert.equal(ship.cargo.provisions, before.provisions, 'the voyage’s provisions untouched');
-  assert.equal((before[filler] ?? 0) - (ship.cargo[filler] ?? 0), Math.ceil((4 - Math.max(0, f.fail.free ?? 0)) / GOODS[filler].volume), 'only as many sold as the room wants');
+  assert.equal((before[filler] ?? 0) - (ship.cargo[filler] ?? 0), Math.ceil((4 * GOODS.rum.volume - Math.max(0, f0)) / GOODS[filler].volume - 1e-6), 'only as many sold as the room wants');
   // nothing to sell but what is kept: nothing moves at all
   const { c: c2, s: s2, ship: ship2, p: p2, port: port2 } = captain(game, 'Kept Kate');
   p2.gold = 1e6;

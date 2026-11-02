@@ -6,7 +6,7 @@
 
 import { pointsXp } from '../../../shared/src/data/xpcurve.ts'; // docs/26
 import { RUN_CHAIN_STEP, RUN_HOUSES, RUN_LEGS, RUN_NEXT_TTL, RUN_SLOTS, earlyShare, runWindow, RUN_EARLY_SHARE } from '../../../shared/src/data/dealings.ts';
-import { GOODS } from '../../../shared/src/data/goods.ts';
+import { GOODS, isStore } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { dist } from '../../../shared/src/math.ts';
 import type { TradeRunView } from '../../../shared/src/protocol.ts';
@@ -41,7 +41,7 @@ export function makeRun(game: Game, from: Port, leg: number, house = game.rng.in
     const there = game.markets.get(to.id)!;
     for (const id in here.goods) {
       const g = id as GoodId;
-      if (GOODS[g].contraband || avoid.includes(g)) continue;
+      if (GOODS[g].contraband || isStore(g) || avoid.includes(g)) continue; // (the ship's stores are not traded)
       const a = here.goods[g]!, b = there.goods[g];
       if (!b || a.stock < 12) continue;
       const gain = midPrice(g, b) / midPrice(g, a);

@@ -132,4 +132,9 @@
 .fy-row .fy-go { min-height: 44px; min-width: 128px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .fy-price { white-space: nowrap; }
 .fy--compact .fy-row { min-height: 40px; }
+.fy-was { display: block; font-size: 11px; opacity: 0.6; text-align: right; }
+.fy-was, .fy-was * { text-decoration: line-through; }
+.fy-quest { font-style: normal; color: #9fd37a; white-space: nowrap; display: inline-flex; align-items: center; gap: 3px; }
+.fy-row--quest .fy-go { box-shadow: 0 0 0 1px rgba(159, 211, 122, 0.55) inset; }
+.fy-pirate { margin-top: 0; }
 .pcd-ferry h3 { display: flex; align-items: center; gap: 6px; }

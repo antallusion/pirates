@@ -8,7 +8,7 @@ import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { dict } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/hud.ts';
-import { esc, icon } from './dom.ts';
+import { esc, icon, m3 } from './dom.ts';
 
 const L = dict(EN, RU);
 
@@ -37,9 +37,9 @@ export function holdMix(cargo: Partial<Record<GoodId, number>>, st: Muls): HoldP
 /** Its words, one line: «провизия 40 (60 м³) · рыба 12 (12 м³) · ещё 3: 5 м³» — the first `max`, the rest summed. */
 export function holdMixText(parts: HoldPart[], max = 4): string {
   if (!parts.length) return L('holdEmpty');
-  const head = parts.slice(0, max).map((p) => L('holdPart', { good: GOODS[p.good].name.toLowerCase(), n: Math.floor(p.n), v: Math.round(p.vol) }));
+  const head = parts.slice(0, max).map((p) => L('holdPart', { good: GOODS[p.good].name.toLowerCase(), n: Math.floor(p.n), v: m3(p.vol) }));
   const rest = parts.slice(max);
-  if (rest.length) head.push(L('holdRest', { n: rest.length, v: Math.round(rest.reduce((a, p) => a + p.vol, 0)) }));
+  if (rest.length) head.push(L('holdRest', { n: rest.length, v: m3(rest.reduce((a, p) => a + p.vol, 0)) }));
   return head.join(' · ');
 }
 
@@ -50,7 +50,7 @@ export function holdMixHtml(parts: HoldPart[], used: number, max: number, shown 
   const all = holdMixText(parts, parts.length);
   const chip = (p: HoldPart) => {
     const share = Math.round((p.vol / Math.max(1, max)) * 100);
-    return `<span class="hm-chip" title="${esc(L('holdPart', { good: GOODS[p.good].name, n: Math.floor(p.n), v: Math.round(p.vol) }))}">${icon(`good_${p.good}`, '', 'ico-xs')}<b>${Math.floor(p.n)}</b><i>${share}%</i></span>`;
+    return `<span class="hm-chip" title="${esc(L('holdPart', { good: GOODS[p.good].name, n: Math.floor(p.n), v: m3(p.vol) }))}">${icon(`good_${p.good}`, '', 'ico-xs')}<b>${Math.floor(p.n)}</b><i>${share}%</i></span>`;
   };
   const rest = parts.slice(shown);
   const restChip = rest.length ? `<span class="hm-chip hm-rest" title="${esc(holdMixText(rest, rest.length))}"><b>+${rest.length}</b><i>${Math.round((rest.reduce((a, p) => a + p.vol, 0) / Math.max(1, max)) * 100)}%</i></span>` : '';

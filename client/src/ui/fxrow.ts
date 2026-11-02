@@ -132,6 +132,7 @@ const KNOWN: Record<string, { icon: string; bad?: boolean; k: string }> = {
   shadow: { icon: 'sp_fog_bank', k: 'hidden' },
   order_fog_bank: { icon: 'sp_fog_bank', k: 'hidden' },
   brace: { icon: 'sk_ward', k: 'brace' },
+  haven_ward: { icon: 'build_lighthouse', k: 'haven' }, // forum post 49: «Под защитой гавани» after the passage
 };
 /** Never in the row: what the HUD shows another way, the inner workings. */
 const SKIP = new Set(['keep_station', 'spawn', 'moored', 'own_ships', 'convoy', 'regatta', 'squadron', 'isle_light', 'isle_tavern', 'isle_cove', 'haven']);

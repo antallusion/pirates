@@ -10,7 +10,7 @@
 
 import { lackMore, lackRoom } from '../../../shared/src/data/buyfail.ts';
 import type { LetterView, ListingView, MarketView } from '../../../shared/src/protocol.ts';
-import { GOODS } from '../../../shared/src/data/goods.ts';
+import { GOODS, STORE_NO_SALE, isStore } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { FACTION_DUTY } from './economy.ts';
@@ -367,6 +367,7 @@ function mineHere(b: Board, accountId: number): number {
 
 function listCheck(game: Game, s: PlayerSession, port: Port, good: GoodId, qty: number, price: number): string | null {
   if (!GOODS[good]) return 'Unknown goods';
+  if (isStore(good)) return STORE_NO_SALE; // (the ship's stores: never sold, nor ordered — owner, 2026-11-02)
   if (!Number.isInteger(qty) || qty < 1 || qty > 10_000) return 'Quantity 1–10,000';
   if (!Number.isInteger(price) || price < 1 || price > 1_000_000) return 'Price 1–1,000,000';
   const b = game.post.board(game, port.id);
@@ -437,6 +438,7 @@ export function marketFill(game: Game, s: PlayerSession, port: Port, id: number,
   const l = b.listings.find((x) => x.id === id);
   if (!l || l.kind === 'auction') return 'That listing is gone';
   if (l.seller === s.accountId) return 'That is your own listing';
+  if (isStore(l.good)) return STORE_NO_SALE; // (a listing of stores from before they were withdrawn from sale)
   const qty = Math.min(l.qty, Math.floor(Number(qtyRaw)));
   if (!Number.isFinite(qty) || qty < 1) return 'Bad quantity';
   const p = s.profile!;

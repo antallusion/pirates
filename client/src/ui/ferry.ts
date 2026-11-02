@@ -5,7 +5,7 @@
 //  - the port card: the same list (buttons only when she lies there);
 //  - the chart and the minimap: a small brass route badge by every hub.
 
-import { isFerryHub } from '../../../shared/src/data/ferry.ts';
+import { HAVEN_R, isFerryHub } from '../../../shared/src/data/ferry.ts';
 import type { ClientMsg, FerryView } from '../../../shared/src/protocol.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { dict } from '../i18n.ts';
@@ -36,13 +36,17 @@ export function ferryHtml(state: ClientState, view: FerryView, here: boolean, le
       return `<div class="fy-row fy-row--locked" title="${esc(LF('locked'))}"><span class="fy-to">${icon('weather_fog', '🌫', 'ico-sm')}<b>${esc(placeName(p.name))}</b><small>${esc(LF('locked'))}</small></span><span class="fy-km">${esc(LF('km', { km: dec1(r.km) }))}</span>${lock}</div>`;
     }
     const can = here && !why && gold >= r.price;
+    // (forum post 49: her price — the pirate flag's ×2, a quest's hub ×0.25 — and the plain one struck through by it)
+    const was = r.base !== undefined && r.base !== r.price ? `<s class="fy-was">${money(r.base)}</s>` : '';
     const btn = here
       ? `<button type="button" class="btn btn-small${can ? ' btn-primary' : ''} fy-go" data-ferry="${esc(r.to)}" ${can ? '' : 'disabled'} title="${esc(gold < r.price ? LF('short') : '')}">${esc(LF('go'))} ${money(r.price)}</button>`
       : `<span class="fy-price">${money(r.price)}</span>`;
-    return `<div class="fy-row"><span class="fy-to">${icon(`faction_${p.faction}`, '', 'ico-sm')}<b>${esc(placeName(p.name))}</b><small>${esc(REGIONS[p.region].name)}</small></span><span class="fy-km">${esc(LF('km', { km: dec1(r.km) }))}</span>${btn}</div>`;
+    const quest = r.quest ? `<em class="fy-quest" title="${esc(LF('questT'))}">${icon('tab_quests', '', 'ico-xs')}${esc(LF('quest'))}</em>` : '';
+    return `<div class="fy-row${r.quest ? ' fy-row--quest' : ''}"><span class="fy-to">${icon(`faction_${p.faction}`, '', 'ico-sm')}<b>${esc(placeName(p.name))}</b><small>${esc(REGIONS[p.region].name)}${quest ? ' · ' : ''}${quest}</small></span><span class="fy-km">${esc(LF('km', { km: dec1(r.km) }))}${was}</span>${btn}</div>`;
   }).join('');
   const status = here ? `<p class="fy-st ${why ? 'warn' : 'good'}">${icon('ui_hourglass', '⌛', 'ico-sm')}${esc(why ?? LF('ready'))}</p>` : '';
-  return `<div class="fy${compact ? ' fy--compact' : ''}">${compact ? '' : `<p class="muted fy-text">${esc(LF('text'))}</p>`}${status}<div class="fy-list">${rows}</div></div>`;
+  const pirate = view.pirate ? `<p class="fy-st warn fy-pirate">${icon('cos_flags', '', 'ico-sm')}${esc(LF('pirate'))}</p>` : '';
+  return `<div class="fy${compact ? ' fy--compact' : ''}">${compact ? '' : `<p class="muted fy-text">${esc(LF('text'))}</p>`}${status}${pirate}<div class="fy-list">${rows}</div></div>`;
 }
 
 /** The harbour window's card. */
@@ -78,6 +82,23 @@ export function drawHubMark(g: CanvasRenderingContext2D, x: number, y: number, r
   g.beginPath();
   g.moveTo(x - a, y - h); g.lineTo(x + a, y - h); g.lineTo(x + a - t, y - h - t);
   g.moveTo(x + a, y + h); g.lineTo(x - a, y + h); g.lineTo(x - a + t, y + h + t);
+  g.stroke();
+  g.restore();
+}
+
+/** «Тихая гавань» (forum post 49) on the chart and the minimap: a faint green ring of HAVEN_R about a hub, `k` px a
+ *  metre — no captain attacks another inside it. */
+export function drawHavenRing(g: CanvasRenderingContext2D, x: number, y: number, k: number): void {
+  const r = HAVEN_R * k;
+  if (r < 3) return;
+  g.save();
+  g.beginPath();
+  g.arc(x, y, r, 0, Math.PI * 2);
+  g.fillStyle = 'rgba(159,211,122,0.1)';
+  g.fill();
+  g.setLineDash([Math.max(2, r * 0.08), Math.max(2, r * 0.06)]);
+  g.lineWidth = Math.max(1.5, Math.min(2.5, r * 0.02));
+  g.strokeStyle = 'rgba(159,211,122,0.6)';
   g.stroke();
   g.restore();
 }

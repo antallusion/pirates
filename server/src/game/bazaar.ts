@@ -7,7 +7,7 @@ import { lackRoom, lackSilver } from '../../../shared/src/data/buyfail.ts';
 import {
   HARBOUR_CUT, PAY_EVERY_MIN, PRICE_CAP, STALL_DAYS, STALL_FEE, STALL_GOODS, STALL_ITEMS,
 } from '../../../shared/src/data/bazaar.ts';
-import { GOODS } from '../../../shared/src/data/goods.ts';
+import { GOODS, STORE_NO_SALE, isStore } from '../../../shared/src/data/goods.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { STASH_SIZE, itemName } from '../../../shared/src/data/items.ts';
@@ -93,6 +93,7 @@ export function addGood(game: Game, s: PlayerSession, port: Port, good: GoodId, 
   const ship = s.ship!;
   const qty = Math.floor(qtyRaw), price = Math.round(priceRaw);
   if (!GOODS[good] || qty <= 0) return 'You have not that much aboard.';
+  if (isStore(good)) return STORE_NO_SALE; // (the ship's stores are not sold: owner, 2026-11-02)
   if (!priceOk(price, GOODS[good].basePrice * PRICE_CAP)) return 'That price will not do.';
   if (Math.floor(ship.cargo[good] ?? 0) < qty) return 'You have not that much aboard.';
   const line = m.st.goods.find((x) => x.good === good);

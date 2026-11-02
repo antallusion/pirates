@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { TICK_RATE } from '../shared/src/constants.ts';
 import { FERRY_COOLDOWN_SEC, FERRY_HOLD_MAX, FERRY_HUBS, FERRY_MIN, FERRY_TOP, ferryPrice } from '../shared/src/data/ferry.ts';
+import { GOODS } from '../shared/src/data/goods.ts';
 import { VOYAGE, VOYAGE_MUL } from '../shared/src/data/passage.ts';
 import { REGIONS } from '../shared/src/world/regions.ts';
 import type { Game } from '../server/src/game/Game.ts';
@@ -63,7 +64,8 @@ test('ferry: 6–8 hubs, in the law\'s and the trade\'s seas only, spread over t
   assert.ok(regions.size >= 4, 'every sea of the law and the trade has one');
 });
 
-test('ferry: the price — steep with distance: the nearest hubs about 1 700, across the whole sea 50 000', () => {
+// (forum post 49, 2026-11-02: softened — the nearest pair about 800, across the whole sea 15 000; it was 1 700 … 50 000)
+test('ferry: the price — steep with distance: the nearest hubs about 800, across the whole sea 15 000', () => {
   assert.equal(ferryPrice(0), FERRY_MIN);
   assert.equal(ferryPrice(1_000_000), FERRY_TOP);
   assert.ok(ferryPrice(40_000) > ferryPrice(20_000), 'rises with the way');
@@ -76,8 +78,11 @@ test('ferry: the price — steep with distance: the nearest hubs about 1 700, ac
     hi = Math.max(hi, c);
     assert.equal(c, ferryCost(game, b, a), 'the same both ways');
   }
-  assert.ok(lo >= 1_500 && lo <= 2_000, `the nearest ${lo}`);
-  assert.ok(hi >= 49_000 && hi <= FERRY_TOP, `the farthest ${hi}`);
+  assert.ok(lo >= 750 && lo <= 850, `the nearest ${lo}`);
+  assert.ok(hi >= 14_500 && hi <= FERRY_TOP, `the farthest ${hi}`);
+  assert.equal(FERRY_TOP, 15_000);
+  // still steep: the middle of the way costs well under half the far end
+  assert.ok(ferryPrice(39_100) < FERRY_TOP * 0.35, `half the way ${ferryPrice(39_100)}`);
   assert.equal(ferryCost(game, 'gravesend', 'gravesend'), null);
   assert.equal(ferryCost(game, 'gravesend', 'cinderhold'), null, 'not a hub');
 });
@@ -93,18 +98,19 @@ test('ferry: refused outside a hub, to a port not a hub, without the silver, in 
   assert.match(ferryGo(game, s, 'hollowmere')!, /costs \d+ silver/);
   s.profile!.gold = 100_000;
   s.profile!.infamy = 500;
-  assert.equal(ferryGo(game, s, 'hollowmere'), FERRY_WORDS.wanted);
+  // (forum post 49: any skull refuses — the old rule refused only ★3, «a wanted captain»)
+  assert.equal(ferryGo(game, s, 'hollowmere'), FERRY_WORDS.skulls);
   s.profile!.infamy = 0;
-  // a laden hold (more than 60% full) is refused (owner, 2026-10-30)
+  // a laden hold (more than 60% of it trade goods) is refused (owner, 2026-10-30; 2026-11-02 the stores do not count)
   const keep = s.ship!.cargo;
-  s.ship!.cargo = { timber: Math.ceil(s.ship!.stats.holdVolume * (FERRY_HOLD_MAX + 0.1)) } as typeof keep;
+  s.ship!.cargo = { timber: Math.ceil((s.ship!.stats.holdVolume * (FERRY_HOLD_MAX + 0.1)) / GOODS.timber.volume) } as typeof keep;
   assert.equal(ferryGo(game, s, 'hollowmere'), FERRY_WORDS.laden);
   s.ship!.cargo = keep;
   assert.equal(s.ship!.docked, 'gravesend', 'still in port');
   assert.equal(s.profile!.gold, 100_000, 'nothing paid');
 });
 
-test('ferry: the trip — paid, ×10 at once, untouchable, in at the other hub; the cooldown kept an hour', () => {
+test('ferry: the trip — paid, ×10 at once, untouchable, in at the other hub; the cooldown kept half an hour', () => {
   assert.equal(VOYAGE.on, false, 'the generic far voyage stays off');
   const { game, s, c } = captain('Ferry Rider', 'gravesend');
   const ship = s.ship!;
@@ -136,7 +142,7 @@ test('ferry: the trip — paid, ×10 at once, untouchable, in at the other hub; 
   assert.equal(off.why, 'arrived');
   assert.equal(off.ferry, 'hollowmere');
   // the cooldown, then free again
-  assert.match(ferryGo(game, s, 'gravesend')!, /next passage in (5\d|60) min/);
+  assert.match(ferryGo(game, s, 'gravesend')!, /next passage in (2\d|30) min/); // (half an hour since post 49)
   assert.equal(s.ship!.docked, 'hollowmere');
   const skew = (game as unknown as { wallSkew: number });
   skew.wallSkew = (skew.wallSkew ?? 0) + FERRY_COOLDOWN_SEC * 1000;

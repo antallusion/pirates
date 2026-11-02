@@ -15,7 +15,7 @@ import type { Colours, ColoursBar } from '../../../shared/src/data/colours.ts';
 import { wantedLevel } from '../../../shared/src/data/factions.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
 import { Rng } from '../../../shared/src/rng.ts';
-import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
+import { tradeVolume } from '../../../shared/src/sim/shipstats.ts';
 import type { Game } from './Game.ts';
 import { atWar } from './guilds.ts';
 import type { NpcBrain } from './npc.ts';
@@ -125,14 +125,15 @@ export function neutralRefused(p: Profile, ship?: ShipEntity | null): string | n
   return null;
 }
 
-/** Her hold is fuller than neutral colours allow (more than 15% of it taken). */
+/** Her hold is fuller than neutral colours allow (more than 15% of it taken by TRADE cargo: the ship's stores never count
+ *  — owner, 2026-11-02, the same rule as the overload's and the ferry's). */
 export function holdTooFull(ship: ShipEntity): boolean {
   const st = ship.stats;
   if (!(st.holdVolume > 0)) return false;
-  const used = cargoVolume(ship.cargo, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
+  const used = tradeVolume(ship.cargo, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
   return used > st.holdVolume * (1 - NEUTRAL_HOLD_FREE) + 1e-9;
 }
-const NEUTRAL_HOLD_MSG = 'Neutral colours only with the hold at least 85% empty: sell or store the cargo first.';
+const NEUTRAL_HOLD_MSG = 'Neutral colours only with the hold at least 85% free of trade goods (the ship’s stores do not count): sell or store the cargo first.';
 
 /** When colours ordered now would go up (wall ms): a minute, and never within ten of her last fight with a captain. */
 export function hoistAt(game: Game, p: Profile): number {

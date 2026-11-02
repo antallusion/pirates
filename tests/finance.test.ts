@@ -218,9 +218,10 @@ test('economy metrics: every silver change is in the ledger; supply, faucets, si
   const r0 = game.economy();
   assert.equal(r0.supply.captains, 3);
   // Trading and the chandlery: the ledger must explain every change in the purse.
-  cs[0].push({ t: 'trade', good: 'provisions', qty: 5 });
+  // (rum, not provisions: the ship's stores are not sold since 2026-11-02)
+  cs[0].push({ t: 'trade', good: 'rum', qty: 5 });
   cs[0].push({ t: 'buy_ammo', ammo: 'round', qty: 20 });
-  cs[0].push({ t: 'trade', good: 'provisions', qty: -3 });
+  cs[0].push({ t: 'trade', good: 'rum', qty: -3 });
   game.saveAll();
   const r1 = game.economy();
   const after = sessions.reduce((a, x) => a + x.profile!.gold + x.profile!.bank, 0);

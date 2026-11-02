@@ -28,4 +28,6 @@ export const SERVER_RU_BUYFAIL: Record<string, string> = {
   '{0} has only {1} {2}, {3} asked': '{0}: товара «{2}» осталось только {1}, а нужно {3}',
   'Nobody here sells {0}': 'Здесь не продают: {0}',
   'Nobody here sells {0}: sold at {1}': 'Здесь не продают: {0}. Есть в портах: {1}',
+  // the ship's stores (owner, 2026-11-02): bought, never sold
+  'Ship’s stores are not for sale: they are the voyage’s supply.': 'Судовые припасы не продаются — это запас для плавания.',
 };

@@ -24,7 +24,7 @@ import { upkeepMul } from './empires.ts';
 import { guildGoalView } from './guildgoal.ts';
 import type { GuildWeekly } from './guildgoal.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
-import { GOODS } from '../../../shared/src/data/goods.ts';
+import { GOODS, STORE_NO_SALE, isStore } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { dist } from '../../../shared/src/math.ts';
 import type { GuildRank, GuildView, RecruitView, RouteNodeView } from '../../../shared/src/protocol.ts';
@@ -590,7 +590,7 @@ export function storeMove(game: Game, s: PlayerSession, good: GoodId, qty: numbe
     // Contracts for this port and good pay per unit.
     let left = n;
     for (const c of g.contracts) {
-      if (c.port !== port || c.good !== good || c.qty <= 0 || left <= 0) continue;
+      if (c.port !== port || c.good !== good || c.qty <= 0 || left <= 0 || isStore(good)) continue; // (stores: kept, never paid for)
       const k = Math.min(left, c.qty, Math.floor(g.treasury / Math.max(1, c.reward)));
       if (k <= 0) continue;
       c.qty -= k;
@@ -624,6 +624,7 @@ export function postContract(game: Game, s: PlayerSession, good: GoodId, qty: nu
   const bad = office(game, g, port);
   if (bad) return bad;
   if (!GOODS[good] || !(qty >= 1 && qty <= 10_000) || !(reward >= 1 && reward <= 10_000)) return 'Bad contract';
+  if (isStore(good)) return STORE_NO_SALE; // (the ship's stores are not bought for silver: owner, 2026-11-02)
   if (g.contracts.length >= 20) return 'Twenty contracts at most';
   g.contracts.push({ id: g.nextId++, good, qty: Math.trunc(qty), port: port!, reward: Math.trunc(reward), by: s.name });
   log(game, g, `${s.name} posts a contract: ${qty} ${GOODS[good].name.toLowerCase()} to ${game.portById(port!)?.name}, ${reward} each.`);
