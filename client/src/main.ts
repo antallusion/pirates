@@ -201,6 +201,7 @@ import { Promos } from './ui/promo.ts'; // her personal offers (owner, 2026-10-1
 import { DailyGift } from './ui/dailygift.ts'; // the daily login gift (owner, 2026-10-16)
 import { SeasonPass } from './ui/seasonpass.ts'; // «Сезонная карта» (owner, 2026-10-30)
 import { initTgNotices } from './ui/tgnotices.ts'; // «Уведомления в Телеграме» (owner, 2026-10-16)
+import { initPromoCode } from './ui/promocode.ts'; // «Промокод» (owner, 2026-11-02)
 import { webCheckouts } from './checkout.ts';
 import { vkIdLoginButton, vkIdReturn } from './vkid.ts'; // «Войти через VK ID» on the website (docs/36 §8)
 import { tgInvoices, tgLoginButton, tgStart } from './tg.ts'; // Telegram: the Mini App, «Войти через Телеграм», Stars (docs/27)
@@ -879,6 +880,7 @@ hud.onExchange = () => openShop(false, { exchange: true }); // the silver's «+�
 // отмели» over the bar's «Плыть» — the newcomer's run of 2026-10-23)
 const dailyGift = new DailyGift({ send: (m) => net.send(m), on: (f) => net.on(f), state, modal: () => modal, busy: () => hostileNear() || !!state.boardTac || !!state.boardFight || openingFrame() !== null });
 initTgNotices((m) => net.send(m), (f) => net.on(f));
+initPromoCode((m) => net.send(m), (f) => net.on(f)); // «Настройки → Промокод» (owner, 2026-11-02)
 // «Сезонная карта» (owner, 2026-10-30): its window, its button in the «⋯» tray with the rewards ready
 const seasonPass = new SeasonPass({ send: (m) => net.send(m), on: (f) => net.on(f), state, toast: (msg, kind) => hud.toast(msg, kind), modal: () => modal });
 const promos = new Promos({ send: (m) => net.send(m), on: (f) => net.on(f), state, modal: () => modal, busy: () => hostileNear() || !!state.boardTac || !!state.boardFight || openingFrame() !== null, held: () => dailyGift.holding() });
@@ -1312,6 +1314,12 @@ tactical.sky = () => ({ weather: state.weather, fog: state.fog, wind: state.wind
 const optionsScreen = new OptionsScreen();
 optionsScreen.close = () => closeModal();
 optionsScreen.toast = (msg, kind) => hud.toast(msg, kind);
+/** «Промокод» (owner, 2026-11-02): the settings opened on the promo code's tab, its field ready. */
+function openPromoCode(): void {
+  optionsScreen.openPromo();
+  if (modal === 'options') closeModal();
+  openModal('options');
+}
 // A phone plays sideways only (owner, 2026-10-02). On the first touch the game goes full screen and holds the screen
 // sideways where the browser allows it (Android); elsewhere the #rotate-lock veil asks for the phone to be turned.
 // Never inside VK (docs/36): VK's own windows — the payment's first — must stay over the game.
@@ -3849,7 +3857,7 @@ hud.onCaptain = () => {
   if (!self) return;
   if (modal) closeModal();
   toggleCaptainMenu({ name: self.name, level: self.level, pts: self.talentPoints }, {
-    open: (id) => (id === 'hero' || id === 'skills' ? openHero(id) : id === 'replays' ? tactical.openReplays() : openModal(id)),
+    open: (id) => (id === 'hero' || id === 'skills' ? openHero(id) : id === 'replays' ? tactical.openReplays() : id === 'promo' ? openPromoCode() : openModal(id)),
     support: (email, message) => authPost('/auth/support', { email, message, token: localStorage.getItem('gravetide.token') ?? '', website: '', t: String(Math.round(performance.now())), lang: lang() }),
     logout: () => {
       net.forget();

@@ -15,6 +15,7 @@ import { tgDeepLink, tgLinked, tgSettingsButton } from '../tg.ts'; // «Прив
 import { EN as UX2_EN, RU as UX2_RU } from '../lang/ui/ux2.ts';
 import { EN as GIFT_EN, RU as GIFT_RU } from '../lang/ui/dailygift.ts';
 import { tgnHtml, tgnView, wireTgn } from './tgnotices.ts'; // «Уведомления в Телеграме» (owner, 2026-10-16)
+import { promoCodeHtml, promoHint, promoOpenLabel, promoTabLabel, wirePromoCode } from './promocode.ts'; // «Промокод» (owner, 2026-11-02)
 import { vkIdLink, vkIdSettingsButton, vkIdStatus } from '../vkid.ts'; // «Привязать VK» on the website (docs/36 §8)
 import { inVk, vkAskNotifications, vkInviteButton, vkShare } from '../vk.ts'; // docs/36: «Позвать друзей» in VK, no link out of it
 
@@ -44,9 +45,9 @@ function soundCredits(): string {
   return `<div class="opt-credits"><p class="opt-l">${esc(t('opt.credits'))}</p><ul class="muted no-tr">${SOUND_CREDITS.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>${inVk() ? '' : `<a href="/assets/audio/CREDITS.md" target="_blank" rel="noopener">${esc(t('opt.creditsAll'))}</a>`}</div>`;
 }
 
-const TAB_ICON: Record<string, string> = { ui: 'menu_options', vision: 'ab_spotters_eye', sound: 'opt_sound', controls: 'opt_controls', notify: 'ui_bell' };
+const TAB_ICON: Record<string, string> = { ui: 'menu_options', vision: 'ab_spotters_eye', sound: 'opt_sound', controls: 'opt_controls', notify: 'ui_bell', promo: 'ui_chest' };
 
-type Tab = 'ui' | 'vision' | 'sound' | 'controls' | 'notify';
+type Tab = 'ui' | 'vision' | 'sound' | 'controls' | 'notify' | 'promo';
 
 export class OptionsScreen {
   private tab: Tab = 'ui';
@@ -86,6 +87,17 @@ export class OptionsScreen {
     addEventListener('gravetide:tgn', () => {
       if (this.root?.isConnected && !this.listening) this.render(this.root);
     });
+    // a promo code's answer came: its line shown at once (on the «Промокод» tab only)
+    addEventListener('gravetide:promocode', () => {
+      if (this.root?.isConnected && this.more && this.tab === 'promo') this.render(this.root);
+    });
+  }
+
+  /** «Промокод» (owner, 2026-11-02): the next opening shows the promo code's tab. */
+  openPromo(): void {
+    this.more = true;
+    this.tab = 'promo';
+    this.listening = null;
   }
 
   /** Whether a key press belongs to this screen (rebinding). */
@@ -97,9 +109,9 @@ export class OptionsScreen {
     this.root = root;
     const s = settings();
     // «Уведомления в Телеграме» (owner, 2026-10-16): a tab of its own for a captain with Telegram linked
-    const tabs: Tab[] = tgnView() ? ['ui', 'vision', 'sound', 'controls', 'notify'] : ['ui', 'vision', 'sound', 'controls'];
+    const tabs: Tab[] = tgnView() ? ['promo', 'ui', 'vision', 'sound', 'controls', 'notify'] : ['promo', 'ui', 'vision', 'sound', 'controls'];
     if (this.tab === 'notify' && !tgnView()) this.tab = 'ui';
-    const chips = this.more ? chipRow([{ id: 'main', icon: 'menu_options', label: W('opt.back') }, ...tabs.map((x) => ({ id: x, icon: TAB_ICON[x], label: x === 'notify' ? G('tgn.tab') : t(`opt.tab.${x}` as Key) }))], this.tab, 'otab') : '';
+    const chips = this.more ? chipRow([{ id: 'main', icon: 'menu_options', label: W('opt.back') }, ...tabs.map((x) => ({ id: x, icon: TAB_ICON[x], label: x === 'notify' ? G('tgn.tab') : x === 'promo' ? promoTabLabel() : t(`opt.tab.${x}` as Key) }))], this.tab, 'otab') : '';
     root.innerHTML = `${winHead(W('opt.title'), { crest: 'menu_options', chips })}
       <div class="modal-body w-body options${this.more ? '' : ' opt-main'}">${this.more ? this.body(s) : this.main(s)}</div>`;
     root.querySelectorAll<HTMLButtonElement>('[data-otab]').forEach((b) => (b.onclick = () => {
@@ -158,6 +170,12 @@ export class OptionsScreen {
       this.render(root);
     });
     wireTgn(root, () => this.render(root));
+    wirePromoCode(root);
+    root.querySelector<HTMLButtonElement>('[data-opromo]')?.addEventListener('click', () => {
+      this.openPromo();
+      this.render(root);
+      root.querySelector<HTMLInputElement>('.pcode-in')?.focus();
+    });
     root.querySelectorAll<HTMLButtonElement>('[data-oswitch]').forEach((b) => (b.onclick = () => {
       const k = b.dataset.oswitch as 'autoFire' | 'autoWeak' | 'autoTopUp' | 'autoGoal';
       update({ [k]: !settings()[k] } as Partial<Settings>);
@@ -231,6 +249,7 @@ export class OptionsScreen {
       ${row('good_provisions', U2('opt.autoTopUp'), sw('autoTopUp', U2('opt.autoTopUp')), U2('opt.autoTopUpHint'))}
       ${row('menu_options', W('opt.size'), seg(UI_SIZES.map((v) => [String(v), `${Math.round(v * 100)}%`, v === near] as [string, string, boolean]), 'osize', W('opt.size')), W('opt.sizeHint'))}
       ${row('menu_map', W('opt.mmTarget'), seg([['hide', W('opt.mmHide'), s.mmTarget === 'hide'], ['show', W('opt.mmShow'), s.mmTarget === 'show']], 'omm', W('opt.mmTarget')), W('opt.mmTargetHint'), 'opt-row--wide')}
+      ${row('ui_chest', promoTabLabel(), `<button type="button" class="k-btn k-btn--secondary k-btn--sm" data-opromo>${esc(promoOpenLabel())}</button>`, promoHint(), 'opt-row--wide')}
       ${tgnView() ? row('ui_bell', G('tgn.title'), `<button type="button" class="k-btn k-btn--secondary k-btn--sm" data-otgn>${esc(G('tgn.open'))}</button>`, G('tgn.hint'), 'opt-row--wide') : ''}
     </div>
     <div class="opt-foot"><button type="button" class="k-btn k-btn--secondary k-btn--md opt-more" data-omore>${esc(W('opt.more'))}</button>${tgSettingsButton(this.tg)}${vkIdSettingsButton(this.vkid)}${vkInviteButton()}</div>
@@ -257,6 +276,8 @@ export class OptionsScreen {
           ${check('webgl', 'opt.webgl')}`;
       case 'notify':
         return tgnHtml();
+      case 'promo':
+        return promoCodeHtml();
       case 'sound':
         return `${vol('master', 'opt.master')}${vol('sea', 'opt.sea')}${vol('combat', 'opt.combat')}${vol('ui', 'opt.uiVol')}${vol('music', 'opt.music')}${check('shipVoices', 'opt.shipVoices')}${check('mono', 'opt.mono')}${check('captions', 'opt.captions')}${soundCredits()}`;
       case 'controls': {
