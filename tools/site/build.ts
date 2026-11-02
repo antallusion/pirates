@@ -285,8 +285,9 @@ const FEATURES: { icon: string; art: string; title: Tr; text: Tr }[] = [
   { icon: 'ico/hot', art: K('hero/cabin'), title: ['The endgame of the Throne', 'Эндгейм «Престол»'], text: ['Zone bosses for fleets of captains, the Seals of the Deep, the Colosseum, contracts of the Admiralty, guild wars and the glory ranks beyond level 60.', 'Боссы морских зон для флотилий капитанов, Печати глубин, Колизей, контракты Адмиралтейства, войны гильдий и ранги славы после 60-го уровня.'] },
 ];
 
-/** The trailer on YouTube (owner, 2026-10-27: «добавь на сайт видос во второй блок»). */
-const TRAILER = 'hZJzeb5K7fQ';
+/** The trailer on YouTube (owner, 2026-10-27: «добавь на сайт видос во второй блок»; 2026-11-02: «замени на сайте видос
+ *  на новый трейлер» — the 1:31 trailer of 2026-11-01). */
+const TRAILER = '3JsBHs8HGzg';
 
 function home(lang: Lang): string {
   const pick = ['young_kraken', 'white_whale', 'crab_queen', 'sea_hydra', 'cloud_whale', 'wreck_titan', 'coral_colossus', 'deep_spawn', 'life_guard', 'mermaid']
