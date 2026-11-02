@@ -4413,6 +4413,19 @@ export class Renderer {
     g.fillStyle = stripe;
     if (c.kind === 'pirate') g.fillRect(x + 6, y + 1, 2, 7);
     else if (c.kind === 'faction') g.fillRect(x + 2, y + 5, 10, 2);
+    // «Каперский патент» (owner, 2026-11-02): a privateer's flag in a gold frame, a gold pennant-tail under it
+    if (c.privateer) {
+      g.strokeStyle = '#e0b862';
+      g.lineWidth = 1.2;
+      g.strokeRect(x - 1.5, y - 1.5, 16, 14);
+      g.fillStyle = '#e0b862';
+      g.beginPath();
+      g.moveTo(x + 2, y + 9);
+      g.lineTo(x + 9, y + 10.5);
+      g.lineTo(x + 2, y + 12);
+      g.closePath();
+      g.fill();
+    }
     if (c.noBoard) {
       const bx = x + 20, by = y + 5;
       g.strokeStyle = '#e6a04a';

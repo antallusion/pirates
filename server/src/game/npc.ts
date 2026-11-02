@@ -4,6 +4,8 @@
 //  * active — near a player: full sailing physics, perception, tacking and combat AI.
 // Every NPC has a purpose: merchants haul real cargo between real markets (docs/01 §5).
 
+import { hiddenSpot } from './questspot.ts'; // forum post 55: a quest's quarry out of sight
+import { patentHunted } from './patent.ts'; // «Каперский патент» (owner, 2026-11-02)
 import { fleesFrom, honourSpares } from './flaglaw.ts'; // forum 34: the three flags and the sea's own ships
 import { untouchable } from './inbattle.ts'; // owner, 2026-10-22
 import { convoyFoe, raidEscort } from './raiding.ts';
@@ -348,6 +350,8 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
   if (other.isPlayer) {
     const p = game.profileOf(other);
     const wanted = other.wantedCache;
+    // «Каперский патент» (patent.ts): the patent's enemies' patrols and hunters come for a privateer in their waters.
+    if ((role === 'patrol' || role === 'hunter') && patentHunted(game, npc, other)) return true;
     switch (role) {
       case 'patrol':
         if (other.hasEffect('bribe_signal') && npc.faction !== 'harpoon') return false;
@@ -1760,14 +1764,12 @@ export function spawnCargoAmbush(game: Game, prey: ShipEntity, accountId: number
  *  of their own (traffic.ts MIX), so the campaign's boardings of the Black Coast would have nothing to board. Null when
  *  no open water was found. */
 export function spawnCampaignFoe(game: Game, prey: ShipEntity, accountId: number, level: number, kind: 'pirate' | 'ghost' | 'hunter' | 'patrol', at?: { x: number; y: number; r: number }, within?: { x: number; y: number; r: number }): ShipEntity | null {
-  for (let k = 0; k < (within ? 24 : 12); k++) {
-    const a = game.rng.float() * Math.PI * 2;
-    // in the location's waters (docs/36: its fights are fought there), else a couple of kilometres off her
-    const d = at ? at.r * (0.3 + 0.6 * game.rng.float()) : 2200;
-    const x = (at?.x ?? prey.state.x) + Math.sin(a) * d, y = (at?.y ?? prey.state.y) - Math.cos(a) * d;
-    // (about her, and still within the location's waters)
-    if (within && Math.hypot(x - within.x, y - within.y) > within.r) continue;
-    if (!openSea(game, x, y) || x < 3500 || y < 3500 || x > 92500 || y > 92500 || !game.inZone(x, y)) continue;
+  // in the location's waters (docs/36: its fights are fought there), else a couple of kilometres off her — and out of every
+  // captain's sight (forum post 55, questspot.ts): it sails in over the horizon, never pops up on her screen
+  const c0 = at ?? { x: prey.state.x, y: prey.state.y, r: 0 };
+  const spot = hiddenSpot(game, c0, at ? at.r * 0.3 : 1900, at ? at.r * 0.9 : 2300, (x, y) => (!within || Math.hypot(x - within.x, y - within.y) <= within.r) && openSea(game, x, y) && x >= 3500 && y >= 3500 && x <= 92500 && y <= 92500 && game.inZone(x, y));
+  for (let k = 0; k < 1 && spot; k++) {
+    const { x, y } = spot;
     const lv = Math.max(1, Math.min(10, Math.round(level)));
     const h = headingOf(prey.state.x - x, prey.state.y - y);
     // (the hunters on her trail and the Crown's patrols of a chapter's story are sent after her as its pirates are: the sea's
@@ -1793,10 +1795,10 @@ export function spawnCampaignFoe(game: Game, prey: ShipEntity, accountId: number
 export function spawnPackLeader(game: Game, region: RegionId, level: number, near?: { x: number; y: number; r: number }): ShipEntity | null {
   // A port's hunt (owner, 2026-10-18: «все что берется в портах, должно делаться недалеко от них»): about its port.
   const [cx, cy] = near ? [near.x, near.y] : REGIONS[region].center;
-  for (let k = 0; k < 20; k++) {
-    const a = game.rng.float() * Math.PI * 2, r = near ? near.r * (0.35 + game.rng.float() * 0.5) : 1500 + game.rng.float() * 6000;
-    const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
-    if (!openSea(game, x, y) || regionAt(game.world, x, y) !== region || !game.inZone(x, y)) continue;
+  // (forum post 55: out of every captain's sight — questspot.ts)
+  const spot = hiddenSpot(game, { x: cx, y: cy }, near ? near.r * 0.35 : 1500, near ? near.r * 0.85 : 7500, (x, y) => openSea(game, x, y) && regionAt(game.world, x, y) === region && game.inZone(x, y));
+  for (let k = 0; k < 1 && spot; k++) {
+    const { x, y } = spot;
     // The leader sails a level above the captains the hunt is written for (canon D12).
     const lv = Math.min(10, shipLevelForCaptain(level) + 1);
     const ship = game.spawnNpcShip('pirate', game.rng.pick(hullsFor('pirate', lv)), 'confederacy', x, y, game.rng.float() * Math.PI * 2);
@@ -1817,11 +1819,10 @@ export function spawnPackLeader(game: Game, region: RegionId, level: number, nea
  *  `r` × 0.85 off the port and kept within `r` of it for a quarter of an hour. Of the quest's ⚓ (`level`), a hull of
  *  `minTier` or above when the step asks it. Null when no open water was found. */
 export function spawnQuestFoe(game: Game, at: { x: number; y: number }, role: 'pirate' | 'ghost' | 'merchant', level: number, r: number, minTier = 0, region?: RegionId): ShipEntity | null {
-  for (let k = 0; k < 16; k++) {
-    const a = game.rng.float() * Math.PI * 2, d = 500 + game.rng.float() * Math.max(100, r * 0.85 - 500);
-    const x = at.x + Math.cos(a) * d, y = at.y + Math.sin(a) * d;
-    if (!openSea(game, x, y) || !game.inZone(x, y) || x < 3500 || y < 3500 || x > 92500 || y > 92500) continue;
-    if (region && regionAt(game.world, x, y) !== region) continue; // a hunt of a sea's: in that sea
+  // (forum post 55: out of every captain's sight — about the port if it can be, else beyond, sailing in: questspot.ts)
+  const spot = hiddenSpot(game, at, 500, Math.max(600, r * 0.95), (x, y) => openSea(game, x, y) && game.inZone(x, y) && x >= 3500 && y >= 3500 && x <= 92500 && y <= 92500 && (!region || regionAt(game.world, x, y) === region));
+  for (let k = 0; k < 1 && spot; k++) {
+    const { x, y } = spot;
     const lv = Math.max(1, Math.min(10, Math.round(level)));
     let hulls = hullsFor(role === 'ghost' ? 'pirate' : role, lv);
     if (minTier) {

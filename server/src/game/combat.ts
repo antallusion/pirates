@@ -26,6 +26,7 @@ import { crueltyMul, inDuel, legalTarget, neutral, onPlayerAttack, pvpBlocked } 
 import { havenBlocked } from './ferry.ts'; // forum post 49: «Тихая гавань» by the ferry hubs
 import { markPvp } from './colours.ts';
 import { PEACE_SAY, skullFor, wrongBrethren } from './flaglaw.ts'; // forum 34: the three flags
+import { piracyBlow } from './patent.ts'; // «Каперский патент» (owner, 2026-11-02)
 import { sameGroup } from './party.ts';
 import { siegeImpact } from './siege.ts';
 import { guildFriends } from './guilds.ts';
@@ -1133,6 +1134,8 @@ function registerAggression(game: Game, a: ShipEntity, b: ShipEntity): void {
   // The pirate flag (forum 34): every new victim of the law's — a peaceful ship, a captain who was no fair game — is a
   // skull at once (flaglaw.ts skullFor), however small the crime's own infamy.
   infamy = Math.max(infamy, skullFor(game, a, b, b.isPlayer && legalTarget(game, a, b)));
+  // A privateer's piracy (patent.ts): a peaceful ship neither enemy nor ally of her patent — the patent burnt, a skull.
+  infamy = Math.max(infamy, piracyBlow(game, a, b));
   if (a.hasEffect('aggressor') && REGIONS[b.region].safety === 'contested') {
     const lvl = wantedLevel(pa.infamy);
     if (lvl < 5) infamy = Math.max(infamy, WANTED_THRESHOLDS[lvl + 1] - pa.infamy + 1);

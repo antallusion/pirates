@@ -9,11 +9,13 @@ import { COLOURS } from '../../../shared/src/data/colours.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { Colours } from '../../../shared/src/data/colours.ts';
 import { SF } from '../../../shared/src/protocol.ts';
-import type { ClientMsg, ShipInfo } from '../../../shared/src/protocol.ts';
+import type { ClientMsg, PatentOfferView, PatentView, ShipInfo } from '../../../shared/src/protocol.ts';
+import { PATENT_CUT } from '../../../shared/src/data/patent.ts';
 import { dict } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/flags.ts';
 import type { ClientState } from '../state.ts';
 import { esc, icon } from './dom.ts';
+import { serverText as serverWords } from '../lang/server.ts';
 
 const L = dict(EN, RU);
 
@@ -43,6 +45,8 @@ export interface ShipColours {
   noBoard: boolean;
   /** A young captain under the Green Pennant (docs/02 §10): neutral to captains in contested water. */
   pennant: boolean;
+  /** A privateer under her city's colours (owner, 2026-11-02: «Каперский патент»). */
+  privateer: boolean;
   /** «нейтральный флаг», «пиратский флаг», «флаг: Корона», «[ТЕГ] · Корона», «зелёный вымпел». */
   label: string;
 }
@@ -54,8 +58,9 @@ export function shipColours(flags: number, info: Pick<ShipInfo, 'isPlayer' | 'ci
   const guild = kind === 'faction' ? info.guild ?? null : null;
   const cityName = city ? FACTIONS[city].short : '';
   const pennant = kind === 'faction' && (flags & SF.GREEN_PENNANT) !== 0;
-  const label = kind === 'neutral' ? L('mark.neutral') : kind === 'pirate' ? L('mark.pirate') : pennant ? L('mark.pennant') : guild ? L('mark.guild', { tag: guild, city: cityName }) : city ? L('mark.city', { city: cityName }) : '';
-  return { kind, city, guild, noBoard: (flags & SF.NO_BOARD) !== 0, pennant, label };
+  const privateer = kind === 'faction' && (flags & SF.PRIVATEER) !== 0;
+  const label = kind === 'neutral' ? L('mark.neutral') : kind === 'pirate' ? L('mark.pirate') : privateer ? L('mark.privateer', { city: cityName }) : pennant ? L('mark.pennant') : guild ? L('mark.guild', { tag: guild, city: cityName }) : city ? L('mark.city', { city: cityName }) : '';
+  return { kind, city, guild, noBoard: (flags & SF.NO_BOARD) !== 0, pennant, privateer, label };
 }
 
 /** A ship's cloth: her colours', the Green Pennant's green over a young captain's city flag. */
@@ -73,7 +78,7 @@ export function flagMark(kind: Colours, city?: FactionId | null, cls = ''): stri
 export function flagChip(c: ShipColours | null): string {
   if (!c || !c.label) return '';
   const { c: cc, s: ss } = shipCloth(c);
-  return `<span class="fl-chip fl-chip--${c.kind}"><i class="fl-mark fl-${c.kind}" style="--fl-c:${cc};--fl-s:${ss}" aria-hidden="true"></i><span>${esc(c.label)}</span>${c.noBoard ? `<em class="fl-nb">${esc(L('mark.noBoard'))}</em>` : ''}</span>`;
+  return `<span class="fl-chip fl-chip--${c.kind}${c.privateer ? ' fl-chip--privateer' : ''}"><i class="fl-mark fl-${c.kind}" style="--fl-c:${cc};--fl-s:${ss}" aria-hidden="true"></i><span>${esc(c.label)}</span>${c.noBoard ? `<em class="fl-nb">${esc(L('mark.noBoard'))}</em>` : ''}</span>`;
 }
 
 /** Her colours for the kit's target line (a cloth, its words for the screen reader). */
@@ -130,10 +135,45 @@ export function coloursCard(state: ClientState, opts: { head?: boolean } = {}): 
   const law = lawlessHere(state) ? `<p class="fl-law" role="note">${icon('danger', '', 'ico-sm')}<span>${esc(L('fl.lawCard'))}</span></p>` : '';
   const skulls = skullsNote(state);
   return `<div class="card fl-card${law ? ' fl-card--lawless' : ''}">${opts.head === false ? '' : `<h4 class="card-h">${icon('tab_law', '', 'ico-md')}${esc(L('fl.title'))}</h4>`}${law}${skulls}
-    <div class="fl-opts" role="radiogroup" aria-label="${esc(L('fl.title'))}">${COLOURS.map(opt).join('')}</div>
+    <div class="fl-opts" role="radiogroup" aria-label="${esc(L('fl.title'))}">${COLOURS.map(opt).join('')}</div>${patentCard(state)}
     <p class="fl-line muted"${line || pennant ? '' : ' hidden'}>${esc(line)}${pennant ? `<span class="good">${esc(pennant)}</span>` : ''}</p>
     <button type="button" class="fl-board${v.noBoard ? ' off' : ''}${idle ? ' idle' : ''}" role="switch" aria-checked="${!v.noBoard}" data-noboard="${v.noBoard ? '0' : '1'}"${docked ? '' : ' disabled'}>
       <i class="fl-nb-ico" aria-hidden="true"></i><span class="fl-t"><b>${esc(v.noBoard ? L('fl.boardOff') : L('fl.boardOn'))}</b>${idle ? `<em class="fl-idle">${esc(L('fl.boardIdle'))}</em>` : ''}<small>${esc(L('fl.boardSub'))}</small></span><i class="fl-sw" aria-hidden="true"></i></button></div>`;
+}
+
+/** «Каперский патент» (owner, 2026-11-02): the fourth card under the three flags — whose, for how long, its prey, the
+ *  rules in three lines, buy or renew (a lawful harbour's offer), or what runs now. Nothing at sea with none held. */
+export function patentCard(state: ClientState): string {
+  const v = state.self?.pvp;
+  if (!v) return '';
+  const held: PatentView | null = v.patent && v.patent.until > Date.now() ? v.patent : null;
+  const offer: PatentOfferView | null = v.patentOffer ?? null;
+  if (!held && !offer) return '';
+  const by = (held ?? offer)!.by;
+  const enemies = (held ?? offer)!.enemies, allies = (held ?? offer)!.allies;
+  const names = (xs: FactionId[]) => (xs.length ? xs.map((f) => FACTIONS[f].short).join(', ') : L('pt.none'));
+  const days = offer?.days ?? 7;
+  const left = held ? patentLeft(held.until - Date.now()) : '';
+  const state_ = held ? `<em class="fl-on">${esc(left)}</em>` : '';
+  const lines = [L('pt.prey', { list: names(enemies) }), L('pt.l1'), L('pt.l2', { allies: names([by, ...allies]) }), L('pt.l3', { cut: Math.round(PATENT_CUT * 100) })];
+  const cost = offer ? offer.price.toLocaleString('ru-RU') : '';
+  const btn = offer && !offer.blocked
+    ? `<button type="button" class="btn btn-small fl-pat-buy" data-patent="1"${(state.self?.gold ?? 0) < offer.price ? ' disabled' : ''}>${esc(offer.renew ? L('pt.renew', { days, cost }) : L('pt.buy', { cost }))}</button>`
+    : '';
+  const why = offer?.blocked ? `<p class="fl-pat-why">${esc(serverWords(offer.blocked))}</p>` : !offer ? `<p class="fl-pat-why">${esc(L('pt.atSea'))}</p>` : '';
+  return `<div class="fl-opt fl-opt--patent fl-pat${held ? ' on' : ''}" role="group" aria-label="${esc(L('pt.title'))}">
+    ${icon(`faction_${by}`, '⚓', 'fl-pat-ico')}<span class="fl-t"><b>${esc(L('pt.title'))}</b><span class="fl-whose">${esc(L('pt.whose', { city: FACTIONS[by].short, days }))}</span><small>${lines.map((x, i) => `<span class="fl-ln${i === 0 ? ' fl-prey' : ''}">${esc(x)}</span>`).join('')}</small>${state_}</span>${btn}</div>${why}`;
+}
+
+/** «6 дн. 23 ч» / «5 ч 12 мин» left on a patent. */
+export function patentLeft(ms: number): string {
+  const h = Math.max(0, Math.floor(ms / 3_600_000));
+  return h >= 24 ? L('pt.left', { d: Math.floor(h / 24), h: h % 24 }) : L('pt.leftH', { h, m: Math.max(0, Math.floor((ms % 3_600_000) / 60_000)) });
+}
+
+/** The question before an act of piracy (the ring's «Атаковать» on a peaceful ship neither enemy nor ally of her patent). */
+export function piracyWords(name: string): { ask: string; go: string; no: string } {
+  return { ask: L('pt.piracyAsk', { name }), go: L('pt.piracyGo'), no: L('pt.piracyNo') };
 }
 
 /** Her skulls on the card (forum 34): what they lock, how to wash them off — time out of fights, or a pardon bought in a
@@ -166,6 +206,7 @@ export function portHint(): string {
 /** The card's buttons: an order for colours, boarding on or off. */
 export function bindColours(root: HTMLElement, send: (m: ClientMsg) => void): void {
   root.querySelectorAll<HTMLButtonElement>('[data-pardon]').forEach((el) => (el.onclick = () => send({ t: 'pardon' })));
+  root.querySelectorAll<HTMLButtonElement>('[data-patent]').forEach((el) => (el.onclick = () => send({ t: 'pvp', action: 'patent' })));
   root.querySelectorAll<HTMLButtonElement>('[data-colours]').forEach((el) => (el.onclick = () => send({ t: 'pvp', action: 'colours', flag: el.dataset.colours as Colours })));
   root.querySelectorAll<HTMLButtonElement>('[data-noboard]').forEach((el) => (el.onclick = () => send({ t: 'pvp', action: 'no_board', on: el.dataset.noboard === '1' })));
 }

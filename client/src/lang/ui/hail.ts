@@ -29,6 +29,9 @@ export const EN = {
   'no.colours': 'Attacking a captain is only for colours that allow it: the pirate flag (never on a neutral one) or two cities at war. The flag is changed in port.',
   'no.protected': 'These are a harbour’s peaceful waters: no fighting here.',
   'no.far': 'She is too far off to attack: close in.',
+  'no.patent': 'Your privateer patent protects the ships of its own flag and its allies.',
+  'patPreyT': 'Attack: your patent’s prey — no skull',
+  'patPiracyT': 'Attack: piracy — your patent burns, a skull',
   'no.how': 'How to change the flag',
   'no.ok': 'Got it',
 };
@@ -61,6 +64,9 @@ export const RU: Record<keyof typeof EN, string> = {
   'no.colours': 'Нападение на капитана — только когда флаги позволяют: под пиратским флагом (не на нейтрального) или между враждующими городами. Флаг меняется в порту.',
   'no.protected': 'Здесь мирные воды гавани: бой запрещён.',
   'no.far': 'Она слишком далеко для атаки: подойдите ближе.',
+  'no.patent': 'Ваш каперский патент защищает корабли своего флага и его союзников.',
+  'patPreyT': 'Атаковать: добыча вашего патента — без черепа',
+  'patPiracyT': 'Атаковать: пиратство — патент сгорит, череп',
   'no.how': 'Как сменить флаг',
   'no.ok': 'Понятно',
 };

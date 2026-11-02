@@ -210,7 +210,9 @@ import { AdvCard } from './ui/advcard.ts'; // docs/17 H4
 import { PuzzleWindow } from './ui/puzzle.ts';
 import { crewSayParts, renderLog, setChronAsk } from './ui/crewlife.ts';
 import { guardOfEntity } from './render/advmap.ts'; // forum 34: the ring by what she is
-import { flagLine, flagsCss, lawlessHere, lawlessWords, peaceWords, portHint, shipColours } from './ui/flags.ts'; // docs/24 C1, D1–D3
+import { flagLine, flagsCss, lawlessHere, lawlessWords, peaceWords, piracyWords, portHint, shipColours } from './ui/flags.ts'; // docs/24 C1, D1–D3
+import { stanceOf } from '../../shared/src/data/patent.ts'; // «Каперский патент» (owner, 2026-11-02)
+import type { PatentIssuer } from '../../shared/src/data/patent.ts';
 import { PEACE_SAY } from '../../shared/src/data/colours.ts'; // forum 34: the city flag's peace
 import { EN as FLAGS_EN, RU as FLAGS_RU } from './lang/ui/flags.ts';
 import { citiesHostile } from '../../shared/src/data/colours.ts';
@@ -4463,10 +4465,34 @@ function attackable(id: number | null): boolean {
   const own = state.ownDisplay;
   if (!s?.info || !own || state.self?.dockedAt || s.cur.flags & (SF.SINKING | SF.DOCKED | SF.PROTECTED | SF.IN_BATTLE | SF.VOYAGE)) return false;
   if (dist(own.x, own.y, s.cur.x, s.cur.y) > 2500) return false;
-  if ((s.info.isPlayer || s.info.npcRole === 'escort') && !(s.cur.flags & SF.HOSTILE) && !fairCaptain(s.cur.flags, s.info)) return false;
-  // A peaceful ship (forum 34): the pirate flag's prey only, unless she comes for her (the server's flaglaw.ts decides).
-  if (peacefulInfo(s.info) && !(s.cur.flags & SF.HOSTILE) && state.self?.pvp.flag !== 'pirate') return false;
+  const pm = patentMarkOf(s.info, s.cur.flags);
+  if ((s.info.isPlayer || s.info.npcRole === 'escort') && !(s.cur.flags & SF.HOSTILE) && !fairCaptain(s.cur.flags, s.info) && pm !== 'prey') return false;
+  // A peaceful ship (forum 34): the pirate flag's prey only, unless she comes for her (the server's flaglaw.ts decides) —
+  // or a privateer's prey, or her piracy (asked first: pickTargetChoice).
+  if (peacefulInfo(s.info) && !(s.cur.flags & SF.HOSTILE) && state.self?.pvp.flag !== 'pirate' && pm !== 'prey' && pm !== 'piracy') return false;
   return true;
+}
+
+/** Her privateer patent's word on a ship, as the client reads it (the server's patent.ts markFor has the last word):
+ *  her prey (the issuer's enemies' ships, captains under their flag, pirates), a ship it protects (its own flag's and
+ *  allies'), piracy (a peaceful ship neither), or nothing. */
+function patentMarkOf(info: ShipInfo, flags: number): 'prey' | 'protected' | 'piracy' | null {
+  const me = state.self?.pvp, pt = me?.patent;
+  if (!me || !pt || pt.until <= Date.now() || me.flag !== 'faction') return null;
+  const by = pt.by as PatentIssuer;
+  if (info.isPlayer) {
+    const them = shipColours(flags, info);
+    if (!them || them.pennant) return null;
+    if (them.kind === 'pirate') return 'prey';
+    return them.kind === 'faction' && !!them.city && stanceOf(by, them.city) === 'enemy' ? 'prey' : null;
+  }
+  if (info.npcRole === 'escort' || markKind(info) === 'deep') return null;
+  if (info.npcRole === 'pirate') return 'prey';
+  if (info.faction === 'player') return null;
+  const st = stanceOf(by, info.faction);
+  if (st === 'enemy') return 'prey';
+  if (!peacefulInfo(info)) return null;
+  return st === 'other' ? 'piracy' : 'protected';
 }
 
 /** A merchant, a fisher, or the law's own ship (a patrol, a hunter of a lawful flag): the city flag's peace (forum 34;
@@ -5014,7 +5040,8 @@ function targetChoices(about: string): { choices: TmChoice[]; name: string; x: n
     const mk = markKind(s.info), beast = beastOfClass(s.info.classId);
     const pos = { name: beast ? BEASTS[beast].name[lang() === 'ru' ? 1 : 0] : s.info.isPlayer ? s.info.captainName : placeName(s.info.name), x: renderer.sx(s.cur.x), y: renderer.sy(s.cur.y), r: Math.max(18, SHIP_CLASSES[s.info.classId].length * 0.5 * renderer.zoom) };
     const ok = !!f?.attackable;
-    const choices = shipRing({ kind: mk, isPlayer: s.info.isPlayer, attackOk: ok, boardNow: ok && canBoardNow(id), struck: !!(s.cur.flags & SF.SURRENDERED), running: state.pursuit?.target === id ? state.pursuit.mode : null });
+    const pm = patentMarkOf(s.info, s.cur.flags);
+    const choices = shipRing({ kind: mk, isPlayer: s.info.isPlayer, attackOk: ok, boardNow: ok && canBoardNow(id), struck: !!(s.cur.flags & SF.SURRENDERED), running: state.pursuit?.target === id ? state.pursuit.mode : null, patent: pm === 'prey' || pm === 'piracy' ? pm : null });
     return choices.length ? { ...pos, choices, info: true } : { ...pos, choices: [{ id: 'info', art: 'bt_book', label: seaWord('tm.info'), title: seaWord('tm.infoT') }] };
   }
   if (kind === 'roam') {
@@ -5041,6 +5068,7 @@ function attackNo(id: number): AttackNo | null {
   const s = state.ships.get(id), own = state.ownDisplay;
   if (!s?.info || attackable(id)) return null;
   if (s.cur.flags & SF.PROTECTED) return 'protected';
+  if (patentMarkOf(s.info, s.cur.flags) === 'protected' && !(s.cur.flags & SF.HOSTILE)) return 'patent';
   if (peacefulInfo(s.info) && !(s.cur.flags & SF.HOSTILE) && state.self?.pvp.flag !== 'pirate') return 'peace';
   if ((s.info.isPlayer || s.info.npcRole === 'escort') && !(s.cur.flags & SF.HOSTILE)) return 'colours';
   return own && dist(own.x, own.y, s.cur.x, s.cur.y) > 2500 ? 'far' : 'protected';
@@ -5086,6 +5114,9 @@ function hirableShip(s: { info?: ShipInfo | null; cur: { flags: number } }): boo
   return !!i && !i.isPlayer && !!i.npcRole && (HIRE_ROLES as readonly string[]).includes(i.npcRole) && !i.named && !i.elite && i.shipLevel !== undefined && !(s.cur.flags & (SF.HOSTILE | SF.SURRENDERED | SF.SINKING | SF.BOARDING));
 }
 
+/** The ships she said «yes» to piracy on (asked once a ship). */
+const piracyAsked = new Set<number>();
+
 /** A choice taken: the mark, the pursuit, the fight — by the messages the action button sends. */
 function pickTargetChoice(id: TmId, about: string): void {
   const [kind, sid] = about.split(':');
@@ -5100,6 +5131,17 @@ function pickTargetChoice(id: TmId, about: string): void {
     // «Атаковать» under colours that forbid it: why, and the one tap to the flag card — nothing sent, no mark taken
     // (owner, 2026-11-01)
     if ((id === 'fight' || id === 'board') && !attackable(n)) return refuseAttack(n);
+    // A privateer's piracy (owner, 2026-11-02): asked once before the patent burns
+    const sh = state.ships.get(n);
+    if ((id === 'fight' || id === 'board') && sh?.info && patentMarkOf(sh.info, sh.cur.flags) === 'piracy' && !piracyAsked.has(n)) {
+      const w = piracyWords(placeName(sh.info.name));
+      void askHtml(`<p id="confirm-text">${esc(w.ask)}</p>`, w.go, w.no).then((go) => {
+        if (!go) return;
+        piracyAsked.add(n);
+        pickTargetChoice(id, about);
+      });
+      return;
+    }
     pinTarget(n); // the pursuit and the fight are about her: she is the mark too
     if (id === 'board') {
       // «На абордаж» (offered within 100 m only): the grapples now

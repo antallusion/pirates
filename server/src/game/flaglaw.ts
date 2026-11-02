@@ -31,6 +31,7 @@ import { npcHostileTo, planWander, sectorLevel } from './npc.ts';
 import { pardonCost } from './player.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
+import { patentPeace } from './patent.ts'; // «Каперский патент» (owner, 2026-11-02)
 
 export { FLAG_LOCK_SAY, PEACE_SAY };
 
@@ -80,6 +81,10 @@ export function peaceBlocked(game: Game, a: ShipEntity, b: ShipEntity): string |
   if ((cap.attackers.get(b.id) ?? -999) > game.now - 120 || (a.attackers.get(b.id) ?? -999) > game.now - 120) return null;
   if (cap.accountId !== null && sanctioned.get(b) === cap.accountId) return null;
   if (npcHostileTo(game, b, cap)) return null;
+  // A privateer (patent.ts): her patent's prey is hers; its own flag's and its allies' ships are refused her; a ship
+  // neither enemy nor ally she may fire on with her own guns — piracy, the patent burnt and a skull (registerAggression).
+  const pat = patentPeace(game, a, b);
+  if (pat !== undefined) return pat;
   return PEACE_SAY;
 }
 
@@ -180,6 +185,12 @@ export function stepHueAndCry(game: Game): void {
     }
     book.set(ship.id, rec);
   }
+}
+
+/** A patrol out of a harbour after her (any flag's: the law's after a skulled pirate, the enemy's after a privateer —
+ *  patent.ts). */
+export function sallyFrom(game: Game, port: { x: number; y: number; faction: import('../../../shared/src/data/factions.ts').FactionId; name: string }, prey: ShipEntity): ShipEntity | null {
+  return sally(game, port, prey);
 }
 
 /** A patrol out of a lawful harbour after a skulled pirate: a level above the waters, on her chase, gone in ten minutes. */

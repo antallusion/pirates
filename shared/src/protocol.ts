@@ -435,6 +435,7 @@ export type ClientMsg =
   /** docs/24 D1–D2: the colours ordered in port (they go up a while after), and «Абордаж: выкл» (C1, in port). */
   | { t: 'pvp'; action: 'colours'; flag: Colours }
   | { t: 'pvp'; action: 'no_board'; on: boolean }
+  | { t: 'pvp'; action: 'patent' } // «Каперский патент» (owner, 2026-11-02): buy or renew in a lawful harbour
   | { t: 'pvp'; action: 'duel'; name: string; fleet: boolean }
   | { t: 'pvp'; action: 'duel_answer'; id: number; accept: boolean }
   | { t: 'pvp'; action: 'forfeit' }
@@ -1263,6 +1264,7 @@ export const SF = {
   TRUCE: 1 << 27, // a ship of the sea under a white flag: a ceasefire bought from her holds (owner, 2026-10-18)
   IN_BATTLE: 1 << 28, // a captain in a battle (or just out of one): nobody may touch her (owner, 2026-10-22, inbattle.ts)
   VOYAGE: 1 << 29, // on a long passage under ×10 (owner, 2026-10-28, passage.ts): out of everyone's reach, drawn as a ghost
+  PRIVATEER: 1 << 30, // «Каперский патент» (owner, 2026-11-02, patent.ts): a privateer under her city's colours
 } as const;
 
 /**
@@ -3586,6 +3588,10 @@ export interface PvpView {
   washAllMin?: number;
   pardon?: number;
   locked?: boolean;
+  /** «Каперский патент» (owner, 2026-11-02, server patent.ts): hers while it runs, and the harbour's offer in a lawful
+   *  port (the Crown, the League, the Harpoon). */
+  patent?: PatentView | null;
+  patentOffer?: PatentOfferView | null;
   shameUntil: number; // epoch ms
   bubbleUntil: number; // epoch ms
   rating: number;
@@ -3595,6 +3601,27 @@ export interface PvpView {
   hunter: boolean; // a hunter's licence (Crown standing)
   sunkBy: { name: string; t: number; free: boolean }[];
   challenges: { id: number; from: string; fleet: boolean }[];
+}
+
+/** Her privateer patent: whose, until when (epoch ms), its prey's flags and the flags it protects with its own. */
+export interface PatentView {
+  by: FactionId;
+  until: number;
+  enemies: FactionId[];
+  allies: FactionId[];
+}
+
+/** A lawful harbour's patent: its price for her, its days, its prey and protected flags, why not now (null: she may),
+ *  whether it is a renewal, the level it is sold from. */
+export interface PatentOfferView {
+  by: FactionId;
+  price: number;
+  days: number;
+  enemies: FactionId[];
+  allies: FactionId[];
+  blocked: string | null;
+  renew: boolean;
+  level: number;
 }
 
 export interface DuelView {

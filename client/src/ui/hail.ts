@@ -35,6 +35,8 @@ export interface RingFacts {
   struck: boolean;
   /** The pursuit on her now, and how. */
   running: 'guns' | 'board' | null;
+  /** Under her privateer patent (owner, 2026-11-02): her patent's prey (no skull), or piracy (the patent burns). */
+  patent?: 'prey' | 'piracy' | null;
 }
 
 /** Men aboard who answer a hail: any captain, any ship of the sea's but the deep's — not a captain's escort (she
@@ -51,7 +53,7 @@ export function shipRing(f: RingFacts): TmChoice[] {
   const out: TmChoice[] = [];
   // (a captain's escort her colours leave alone: nothing to do with her but her card)
   if (f.kind === 'captain' && !f.isPlayer && !f.attackOk) return out;
-  const fight: TmChoice = { id: 'fight', art: 'talent_gun_rolling_broadside', label: LS('tm.attack'), title: f.struck ? LS('tm.fightStruck') : f.attackOk ? L('attackT') : L('attackOffT'), on: f.attackOk && f.running === 'guns' };
+  const fight: TmChoice = { id: 'fight', art: 'talent_gun_rolling_broadside', label: LS('tm.attack'), title: f.struck ? LS('tm.fightStruck') : f.attackOk ? (f.patent === 'prey' ? L('patPreyT') : f.patent === 'piracy' ? L('patPiracyT') : L('attackT')) : L('attackOffT'), on: f.attackOk && f.running === 'guns' };
   if (!f.attackOk) fight.off = true;
   out.push(fight);
   if (f.kind === 'deep') return out; // the deep's: «Атаковать» alone (owner, 2026-10-31)
@@ -119,7 +121,7 @@ export function hailOptions(f: HailFacts): HailChoice[] {
 
 /** Why the attack on her is refused now: the peace of a peaceful ship (the city or neutral flag), a captain the colours
  *  leave alone, a harbour's peace, too far. */
-export type AttackNo = 'peace' | 'colours' | 'protected' | 'far';
+export type AttackNo = 'peace' | 'colours' | 'protected' | 'far' | 'patent';
 
 export function attackNoText(why: AttackNo): string {
   return L(`no.${why}`);

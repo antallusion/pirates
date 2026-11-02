@@ -22,6 +22,8 @@ import type { NpcBrain } from './npc.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { FLAG_LOCK_SAY, flagLocked } from './flaglaw.ts'; // forum 34: skulls lock the colours
+import { patentFoes, patentOf, voidPatent } from './patent.ts'; // «Каперский патент» (owner, 2026-11-02)
+import { PATENT_SAY } from '../../../shared/src/data/patent.ts';
 
 /** The colours' own dice (a pirate's mind about a neutral captain, the hunts spared her): the sea's stream is not drawn
  *  on, so the fights and the landings the tests replay stay as they were. */
@@ -70,7 +72,8 @@ export function enemies(game: Game, a: ShipEntity, b: ShipEntity): boolean {
 /** The Green Pennant (docs/02 §10, docs/24): a young captain under her city's flag who has fired on no captain in half
  *  an hour — neutral to other captains in contested water, though she may fire first (and so strike it). */
 export function hasPennant(game: Game, p: Profile): boolean {
-  return coloursOf(p) === 'faction' && p.level < PENNANT_LEVEL && p.pvp.played < PENNANT_SECONDS && game.wallNow() - p.pvp.aggressedAt > PENNANT_AGGRESSED_MS;
+  // (a privateer is no protected youngster: her patent strikes the pennant — patent.ts)
+  return coloursOf(p) === 'faction' && p.level < PENNANT_LEVEL && p.pvp.played < PENNANT_SECONDS && game.wallNow() - p.pvp.aggressedAt > PENNANT_AGGRESSED_MS && !patentOf(game, p);
 }
 
 /** Why the colours bar captain `a` from captain `b` (their own ships), or null. */
@@ -82,6 +85,8 @@ export function coloursBlocked(game: Game, a: ShipEntity, b: ShipEntity): string
   const ca = coloursOf(pa), cb = coloursOf(pb);
   // The pennant shields her one way only: the young captain may still fire first.
   if (ca !== 'neutral' && REGIONS[b.region].safety === 'contested' && hasPennant(game, pb)) return PENNANT_SAY;
+  // A privateer and a captain flying her patent's enemies' city flag: fair game for each other (patent.ts).
+  if (ca === 'faction' && cb === 'faction' && patentFoes(game, a, b)) return null;
   const bar = coloursBar(ca, cb, ca === 'faction' && cb === 'faction' && enemies(game, a, b));
   return bar ? COLOURS_SAY[bar] : null;
 }
@@ -206,6 +211,8 @@ export function coloursSecond(game: Game, s: PlayerSession): void {
       } else if (flagLocked(p, flag)) {
         game.sendTo(s, { t: 'toast', msg: FLAG_LOCK_SAY, kind: 'bad' });
       } else {
+        // (other colours over a privateer's: the patent is void — patent.ts)
+        if (p.pvp.patent && (flag !== 'faction' || (p.pvp.nextCity && p.pvp.nextCity !== p.pvp.patent.by))) voidPatent(game, s, PATENT_SAY.struck);
         p.pvp.flag = flag;
         if (p.pvp.nextCity) p.pvp.city = p.pvp.nextCity;
         game.sendTo(s, { t: 'toast', msg: UP[flag], kind: flag === 'pirate' ? 'bad' : 'good' });
