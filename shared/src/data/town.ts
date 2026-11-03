@@ -105,7 +105,16 @@ export const UNIT_GOODS: Partial<Record<UnitId, Partial<Record<GoodId, number>>>
   life_guard: { pearls: 0.3 },
   drowned: { pearls: 0.5 },
   deep_spawn: { pearls: 0.75 },
+  // docs/38 §2.4 B: the elites ask half as much again as the upgraded kind of their tier (the grenadiers their grenades)
+  sea_grenadier: { gunpowder: 0.25 },
+  deadeye: { gunpowder: 0.5 },
+  mortar_crew: { gunpowder: 1.1, iron: 0.5 },
+  corsair_blade: { rum: 2.25 },
+  admiral_guard: { pearls: 0.45 },
+  deep_horror: { pearls: 1.1 },
 };
+/** docs/38 §2.4 B: an elite dwelling's (level 8 and up) men a week, a share of its tier's growth (a pool of their own). */
+export const ELITE_GROWTH = 0.5;
 
 export interface Price {
   silver: number;

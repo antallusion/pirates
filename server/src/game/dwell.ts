@@ -18,7 +18,7 @@ import { PREMIUM_BEAST_IDS, PREMIUM_PLURAL } from '../../../shared/src/data/prem
 import type { PremiumBeastId } from '../../../shared/src/data/premiumbeasts.ts';
 import { SHIP_BEAST_IDS, SHIP_BEAST_PLURAL } from '../../../shared/src/data/shipbeasts.ts';
 import type { ShipBeastId } from '../../../shared/src/data/shipbeasts.ts';
-import { UNITS, armyWeight, stackKey } from '../../../shared/src/data/army.ts';
+import { TIER_ELITE, UNITS, armyWeight, stackKey } from '../../../shared/src/data/army.ts';
 import { recruitLift } from './throne.ts';
 import { BEAST_PLURAL, CREATURE_IDS } from '../../../shared/src/data/bestiary.ts';
 import type { CreatureId } from '../../../shared/src/data/bestiary.ts';
@@ -38,8 +38,8 @@ import { recruitCost, reconcile } from './crew.ts';
 import type { Game } from './Game.ts';
 import type { Holding } from './holdings.ts';
 import type { PlayerSession } from './player.ts';
-import { islePools, isleWeekGrowth, keepsDeep, townHave, townLevel } from './town.ts';
-import { DWELL_HIRE_OFF, DWELL_UP_LEVEL } from '../../../shared/src/data/isletree.ts';
+import { isleElitePools, isleEliteGrowth, islePools, isleWeekGrowth, keepsDeep, townHave, townLevel } from './town.ts';
+import { DWELL_HIRE_OFF, DWELL_UP_LEVEL, dwellElite } from '../../../shared/src/data/isletree.ts';
 import { freeCargo, jobCargo, questEvent } from './quests.ts'; // playthrough C: her jobs' cargo is not hers to spend
 import { mooredAt } from './waystations.ts';
 import { captainAdvice } from './armyadvice.ts';
@@ -116,10 +116,12 @@ interface Here {
   /** The tiers here opened by her island (2 and up), and the port's own among them. */
   remote: Set<number>;
   native: Set<number>;
+  /** docs/38 §2.4 B: the tiers whose elite is hired here (her island's own dwellings of level 8 and up, at the island). */
+  elite: Set<number>;
 }
 
-/** Her island's dwellings by tier, each at its level (docs/38: the plumbing of the elite kind of a later task — isletree.ts
- *  DWELL_ELITE_LEVEL, dwellElite — and of the hire's share off, DWELL_HIRE_OFF). */
+/** Her island's dwellings by tier, each at its level (docs/38: the elite kind from DWELL_ELITE_LEVEL — isletree.ts
+ *  dwellElite — and the hire's share off, DWELL_HIRE_OFF). */
 export function isleDwellLevels(y: Yard): Map<number, number> {
   const out = new Map<number, number>();
   for (let t = 1; t <= 7; t++) {
@@ -162,21 +164,22 @@ function here(game: Game, s: PlayerSession, src: Src): Here | string {
       remote.add(t);
       dwell.set(t, (dwell.get(t) ?? false) || up);
     }
-    return { src, place: port.name, port, h: null, y: null, dwell, why: null, own: r?.y ?? null, remote, native };
+    return { src, place: port.name, port, h: null, y: null, dwell, why: null, own: r?.y ?? null, remote, native, elite: new Set() };
   }
   if (src === 'way') {
     const w = mooredAt(game, s);
     if (!w) return 'Moor at a floating waystation first.';
     const r = remoteOf(game, s);
     if (!r) return 'You have no island of your own.';
-    return { src, place: w.kind, port: null, h: null, y: null, dwell: r.dwell, why: null, own: r.y, remote: new Set(r.dwell.keys()), native: new Set() };
+    return { src, place: w.kind, port: null, h: null, y: null, dwell: r.dwell, why: null, own: r.y, remote: new Set(r.dwell.keys()), native: new Set(), elite: new Set() };
   }
   const m = ownBase(game, s);
   if (typeof m === 'string') return m;
   const { h, y, isl } = m;
   const dwell = isleDwell(y);
   const why = lyingOff(game, s, h) ? null : 'Bring your ship to the island to take the men aboard.';
-  return { src, place: isl.name, port: null, h, y, dwell, why, own: y, remote: new Set(), native: new Set(dwell.keys()) };
+  const elite = new Set([...isleDwellLevels(y)].filter(([, L]) => dwellElite(L)).map(([t]) => t));
+  return { src, place: isl.name, port: null, h, y, dwell, why, own: y, remote: new Set(), native: new Set(dwell.keys()), elite };
 }
 
 /** Far from the island (a port, a waystation): the port's price, the hold's resources. */
@@ -283,6 +286,8 @@ export function recruit(game: Game, s: PlayerSession, src: Src, u: UnitId, want:
   if (b) return b;
   const d = UNITS[u];
   if (!d) return 'Unknown kind of man';
+  // docs/38 §2.4 B: the elite only at her island's own dwelling of its tier, raised to level 8
+  if (d.elite && !at.elite.has(d.tier)) return ELITE_WHY;
   const up = at.dwell.get(d.tier);
   if (up === undefined) return 'No dwelling of theirs here.';
   if (d.up && !up) return 'Only an upgraded dwelling trains those.';
@@ -290,7 +295,7 @@ export function recruit(game: Game, s: PlayerSession, src: Src, u: UnitId, want:
   const ship = s.ship!;
   const p = s.profile!;
   if (ship.shipLevel < TIER_SHIP_LEVEL[d.tier]) return tierWhy(d.tier);
-  const pools = poolsOf(game, at);
+  const pools = d.elite ? isleElitePools(game, at.y!) : poolsOf(game, at);
   const picked = d.tier >= PICKED_TIER ? pickedRoom(s) : Infinity;
   // Owner, 2026-10-28: the hands go ashore to make room for better men (a full hold of deckhands hired nothing).
   const swap = swapOf(ship.army, d.tier);
@@ -336,7 +341,8 @@ export function recruit(game: Game, s: PlayerSession, src: Src, u: UnitId, want:
       game.holdings.touch();
     }
   } else {
-    at.y!.town!.pool[d.tier] = Math.max(0, (at.y!.town!.pool[d.tier] ?? 0) - n);
+    const pool = d.elite ? isleElitePools(game, at.y!) : at.y!.town!.pool;
+    pool[d.tier] = Math.max(0, (pool[d.tier] ?? 0) - n);
     game.holdings.touch();
   }
   signOn(game, s, u, n);
@@ -420,12 +426,17 @@ export function mightLeft(s: PlayerSession, u: UnitId, from?: UnitId): number {
   return mightRoom(ship.army, u, ship.shipLevel, ship.stats.crewMax, ship.armySlots, from);
 }
 
+/** docs/38 §2.4 B: why an elite is not hired here. */
+const ELITE_WHY = 'The elite are hired only at your island’s own dwelling of their tier, raised to level 8.';
+
 const tierWhy = (tier: number) => `Men of tier ${tier} serve a ship of level ${TIER_SHIP_LEVEL[tier]} and up.`;
 
 const NAMES: Record<UnitId, string> = {
   deckhand: 'deckhands', sailor: 'seasoned sailors', marine: 'marines', sea_guard: 'sea guards', musketeer: 'musketeers', sharpshooter: 'sharpshooters',
   gunner: 'gunners', bombardier: 'bombardiers', boarder: 'boarders', cutthroat: 'cutthroats', guard: 'officers’ guards', life_guard: 'life guards',
   drowned: 'drowned', deep_spawn: 'spawn of the deep',
+  // docs/38 §2.4 B: the elites
+  bosun: 'bosuns', sea_grenadier: 'sea grenadiers', deadeye: 'deadeyes', mortar_crew: 'mortar crews', corsair_blade: 'corsair blades', admiral_guard: 'admiral’s guards', deep_horror: 'horrors of the deep',
   ...(Object.fromEntries(CREATURE_IDS.map((b) => [b, BEAST_PLURAL[b][0]])) as Record<CreatureId, string>), // docs/18 II, IV
   ...(Object.fromEntries(FACTION_KIND_IDS.map((k) => [k, FACTION_NAMES[k][0].toLowerCase()])) as Record<FactionKindId, string>), // the world's armies
   ...(Object.fromEntries(PREMIUM_BEAST_IDS.map((k) => [k, PREMIUM_PLURAL[k][0]])) as Record<PremiumBeastId, string>), // the shop's creatures
@@ -513,16 +524,23 @@ export function dwellView(game: Game, s: PlayerSession, src: Src): DwellView | n
   const pools = poolsOf(game, at);
   const deep = keepsDeep(s);
   const rows: DwellRow[] = [];
+  const elite = at.elite.size ? isleElitePools(game, at.y!) : null;
   for (const [tier, up] of [...at.dwell].sort((a, b) => a[0] - b[0])) {
     const base = TIER_UNIT[tier];
     const kinds: UnitId[] = up ? [base, UNITS[base].upgrade!] : [base];
     const swap = swapOf(ship.army, tier);
+    const unit = (u: UnitId) => { const room = mightRoom(swap ? sansHands(ship.army) : ship.army, u, ship.shipLevel, ship.stats.crewMax, ship.armySlots); return { u, per: Math.round(perMan(game, s, at, u) * 100) / 100, goods: UNIT_GOODS[u] ?? {}, room: Number.isFinite(room) ? room : -1 }; };
+    const why = UNITS[base].deep && !deep ? 'Only a captain of the Choir or of a cursed ship keeps the drowned.' : ship.shipLevel < TIER_SHIP_LEVEL[tier] ? tierWhy(tier) : null;
     rows.push({
       tier, name: at.port && tier === 1 ? 'tavern' : dwellingOf(tier), up, pool: Math.floor(pools[tier] ?? 0), growth: Math.round(growthOf(game, at, tier) * 10) / 10,
-      units: kinds.map((u) => { const room = mightRoom(swap ? sansHands(ship.army) : ship.army, u, ship.shipLevel, ship.stats.crewMax, ship.armySlots); return { u, per: Math.round(perMan(game, s, at, u) * 100) / 100, goods: UNIT_GOODS[u] ?? {}, room: Number.isFinite(room) ? room : -1 }; }),
-      why: UNITS[base].deep && !deep ? 'Only a captain of the Choir or of a cursed ship keeps the drowned.' : ship.shipLevel < TIER_SHIP_LEVEL[tier] ? tierWhy(tier) : null,
+      units: kinds.map(unit), why,
       ...(at.remote.has(tier) ? { isle: true } : {}), ...(swap ? { swap } : {}),
     });
+    // docs/38 §2.4 B: the elite of the tier, its pool its own, right under its dwelling's row
+    const eu = TIER_ELITE[tier];
+    if (elite && eu && at.elite.has(tier)) {
+      rows.push({ tier, name: dwellingOf(tier), up: true, elite: true, pool: Math.floor(elite[tier] ?? 0), growth: Math.round(isleEliteGrowth(game, at.y!, tier) * 10) / 10, units: [unit(eu)], why, ...(swap ? { swap } : {}) });
+    }
   }
   if (src === 'isle' && dwellHooks.isleRows) rows.push(...dwellHooks.isleRows(game, s));
   const ups: DwellUp[] = [];
@@ -562,6 +580,10 @@ export function adminDwell(game: Game, s: PlayerSession, arg: string): string {
   if (typeof m !== 'string') {
     const pools = islePools(game, m.y);
     if (arg === 'fill') for (let t = 1; t <= 7; t++) if (townLevel(m.y, dwellingOf(t)) > 0) pools[t] = POOL_WEEKS * isleWeekGrowth(game, m.y, t);
+    if (arg === 'fill') {
+      const elite = isleElitePools(game, m.y); // docs/38 §2.4 B
+      for (let t = 1; t <= 7; t++) elite[t] = POOL_WEEKS * isleEliteGrowth(game, m.y, t);
+    }
     game.holdings.touch();
     out.push(`${m.isl.name}: ${[1, 2, 3, 4, 5, 6, 7].filter((t) => townLevel(m.y, dwellingOf(t)) > 0).map((t) => `${TIER_UNIT[t]} ${Math.floor(pools[t])}`).join(', ') || 'no dwellings'}`);
   }

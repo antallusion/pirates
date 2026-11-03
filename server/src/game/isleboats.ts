@@ -173,7 +173,7 @@ export function boatsDwellView(game: Game, s: PlayerSession): DwellView | null {
   const info = boatsInfo(game, s);
   if (!v || !info) return null;
   // (her dwellings only: the pen's creatures and the titans are not for the boats; nothing trained up from afar)
-  return { ...v, src: 'boat', rows: v.rows.filter((r) => /^dw\d$/.test(r.name)), ups: [], why: boatsWhy(game, s), boat: info };
+  return { ...v, src: 'boat', rows: v.rows.filter((r) => /^dw\d$/.test(r.name) && !r.elite), ups: [], why: boatsWhy(game, s), boat: info };
 }
 
 // ------------------------------------------------------------------------------------------------ sending them
@@ -213,7 +213,7 @@ export function sendBoats(game: Game, s: PlayerSession, picks: readonly { u: Uni
   for (const [u, n] of want) {
     const d = UNITS[u];
     const up = dwell.get(d.tier);
-    if (up === undefined || d.beast || d.titan) return 'No dwelling of theirs on your island.';
+    if (up === undefined || d.beast || d.titan || d.elite) return 'No dwelling of theirs on your island.'; // (docs/38 §2.4 B: the elite only at the island)
     if (d.up && !up) return 'Only an upgraded dwelling trains those.';
     if (d.deep && !keepsDeep(s)) return 'Only a captain of the Choir or of a cursed ship keeps the drowned.';
     if (ship.shipLevel < TIER_SHIP_LEVEL[d.tier]) return `Men of tier ${d.tier} serve a ship of level ${TIER_SHIP_LEVEL[d.tier]} and up.`;

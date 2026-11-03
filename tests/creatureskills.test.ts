@@ -53,7 +53,7 @@ function arena(u: UnitId, foe: UnitId = 'marine', o: { gap?: number; hurt?: bool
 
 test('the share: about 30% of the creatures hold an ability, 25–40 kinds of them, every kind held; 20–25% fire from afar', () => {
   const all = Object.keys(UNITS) as UnitId[];
-  assert.equal(all.length, 271);
+  assert.equal(all.length, 278); // (+7: the island's elites, docs/38 §2.4 B)
   const held = all.filter((u) => UNIT_SKILL[u]);
   assert.ok(held.length / all.length >= 0.27 && held.length / all.length <= 0.35, `${held.length} of ${all.length}`);
   assert.ok(SKILL_IDS.length >= 25 && SKILL_IDS.length <= 40, `${SKILL_IDS.length} kinds`);

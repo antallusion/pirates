@@ -171,7 +171,10 @@ export function raze(game: Game, s: PlayerSession, t: RazeTarget): string | null
     const ts = townState(y);
     delete ts.b[f.what as TownId];
     const tier = TOWN[f.what as TownId].tier;
-    if (tier) ts.pool[tier] = 0; // the men waiting in it go with it
+    if (tier) {
+      ts.pool[tier] = 0; // the men waiting in it go with it
+      if (ts.elite) ts.elite[tier] = 0; // (its elite too, docs/38 §2.4 B)
+    }
   } else if (f.kind === 'producer') {
     y.producers = y.producers.filter((p) => p.plot !== plot);
   } else {

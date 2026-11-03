@@ -49,6 +49,8 @@ export interface DwellRow {
   isle?: boolean;
   /** Tier-1 men aboard who go ashore to make room for these when the hammocks are full. */
   swap?: number;
+  /** docs/38 §2.4 B: the elite of the tier (her island's dwelling of level 8 and up), from a pool of its own. */
+  elite?: boolean;
 }
 
 /** A stack of the ship's army that may be trained up here, at silver and resources a man. */

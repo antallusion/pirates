@@ -6,8 +6,8 @@
 // island's store, then the hold of a ship lying off the island).
 
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
-import { TOWN, TOWN_IDS, HALL_INCOME, KEEP_GROWTH, MARKET_GOODS, MARKET_MIN_SPREAD, POOL_WEEKS, marketCost, TIER_UNIT, deepAllowed, dwellingOf, isleGrowth, marketBuy, marketSell, townCost, townOf } from '../../../shared/src/data/town.ts';
-import { ISLE_OF_HALL, RARE_GOODS, TREE_BASE, TREE_MAX, TREE_TOWN, isTree, isTreeTown, treeNeeds } from '../../../shared/src/data/isletree.ts';
+import { ELITE_GROWTH, TOWN, TOWN_IDS, HALL_INCOME, KEEP_GROWTH, MARKET_GOODS, MARKET_MIN_SPREAD, POOL_WEEKS, marketCost, TIER_UNIT, deepAllowed, dwellingOf, isleGrowth, marketBuy, marketSell, townCost, townOf } from '../../../shared/src/data/town.ts';
+import { DWELL_ELITE_LEVEL, dwellElite, ISLE_OF_HALL, RARE_GOODS, TREE_BASE, TREE_MAX, TREE_TOWN, isTree, isTreeTown, treeNeeds } from '../../../shared/src/data/isletree.ts';
 import type { TreeId } from '../../../shared/src/data/isletree.ts';
 import { BUILDINGS } from '../../../shared/src/data/holdings.ts';
 import type { BuildingId } from '../../../shared/src/data/holdings.ts';
@@ -39,6 +39,8 @@ export interface TownState {
   pool: number[];
   /** The week the pools were last grown to. */
   w: number;
+  /** docs/38 §2.4 B: each tier's elite men waiting in its dwelling of level 8 and up (index: the tier). */
+  elite?: number[];
 }
 
 export function townState(y: Yard): TownState {
@@ -47,6 +49,7 @@ export function townState(y: Yard): TownState {
   t.b ??= {};
   if (!Array.isArray(t.pool) || t.pool.length < 8) t.pool = [0, 0, 0, 0, 0, 0, 0, 0];
   if (!Number.isFinite(t.w)) t.w = -1;
+  if (t.elite !== undefined && (!Array.isArray(t.elite) || t.elite.length < 8)) t.elite = [0, 0, 0, 0, 0, 0, 0, 0];
   return t;
 }
 
@@ -70,6 +73,11 @@ export function isleWeekGrowth(game: Game, y: Yard, tier: number, week = thisWee
   return isleGrowth(tier, townLevel(y, 'keep'), weekGrowth(kindOfWeek(game, week), tier), L) * grailGrowth(y);
 }
 
+/** docs/38 §2.4 B: a dwelling's elite men a week (none under DWELL_ELITE_LEVEL): a share of its own growth. */
+export function isleEliteGrowth(game: Game, y: Yard, tier: number, week = thisWeek(game)): number {
+  return dwellElite(townLevel(y, dwellingOf(tier))) ? isleWeekGrowth(game, y, tier, week) * ELITE_GROWTH : 0;
+}
+
 /** The Grail over the town (docs/17 H4): every dwelling grows half as many men again. */
 export const grailGrowth = (y: Yard): number => (townLevel(y, 'grail') > 0 ? GRAIL_GROWTH : 1);
 
@@ -87,12 +95,26 @@ export function islePools(game: Game, y: Yard): number[] {
       for (let tier = 1; tier <= 7; tier++) {
         const g = isleWeekGrowth(game, y, tier, k);
         if (g > 0) t.pool[tier] = Math.min(poolCap(game, y, tier), (t.pool[tier] ?? 0) + g);
+        // docs/38 §2.4 B: the elite's own pool, as the dwelling's, at its share
+        const e = isleEliteGrowth(game, y, tier, k);
+        if (e > 0) {
+          t.elite ??= [0, 0, 0, 0, 0, 0, 0, 0];
+          t.elite[tier] = Math.min(poolCap(game, y, tier) * ELITE_GROWTH, (t.elite[tier] ?? 0) + e);
+        }
       }
     }
     t.w = w;
     game.holdings.touch();
   }
   return t.pool;
+}
+
+/** docs/38 §2.4 B: the island's elite pools grown to this week (index: the tier). */
+export function isleElitePools(game: Game, y: Yard): number[] {
+  islePools(game, y);
+  const t = townState(y);
+  t.elite ??= [0, 0, 0, 0, 0, 0, 0, 0];
+  return t.elite;
 }
 
 // ------------------------------------------------------------------------------------------------ building
@@ -188,6 +210,11 @@ export function finishTown(game: Game, h: Holding, y: Yard, isl: Island, j: Base
   if (tier && j.level <= 1) {
     islePools(game, y);
     t.pool[tier] = (t.pool[tier] ?? 0) + isleWeekGrowth(game, y, tier);
+  }
+  // docs/38 §2.4 B: the dwelling that opens its elite opens with the elite's first week
+  if (tier && j.level === DWELL_ELITE_LEVEL) {
+    const e = isleElitePools(game, y);
+    e[tier] = (e[tier] ?? 0) + isleEliteGrowth(game, y, tier);
   }
   game.holdings.touch();
   const s = h.owner.kind === 'player' ? game.sessionByAccount(h.owner.id) : undefined;
@@ -378,6 +405,9 @@ export function adminTown(game: Game, s: PlayerSession, level?: number): string 
   h.level = Math.max(h.level ?? 1, ISLE_OF_HALL[Math.min(TREE_MAX, t.b.hall ?? 1)]);
   islePools(game, y);
   for (let tier = 1; tier <= 7; tier++) t.pool[tier] = poolCap(game, y, tier);
+  // docs/38 §2.4 B: the elite dwellings full too
+  const elite = isleElitePools(game, y);
+  for (let tier = 1; tier <= 7; tier++) elite[tier] = isleEliteGrowth(game, y, tier) > 0 ? poolCap(game, y, tier) * ELITE_GROWTH : 0;
   reckonBase(game, h);
   game.holdings.touch();
   // (in figures: the buildings' and the creatures' ids came out in English on a Russian screen, QA 2026-10-09)

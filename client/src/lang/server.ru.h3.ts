@@ -34,6 +34,15 @@ export const SERVER_RU_H3: Record<string, string> = {
   'life guards': 'лейб-гвардия',
   'drowned': 'утопленники',
   'spawn of the deep': 'порождения бездны',
+  // docs/38 §2.4 B: the elites
+  'bosuns': 'боцманы',
+  'sea grenadiers': 'морские гренадеры',
+  'deadeyes': 'снайперы',
+  'mortar crews': 'мортирные расчёты',
+  'corsair blades': 'клинки корсаров',
+  'admiral’s guards': 'адмиральская гвардия',
+  'horrors of the deep': 'ужасы глубин',
+  'The elite are hired only at your island’s own dwelling of their tier, raised to level 8.': 'Элиту нанимают только в жилище её уровня на вашем острове, поднятом до 8-го уровня.',
   // 10. the week
   'Week {0} begins: {1}. {2}': 'Началась неделя {0}: {1}. {2}',
   'Week {0}, day {1}: {2}. Next week in {3} min.': 'Неделя {0}, день {1}: {2}. Следующая неделя через {3} мин.',

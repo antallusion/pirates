@@ -124,6 +124,14 @@ export const FIGURES: Partial<Record<UnitId, Figure>> = {
   banshee: F('fly', 1.35, 'wild', 'lantern_wraith'),
   plumed_serpent: F('fly', 1.75, 'wild', 'sea_dragon', 'storm_roc'),
   wreck_titan: F('big', 1.8, 'wild', 'basalt_guardian', 'abyss_herald'),
+  // docs/38 §2.4 B: the elites of the island's dwellings stand in as the upgraded kind of their tier until painted.
+  bosun: F('man', 1.28, 'pirate', 'sailor', 'deckhand'),
+  sea_grenadier: F('man', 1.3, 'pirate', 'sea_guard', 'marine'),
+  deadeye: F('man', 1.28, 'pirate', 'sharpshooter', 'musketeer'),
+  mortar_crew: F('man', 1.3, 'pirate', 'bombardier', 'gunner'),
+  corsair_blade: F('man', 1.3, 'pirate', 'cutthroat', 'boarder'),
+  admiral_guard: F('man', 1.34, 'pirate', 'life_guard', 'guard'),
+  deep_horror: F('big', 1.5, 'pirate', 'deep_spawn', 'drowned'),
 };
 
 /** Painted kinds by body and whose: the stand-ins when none a kind names is there. */

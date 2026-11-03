@@ -111,7 +111,7 @@ test('the shop\'s twenty: battle units of the art queue\'s premium faction, each
 });
 
 test('their numbers by tier: above the best of the sea\'s own, below the next tier\'s; priced by might, dearer a point the higher the tier', () => {
-  const own = (t: number) => (Object.keys(UNITS) as UnitId[]).filter((u) => UNITS[u].tier === t && !UNITS[u].premium && !UNITS[u].legend && !UNITS[u].roster && !isBossUnit(u)); // the great ones ashore are never hired
+  const own = (t: number) => (Object.keys(UNITS) as UnitId[]).filter((u) => UNITS[u].tier === t && !UNITS[u].premium && !UNITS[u].legend && !UNITS[u].roster && !isBossUnit(u) && !UNITS[u].elite); // the great ones ashore are never hired; the island's elites (docs/38 §2.4 B) stand over the sea's own
   const best = (t: number) => Math.max(...own(t).map(w1));
   // (the sea's own legends: the titans of the Grail are the tier above the shop's, not legends of the sea — docs/19 E10)
   const legends = Math.min(...(Object.keys(UNITS) as UnitId[]).filter((u) => UNITS[u].legend && !UNITS[u].titan).map(w1));

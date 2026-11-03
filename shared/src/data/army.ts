@@ -18,7 +18,7 @@ import { RANGED_KINDS, skillWorth } from './creatureskills.ts'; // owner, 2026-1
 /** Every kind of fighting man: seven tiers, a plain and an upgraded kind of each — and the land's creatures beside
  *  them (docs/18 II, shared/src/data/bestiary.ts), the world's armies, the shop's creatures (premiumbeasts.ts), the
  *  premium hulls' own kinds (shipbeasts.ts) and the great ones ashore (bossunits.ts). */
-export type UnitId = MenId | BeastId | SeaBeastId | FactionKindId | PremiumBeastId | ShipBeastId | BossUnitId | TitanId;
+export type UnitId = MenId | EliteId | BeastId | SeaBeastId | FactionKindId | PremiumBeastId | ShipBeastId | BossUnitId | TitanId;
 export type MenId =
   | 'deckhand' | 'sailor'
   | 'marine' | 'sea_guard'
@@ -30,6 +30,17 @@ export type MenId =
 
 /** The men (the creatures' kinds are BEAST_IDS). */
 export const UNIT_IDS: MenId[] = ['deckhand', 'sailor', 'marine', 'sea_guard', 'musketeer', 'sharpshooter', 'gunner', 'bombardier', 'boarder', 'cutthroat', 'guard', 'life_guard', 'drowned', 'deep_spawn'];
+
+/** docs/38 §2.4 variant B (owner, 2026-11-03): the third, elite kind of each tier — hired only at her island's own
+ *  dwelling of its tier raised to DWELL_ELITE_LEVEL (isletree.ts), from a pool of its own (server town.ts). Each stands
+ *  over the upgraded kind of its tier (some +20–25% in its numbers, a craft more, ~×1.6 its silver); the plain and the
+ *  upgraded kinds keep their pair (`base`/`upgrade`), the elite names the plain kind as its base and trains into
+ *  nothing. They are not among UNIT_IDS: the sea's own armies never carry them. */
+export type EliteId = 'bosun' | 'sea_grenadier' | 'deadeye' | 'mortar_crew' | 'corsair_blade' | 'admiral_guard' | 'deep_horror';
+export const ELITE_IDS: EliteId[] = ['bosun', 'sea_grenadier', 'deadeye', 'mortar_crew', 'corsair_blade', 'admiral_guard', 'deep_horror'];
+/** The elite kind of each tier (index: the tier). */
+export const TIER_ELITE: (EliteId | null)[] = [null, 'bosun', 'sea_grenadier', 'deadeye', 'mortar_crew', 'corsair_blade', 'admiral_guard', 'deep_horror'];
+export const isElite = (u: string): u is EliteId => (ELITE_IDS as string[]).includes(u);
 
 /** What makes a kind of man more than his numbers (as the specials of HoMM3's creatures). */
 export type UnitSpecial =
@@ -113,6 +124,8 @@ export interface UnitDef {
   cost: number;
   /** Only the Choir's and the cursed ships carry them. */
   deep?: boolean;
+  /** docs/38 §2.4 B: the third, elite kind of its tier (`up` too: it stands over the upgraded kind). */
+  elite?: boolean;
   /** One of the land's creatures (docs/18 II), not a man. */
   beast?: boolean;
   /** A legend of the sea (docs/18 #40): the white whale, the young kraken — one a captain, never sold. */
@@ -139,8 +152,11 @@ export interface PremiumUnit {
 
 const U = (id: UnitId, tier: number, up: boolean, base: UnitId, upgrade: UnitId | null, s: Omit<UnitDef, 'id' | 'tier' | 'up' | 'base' | 'upgrade'>): UnitDef => ({ id, tier, up, base, upgrade, ...s });
 
+/** An elite (docs/38 §2.4 B): over the upgraded kind of its tier, the plain kind its base, trained into nothing. */
+const E = (id: EliteId, tier: number, base: MenId, s: Omit<UnitDef, 'id' | 'tier' | 'up' | 'base' | 'upgrade'>): UnitDef => ({ id, tier, up: true, base, upgrade: null, elite: true, ...s });
+
 /** One man of each kind (the HoMM3 scale: a pikeman 4/5 1–3 10 hp, a black dragon 25/25 40–50 300 hp). */
-const BASE_UNITS: Record<MenId | BeastId | SeaBeastId, UnitDef> = {
+const BASE_UNITS: Record<MenId | EliteId | BeastId | SeaBeastId, UnitDef> = {
   ...BEASTS,
   ...SEA_BEASTS,
   deckhand: U('deckhand', 1, false, 'deckhand', 'sailor', { atk: 3, def: 2, dmin: 1, dmax: 2, hp: 5, speed: 4, init: 5, shots: 0, specials: [], art: 'portrait.pirate_15', cost: 20 }),
@@ -157,6 +173,16 @@ const BASE_UNITS: Record<MenId | BeastId | SeaBeastId, UnitDef> = {
   life_guard: U('life_guard', 6, true, 'guard', null, { atk: 15, def: 14, dmin: 7, dmax: 10, hp: 30, speed: 6, init: 10, shots: 0, specials: ['leader', 'steady', 'retaliate_all'], art: 'portrait.pirate_21', cost: 400 }),
   drowned: U('drowned', 7, false, 'drowned', 'deep_spawn', { atk: 14, def: 12, dmin: 8, dmax: 12, hp: 35, speed: 4, init: 7, shots: 0, specials: ['undead', 'fear'], art: 'portrait.pirate_22', cost: 450, deep: true }),
   deep_spawn: U('deep_spawn', 7, true, 'drowned', null, { atk: 17, def: 15, dmin: 10, dmax: 15, hp: 45, speed: 5, init: 9, shots: 0, specials: ['undead', 'fear', 'sweep'], art: 'icon.ab_deep_call', cost: 600, deep: true }),
+  // docs/38 §2.4 B: the elites (tests/balance/elite.test.ts: a silver's worth of them no more than ~10% over the
+  // upgraded kind's, an army with them against one without at the same silver 50–60%). Their face is the upgraded
+  // kind's portrait, their figure the upgraded kind's until their own sheet is painted (unitart.ts FIGURES).
+  bosun: E('bosun', 1, 'deckhand', { atk: 5, def: 4, dmin: 2, dmax: 3, hp: 7, speed: 5, init: 7, shots: 0, specials: ['steady'], art: 'portrait.giver_old_salt_m', cost: 38 }),
+  sea_grenadier: E('sea_grenadier', 2, 'marine', { atk: 10, def: 10, dmin: 3, dmax: 5, hp: 13, speed: 5, init: 9, shots: 0, specials: ['shield_wall', 'chain'], art: 'portrait.giver_garrison_captain_m', cost: 100 }),
+  deadeye: E('deadeye', 3, 'musketeer', { atk: 10, def: 5, dmin: 3, dmax: 4, hp: 9, speed: 3, init: 8, shots: 8, specials: ['shooter', 'no_penalty', 'bind'], art: 'portrait.pirate_23', cost: 125 }),
+  mortar_crew: E('mortar_crew', 4, 'gunner', { atk: 11, def: 7, dmin: 5, dmax: 9, hp: 15, speed: 3, init: 6, shots: 4, specials: ['shooter', 'blast', 'no_penalty'], art: 'portrait.pirate_00', cost: 225 }),
+  corsair_blade: E('corsair_blade', 5, 'boarder', { atk: 14, def: 11, dmin: 6, dmax: 8, hp: 22, speed: 7, init: 11, shots: 0, specials: ['double_strike', 'no_retaliation', 'fortune'], art: 'portrait.pirate_16', cost: 300 }),
+  admiral_guard: E('admiral_guard', 6, 'guard', { atk: 18, def: 17, dmin: 9, dmax: 12, hp: 36, speed: 6, init: 11, shots: 0, specials: ['leader', 'steady', 'retaliate_all', 'shield_wall'], art: 'portrait.pirate_21', cost: 520 }),
+  deep_horror: E('deep_horror', 7, 'drowned', { atk: 20, def: 18, dmin: 12, dmax: 18, hp: 55, speed: 5, init: 10, shots: 0, specials: ['undead', 'fear', 'sweep', 'terror'], art: 'icon.ab_deep_call', cost: 770, deep: true }),
 };
 
 /** The world's armies: each faction's kind fights with the numbers of the pirate kind whose place it takes, its plain
@@ -230,6 +256,9 @@ export function armyMen(army: readonly ArmyStack[]): number {
   return n;
 }
 
+/** A kind's grade within its tier: 0 plain, 1 upgraded, 2 elite (docs/38 §2.4 B). */
+export const grade = (u: UnitId): number => (UNITS[u].elite ? 2 : UNITS[u].up ? 1 : 0);
+
 /** Same kinds in one slot (a gift stack and a split part apart), empty slots gone, the strongest first (as the stacks
  *  stand in the ship's screen). A part left alone of its kind loses its tag. */
 export function armyTidy(army: readonly ArmyStack[]): ArmyStack[] {
@@ -245,7 +274,7 @@ export function armyTidy(army: readonly ArmyStack[]): ArmyStack[] {
   }
   const out = [...by.values()];
   for (const s of out) if (s.p && !out.some((o) => o !== s && o.u === s.u && !!o.g === !!s.g)) delete s.p;
-  return out.sort((a, b) => UNITS[b.u].tier - UNITS[a.u].tier || Number(UNITS[b.u].up) - Number(UNITS[a.u].up));
+  return out.sort((a, b) => UNITS[b.u].tier - UNITS[a.u].tier || grade(b.u) - grade(a.u));
 }
 
 /** How exposed one man of a kind is to shot and splinters beside a deckhand: the tougher and the better covered, the
@@ -309,7 +338,7 @@ export function shotHp(u: UnitId): number {
 /** The order the cannon's dead fall in (docs/24 B3, owner 2026-10-07: «убиваются сперва существа с маленьким HP и
  *  потом по возрастанию»): the fewest hit points a man first, then the less armoured, the lower tier, the plain kind. */
 export function shotOrder(army: readonly ArmyStack[]): ArmyStack[] {
-  return [...army].sort((a, b) => UNITS[a.u].hp - UNITS[b.u].hp || UNITS[a.u].def - UNITS[b.u].def || UNITS[a.u].tier - UNITS[b.u].tier || Number(UNITS[a.u].up) - Number(UNITS[b.u].up));
+  return [...army].sort((a, b) => UNITS[a.u].hp - UNITS[b.u].hp || UNITS[a.u].def - UNITS[b.u].def || UNITS[a.u].tier - UNITS[b.u].tier || grade(a.u) - grade(b.u));
 }
 
 /** The cannon's dead (docs/24 B3), in place: a hit worth `k` men of the army as she stands (the hit points the old

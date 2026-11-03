@@ -334,9 +334,8 @@ export const HALL_DAY = [0, 60, 100, 160, 250, 400, 600, 900, 1_300, 1_800, 2_50
 /** Each dwelling's growth by its level (the upgraded kind from DWELL_UP_LEVEL). */
 export const DWELL_GROWTH = [0, 1, 1.1, 1.2, 1.35, 1.5, 1.65, 1.8, 2, 2.2, 2.5];
 export const DWELL_UP_LEVEL = 3;
-/** The hook of docs/38 §2.4 variant B (owner, 2026-11-03: a later task): from this dwelling level each tier opens a
- *  third, elite kind. No kind is defined yet — `dwellElite` only says whether a dwelling stands that high (the server's
- *  dwell.ts isleDwellLevels gives each tier's dwelling level for it). */
+/** docs/38 §2.4 variant B (owner, 2026-11-03): from this dwelling level each tier opens a third, elite kind (army.ts
+ *  TIER_ELITE), hired at the island only from a pool of its own (server town.ts isleElitePools, dwell.ts). */
 export const DWELL_ELITE_LEVEL = 8;
 export const dwellElite = (level: number): boolean => Math.floor(level) >= DWELL_ELITE_LEVEL;
 /** The share off a man's silver hired from a dwelling of her island, by its level (docs/38 §2.4: −5 % at 6, −10 % at 7

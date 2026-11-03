@@ -10,7 +10,8 @@ import { metrikaTag } from '../../shared/src/metrika.ts';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { UNITS } from '../../shared/src/data/army.ts';
+import { UNITS, isElite } from '../../shared/src/data/army.ts';
+import { figureStandIn } from '../../shared/src/data/unitart.ts'; // docs/38 §2.4 B: an elite's figure until painted
 import type { UnitDef } from '../../shared/src/data/army.ts';
 import { BEAST_IDS, SEA_BEAST_IDS } from '../../shared/src/data/bestiary.ts';
 import { FACTION_KIND_IDS, FACTION_NAMES } from '../../shared/src/data/factionunits.ts';
@@ -117,7 +118,8 @@ const CREATURES: Creature[] = (Object.keys(UNITS) as string[]).map((id) => {
   const { name, note } = names(id);
   return {
     id, u, group: groupOf(id), roster: (u as { roster?: string }).roster, name, note,
-    figure: asset(`unit.${id}`) ?? asset(u.art),
+    // (an elite not painted yet: the upgraded kind of its tier stands in, as in the game)
+    figure: asset(`unit.${id}`) ?? (isElite(id) ? asset(`unit.${figureStandIn(id, (k) => !!asset(`unit.${k}`))}`) : null) ?? asset(u.art),
     poses: ['', '_b', '_atk', '_hit'].map((f) => asset(`unit.${id}${f}`)).filter((x): x is string => !!x),
     lairs: lairsOf(id),
   };

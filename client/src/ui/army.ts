@@ -69,11 +69,11 @@ export function stackRating(n: number): string {
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 /** The tier's mark: its numeral on a code-drawn badge in the tier's colour, a gold chevron for an upgraded kind. */
-const tierMark = (tier: number, up: boolean): string => `<i class="army-tier">${ROMAN[tier] ?? tier}${up ? '<s class="army-up" aria-hidden="true"></s>' : ''}</i>`;
+const tierMark = (tier: number, up: boolean, elite = false): string => `<i class="army-tier">${ROMAN[tier] ?? tier}${up ? '<s class="army-up" aria-hidden="true"></s>' : ''}${elite ? '<s class="army-up" aria-hidden="true"></s>' : ''}</i>`;
 /** The classes of a stack's frame: its tier's colour, upgraded, its rank. */
 const slotCls = (u: UnitId): string => {
   const d = UNITS[u], r = unitRank(u);
-  return `t${Math.min(7, Math.max(1, d.tier))}${d.up ? ' up' : ''}${r ? ` r-${r}` : ''}`;
+  return `t${Math.min(7, Math.max(1, d.tier))}${d.up ? ' up' : ''}${d.elite ? ' elite' : ''}${r ? ` r-${r}` : ''}`;
 };
 
 /** HoMM3's word for an army of `men`, and the head counts it stands for. */
@@ -92,7 +92,7 @@ export function armySlot(s: ArmyStack | null, cls = ''): string {
   const r = unitRank(s.u);
   const pow = armyPower([s]);
   const tip = `${unitName(s.u)} ×${s.n} — ${L('tier', { n: d.tier })}${d.up ? `, ${L('up')}` : ''}${r ? `, ${L(`r.${r}` as K)}` : ''}. ${L('rate', { n: fmt(Math.round(pow)) })}. ${unitNote(s.u)}${d.specials.length ? ` ${L('specials')}: ${d.specials.map(specialName).join(', ')}.` : ''}${s.g ? ` ${L('gift.note')}.` : ''}`;
-  return `<div class="army-slot ${slotCls(s.u)}${s.g ? ' gift' : ''} ${cls}"${detailAttr(`unit:${s.u}:${s.n}`)} title="${esc(tip)}">${unitIcon(s.u, 'army-face')}${tierMark(d.tier, d.up)}${s.g ? giftMark() : ''}<b class="army-rate" title="${esc(L('rate', { n: fmt(Math.round(pow)) }))}">${icon('act_attack', '', 'army-rate-ico')}${stackRating(pow)}</b><b class="army-n">${fmt(s.n)}</b></div>`;
+  return `<div class="army-slot ${slotCls(s.u)}${s.g ? ' gift' : ''} ${cls}"${detailAttr(`unit:${s.u}:${s.n}`)} title="${esc(tip)}">${unitIcon(s.u, 'army-face')}${tierMark(d.tier, d.up, !!d.elite)}${s.g ? giftMark() : ''}<b class="army-rate" title="${esc(L('rate', { n: fmt(Math.round(pow)) }))}">${icon('act_attack', '', 'army-rate-ico')}${stackRating(pow)}</b><b class="army-n">${fmt(s.n)}</b></div>`;
 }
 
 /** The row of her class's slots, filled from the strongest. */
@@ -112,7 +112,7 @@ export function armyPanel(army: readonly ArmyStack[], slots: number, edit = fals
   const list = army.map((s) => {
     const d = UNITS[s.u];
     const r = unitRank(s.u);
-    return `<div class="army-line"${detailAttr(`unit:${s.u}:${s.n}`)}><span class="army-thumb ${slotCls(s.u)}">${unitIcon(s.u, 'army-face-sm')}</span><div class="item-text"><b>${esc(unitName(s.u))} <span class="muted">×${s.n}</span>${s.g ? ` <span class="chip army-gift-chip" title="${esc(L('gift.note'))}">${esc(L('gift'))}</span>` : ''} <span class="army-line-rate">${icon('act_attack', '', 'army-rate-ico')}${stackRating(armyPower([s]))}</span></b><span class="muted">${esc(L('tier', { n: d.tier }))}${d.up ? ` · ${esc(L('up'))}` : ''}${r ? ` · ${esc(L(`r.${r}` as K))}` : ''} · ${esc(L('stat', { atk: d.atk, def: d.def, dmin: d.dmin, dmax: d.dmax, hp: d.hp }))}${d.specials.length ? ` · ${esc(d.specials.map(specialName).join(', '))}` : ''}</span></div></div>`;
+    return `<div class="army-line"${detailAttr(`unit:${s.u}:${s.n}`)}><span class="army-thumb ${slotCls(s.u)}">${unitIcon(s.u, 'army-face-sm')}</span><div class="item-text"><b>${esc(unitName(s.u))} <span class="muted">×${s.n}</span>${s.g ? ` <span class="chip army-gift-chip" title="${esc(L('gift.note'))}">${esc(L('gift'))}</span>` : ''} <span class="army-line-rate">${icon('act_attack', '', 'army-rate-ico')}${stackRating(armyPower([s]))}</span></b><span class="muted">${esc(L('tier', { n: d.tier }))}${d.elite ? ` · ${esc(L('elite'))}` : d.up ? ` · ${esc(L('up'))}` : ''}${r ? ` · ${esc(L(`r.${r}` as K))}` : ''} · ${esc(L('stat', { atk: d.atk, def: d.def, dmin: d.dmin, dmax: d.dmax, hp: d.hp }))}${d.specials.length ? ` · ${esc(d.specials.map(specialName).join(', '))}` : ''}</span></div></div>`;
   }).join('');
   // docs/18 IV: the creatures aboard — their own window (food, ranks, the pen, the tamer).
   const beasts = army.some((x) => UNITS[x.u]?.beast) ? `<button class="btn btn-small army-tame" data-tame>${icon('build_kennel', '', 'ico-sm')}${esc(DL('open'))}</button>` : '';

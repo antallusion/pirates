@@ -138,7 +138,7 @@ test('twelve creatures for the islands, each the face of a lair where an island\
     assert.equal(ART.get(u)?.faction, 'wild', `${u}: in the wild beasts' section of tools/art/creatures.py`);
     assert.equal(ART.get(u)?.tier, d.tier, `${u}: the art's tier`);
     // A tier's peer: no heavier than the heaviest of its tier before it (the shop's kinds stay over them).
-    const peers = (Object.keys(UNITS) as UnitId[]).filter((x) => UNITS[x].tier === d.tier && !UNITS[x].premium && !UNITS[x].legend && !UNITS[x].roster && !isBossUnit(x) && !WILD.includes(x as BeastId));
+    const peers = (Object.keys(UNITS) as UnitId[]).filter((x) => UNITS[x].tier === d.tier && !UNITS[x].premium && !UNITS[x].legend && !UNITS[x].roster && !isBossUnit(x) && !UNITS[x].elite && !WILD.includes(x as BeastId)); // (the island's elites, docs/38 §2.4 B, stand over the sea's own)
     assert.ok(w1(u) <= Math.max(...peers.map(w1)), `${u}: ${w1(u).toFixed(2)} a head at tier ${d.tier}`);
     assert.ok(w1(u) >= 0.6 * Math.max(...peers.map(w1)), `${u}: not a weakling of its tier`);
     assert.ok(['land', 'sea', 'deep'].includes(peopleOf(u)), `${u}: a people`);

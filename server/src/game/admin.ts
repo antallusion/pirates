@@ -119,7 +119,7 @@ import { closestOnPolygon, headingVec, pointInPolygon } from '../../../shared/sr
 import { isLand, islandsNear } from '../../../shared/src/world/worldgen.ts';
 import { summon } from './bosses.ts';
 import { boardingRangeBetween, canBoard, startBoarding } from './boarding.ts';
-import { UNITS, UNIT_IDS, armyForLevel, armyMen, armyWord } from '../../../shared/src/data/army.ts';
+import { ELITE_IDS, UNITS, UNIT_IDS, armyForLevel, armyMen, armyWord } from '../../../shared/src/data/army.ts';
 import type { UnitId } from '../../../shared/src/data/army.ts';
 import { mastWreck } from './combat.ts';
 import { spawnFireship } from './npc.ts';
@@ -1208,7 +1208,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
         ship.setArmy(armyForLevel(lv, ship.crew, ship.armySlots, 'player'));
       } else {
         const u = args[0] as UnitId;
-        if (!UNITS[u]) return `Units: ${UNIT_IDS.join(', ')}`;
+        if (!UNITS[u]) return `Units: ${[...UNIT_IDS, ...ELITE_IDS].join(', ')}`; // (the elites too, docs/38 §2.4 B)
         const n = Math.max(0, Math.floor(num(1, 10)));
         const rest = ship.army.filter((x) => x.u !== u).map((x) => ({ ...x }));
         // Room in the hammocks: the deckhands make way first, then the smallest stacks.

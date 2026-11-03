@@ -4,16 +4,16 @@
 
 import { TOWN } from '../../../shared/src/data/town.ts';
 import type { TownId } from '../../../shared/src/data/town.ts';
-import { GROWTH, KEEP_GROWTH, MARKET_BUY, MARKET_SELL, TIER_UNIT } from '../../../shared/src/data/town.ts';
+import { ELITE_GROWTH, GROWTH, KEEP_GROWTH, MARKET_BUY, MARKET_SELL, TIER_UNIT } from '../../../shared/src/data/town.ts';
 import { BUILDINGS, islandSize } from '../../../shared/src/data/holdings.ts';
 import type { BuildingId, IslandSize } from '../../../shared/src/data/holdings.ts';
-import { DWELL_GROWTH, DWELL_HIRE_OFF, DWELL_UP_LEVEL, HALL_DAY, ISLE_OF_HALL, SHIPYARD_REPAIR, TREE_MAX, TREE_OLD_MAX, hallBonus, isTreeTown } from '../../../shared/src/data/isletree.ts';
+import { DWELL_GROWTH, DWELL_HIRE_OFF, DWELL_UP_LEVEL, dwellElite, HALL_DAY, ISLE_OF_HALL, SHIPYARD_REPAIR, TREE_MAX, TREE_OLD_MAX, hallBonus, isTreeTown } from '../../../shared/src/data/isletree.ts';
 import { ISLE_LEVELS } from '../../../shared/src/data/estate.ts';
 import { caravanExtra, chartCopy, coveHide, dockDiscount, forgeReach, levelMul, residentRooms, signalMins, signalRisk, smugglerRoom, trophyCap, workshopYield } from '../../../shared/src/data/baselevels.ts';
 import { PRODUCERS, crewsAt, plotsOf, producerOf, producerRate, yardCap } from '../../../shared/src/data/base.ts';
 import { DEF_BATTERY, DEF_FORT } from '../../../shared/src/data/baseclaim.ts';
 import { YARD_SHIP_LEVEL } from '../../../shared/src/data/baseships.ts';
-import { UNITS } from '../../../shared/src/data/army.ts';
+import { TIER_ELITE, UNITS } from '../../../shared/src/data/army.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { IslandBiome } from '../../../shared/src/world/regions.ts';
 import type { ClientMsg, IsleMoveView } from '../../../shared/src/protocol.ts';
@@ -114,7 +114,10 @@ export function givesText(id: string, level: number, c: GiveCtx): string {
     const up = L >= DWELL_UP_LEVEL ? UNITS[plain].upgrade ?? plain : plain;
     const n = dec1(GROWTH[tier] * DWELL_GROWTH[L]).replace(/[.,]0$/, '');
     const off = DWELL_HIRE_OFF[L] ? ` · ${T29('gHireOff', { p: Math.round(DWELL_HIRE_OFF[L] * 100) })}` : '';
-    return (L >= DWELL_UP_LEVEL ? T29('gDwellUp', { unit: unitName(up), n }) : T29('gDwell', { unit: unitName(plain), n })) + off;
+    // docs/38 §2.4 B: from the eighth level the tier's elite, hired at the island only
+    const eu = TIER_ELITE[tier];
+    const elite = eu && dwellElite(L) ? ` · ${T29('gElite', { unit: unitName(eu), n: dec1(GROWTH[tier] * DWELL_GROWTH[L] * ELITE_GROWTH).replace(/[.,]0$/, '') })}` : '';
+    return (L >= DWELL_UP_LEVEL ? T29('gDwellUp', { unit: unitName(up), n }) : T29('gDwell', { unit: unitName(plain), n })) + off + elite;
   }
   return '';
 }
