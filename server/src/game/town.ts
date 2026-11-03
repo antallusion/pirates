@@ -75,7 +75,9 @@ export function isleWeekGrowth(game: Game, y: Yard, tier: number, week = thisWee
 
 /** docs/38 §2.4 B: a dwelling's elite men a week (none under DWELL_ELITE_LEVEL): a share of its own growth. */
 export function isleEliteGrowth(game: Game, y: Yard, tier: number, week = thisWeek(game)): number {
-  return dwellElite(townLevel(y, dwellingOf(tier))) ? isleWeekGrowth(game, y, tier, week) * ELITE_GROWTH : 0;
+  // whole men a week (the card's «+52,5 в неделю» was half a man), at least one where the dwelling grows any
+  const g = dwellElite(townLevel(y, dwellingOf(tier))) ? isleWeekGrowth(game, y, tier, week) * ELITE_GROWTH : 0;
+  return g > 0 ? Math.max(1, Math.round(g)) : 0;
 }
 
 /** The Grail over the town (docs/17 H4): every dwelling grows half as many men again. */
