@@ -53,7 +53,7 @@ export function slideSrc(img: string | undefined): string | null {
   if (known) return known;
   if (img.startsWith('guide.')) return `/assets/guide/${img.slice(6)}.webp`;
   if (img.includes('/')) return img.startsWith('/') || /^https?:/.test(img) ? img : `/${img}`;
-  return `/assets/guide/${img}.webp`;
+  return `/assets/guide/${/\.\w+$/.test(img) ? img : img + '.webp'}`;
 }
 
 /** A text with the query's words lit (escaped). */

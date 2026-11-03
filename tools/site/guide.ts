@@ -74,6 +74,7 @@ export function slideImg(img: string | undefined): string | null {
   if (!img) return null;
   if (img.startsWith('guide.')) return `/assets/guide/${img.slice(6)}.webp`;
   if (/^https?:\/\//.test(img) || img.startsWith('/')) return img;
+  if (!img.includes('/')) return `/assets/guide/${/\.\w+$/.test(img) ? img : img + '.webp'}`;
   return `/${img}`;
 }
 const articleUrl = (lang: Lang, id: string) => `${root(lang)}guide/${id}.html`;

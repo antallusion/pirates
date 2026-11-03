@@ -2,6 +2,7 @@
 // per-section files only.
 import type { GuideArticle, GuideSection } from './types.ts';
 import { ARTICLES as SEA } from './sea.ts';
+import { ARTICLES as SEA2 } from './sea2.ts';
 import { ARTICLES as COMBAT } from './combat.ts';
 import { ARTICLES as FLAGS } from './flags.ts';
 import { ARTICLES as TRADE } from './trade.ts';
@@ -17,7 +18,7 @@ export type { GuideArticle, GuideSection, GuideSlide } from './types.ts';
 /** The sections in the book's order. */
 export const GUIDE_SECTIONS: GuideSection[] = ['sea', 'combat', 'flags', 'trade', 'island', 'army', 'explore', 'travel', 'progress', 'faq'];
 
-export const GUIDE: GuideArticle[] = [...SEA, ...COMBAT, ...FLAGS, ...TRADE, ...ISLAND, ...ARMY, ...EXPLORE, ...TRAVEL, ...PROGRESS, ...FAQ];
+export const GUIDE: GuideArticle[] = [...SEA, ...SEA2, ...COMBAT, ...FLAGS, ...TRADE, ...ISLAND, ...ARMY, ...EXPLORE, ...TRAVEL, ...PROGRESS, ...FAQ];
 
 /** Silver paid once for a section whose every article is read. */
 export const GUIDE_SECTION_REWARD = 300;
