@@ -163,7 +163,7 @@ interface Hero { img: string; imgM?: string; kicker: string; title: string; lead
 
 /** The header's links in the order they stand, and the order they leave the bar for the burger's drawer when the row
  *  is short (priority+, site.js): the home first (the logo leads there too), the forum last; the current page never. */
-const NAV = [['', 'home', 'ico/home', 1], ['guide/', 'guide', 'ico/guides', 2], ['creatures/', 'creatures', 'ico/creatures', 7], ['captains/', 'captains', 'ico/captains', 5], ['ships/', 'ships', 'ico/ships', 4], ['rating/', 'rating', 'ico/achievements', 3], ['shop/', 'shop', 'ico/doubloon', 6], ['forum/', 'forum', 'ico/forum', 8]] as const;
+const NAV = [['', 'home', 'ico/home', 1], ['guide/', 'guide', 'ico/guides', 9], ['creatures/', 'creatures', 'ico/creatures', 7], ['captains/', 'captains', 'ico/captains', 4], ['ships/', 'ships', 'ico/ships', 3], ['rating/', 'rating', 'ico/achievements', 2], ['shop/', 'shop', 'ico/doubloon', 5], ['forum/', 'forum', 'ico/forum', 8]] as const;
 const TG_MARK = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M21.9 4.3 18.7 19.4c-.2 1-.9 1.3-1.7.8l-4.8-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.5 13.2 1.8 11.7c-1-.3-1-1 .2-1.5L20.5 3c.9-.3 1.6.2 1.4 1.3z"/></svg>';
 
 /** The header (owner, 2026-10-25): logo · the links (exactly one lit: this page) · the end — the forum's member button
