@@ -76,13 +76,27 @@ p { margin: 0 0 1em; }
 }
 .hdr-logo { flex: none; }
 .hdr-logo img { height: 66px; margin: -12px 0 -14px; width: auto; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.7)); }
-.hdr-nav { display: flex; gap: 2px; flex: 1 1 0; min-width: 0; justify-content: center; overflow: hidden; }
+.hdr-nav { display: flex; gap: 2px; flex: 1 1 0; min-width: 0; justify-content: center; }
 .hdr-nav a, .hdr-drawer nav a { flex: none; display: flex; align-items: center; gap: 8px; padding: 9px 13px; border-radius: 999px; color: #cfc8b8; font-weight: 500; font-size: 15px; white-space: nowrap; transition: color 0.2s; }
 .hdr-nav a img, .hdr-drawer nav a img { flex: none; width: 22px; height: 22px; filter: drop-shadow(0 1px 2px #000); transition: filter 0.2s; }
 .hdr-nav a:hover, .hdr-drawer nav a:hover { color: #fff3d6; }
 .hdr-nav a:hover img, .hdr-drawer nav a:hover img { filter: drop-shadow(0 1px 2px #000) drop-shadow(0 0 6px rgba(245, 196, 81, 0.45)); }
 .hdr-nav a.on, .hdr-drawer nav a.on { color: var(--gold1); background: rgba(245, 196, 81, 0.1); box-shadow: inset 0 0 0 1px rgba(245, 196, 81, 0.25); }
 .hdr-nav a.off { display: none; }
+.hdr-nav > .off { display: none; }
+/* The groups' drop-downs (Мир игры): the button reads as a link; its pages hang under it in the header's glass. */
+.hdr-dd { position: relative; flex: none; }
+.hdr-dd-btn { display: flex; align-items: center; gap: 8px; padding: 9px 13px; border: 0; border-radius: 999px; background: none; color: #cfc8b8; font: inherit; font-weight: 500; font-size: 15px; white-space: nowrap; cursor: pointer; transition: color 0.2s; }
+.hdr-dd-btn img { flex: none; width: 22px; height: 22px; filter: drop-shadow(0 1px 2px #000); }
+.hdr-dd-btn:hover, .hdr-dd.open .hdr-dd-btn { color: #fff3d6; }
+.hdr-dd.on .hdr-dd-btn { color: var(--gold1); background: rgba(245, 196, 81, 0.1); box-shadow: inset 0 0 0 1px rgba(245, 196, 81, 0.25); }
+.hdr-caret { margin-left: -2px; opacity: 0.75; transition: transform 0.2s; }
+.hdr-dd.open .hdr-caret { transform: rotate(180deg); }
+.hdr-dd-menu { position: absolute; top: calc(100% + 10px); left: 50%; min-width: 210px; padding: 8px; display: flex; flex-direction: column; gap: 2px; border-radius: 18px; background: rgba(9, 13, 22, 0.96); border: 1px solid var(--line2); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5); opacity: 0; visibility: hidden; transform: translate(-50%, -4px); transition: opacity 0.15s, transform 0.15s, visibility 0.15s; z-index: 5; }
+.hdr-dd-menu::before { content: ''; position: absolute; left: 0; right: 0; top: -12px; height: 12px; }
+.hdr-dd.open .hdr-dd-menu { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+@media (hover: hover) and (pointer: fine) { .hdr-dd:hover .hdr-dd-menu { opacity: 1; visibility: visible; transform: translate(-50%, 0); } .hdr-dd:hover .hdr-caret { transform: rotate(180deg); } }
+.hdr-dd-menu a { padding: 10px 14px; }
 .hdr-end { flex: none; display: flex; align-items: center; gap: 8px; }
 /* the round buttons: a dark well in a brass ring, the glyph ivory-brass; a hover lights the ring */
 .hdr-lang, .hdr-soc, .hdr-burger {
@@ -463,6 +477,6 @@ img[src*="/site/img/ico/"], img[src*="/site/img/rank/"], img[src*="/site/img/med
 /* seven links in the pill (the rating and the shop joined, 2026-10-20): tighter before links leave for the drawer */
 @media (max-width: 1240px) and (min-width: 901px) {
   .hdr-pill { gap: 10px; padding-left: 14px; }
-  .hdr-nav a { padding: 9px 10px; gap: 6px; font-size: 14px; }
-  .hdr-nav a img { width: 18px; height: 18px; }
+  .hdr-nav a, .hdr-dd-btn { padding: 9px 10px; gap: 6px; font-size: 14px; }
+  .hdr-nav a img, .hdr-dd-btn img { width: 18px; height: 18px; }
 }

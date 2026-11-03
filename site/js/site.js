@@ -73,8 +73,24 @@ window.gtAvatar = ({ src, fit, ring, size, cls = '', attrs = '' }) => {
   d.addEventListener('keydown', (e) => { if (e.key === 'Escape' && hdr?.classList.contains('open')) { setOpen(false); burger?.focus(); } });
   d.addEventListener('hdr:close', () => setOpen(false));
   if (hdr && nav) {
-    const bar = [...nav.querySelectorAll('a')];
+    const bar = [...nav.children];
     const drawer = [...d.querySelectorAll('.hdr-drawer nav a')];
+    // The groups' drop-downs (Мир игры: the bestiary, the captains, the fleet): open on a hover with a mouse, on a tap
+    // or Enter always; one at a time, shut by a click elsewhere or Escape.
+    const dds = [...nav.querySelectorAll('.hdr-dd')];
+    const shut = (except) => dds.forEach((dd) => { if (dd !== except) { dd.classList.remove('open'); dd.querySelector('.hdr-dd-btn')?.setAttribute('aria-expanded', 'false'); } });
+    dds.forEach((dd) => {
+      const btn = dd.querySelector('.hdr-dd-btn');
+      btn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const open = !dd.classList.contains('open');
+        shut(dd);
+        dd.classList.toggle('open', open);
+        btn.setAttribute('aria-expanded', String(open));
+      });
+    });
+    d.addEventListener('click', (e) => { if (!e.target.closest('.hdr-dd')) shut(null); });
+    d.addEventListener('keydown', (e) => { if (e.key === 'Escape') shut(null); });
     const order = bar.map((a, i) => i).filter((i) => !bar[i].classList.contains('on')).sort((a, b) => bar[a].dataset.pri - bar[b].dataset.pri);
     const phone = matchMedia('(max-width: 900px)');
     const need = () => {
@@ -91,7 +107,8 @@ window.gtAvatar = ({ src, fit, ring, size, cls = '', attrs = '' }) => {
           hdr.classList.add('more');
         }
       }
-      drawer.forEach((a, i) => a.classList.toggle('more', !!bar[i]?.classList.contains('off')));
+      const offK = new Set(bar.filter((b) => b.classList.contains('off')).map((b) => b.dataset.k));
+      drawer.forEach((a) => a.classList.toggle('more', offK.has(a.dataset.k)));
       if (!phone.matches && !hdr.classList.contains('more') && hdr.classList.contains('open')) setOpen(false);
     };
     let queued = false;

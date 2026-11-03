@@ -145,7 +145,7 @@ const UI: Record<string, Tr> = {
   footer: ['A dark Pirate Gothic sea: a ship is an army, a captain is a hero, boarding is a battle.', 'Мрачное море Pirate Gothic: корабль — армия, капитан — герой, абордаж — битва.'],
   silver: ['silver', 'серебра'], doubloons: ['doubloons', 'дублонов'], guns: ['Guns a side', 'Пушек на борт'], hull: ['Hull', 'Корпус'],
   crew: ['Crew', 'Команда'], rank: ['Rank', 'Ранг'], premium: ['Premium', 'Премиум'],
-  rating: ['Rating', 'Рейтинг'], shop: ['Shop', 'Магазин'], pass: ['Season card', 'Сезонная карта'], guide: ['Encyclopedia', 'Энциклопедия'],
+  rating: ['Rating', 'Рейтинг'], shop: ['Shop', 'Магазин'], pass: ['Season card', 'Сезонная карта'], guide: ['Encyclopedia', 'Энциклопедия'], world: ['Game world', 'Мир игры'],
 };
 const u = (k: string, lang: Lang) => L(lang, UI[k]);
 const root = (lang: Lang) => (lang === 'ru' ? '/site/' : '/site/en/');
@@ -163,7 +163,10 @@ interface Hero { img: string; imgM?: string; kicker: string; title: string; lead
 
 /** The header's links in the order they stand, and the order they leave the bar for the burger's drawer when the row
  *  is short (priority+, site.js): the home first (the logo leads there too), the forum last; the current page never. */
-const NAV = [['', 'home', 'ico/home', 1], ['guide/', 'guide', 'ico/guides', 9], ['creatures/', 'creatures', 'ico/creatures', 7], ['captains/', 'captains', 'ico/captains', 4], ['ships/', 'ships', 'ico/ships', 3], ['rating/', 'rating', 'ico/achievements', 2], ['shop/', 'shop', 'ico/doubloon', 5], ['forum/', 'forum', 'ico/forum', 8]] as const;
+const NAV = [['rating/', 'rating', 'ico/achievements', 10], ['guide/', 'guide', 'ico/guides', 9], ['creatures/', 'creatures', 'ico/creatures', 7, 'world'], ['captains/', 'captains', 'ico/captains', 7, 'world'], ['ships/', 'ships', 'ico/ships', 7, 'world'], ['shop/', 'shop', 'ico/doubloon', 5], ['forum/', 'forum', 'ico/forum', 8]] as const;
+/** The header's groups (owner, 2026-11-03: «капитаны, бестиарий и флот объединить в хедере дропдауном»): one button on
+ *  the bar, its pages in a drop-down; the burger's drawer lists them flat. */
+const NAV_GROUPS: Record<string, { ic: string; pri: number }> = { world: { ic: 'ico/world', pri: 7 } };
 const TG_MARK = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M21.9 4.3 18.7 19.4c-.2 1-.9 1.3-1.7.8l-4.8-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.5 13.2 1.8 11.7c-1-.3-1-1 .2-1.5L20.5 3c.9-.3 1.6.2 1.4 1.3z"/></svg>';
 
 /** The header (owner, 2026-10-25): logo · the links (exactly one lit: this page) · the end — the forum's member button
@@ -171,12 +174,26 @@ const TG_MARK = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="tr
  *  and the burger. The burger's drawer holds the links the bar has no room for, and on phones all of them. */
 function header(lang: Lang, active: string, path: string): string {
   const r = root(lang);
-  const link = ([href, k, ic, pri]: (typeof NAV)[number], bar: boolean) =>
-    `<a href="${r + href}"${bar ? ` data-pri="${pri}"` : ''}${active === k ? ' class="on" aria-current="page"' : ''}><img src="${K(ic)}" alt="" width="22" height="22">${u(k, lang)}</a>`;
+  type Nav = (typeof NAV)[number];
+  const link = (x: Nav, bar: boolean) => {
+    const [href, k, ic, pri] = x;
+    const g = x[4];
+    return `<a href="${r + href}"${bar && !g ? ` data-pri="${pri}"` : ''}${!bar ? ` data-k="${g ?? k}"` : ''}${active === k ? ' class="on" aria-current="page"' : ''}><img src="${K(ic)}" alt="" width="22" height="22">${u(k, lang)}</a>`;
+  };
+  const CARET = '<svg class="hdr-caret" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const barItems: string[] = [];
+  for (const x of NAV) {
+    const g = x[4];
+    if (!g) { barItems.push(link(x, true).replace('<a ', `<a data-k="${x[1]}" `)); continue; }
+    if (barItems.some((h) => h.includes(`data-k="${g}"`))) continue;
+    const kids = NAV.filter((y) => y[4] === g);
+    const on = kids.some((y) => y[1] === active);
+    barItems.push(`<div class="hdr-dd${on ? ' on' : ''}" data-k="${g}" data-pri="${NAV_GROUPS[g].pri}"><button type="button" class="hdr-dd-btn" aria-haspopup="true" aria-expanded="false"><img src="${K(NAV_GROUPS[g].ic)}" alt="" width="22" height="22">${u(g, lang)}${CARET}</button><div class="hdr-dd-menu">${kids.map((y) => link(y, true)).join('')}</div></div>`);
+  }
   const other = lang === 'ru' ? `/site/en/${path}` : `/site/${path}`;
   return `<header class="hdr"><div class="hdr-pill">
 <a class="hdr-logo" href="${r}" aria-label="GRAVETIDE"><img src="${K('brand/logo')}" alt="GRAVETIDE" width="120" height="96"></a>
-<nav class="hdr-nav" id="nav" aria-label="${lang === 'ru' ? 'Разделы' : 'Sections'}">${NAV.map((x) => link(x, true)).join('')}</nav>
+<nav class="hdr-nav" id="nav" aria-label="${lang === 'ru' ? 'Разделы' : 'Sections'}">${barItems.join('')}</nav>
 <div class="hdr-end"><a class="hdr-lang" href="${other}" hreflang="${lang === 'ru' ? 'en' : 'ru'}">${lang === 'ru' ? 'EN' : 'RU'}</a>
 <a class="hdr-soc" href="https://t.me/gravetide_bot" target="_blank" rel="noopener" aria-label="Telegram" title="Telegram">${TG_MARK}</a>
 <a class="hdr-soc hdr-vk" href="${VK_START}" data-vk aria-label="${u('vk', lang)}" title="${u('vk', lang)}">${VK_MARK}</a>
