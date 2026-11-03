@@ -12,8 +12,9 @@
 //   ISLAND = 10 000 × √(the silver and the resources, at their base prices, sunk into her island's town — every level of
 //            the hall, the keep, the market, the guild, the seven dwellings, the warehouse, the shipyard, the battery,
 //            the fort, the Grail and the pen (townCost / treeCost) — plus half of what her workings and other buildings
-//            cost (baseCost), against the whole town at its greatest); capped there: the greatest island is 10 000. (The
-//            root: the dear last levels would leave a young island at a few dozen.)
+//            cost (baseCost), against the whole town at the tree's old top, level 5); capped there at 10 000. (The
+//            root: the dear last levels would leave a young island at a few dozen.) docs/38: the levels 6..10 add up to
+//            5 000 more by the same root over what they cost (ISLE_TOP_PART): the greatest island is 15 000.
 //   GEAR   = the items she wears (the captain's ten slots) and her ship's (the slots her level has opened): each
 //            ILVL × RARITY × Excellent × tempering, an artifact by its class, and every set bonus in force; 10 000 ≈
 //            twenty legendary pieces of ⚓10, tempered and Excellent, in full sets.
@@ -36,7 +37,7 @@ import { GOODS } from './goods.ts';
 import type { GoodId } from './goods.ts';
 import { TOWN_IDS, townCost } from './town.ts';
 import type { TownId } from './town.ts';
-import { TREE_BASE, TREE_MAX, isTree, treeCost } from './isletree.ts';
+import { TREE_BASE, TREE_MAX, TREE_OLD_MAX, isTree, treeCost } from './isletree.ts';
 import type { TreeId } from './isletree.ts';
 import { baseCost } from './base.ts';
 import { levelRange, shipLevelOf } from './shiplevel.ts';
@@ -139,33 +140,47 @@ const worth = (c: { silver: number; goods: Partial<Record<GoodId, number>> }) =>
   c.silver + Object.entries(c.goods).reduce((s, [g, n]) => s + (GOODS[g as GoodId]?.basePrice ?? 0) * (n ?? 0), 0);
 
 const TOWN_MAX: Record<string, number> = { grail: 1, pen: 2 };
-/** Every level of a town (or tree) building up to `level`, what it cost. */
-function townWorth(id: string, level: number): number {
+/** Every level of a town (or tree) building from `from` up to `level`, what it cost. */
+function townWorth(id: string, level: number, from = 1): number {
   const top = isTree(id) ? TREE_MAX : TOWN_MAX[id] ?? 0;
   const L = Math.max(0, Math.min(top, Math.floor(level)));
   let w = 0;
-  for (let l = 1; l <= L; l++) w += worth(isTree(id) ? treeCost(id as TreeId, l) : townCost(id as TownId, l));
+  for (let l = Math.max(1, from); l <= L; l++) w += worth(isTree(id) ? treeCost(id as TreeId, l) : townCost(id as TownId, l));
   return w;
 }
-/** The rest: a working or a building, every level of it. */
-function otherWorth(id: string, level: number): number {
-  const L = Math.max(0, Math.min(5, Math.floor(level)));
+/** The rest: a working or a building, every level of it (from `from`). */
+function otherWorth(id: string, level: number, from = 1): number {
+  const L = Math.max(0, Math.min(TREE_MAX, Math.floor(level)));
   let w = 0;
-  for (let l = 1; l <= L; l++) w += worth(baseCost(id, l));
+  for (let l = Math.max(1, from); l <= L; l++) w += worth(baseCost(id, l));
   return w;
 }
 
 const TOWN_KEYS: string[] = [...new Set<string>([...TOWN_IDS, ...TREE_BASE])];
-/** The whole town at its greatest: ISLAND's 10 000. */
-const ISLE_REF = TOWN_KEYS.reduce((s, id) => s + townWorth(id, isTree(id) ? TREE_MAX : TOWN_MAX[id] ?? 0), 0);
+/** The whole town at the tree's old top (level 5): ISLAND's 10 000 — the scale every island stood on before docs/38. */
+const ISLE_REF = TOWN_KEYS.reduce((s, id) => s + townWorth(id, isTree(id) ? TREE_OLD_MAX : TOWN_MAX[id] ?? 0), 0);
+/** The whole town at its greatest (level 10). */
+const ISLE_TOP = TOWN_KEYS.reduce((s, id) => s + townWorth(id, TREE_MAX, TREE_OLD_MAX + 1), 0);
+/** docs/38: what the levels 6..10 add (their own worth against the whole town's 6..10) — half as much again at the
+ *  greatest island (15 000), by the same root; the levels 1..5 count as they did, so nobody's score moved. */
+export const ISLE_TOP_PART = 0.5;
 
 /** ISLAND: what stands on her island on the 10 000 scale (no island: 0). */
 export function isleScore(isle: PowerIsle | null): number {
   if (!isle) return 0;
-  let w = 0;
-  for (const id of TOWN_KEYS) w += townWorth(id, isle.town[id] ?? 0);
-  for (const o of isle.other) if (!TOWN_KEYS.includes(o.id)) w += otherWorth(o.id, o.level) / 2;
-  return Math.round(Math.sqrt(Math.min(1, fin(w) / ISLE_REF)) * POWER_TOP);
+  let w = 0, top = 0;
+  const cut = TREE_OLD_MAX;
+  for (const id of TOWN_KEYS) {
+    const l = isle.town[id] ?? 0;
+    w += townWorth(id, Math.min(cut, l));
+    top += townWorth(id, l, cut + 1);
+  }
+  for (const o of isle.other) {
+    if (TOWN_KEYS.includes(o.id)) continue;
+    w += otherWorth(o.id, Math.min(cut, o.level)) / 2;
+    top += otherWorth(o.id, o.level, cut + 1) / 2;
+  }
+  return Math.round((Math.sqrt(Math.min(1, fin(w) / ISLE_REF)) + ISLE_TOP_PART * Math.sqrt(Math.min(1, fin(top) / ISLE_TOP))) * POWER_TOP);
 }
 
 // ------------------------------------------------------------------------------------------------ the gear

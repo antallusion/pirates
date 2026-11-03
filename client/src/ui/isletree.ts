@@ -1,5 +1,5 @@
 // docs/29 (owner, 2026-10-11): the island's tech tree on the screen — a building's card as the mobile city-builders draw
-// it (its level i/5 in pips, what the next level gives, its cost and its time, what it asks with ✓ and ✗, «Улучшить»),
+// it (its level i/10 in pips, what the next level gives, its cost and its time, what it asks with ✓ and ✗, «Улучшить»),
 // and the move's confirm (what it pulls down, what goes along, silver or doubloons).
 
 import { TOWN } from '../../../shared/src/data/town.ts';
@@ -7,7 +7,7 @@ import type { TownId } from '../../../shared/src/data/town.ts';
 import { GROWTH, KEEP_GROWTH, MARKET_BUY, MARKET_SELL, TIER_UNIT } from '../../../shared/src/data/town.ts';
 import { BUILDINGS, islandSize } from '../../../shared/src/data/holdings.ts';
 import type { BuildingId, IslandSize } from '../../../shared/src/data/holdings.ts';
-import { DWELL_GROWTH, DWELL_UP_LEVEL, HALL_DAY, ISLE_OF_HALL, SHIPYARD_REPAIR, TREE_MAX, isTreeTown } from '../../../shared/src/data/isletree.ts';
+import { DWELL_GROWTH, DWELL_HIRE_OFF, DWELL_UP_LEVEL, HALL_DAY, ISLE_OF_HALL, SHIPYARD_REPAIR, TREE_MAX, TREE_OLD_MAX, hallBonus, isTreeTown } from '../../../shared/src/data/isletree.ts';
 import { ISLE_LEVELS } from '../../../shared/src/data/estate.ts';
 import { caravanExtra, chartCopy, coveHide, dockDiscount, forgeReach, levelMul, residentRooms, signalMins, signalRisk, smugglerRoom, trophyCap, workshopYield } from '../../../shared/src/data/baselevels.ts';
 import { PRODUCERS, crewsAt, plotsOf, producerOf, producerRate, yardCap } from '../../../shared/src/data/base.ts';
@@ -39,9 +39,9 @@ export function treeLabel(id: string, level = 1): string {
   return BUILDINGS[id as BuildingId]?.name ?? id;
 }
 
-/** Five pips: the levels it stands at, filled. */
+/** Pips: the levels it stands at, filled (ten of them smaller: `tr-pips10`). */
 export function pips(level: number, max = TREE_MAX): string {
-  return `<span class="tr-pips" aria-hidden="true">${Array.from({ length: max }, (_, i) => `<i class="${i < level ? 'on' : ''}"></i>`).join('')}</span>`;
+  return `<span class="tr-pips${max > 5 ? ' tr-pips10' : ''}" aria-hidden="true">${Array.from({ length: max }, (_, i) => `<i class="${i < level ? 'on' : ''}"></i>`).join('')}</span>`;
 }
 
 /** What the tree asks of the next level, each ✓ when it stands, ✗ when not. */
@@ -68,11 +68,17 @@ export function givesText(id: string, level: number, c: GiveCtx): string {
   switch (id) {
     case 'hall': {
       const isle = ISLE_OF_HALL[L];
+      if (L > TREE_OLD_MAX) {
+        // docs/38: the island stands at its greatest; the hall 6..10 gives its own over it
+        const b = hallBonus(L);
+        const extra = [b.outposts ? T29('bOutposts', { n: b.outposts }) : '', b.crews ? T29('bCrews', { n: b.crews }) : '', b.caravans ? T29('bCaravans', { n: b.caravans }) : '', L >= TREE_MAX ? T29('bCapital') : ''].filter(Boolean).join(', ');
+        return T29('gHallTop', { silver: fmt(HALL_DAY[L]), isle, extra });
+      }
       return T29('gHall', { silver: HALL_DAY[L], isle, plots: plotsOf(isle, c.size), outposts: ISLE_LEVELS[isle].outposts, crews: crewsAt(isle) });
     }
     case 'keep': return T29('gKeep', { g: dec1(KEEP_GROWTH[L]).replace(/[.,]0$/, '') });
     case 'market': return T29('gMarket', { s: Math.round(MARKET_SELL[L] * 1000) / 10, b: Math.round(MARKET_BUY[L] * 1000) / 10 });
-    case 'guild': return T29('gGuild', { n: L, k: [3, 3, 2, 1, 1][L - 1] });
+    case 'guild': return L > TREE_OLD_MAX ? T29('gGuildMore', { n: L - TREE_OLD_MAX }) : T29('gGuild', { n: L, k: [3, 3, 2, 1, 1][L - 1] });
     case 'warehouse': return T29('gWarehouse', { n: fmt(yardCap(Math.max(c.isle, 1), L)) });
     case 'shipyard': return T29('gShipyard', { lv: YARD_SHIP_LEVEL[L], p: Math.round(SHIPYARD_REPAIR[L] * 100) });
     case 'battery': return T29('gBattery', { n: DEF_BATTERY * L });
@@ -107,7 +113,8 @@ export function givesText(id: string, level: number, c: GiveCtx): string {
     const plain = TIER_UNIT[tier];
     const up = L >= DWELL_UP_LEVEL ? UNITS[plain].upgrade ?? plain : plain;
     const n = dec1(GROWTH[tier] * DWELL_GROWTH[L]).replace(/[.,]0$/, '');
-    return L >= DWELL_UP_LEVEL ? T29('gDwellUp', { unit: unitName(up), n }) : T29('gDwell', { unit: unitName(plain), n });
+    const off = DWELL_HIRE_OFF[L] ? ` · ${T29('gHireOff', { p: Math.round(DWELL_HIRE_OFF[L] * 100) })}` : '';
+    return (L >= DWELL_UP_LEVEL ? T29('gDwellUp', { unit: unitName(up), n }) : T29('gDwell', { unit: unitName(plain), n })) + off;
   }
   return '';
 }

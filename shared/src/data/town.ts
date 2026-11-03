@@ -201,16 +201,19 @@ export interface TownDef {
   tier?: number;
 }
 
-// docs/29: five levels each; a dwelling keeps its plain name to its second level and trains the upgraded kind from its third.
-const dw = (tier: number, plain: Tr, up: Tr, text: Tr, art: string): TownDef => ({ id: `dw${tier}` as TownId, names: [plain, plain, up, up, up], text, art, max: TREE_MAX, tier });
+// docs/29: five levels each (ten since docs/38); a dwelling keeps its plain name to its second level and trains the upgraded
+// kind from its third, under the upgraded name to the tenth.
+const dw = (tier: number, plain: Tr, up: Tr, text: Tr, art: string): TownDef => ({ id: `dw${tier}` as TownId, names: [plain, plain, ...Array.from({ length: TREE_MAX - 2 }, () => up)], text, art, max: TREE_MAX, tier });
 
 export const TOWN: Record<TownId, TownDef> = {
   hall: {
-    id: 'hall', names: [['Town Hall', 'Ратуша'], ['Council Hall', 'Дом совета'], ['City Hall', 'Городская управа'], ['Governor’s Hall', 'Губернаторский дом'], ['Capitol', 'Капитолий']],
+    id: 'hall', names: [['Town Hall', 'Ратуша'], ['Council Hall', 'Дом совета'], ['City Hall', 'Городская управа'], ['Governor’s Hall', 'Губернаторский дом'], ['Capitol', 'Капитолий'],
+      // docs/38: the hall 6..10, the tenth the pirates' capital (the island's own top title)
+      ['Governor’s Palace', 'Губернаторский дворец'], ['Viceroy’s Palace', 'Дворец вице-короля'], ['Brethren’s Council', 'Совет Берегового братства'], ['Pirate Senate', 'Пиратский сенат'], ['Pirate Capital', 'Пиратская столица']],
     text: ['The heart of the island: it stands from the claim. Each level grows the island (plots, outposts, caravans, residents, builders) and pays silver every day into its treasury; its next level asks the town round it.', 'Сердце острова: стоит с самого занятия. Каждый уровень растит остров (участки, аванпосты, караваны, жители, бригады) и платит серебро каждый день в казну; следующий уровень требует города вокруг.'],
     art: 'trophy_hall', max: TREE_MAX,
   },
-  keep: { id: 'keep', names: [['Keep', 'Крепость'], ['Stockade', 'Острог'], ['Citadel', 'Цитадель'], ['Bastion', 'Бастион'], ['Castle', 'Замок']], text: ['Walls for the town: every level grows more men in every dwelling — the citadel half as many again, the castle twice as many.', 'Стены города: каждый уровень даёт всем жилищам больше бойцов — цитадель в полтора раза, замок вдвое.'], art: 'fort', max: TREE_MAX },
+  keep: { id: 'keep', names: [['Keep', 'Крепость'], ['Stockade', 'Острог'], ['Citadel', 'Цитадель'], ['Bastion', 'Бастион'], ['Castle', 'Замок'], ['High Keep', 'Твердыня'], ['Bulwark', 'Оплот'], ['Sea Fortress', 'Морская крепость'], ['Grand Castle', 'Великий замок'], ['Iron Citadel', 'Железная цитадель']], text: ['Walls for the town: every level grows more men in every dwelling — the citadel half as many again, the castle twice as many.', 'Стены города: каждый уровень даёт всем жилищам больше бойцов — цитадель в полтора раза, замок вдвое.'], art: 'fort', max: TREE_MAX },
   dw1: dw(1, ['Bunkhouse', 'Кубрик'], ['Sailors’ Hall', 'Матросский дом'], ['Deckhands sign on here; upgraded, it trains them into seasoned sailors.', 'Здесь нанимаются юнги; улучшенный — учит их в бывалых матросов.'], 'residents_house'),
   dw2: dw(2, ['Marine Barracks', 'Казарма морпехов'], ['Guard House', 'Караульня'], ['Marines muster here; upgraded, sea guards.', 'Здесь собираются морпехи; улучшенная — морская гвардия.'], 'barracks'),
   dw3: dw(3, ['Shooting Range', 'Стрельбище'], ['Shooters’ Guild', 'Гильдия стрелков'], ['Musketeers practise here; upgraded, sharpshooters. They want powder.', 'Здесь упражняются мушкетёры; улучшенное — меткие стрелки. Им нужен порох.'], 'kennel'),
@@ -218,12 +221,13 @@ export const TOWN: Record<TownId, TownDef> = {
   dw5: dw(5, ['Veterans’ Den', 'Притон ветеранов'], ['Cutthroats’ Den', 'Логово головорезов'], ['Boarders who have taken ships; upgraded, cutthroats. They drink rum.', 'Абордажники, бравшие корабли; улучшенный — головорезы. Пьют ром.'], 'smuggler_store'),
   dw6: dw(6, ['Admiralty', 'Адмиралтейство'], ['Admiralty Court', 'Адмиралтейский двор'], ['The officers’ guard; upgraded, the life guard. Paid in pearls as well.', 'Офицерская гвардия; улучшенное — лейб-гвардия. Платят и жемчугом.'], 'chart_house'),
   dw7: dw(7, ['Drowned Shrine', 'Святилище утопленников'], ['Abyssal Altar', 'Алтарь бездны'], ['The drowned rise for the Choir and the cursed; upgraded, the deep’s spawn. Pearls for the sea.', 'Утопленники встают для Хора и проклятых; улучшенное — порождения бездны. Жемчуг — морю.'], 'chapel'),
-  market: { id: 'market', names: [['Marketplace', 'Рынок'], ['Trading Row', 'Торговые ряды'], ['Exchange', 'Биржа'], ['Counting House', 'Торговый дом'], ['Merchants’ Guild', 'Гильдия купцов']], text: ['Trades the island’s resources for silver and for each other — near the world’s prices, the spread narrower with each level.', 'Меняет ресурсы острова на серебро и друг на друга — по ценам, близким к мировым; с каждым уровнем разница меньше.'], art: 'caravan_office', max: TREE_MAX },
+  market: { id: 'market', names: [['Marketplace', 'Рынок'], ['Trading Row', 'Торговые ряды'], ['Exchange', 'Биржа'], ['Counting House', 'Торговый дом'], ['Merchants’ Guild', 'Гильдия купцов'], ['Merchants’ Exchange', 'Купеческая биржа'], ['Trading Company', 'Торговая компания'], ['Grand Bourse', 'Большая биржа'], ['Grand Bazaar', 'Великий базар'], ['Free Port Exchange', 'Биржа вольного порта']], text: ['Trades the island’s resources for silver and for each other — near the world’s prices, the spread narrower with each level.', 'Меняет ресурсы острова на серебро и друг на друга — по ценам, близким к мировым; с каждым уровнем разница меньше.'], art: 'caravan_office', max: TREE_MAX },
   // docs/17 H5: HoMM3's mage guild — five floors, each teaching a fixed list of its level's orders free.
   guild: {
-    id: 'guild', names: [['Guild of Orders', 'Гильдия приказов'], ['Hall of Orders', 'Зал приказов'], ['School of Orders', 'Школа приказов'], ['College of Orders', 'Коллегия приказов'], ['Tower of Orders', 'Башня приказов']],
-    text: ['Teaches the captain its orders free, as far as her level allows: each floor a fixed list of its level’s orders (three, three, two, one, one). Lie off the island to learn.', 'Учит капитана своим приказам даром, насколько позволяет её уровень: на каждом ярусе свой список приказов его уровня (три, три, два, один, один). Чтобы учиться, встаньте у острова.'],
-    art: 'lighthouse', max: 5,
+    id: 'guild', names: [['Guild of Orders', 'Гильдия приказов'], ['Hall of Orders', 'Зал приказов'], ['School of Orders', 'Школа приказов'], ['College of Orders', 'Коллегия приказов'], ['Tower of Orders', 'Башня приказов'],
+      ['Academy of Orders', 'Академия приказов'], ['Lyceum of Orders', 'Лицей приказов'], ['Conclave of Orders', 'Конклав приказов'], ['Citadel of Orders', 'Цитадель приказов'], ['Spire of Orders', 'Шпиль приказов']],
+    text: ['Teaches the captain its orders free, as far as her level allows: each floor a fixed list of its level’s orders (three, three, two, one, one); from the sixth level each level adds one more order to a floor, the first to the fifth. Lie off the island to learn.', 'Учит капитана своим приказам даром, насколько позволяет её уровень: на каждом ярусе свой список приказов его уровня (три, три, два, один, один); с шестого уровня каждый уровень добавляет ещё один приказ ярусу — с первого по пятый. Чтобы учиться, встаньте у острова.'],
+    art: 'lighthouse', max: TREE_MAX,
   },
   // docs/17 H4 item 16: the legendary treasure the obelisks' chart leads to, raised over the town.
   // docs/18 #20: the pen where the eggs and the young of the land's creatures hatch and grow into a kind to hire.
@@ -245,8 +249,9 @@ export const dwellingOf = (tier: number): TownId => `dw${tier}` as TownId;
 
 /** The town hall's silver a day by its level (docs/29: five levels; isletree.ts HALL_DAY). */
 export const HALL_INCOME = HALL_DAY;
-/** Growth by the keep's level: none, the keep, … the citadel (3rd: +50%), … the castle (5th: +100%). */
-export const KEEP_GROWTH = [1, 1, 1.25, 1.5, 1.75, 2];
+/** Growth by the keep's level: none, the keep, … the citadel (3rd: +50%), … the castle (5th: +100%), … ×3 at the tenth
+ *  (docs/38). */
+export const KEEP_GROWTH = [1, 1, 1.25, 1.5, 1.75, 2, 2.2, 2.4, 2.6, 2.8, 3];
 
 /** The market: what it pays for a unit (a share of its base price) and what it asks, by its level. Elordaert, forum
  *  2026-10-29: HoMM3's poor rates (it paid 0.2 and asked 3.4 of the base: iron 6.8 against 115.6) read as a broken
@@ -254,8 +259,8 @@ export const KEEP_GROWTH = [1, 1, 1.25, 1.5, 1.75, 2];
  *  first level, ×1.28 at the fifth). Its dearest pay even in a fair week (×1.25) stays under a producing harbour's
  *  price (~0.83 of the base: 0.78 and the spread), and what it sells goes into the yard, never to the hold — so no
  *  round trip through it pays. */
-export const MARKET_SELL = [0, 0.6, 0.61, 0.62, 0.63, 0.64];
-export const MARKET_BUY = [0, 0.9, 0.88, 0.86, 0.84, 0.82];
+export const MARKET_SELL = [0, 0.6, 0.61, 0.62, 0.63, 0.64, 0.65, 0.66, 0.67, 0.68, 0.7];
+export const MARKET_BUY = [0, 0.9, 0.88, 0.86, 0.84, 0.82, 0.8, 0.78, 0.76, 0.74, 0.72];
 /** The least the market's ask stands over its pay in any week (the fair: ×1.25 pay, ×0.85 ask). */
 export const MARKET_MIN_SPREAD = 1.2;
 /** What `n` units cost at the market's asking price (one sum, rounded up once). */

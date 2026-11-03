@@ -4,11 +4,12 @@
 // figures and the battle's effects when a hostile sail is near, so the grapples find the battle ready. And the
 // service worker (client/sw.js) that keeps every picture for the next visit.
 
-import { ISO_MAP_OF, isoSheet } from '../../shared/src/data/isleiso.ts';
+import { ISO_LEVELS, ISO_MAP_OF, isoPic, isoSheet } from '../../shared/src/data/isleiso.ts';
+import type { IsoStage } from '../../shared/src/data/isleiso.ts';
 import { deckArt } from '../../shared/src/data/fleet.ts';
 import { SF } from '../../shared/src/protocol.ts';
 import { armyForLevel } from '../../shared/src/data/army.ts';
-import { assetFor, assetIds, ensureAssets, keepUrls, loadManifest, prefetchAssets, warmAll, assetUrl } from './assets.ts';
+import { assetFor, assetIds, ensureAssets, hasAsset, keepUrls, loadManifest, prefetchAssets, warmAll, assetUrl } from './assets.ts';
 import type { ClientState } from './state.ts';
 import { filmDue } from './ui/cutscene.ts';
 
@@ -86,11 +87,11 @@ export function sceneWarm(state: ClientState, t: number): void {
       if (v) {
         for (const c of v.cells) {
           const sheet = c.what ? isoSheet(c.what) : null;
-          if (sheet) ids.push(`isle.${sheet}.l${Math.max(1, Math.min(5, c.level || 1))}`, ...(c.job ? [`isle.${sheet}.up`, `isle.${sheet}.s0`, `isle.${sheet}.s1`] : []));
+          if (sheet) ids.push(isoPic(sheet, `l${Math.max(1, Math.min(ISO_LEVELS, c.level || 1))}` as IsoStage, hasAsset), ...(c.job ? [`isle.${sheet}.up`, `isle.${sheet}.s0`, `isle.${sheet}.s1`] : []));
         }
         for (const th of v.town?.things ?? []) {
           const sheet = isoSheet(th.id);
-          if (sheet) ids.push(`isle.${sheet}.${th.level > 0 ? `l${Math.min(5, th.level)}` : 's0'}`);
+          if (sheet) ids.push(isoPic(sheet, (th.level > 0 ? `l${Math.min(ISO_LEVELS, th.level)}` : 's0') as IsoStage, hasAsset));
         }
       }
       prefetchAssets(ids);

@@ -87,8 +87,8 @@ function go(game: Game, s: PlayerSession, kind: string): string {
 // ------------------------------------------------------------------------------------------------ A. the wiring
 
 test('the island\'s guild of orders: five floors, a fixed list of each floor\'s level, taught free through learnOrder while she lies off it', () => {
-  assert.equal(TOWN.guild.max, 5);
-  for (let L = 1; L <= 5; L++) {
+  assert.equal(TOWN.guild.max, 10); // (docs/38: to 10, each level above 5 one more order)
+  for (let L = 1; L <= 10; L++) {
     assert.ok(townCost('guild', L).silver > (L > 1 ? townCost('guild', L - 1).silver : 0), `floor ${L} dearer`);
     assert.ok(townGate('guild', L).isle >= (L > 1 ? townGate('guild', L - 1).isle : 1));
     assert.equal(TOWN.guild.names[L - 1].length, 2);
@@ -103,6 +103,17 @@ test('the island\'s guild of orders: five floors, a fixed list of each floor\'s 
   });
   assert.deepEqual(isleGuildOrders(77, 2), a.slice(0, 2), 'a higher floor keeps the lower floors\' lists');
   assert.notDeepEqual(isleGuildOrders(78, 5), a, 'each island its own');
+  // docs/38: the guild 5 + k adds one order of level k, the floors' own lists unchanged
+  for (let f = 6; f <= 10; f++) {
+    const up = isleGuildOrders(77, f);
+    assert.equal(up.length, 5);
+    up.forEach((list, i) => {
+      assert.deepEqual(list.slice(0, ISLE_GUILD_COUNT[i + 1]), a[i], `guild ${f}: floor ${i + 1} keeps its list`);
+      assert.equal(list.length, ISLE_GUILD_COUNT[i + 1] + (i + 1 <= f - 5 ? 1 : 0), `guild ${f}: floor ${i + 1}`);
+      assert.equal(new Set(list).size, list.length);
+      for (const id of list) assert.ok(ORDERS[id].level === i + 1, id);
+    });
+  }
 
   const game = world();
   const { s, home } = islander(game);

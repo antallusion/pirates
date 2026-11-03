@@ -38,11 +38,12 @@ export interface OwnRoleDef {
 export const OWN_ROLE_DEFS: Record<OwnRole, OwnRoleDef> = {
   war: {
     id: 'war', name: ['Warship', 'Боевой корабль'], text: ['Fights at your side and takes the blows meant for you.', 'Бьётся рядом с вами и принимает удары на себя.'],
-    hulls: ['cutter', 'brigantine', 'brig', 'frigate'], from: { frigate: 8 }, silver: 2500, goods: { timber: 80, coal: 20, tar: 25, iron: 30, provisions: 30 }, secs: 1200,
+    // (docs/38: the shipyard 6–7 raises her on to a man-o'-war at ⚓9–10 — kept to OWN_PARITY like the frigate)
+    hulls: ['cutter', 'brigantine', 'brig', 'frigate', 'man_o_war'], from: { frigate: 8 }, silver: 2500, goods: { timber: 80, coal: 20, tar: 25, iron: 30, provisions: 30 }, secs: 1200,
   },
   merchant: {
     id: 'merchant', name: ['Merchant', 'Торговый корабль'], text: ['Carries for you: half her hold is added to yours while she sails with you.', 'Везёт за вас: половина её трюма прибавляется к вашему, пока она идёт с вами.'],
-    hulls: ['sloop', 'fluyt', 'galleon'], silver: 2000, goods: { timber: 90, coal: 10, tar: 25, iron: 15, provisions: 30 }, secs: 1200,
+    hulls: ['sloop', 'fluyt', 'galleon', 'great_indiaman'], from: { great_indiaman: 10 }, silver: 2000, goods: { timber: 90, coal: 10, tar: 25, iron: 15, provisions: 30 }, secs: 1200,
   },
   fisher: {
     id: 'fisher', name: ['Fisher', 'Рыбацкий корабль'], text: ['Nets the shoals you pass and brings the catch aboard.', 'Ловит в косяках на вашем пути и сдаёт улов вам в трюм.'],
@@ -57,7 +58,7 @@ export const OWN_ROLE_DEFS: Record<OwnRole, OwnRoleDef> = {
 /** Her own ships: two at the most, built, laid up or at sea. */
 export const OWN_SHIPS_MAX = 2;
 /** The greatest level the island's shipyard builds to, by its own level (index: the shipyard's level). */
-export const YARD_SHIP_LEVEL = [0, 3, 4, 5, 7, 8];
+export const YARD_SHIP_LEVEL = [0, 3, 4, 5, 7, 8, 9, 10, 10, 10, 10]; // (docs/38: ⚓9 at 6, ⚓10 from 7)
 export const SHIPYARD_MAX = YARD_SHIP_LEVEL.length - 1;
 
 /** The levels a role takes a hull at: her class's, from the role's own first level for it. */

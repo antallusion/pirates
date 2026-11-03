@@ -117,8 +117,8 @@ test('the terms by the waters: safe dear and taxed and never raided, contested b
   assert.equal(isleDefence({ batteries: [{ level: 2, condition: 1 }], forts: [], ships: [] }), 6);
   assert.ok(isleDefence({ batteries: [], forts: [{ level: 1, condition: 1 }], ships: [{ level: 5, hull: 1 }] }) > isleDefence({ batteries: [{ level: 1, condition: 1 }], forts: [], ships: [] }));
   // Batteries and forts are raised by level at the base, their costs fitting the yard.
-  assert.equal(maxLevel('battery'), 5);
-  assert.equal(maxLevel('fort'), 5);
+  assert.equal(maxLevel('battery'), 10); // (docs/38: the tree to 10)
+  assert.equal(maxLevel('fort'), 10);
   assert.ok(baseCost('fort', 3).silver > baseCost('battery', 3).silver);
 });
 

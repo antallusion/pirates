@@ -8,7 +8,7 @@ import { ISLE_LEVELS, ISLE_MAX } from '../../shared/src/data/estate.ts';
 import { LOSS_DAY_CAP, isleTax } from '../../shared/src/data/baseclaim.ts';
 import { ISLE_POWER, OWN_PARITY, combatWorth, hiredWorth, hullFor, ownParity, roleLevels } from '../../shared/src/data/baseships.ts';
 import type { IslandBiome } from '../../shared/src/world/regions.ts';
-import { STEADY, daysToHall, simulateTree } from './isletree.ts';
+import { STEADY, daysToHall, simulateTree, treePace } from './isletree.ts';
 
 const BIOMES: IslandBiome[] = ['temperate', 'mossy', 'volcanic', 'ice', 'ruins', 'bone', 'barren', 'jungle', 'mangrove', 'atoll', 'saltflat', 'blacksand', 'fungal', 'crystal'];
 
@@ -96,4 +96,21 @@ test('docs/17 H3 on the tree (docs/29): the town hall\'s daily silver is a real 
   assert.ok(r.hallIncome > 0 && r.hallIncome < (r.earned * STEADY.share) * 0.75, `the hall brought ${Math.round(r.hallIncome)} of ${Math.round(r.earned * STEADY.share)}`);
   const heavy = simulateTree({ ...STEADY, hours: 5 });
   assert.ok(daysToHall(heavy, 5) >= 14, `heavy play: hall 5 on day ${daysToHall(heavy, 5).toFixed(1)}`);
+});
+
+// docs/38 (owner, 2026-11-03: «стройка всего до 10 уровня занимала 3 года без ускорений»): the builders' time alone —
+// silver and goods never wanting, no speed-ups — from the claim to every building of the tree at 10.
+test('the whole tree to 10 takes about three years of the two free crews; more crews shorten it, never to a season', () => {
+  const YEAR = 365 * 24;
+  const two = treePace(2), three = treePace(3), five = treePace(5);
+  assert.ok(Math.abs(two.all / YEAR - 3) <= 0.3, `two crews: ${(two.all / YEAR).toFixed(2)} years`);
+  assert.ok(three.all < two.all && five.all < three.all, 'more crews, sooner');
+  assert.ok(five.all / YEAR >= 1.5, `five crews: ${(five.all / YEAR).toFixed(2)} years — the hall's own chain holds the pace`);
+  // the hall's levels come in order, each a longer wait than the last from 6 on
+  for (let l = 7; l <= 10; l++) assert.ok(two.hall[l] - two.hall[l - 1] > two.hall[l - 1] - two.hall[l - 2], `hall ${l}`);
+  // the hall's own crews (7 and 10) help but do not halve it
+  const own = treePace(2, 10, true);
+  assert.ok(own.all < two.all && own.all > two.all * 0.75, `with the hall's crews: ${(own.all / YEAR).toFixed(2)} years`);
+  // the old top stays where it was: the hall 5 within days of pure building (the silver paces it: simulateTree)
+  assert.ok(two.hall[5] / 24 < 10, `hall 5 after ${(two.hall[5] / 24).toFixed(1)} days of building`);
 });

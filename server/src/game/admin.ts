@@ -72,7 +72,7 @@ import { TATTOOS, TATTOO_BY_ID } from '../../../shared/src/data/sidequests.ts';
 import { ownIsland } from './estate.ts';
 import { baseView, capOf, grantSpeedups, plotCount, reckonBase, yardOf } from './base.ts';
 import { newOwnHolding, ownKey } from './holdings.ts';
-import { ISLE_OF_HALL, TREE_TOWN, hallOfIsle } from '../../../shared/src/data/isletree.ts';
+import { ISLE_OF_HALL, TREE_MAX, TREE_TOWN, hallOfIsle } from '../../../shared/src/data/isletree.ts';
 import { groupAnswer, groupInvite, groupOfAccount, lfgPost } from './party.ts';
 import { prefOf } from './boardgroup.ts'; // docs/25 block Е
 import { worldGoalsAdd } from './worldgoals.ts';
@@ -638,7 +638,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       if (!h) return 'You have no island of your own.';
       const y = yardOf(game, h);
       if (args[0] === 'tree') {
-        const n = Math.max(1, Math.min(5, Math.round(num(1, 5))));
+        const n = Math.max(1, Math.min(TREE_MAX, Math.round(num(1, 5))));
         const t = y.town ?? (y.town = { b: {}, pool: [0, 0, 0, 0, 0, 0, 0, 0], w: -1 });
         for (const id of TREE_TOWN) t.b[id as 'hall'] = n;
         h.level = Math.max(h.level ?? 1, ISLE_OF_HALL[n]);

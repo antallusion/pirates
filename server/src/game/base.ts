@@ -35,7 +35,7 @@ import { has, island, islandNear, slotsOf, slotsUsed, treasuryMove } from './hol
 import type { Building, Holding } from './holdings.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { finishTown, townLevel, townView, treeNeedView, treeWhy } from './town.ts';
-import { BASE_UNLOCK, isTreeBase, producerHall } from '../../../shared/src/data/isletree.ts';
+import { BASE_UNLOCK, hallBonus, isTreeBase, producerHall } from '../../../shared/src/data/isletree.ts';
 import type { TreeId } from '../../../shared/src/data/isletree.ts';
 import { TREE_VERSION, migrateTree } from './holdings.ts';
 import type { TownState } from './town.ts';
@@ -385,9 +385,10 @@ export function powerOf(h: Holding): number {
   return islePower(things, ships);
 }
 
-/** The island's own builders' crews: by its level, and one more for an island of great power. */
+/** The island's own builders' crews: by its level, one more for an island of great power, and the hall 7 and 10's
+ *  (docs/38 hallBonus). */
 export function crewsBase(h: Holding): number {
-  return crewsAt(h.level ?? 1, powerOf(h) >= POWER_CREW ? 1 : 0);
+  return crewsAt(h.level ?? 1, (powerOf(h) >= POWER_CREW ? 1 : 0) + hallBonus(h.yard?.town?.b.hall ?? 1).crews);
 }
 
 /** The builders' crews: the island's own, and — with the game — the brigades of the owner's premium shop (hers for

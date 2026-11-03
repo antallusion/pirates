@@ -39,7 +39,7 @@ import type { Game } from './Game.ts';
 import type { Holding } from './holdings.ts';
 import type { PlayerSession } from './player.ts';
 import { islePools, isleWeekGrowth, keepsDeep, townHave, townLevel } from './town.ts';
-import { DWELL_UP_LEVEL } from '../../../shared/src/data/isletree.ts';
+import { DWELL_HIRE_OFF, DWELL_UP_LEVEL } from '../../../shared/src/data/isletree.ts';
 import { freeCargo, jobCargo, questEvent } from './quests.ts'; // playthrough C: her jobs' cargo is not hers to spend
 import { mooredAt } from './waystations.ts';
 import { captainAdvice } from './armyadvice.ts';
@@ -116,6 +116,17 @@ interface Here {
   /** The tiers here opened by her island (2 and up), and the port's own among them. */
   remote: Set<number>;
   native: Set<number>;
+}
+
+/** Her island's dwellings by tier, each at its level (docs/38: the plumbing of the elite kind of a later task — isletree.ts
+ *  DWELL_ELITE_LEVEL, dwellElite — and of the hire's share off, DWELL_HIRE_OFF). */
+export function isleDwellLevels(y: Yard): Map<number, number> {
+  const out = new Map<number, number>();
+  for (let t = 1; t <= 7; t++) {
+    const L = townLevel(y, dwellingOf(t));
+    if (L > 0) out.set(t, L);
+  }
+  return out;
 }
 
 /** Her island's dwellings, as the tiers they open (tier → the upgraded kind too). */
@@ -205,6 +216,12 @@ function priceOf(game: Game, s: PlayerSession, at: Here, u: UnitId, n: number): 
   if (at.port && UNITS[u].tier === 1) p.silver = Math.round(n * perMan(game, s, at, u));
   const off = recruitLift(s.profile); // docs/19 E2: the Merchant's recruiter's purse
   if (off > 0) p.silver = Math.round(p.silver * (1 - off));
+  // docs/38: men of her island's own dwelling of level 6..10 come cheaper (DWELL_HIRE_OFF) — at the island, at a
+  // waystation, and in a port that has no dwelling of their tier of its own
+  const tier = UNITS[u].tier;
+  const isle = at.src === 'isle' ? at.y : at.remote.has(tier) && !at.native.has(tier) ? at.own : null;
+  const cut = isle ? DWELL_HIRE_OFF[Math.min(DWELL_HIRE_OFF.length - 1, townLevel(isle, dwellingOf(tier)))] ?? 0 : 0;
+  if (cut > 0) p.silver = Math.round(p.silver * (1 - cut));
   return p;
 }
 

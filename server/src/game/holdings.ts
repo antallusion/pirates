@@ -42,7 +42,7 @@ import { deliver, notice } from './post.ts';
 import { repairCost } from './ports.ts';
 import type { ShipEntity } from './ship.ts';
 import { SPEED_SCALE } from '../../../shared/src/constants.ts';
-import { ISLE_OF_HALL, SHIPYARD_REPAIR, hallOfIsle, isTreeBase } from '../../../shared/src/data/isletree.ts';
+import { ISLE_OF_HALL, SHIPYARD_REPAIR, TREE_MAX, hallOfIsle, isTreeBase } from '../../../shared/src/data/isletree.ts';
 import { chartCopy, dockDiscount, levelMul, smugglerRoom, workshopYield } from '../../../shared/src/data/baselevels.ts';
 
 const DAY = 86_400_000;
@@ -311,7 +311,7 @@ export function migrateLevels(h: Holding): boolean {
   if (!h.owned) return false;
   let changed = false;
   for (const b of h.buildings) {
-    const l = Math.max(1, Math.min(5, Math.round(b.level ?? 1)));
+    const l = Math.max(1, Math.min(TREE_MAX, Math.round(b.level ?? 1))); // (docs/38: to 10)
     if (b.level !== l) {
       b.level = l;
       changed = true;

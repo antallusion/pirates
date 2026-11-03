@@ -71,6 +71,7 @@ export const EN = {
   t_s: '{s} s',
   t_m: '{m} min',
   t_hm: '{h} h {m} min',
+  t_dh: '{d} d {h} h', // docs/38: the levels 6..10 take days
   cost: 'Cost',
   time: 'Time',
   // The shipyard and the island's power (docs/15 items 4–5).
@@ -208,6 +209,7 @@ export const RU: Record<keyof typeof EN, string> = {
   t_s: '{s} с',
   t_m: '{m} мин',
   t_hm: '{h} ч {m} мин',
+  t_dh: '{d} дн {h} ч',
   cost: 'Цена',
   time: 'Время',
   tab_plots: 'Остров',

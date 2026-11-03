@@ -179,8 +179,8 @@ export const ARTICLES: GuideArticle[] = [
       {
         img: img('isle-cost', 2),
         text: [
-          'From level 3 it grows steeply: the Town Hall 3 costs 5 350 silver and 8 hours, Hall 4 — 48 000, Hall 5 — 95 000. Build the cheap levels everywhere first.',
-          'С третьего уровня цены круто растут: ратуша 3 — 5 350 серебра и 8 часов, ратуша 4 — 48 000, ратуша 5 — 95 000. Сначала берите дешёвые уровни везде.',
+          'From level 3 it grows steeply: the Town Hall 3 costs 5 350 silver and 8 hours, Hall 4 — 48 000, Hall 5 — 95 000. Build the cheap levels everywhere first. Levels 6 to 10 are the long road: Hall 6 costs 285 000 silver and three days, Hall 10 — 3.4 million and about six weeks, and they ask the sea’s rare goods (pearls, rum, powder, whalebone, scales, ambergris and the bosses’ trophies).',
+          'С третьего уровня цены круто растут: ратуша 3 — 5 350 серебра и 8 часов, ратуша 4 — 48 000, ратуша 5 — 95 000. Сначала берите дешёвые уровни везде. Уровни с 6-го по 10-й — долгая дорога: ратуша 6 стоит 285 000 серебра и три дня, ратуша 10 — 3,4 миллиона и около шести недель, и им нужны редкие товары моря (жемчуг, ром, порох, китовый ус, чешуя, амбра и трофеи боссов).',
         ],
       },
       {

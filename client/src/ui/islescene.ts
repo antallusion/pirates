@@ -13,7 +13,7 @@
 
 import { detailAttr } from './detailattr.ts'; // the detail card (owner, 2026-10-30)
 import { HL, bindHaul, haulCard } from './islehaul.ts';
-import { ISO_H, ISO_MAP_OF, ISO_SLOT, ISO_UNIT, ISO_W, isoFoot, isoSheet, isoSpot, isoStage } from '../../../shared/src/data/isleiso.ts';
+import { ISO_H, ISO_LEVELS, ISO_MAP_OF, ISO_SLOT, ISO_UNIT, ISO_W, isoFoot, isoPic, isoSheet, isoSpot, isoStage } from '../../../shared/src/data/isleiso.ts';
 import type { IsoMap, Pt } from '../../../shared/src/data/isleiso.ts';
 import { PLOT_CELLS, PRODUCERS, producerOf } from '../../../shared/src/data/base.ts';
 import { TOWN_CELLS, isTreeTown } from '../../../shared/src/data/isletree.ts';
@@ -21,7 +21,7 @@ import type { TownId } from '../../../shared/src/data/town.ts';
 import type { BaseView, ClientMsg, IslePlanStepView } from '../../../shared/src/protocol.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
-import { assetMeta, assetUrl, prefetchAssets } from '../assets.ts';
+import { assetMeta, assetUrl, hasAsset, prefetchAssets } from '../assets.ts';
 import { IsleFx } from './islefx.ts';
 import type { FxSpot } from './islefx.ts';
 import { beginLoad } from './loader.ts';
@@ -317,9 +317,9 @@ export class IsleScene {
       for (const s of this.spots) {
         const m = s.pic && 'id' in s.pic ? /^isle\.(.+)\.(\w+)$/.exec(s.pic.id) : null;
         if (!m) continue;
-        const lv = /^l(\d)$/.exec(m[2]);
+        const lv = /^l(\d+)$/.exec(m[2]);
         ids.push(`isle.${m[1]}.up`, `isle.${m[1]}.s1`);
-        if (lv && Number(lv[1]) < 5) ids.push(`isle.${m[1]}.l${Number(lv[1]) + 1}`);
+        if (lv && Number(lv[1]) < ISO_LEVELS && hasAsset(`isle.${m[1]}.l${Number(lv[1]) + 1}`)) ids.push(`isle.${m[1]}.l${Number(lv[1]) + 1}`);
       }
       prefetchAssets(ids);
     }
@@ -374,7 +374,7 @@ export class IsleScene {
       // (the pen's own isometric painting since 2026-10-24, isle.pen: its fence's diamond as a cell of a sheet)
       const penOwn = t.id === 'pen' ? assetUrl('isle.pen') : null;
       const art = sheet ? null : penOwn ?? (t.id === 'pen' ? townArt('pen', Math.max(1, t.level), false) : assetUrl(GRAIL_ART) ?? townArt(t.id, 1, false));
-      const pic = sheet ? { id: `isle.${sheet}.${ghost ? 's0' : st.stage}`, foot: isoFoot(sheet) } : !art ? null : t.id === 'pen' ? { url: art, ...(penOwn ? PEN_OWN : PEN_ART) } : { icon: art };
+      const pic = sheet ? { id: isoPic(sheet, ghost ? 's0' : st.stage, hasAsset), foot: isoFoot(sheet) } : !art ? null : t.id === 'pen' ? { url: art, ...(penOwn ? PEN_OWN : PEN_ART) } : { icon: art };
       const tag = t.job ? `<span class="is-t is-tj">${timer(t.job)}</span>` : t.level > 0 ? `<span class="is-t is-tl">${t.level}</span>` : can ? '<span class="is-t is-tp" aria-hidden="true">+</span>' : '';
       const upright = !sheet && t.id !== 'pen';
       out.push(mark({ key: `t:${t.id}`, town: t.id, cell, pic, cls: [ghost ? 'ghost' : '', can ? 'can' : '', !ghost && (st.dim || (!sheet && !!t.job)) ? 'dim' : '', upright ? `upright ${t.id}` : ''].filter(Boolean).join(' '), ground: upright ? (ghost ? 'plinth ghost' : 'plinth') : ghost ? 'ghost' : '', tag }));
@@ -402,7 +402,7 @@ export class IsleScene {
       const tag = c.job ? `<span class="is-t is-tj">${timer(c.job)}</span>`
         : c.fresh > 0 && kind ? `<span class="is-t is-tf">${icon(`good_${PRODUCERS[kind].good}`, '', 'ico-sm')}+${fmt(c.fresh)}</span>`
         : c.level ? `<span class="is-t is-tl">${c.level}</span>` : '';
-      out.push(mark({ key: `p:${k}`, plot: k, cell, pic: { id: `isle.${sheet}.${st.stage}`, foot: isoFoot(sheet) }, cls: [st.dim ? 'dim' : '', c.idle ? 'idle' : ''].filter(Boolean).join(' '), ground: '', tag }));
+      out.push(mark({ key: `p:${k}`, plot: k, cell, pic: { id: isoPic(sheet, st.stage, hasAsset), foot: isoFoot(sheet) }, cls: [st.dim ? 'dim' : '', c.idle ? 'idle' : ''].filter(Boolean).join(' '), ground: '', tag }));
     }
     return out;
   }

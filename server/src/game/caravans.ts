@@ -42,6 +42,7 @@ import { SKIPPER_RISK, SKIPPER_SALE, SKIPPER_SKIM, SKIPPER_SPEED } from '../../.
 import { skipperHome, takeSkipper } from './turncoats.ts';
 import type { Skipper } from './turncoats.ts';
 import { SPEED_SCALE } from '../../../shared/src/constants.ts';
+import { hallBonus } from '../../../shared/src/data/isletree.ts';
 
 
 type Stop = { kind: 'isle' } | { kind: 'port'; id: string; act: 'sell' | 'buy' | 'trade_buy' | 'trade_sell' } | { kind: 'outpost'; id: string };
@@ -120,7 +121,8 @@ function note(c: Caravan, line: string): void {
 export function caravanSlots(game: Game, s: PlayerSession): number {
   const h = ownIsland(game, s.accountId);
   if (!h) return 0;
-  return ISLE_LEVELS[Math.max(1, Math.min(10, h.level ?? 1))].caravans + (has(h, 'caravan_office') ? caravanExtra(levelOf(h, 'caravan_office')) : 0) + (s.ship?.hasFlag('counting_house') ? 1 : 0);
+  // (docs/38: the hall 8 adds one)
+  return ISLE_LEVELS[Math.max(1, Math.min(10, h.level ?? 1))].caravans + hallBonus(h.yard?.town?.b.hall ?? 1).caravans + (has(h, 'caravan_office') ? caravanExtra(levelOf(h, 'caravan_office')) : 0) + (s.ship?.hasFlag('counting_house') ? 1 : 0);
 }
 
 function level(c: Caravan): number {

@@ -10,7 +10,7 @@ import { lairIsland } from '../server/src/game/wanted.ts';
 import assert from 'node:assert/strict';
 import { BASE_RES, crewsAt } from '../shared/src/data/base.ts';
 import {
-  FISH_EVERY, ISLE_POWER, OWN_ROLES, OWN_ROLE_DEFS, OWN_SHIPS_MAX, POWER_CREW, SHIP_POWER, YARD_SHIP_LEVEL, hullFor, merchantHold, nextOwnLevel, ownBuildCost,
+  FISH_EVERY, ISLE_POWER, OWN_ROLES, OWN_ROLE_DEFS, OWN_SHIPS_MAX, POWER_CREW, SHIP_POWER, YARD_SHIP_LEVEL, hullFor, yardLevelFor, merchantHold, nextOwnLevel, ownBuildCost,
   ownParity, ownRepairCost, ownUpgradeCost, ownXpNext, roleLevels, scoutSight,
 } from '../shared/src/data/baseships.ts';
 import { SHIP_CLASSES } from '../shared/src/data/ships.ts';
@@ -113,12 +113,19 @@ test('the data: four roles on hulls of their kind, costs that fit a young yard, 
       for (const n of Object.values(u.goods)) assert.ok((n ?? 0) <= 150 + 50 * 5 + 250, `${r} ${l} fits a grown yard`);
     }
   }
-  assert.deepEqual(OWN_ROLE_DEFS.war.hulls, ['cutter', 'brigantine', 'brig', 'frigate']);
+  assert.deepEqual(OWN_ROLE_DEFS.war.hulls, ['cutter', 'brigantine', 'brig', 'frigate', 'man_o_war']);
+  // docs/38: the shipyard 6 builds to ⚓9, 7 and above to ⚓10 — the warship a man-o'-war there, the merchant an indiaman
+  assert.equal(hullFor('war', 9), 'man_o_war');
+  assert.equal(hullFor('war', 10), 'man_o_war');
+  assert.equal(hullFor('merchant', 10), 'great_indiaman');
+  assert.equal(YARD_SHIP_LEVEL[6], 9);
+  assert.equal(YARD_SHIP_LEVEL[7], 10);
+  assert.equal(yardLevelFor(10), 7);
   assert.equal(hullFor('war', 8), 'frigate');
   assert.equal(hullFor('merchant', 7), 'galleon');
   assert.equal(nextOwnLevel('merchant', 5), 7, 'a bigger hull skips a level');
   assert.equal(nextOwnLevel('fisher', 5), null);
-  assert.ok(YARD_SHIP_LEVEL.every((l, i) => i === 0 || l > YARD_SHIP_LEVEL[i - 1]));
+  assert.ok(YARD_SHIP_LEVEL.every((l, i) => i === 0 || l > YARD_SHIP_LEVEL[i - 1] || l === 10), 'each level of the shipyard builds higher, to ⚓10');
   assert.ok(ownRepairCost('war', 3, 0, true).secs > ownRepairCost('war', 3, 0, false).secs, 'a sunk hull takes longer');
   assert.equal(ISLE_POWER[2], 0, 'the first step asks no power');
   for (let l = 3; l <= ISLE_MAX; l++) assert.ok(ISLE_POWER[l] > ISLE_POWER[l - 1]);

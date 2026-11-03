@@ -14,7 +14,7 @@ import type { IslandBiome } from '../world/regions.ts';
 import { BUILDINGS } from './holdings.ts';
 import type { BuildingId, IslandSize } from './holdings.ts';
 import type { Tr } from './estate.ts';
-import { isTreeBase, treeCost } from './isletree.ts';
+import { TOP_SILVER, TREE_GOODS, TREE_MAX, TREE_OLD_MAX, TREE_TIME, WAREHOUSE_TOP, isTreeBase, treeCost } from './isletree.ts';
 import { singleCost } from './baselevels.ts';
 import type { TreeId } from './isletree.ts';
 
@@ -81,7 +81,8 @@ export const PRODUCERS: Record<ProducerKind, ProducerDef> = {
   fishery: { id: 'fishery', name: ['Fishing Crew', 'Рыбная артель'], text: ['Nets and smokes the catch: provisions by the hour.', 'Ловит и коптит рыбу: провизия каждый час.'], good: 'provisions', rate: 8, art: 'outpost_fishery', stages: 'growth', silver: 500, goods: { timber: 15 }, secs: 240 },
 };
 
-export const PRODUCER_MAX = 5;
+/** A producer rises with the hall (isletree.ts producerHall): to 10 since docs/38. */
+export const PRODUCER_MAX = TREE_MAX;
 
 /** A producer's yield by the hour at a level on a biome. */
 export function producerRate(kind: ProducerKind, level: number, biome: IslandBiome): number {
@@ -116,11 +117,11 @@ export function producerOf(what: string): ProducerKind | null {
 /** Buildings that grow a level after the first (the warehouse widens the yard; the shipyard builds her own ships
  *  to higher levels, docs/15 item 4; the shore battery and the fort defend the island harder against raids, item 7). */
 export const UPGRADABLE: BuildingId[] = ['warehouse', 'shipyard', 'battery', 'fort'];
-export const BUILDING_MAX = 5;
+export const BUILDING_MAX = TREE_MAX;
 
 export function maxLevel(what: string): number {
   if (isProducer(what)) return PRODUCER_MAX;
-  // docs/29 (owner, 2026-10-15): every building of the base rises to five (baselevels.ts)
+  // docs/29 (owner, 2026-10-15): every building of the base rises to five (baselevels.ts), to ten since docs/38
   return what in BUILDINGS ? BUILDING_MAX : 1;
 }
 
@@ -164,6 +165,15 @@ export function baseCostOld(what: string, level: number): BaseCost {
   if (isTreeBase(what)) return treeCost(what as TreeId, level);
   const kind = producerOf(what);
   const k = levelMul(level);
+  if (kind && level > TREE_OLD_MAX) {
+    // docs/38: a producer's level 6..10 — level 5's silver ×3 … ×36 (TOP_SILVER), its goods as the tree's grow (TREE_GOODS
+    // against level 5's) and its time ×1.94 a level (TREE_TIME), never capped at BUILD_MAX_SECS as the first five are
+    const five = baseCostOld(what, TREE_OLD_MAX);
+    const L = Math.min(TREE_MAX, Math.round(level));
+    const goods: Partial<Record<GoodId, number>> = {};
+    for (const [g, n] of Object.entries(five.goods) as [GoodId, number][]) goods[g] = Math.ceil((n ?? 0) * TREE_GOODS[L] / TREE_GOODS[TREE_OLD_MAX]);
+    return { silver: round50(five.silver * TOP_SILVER[L]), goods, secs: Math.round((five.secs * TREE_TIME[L]) / TREE_TIME[TREE_OLD_MAX]) };
+  }
   if (kind) {
     const d = PRODUCERS[kind];
     const goods: Partial<Record<GoodId, number>> = {};
@@ -219,9 +229,12 @@ export function baseCostOld(what: string, level: number): BaseCost {
 
 // ------------------------------------------------------------------------------------------------ the yard
 
-/** The yard's cap for each resource: by the island's level, and a warehouse widens it a level at a time. */
+/** The yard's cap for each resource: by the island's level, and a warehouse widens it a level at a time (docs/38: from
+ *  its sixth level ×1.25 a level over its fifth's). */
 export function yardCap(isleLevel: number, warehouseLevel: number): number {
-  return 150 + 50 * Math.max(1, isleLevel) + 250 * Math.max(0, warehouseLevel);
+  const w = Math.max(0, warehouseLevel);
+  const base = 150 + 50 * Math.max(1, isleLevel) + 250 * Math.min(TREE_OLD_MAX, w);
+  return w <= TREE_OLD_MAX ? base : Math.round((base * WAREHOUSE_TOP ** (Math.min(TREE_MAX, w) - TREE_OLD_MAX)) / 10) * 10;
 }
 
 // ------------------------------------------------------------------------------------------------ plots and crews

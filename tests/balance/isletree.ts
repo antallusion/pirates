@@ -12,7 +12,7 @@ import { PRODUCERS, PRODUCER_KINDS, TOKEN_SECS, baseCost, crewsAt, producerFits,
 import type { BaseRes, ProducerKind } from '../../shared/src/data/base.ts';
 import { GOODS } from '../../shared/src/data/goods.ts';
 import type { GoodId } from '../../shared/src/data/goods.ts';
-import { ISLE_OF_HALL, HALL_DAY, TREE_MAX, treeClosure, treeCost, treeNeeds } from '../../shared/src/data/isletree.ts';
+import { ISLE_OF_HALL, HALL_DAY, TREE_IDS, TREE_MAX, hallBonus, treeClosure, treeCost, treeNeeds } from '../../shared/src/data/isletree.ts';
 import type { TreeId } from '../../shared/src/data/isletree.ts';
 import { POWER_CREW } from '../../shared/src/data/baseships.ts';
 import { finishPrice } from '../../shared/src/data/shop.ts';
@@ -73,7 +73,7 @@ export function simulateTree(plan: TreePlan = STEADY): TreeResult {
   const hall = () => lv.get('hall') ?? 1;
   const isle = () => ISLE_OF_HALL[hall()];
   const power = () => [...lv.values()].reduce((a, b) => a + b, 0) + [...prod.values()].reduce((a, b) => a + b, 0);
-  const crews = () => crewsAt(isle(), power() >= POWER_CREW ? 1 : 0);
+  const crews = () => crewsAt(isle(), (power() >= POWER_CREW ? 1 : 0) + hallBonus(hall()).crews); // (docs/38: the hall 7 and 10 add one each)
   const cap = () => yardCap(isle(), lv.get('warehouse') ?? 0);
   const rate = (g: BaseRes) => [...prod].filter(([k]) => PRODUCERS[k].good === g).reduce((a, [k, l]) => a + producerRate(k, l, plan.biome), 0);
   const own = (g: GoodId) => ((RES as string[]).includes(g) ? res[g as BaseRes] : 0);
@@ -186,3 +186,44 @@ export function simulateTree(plan: TreePlan = STEADY): TreeResult {
 }
 
 export const daysToHall = (r: TreeResult, level: number): number => r.at[level] / 24;
+
+// ------------------------------------------------------------------------------------------------ the pace to 10
+
+/** docs/38 §2.2 (owner, 2026-11-03: «стройка всего до 10 уровня занимала 3 года без ускорений»): the builders' time alone —
+ *  silver and goods never wanting, no speed-ups, no tokens — with `crews` crews from the claim to every building of the
+ *  tree at `top`. The tree's own rule holds (nothing above the hall, each level after what it asks), so while the hall
+ *  rises a level the other crews raise only what stands lower (the guns) or wait. The hall first whenever it may rise,
+ *  else the next hall's ring, longest work first. `hallCrews`: with the crews the hall 7 and 10 add (hallBonus). Hours to
+ *  each hall level and to the whole tree. */
+export function treePace(crews: number, top = TREE_MAX, hallCrews = false): { hall: number[]; all: number } {
+  const lv = new Map<TreeId, number>(TREE_IDS.map((k) => [k, k === 'hall' ? 1 : 0]));
+  const busy = new Map<TreeId, { end: number; level: number }>();
+  const hall = new Array(top + 1).fill(NaN);
+  hall[1] = 0;
+  let t = 0;
+  const done = () => TREE_IDS.every((k) => (lv.get(k) ?? 0) >= top);
+  for (let guard = 0; guard < 10_000 && !done(); guard++) {
+    // start what may start
+    for (;;) {
+      if (busy.size >= crews + (hallCrews ? hallBonus(lv.get('hall') ?? 1).crews : 0)) break;
+      const gate = treeClosure('hall', Math.min(top, (lv.get('hall') ?? 1) + 1));
+      const open = TREE_IDS.filter((k) => !busy.has(k) && (lv.get(k) ?? 0) < top)
+        .map((k) => [k, (lv.get(k) ?? 0) + 1] as [TreeId, number])
+        .filter(([k, n]) => treeNeeds(k, n).every(([d, m]) => (lv.get(d) ?? 0) >= m));
+      if (!open.length) break;
+      const rank = ([k, n]: [TreeId, number]) => (k === 'hall' ? 2e12 : (gate.get(k) ?? 0) >= n ? 1e12 : 0) + treeCost(k, n).secs;
+      open.sort((a, b) => rank(b) - rank(a));
+      const [k, n] = open[0];
+      busy.set(k, { end: t + treeCost(k, n).secs / 3600, level: n });
+    }
+    if (!busy.size) break;
+    t = Math.min(...[...busy.values()].map((b) => b.end));
+    for (const [k, b] of [...busy]) {
+      if (b.end > t + 1e-9) continue;
+      busy.delete(k);
+      lv.set(k, b.level);
+      if (k === 'hall') hall[b.level] = t;
+    }
+  }
+  return { hall, all: done() ? t : NaN };
+}

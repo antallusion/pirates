@@ -29,13 +29,13 @@ function holding(buildings: Holding['buildings']): Holding {
   return { island: 1, owner: { kind: 'player', id: 7, name: 'Q' }, owned: true, buildings, store: {}, treasury: 0, since: 0, until: 0, lastWork: 0, lastUpkeep: 0, toll: { day: 0, paid: 0 } } as unknown as Holding;
 }
 
-test('the 24 buildings rise to five; each level dearer, never above the hall\'s silver nor its time, and asks the hall at it', () => {
+test('the 24 buildings rise to ten (docs/38); each level dearer, never above the hall\'s silver nor its time, and asks the hall at it', () => {
   assert.equal(SINGLE.length, 24);
   for (const id of SINGLE) {
-    assert.equal(maxLevel(id), 5, `${id} has five levels`);
+    assert.equal(maxLevel(id), 10, `${id} has ten levels`);
     let last = 0;
     const found = baseCost(id, 1);
-    for (let l = 2; l <= 5; l++) {
+    for (let l = 2; l <= 10; l++) {
       const c = baseCost(id, l);
       const hall = treeCost('hall', l);
       assert.ok(c.silver >= last && c.silver >= found.silver, `${id} ${l}: no cheaper than the one before`);
@@ -62,7 +62,7 @@ test('level 1 is what the buildings did before; level 5 is the most', () => {
   assert.equal(workshopYield(1), 3);
   assert.equal(smugglerRoom(1), 0);
   assert.equal(coveHide(1), 0);
-  for (let l = 2; l <= 5; l++) {
+  for (let l = 2; l <= 10; l++) {
     assert.ok(LEVEL_MUL[l] > LEVEL_MUL[l - 1]);
     assert.ok(signalMins(l) >= signalMins(l - 1) && signalRisk(l) < signalRisk(l - 1) && residentRooms(l) > residentRooms(l - 1));
     assert.ok(dockDiscount(l) > dockDiscount(l - 1) && chartCopy(l) < chartCopy(l - 1) && forgeReach(l) > forgeReach(l - 1));
@@ -113,7 +113,7 @@ test('an old save: the buildings stand at level 1 and work as they did', () => {
   const r = migrateHoldings(all, 0);
   assert.ok(r.changed);
   assert.equal(h.buildings[0].level, 1);
-  assert.equal(h.buildings[1].level, 5, 'a level out of range is brought in');
+  assert.equal(h.buildings[1].level, 9, 'a level in range stands (docs/38: to 10)');
   assert.equal(strength(h, 'farm'), before);
   assert.equal(migrateHoldings(all, 0).changed, false, 'once only');
 });

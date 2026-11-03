@@ -92,7 +92,7 @@ export function townArt(id: TownId, level: number, working: boolean): string | n
 /** Why a step may not be taken — unless the list of what it asks says it already (a ✗ there). */
 const whyOf = (n: { why: string | null; needs?: { level: number; have: number }[] }): string => (n.why && !(n.needs ?? []).some((x) => x.have < x.level) ? `<p class="muted">${esc(sv(n.why))}</p>` : '');
 
-/** A thing's greatest level on the island (the tree's five; a single-level building's one). */
+/** A thing's greatest level on the island (the tree's ten; a base building's or a producer's own). */
 export const maxOf = (what: string): number => (isTreeBase(what) ? TREE_MAX : maxLevel(what));
 
 export function timeText(secs: number): string {
@@ -100,6 +100,8 @@ export function timeText(secs: number): string {
   if (s < 60) return L('t_s', { s });
   if (s < 3600) return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   const m = Math.floor(s / 60);
+  // (docs/38: from two days on, days and hours)
+  if (m >= 48 * 60) return L('t_dh', { d: Math.floor(m / 1440), h: Math.floor((m % 1440) / 60) });
   return L('t_hm', { h: Math.floor(m / 60), m: String(m % 60).padStart(2, '0') });
 }
 
@@ -107,6 +109,7 @@ export function spanText(secs: number): string {
   const m = Math.round(secs / 60);
   if (m < 1) return L('t_s', { s: Math.round(secs) });
   if (m < 60) return L('t_m', { m });
+  if (m >= 48 * 60) return L('t_dh', { d: Math.floor(m / 1440), h: Math.floor((m % 1440) / 60) });
   return L('t_hm', { h: Math.floor(m / 60), m: m % 60 });
 }
 
@@ -403,13 +406,14 @@ export class BaseWindow {
    *  town's own tab. */
   /** Owner, 2026-10-28: what the yard lacks for a building, far from the island — the hold pays only lying off it,
    *  so the one journey that is truly needed says so, with «Плыть к острову» (islescene.ts: the route `own`). */
-  private farLack(v: BaseView, goods: Partial<Record<GoodId, number>>): string {
-    if (v.near || !v.town) return '';
+  private farLack(v: BaseView, goods: Partial<Record<GoodId, number>>): { text: string; btn: string } {
+    if (v.near || !v.town) return { text: '', btn: '' };
     const have = Object.fromEntries(v.town.res.map((r) => [r.good, r.n])) as Partial<Record<GoodId, number>>;
     const lack = (Object.entries(goods) as [GoodId, number][]).filter(([g, n]) => (have[g] ?? 0) < n);
-    if (!lack.length) return '';
+    if (!lack.length) return { text: '', btn: '' };
     const what = lack.map(([g, n]) => `${GOODS[g].name.toLowerCase()} ${fmt(n - (have[g] ?? 0))}`).join(', ');
-    return `<p class="muted tw-why">${esc(L('lack_far', { what }))}</p><button type="button" class="btn btn-small" data-bsailisle>${icon('menu_ship', '', 'ico-sm')}${esc(L('sail_isle'))}</button>`;
+    // (docs/38: the way to the island stands in one row with «Улучшить» — the card's foot, never under it)
+    return { text: `<p class="muted tw-why">${esc(L('lack_far', { what }))}</p>`, btn: `<button type="button" class="btn btn-small" data-bsailisle>${icon('menu_ship', '', 'ico-sm')}${esc(L('sail_isle'))}</button>` };
   }
 
   townSheet(v: BaseView, t: TownThingView, gold: number): string {
@@ -424,9 +428,10 @@ export class BaseWindow {
     const job = t.job ? this.jobCard(v, t.job, t.level ? T29('raising', { n: t.job.level }) : T29('founding'), false) : '';
     const n = t.next;
     const land = n?.land ? (Object.entries(n.land) as [LandRes, number][]).filter(([, k]) => (k ?? 0) > 0).map(([r, k]) => `<span class="bcost${(v.town?.land?.res[r] ?? 0) < k ? ' lack' : ''}"${srcAttr(`l:${r}`, k, v.town?.land?.res[r] ?? 0)}>${icon(LAND_RES_DEF[r].icon, '', 'ico-sm')}${fmt(k)}</span>`).join('') : '';
+    const far = n ? this.farLack(v, n.goods) : { text: '', btn: '' };
     const next = !t.job && n ? `<div class="bupcard tr-card"><div class="row"><b>${esc(T29('gives'))} ${esc(treeLabel(t.id, n.level))}${t.max > 1 ? ` · ${esc(T29('lvOf', { n: n.level, max: t.max }))}` : ''}</b></div>${givesText(t.id, n.level, ctx) ? `<p class="tr-gives">${esc(givesText(t.id, n.level, ctx))}</p>` : ''}
-      ${this.costHtml(v, n, gold)}${land ? `<span class="bcosts">${land}</span>` : ''}${n.needs ? needsHtml(n.needs) : ''}${whyOf(n)}${this.farLack(v, n.goods)}
-      <button class="btn btn-small btn-primary" data-tbuild="${t.id}"${n.why ? ' disabled' : ''}>${esc(t.level ? T29('upgrade') : T29('build'))}</button></div>`
+      ${this.costHtml(v, n, gold)}${land ? `<span class="bcosts">${land}</span>` : ''}${n.needs ? needsHtml(n.needs) : ''}${whyOf(n)}${far.text}
+      ${far.btn ? `<div class="tr-foot">${far.btn}` : ''}<button class="btn btn-small btn-primary" data-tbuild="${t.id}"${n.why ? ' disabled' : ''}>${esc(t.level ? T29('upgrade') : T29('build'))}</button>${far.btn ? '</div>' : ''}</div>`
       : !t.job ? `<p class="muted">${esc(T29('max'))}</p>` : '';
     const more = t.id === 'market' || t.id === 'guild' || t.id === 'pen' ? `<div class="row bactions"><button class="btn btn-small" data-btab="town">${esc(H('tab'))}</button></div>` : '';
     const raze = t.raze && t.id !== 'hall' && t.id !== 'grail' ? `<div class="row bactions">${this.razeBtn(t.raze, `town:${t.id}`)}</div>${this.razeWhy(t.raze)}` : '';
@@ -490,8 +495,8 @@ export class BaseWindow {
     const n = t.next;
     const body = t.job ? this.jobCard(v, t.job, T29('raising', { n: t.job.level }), false)
       : n ? `<p class="tr-hn"><b>${esc(T29('gives'))} ${esc(treeLabel('hall', n.level))}</b></p><p class="tr-gives">${esc(givesText('hall', n.level, { size: v.size, biome: v.biome, isle: v.level }))}</p>${needsHtml(n.needs)}${this.costHtml(v, n, gold)}${whyOf(n)}<button class="btn btn-small btn-primary" data-tbuild="hall"${n.why ? ' disabled' : ''}>${esc(T29('upgrade'))}</button>`
-      : `<p class="muted">${esc(T29('hallMax'))}</p>`;
-    return `<div class="bupcard blevel tr-hall"><div class="row"><b>${esc(T29('hall', { n: hall, isle: v.level }))}</b>${pips(hall)}</div><p class="muted">${esc(T29('hallText'))}</p>${body}</div>`;
+      : `<p class="muted">${esc(T29('hallMax', { max: TREE_MAX }))}</p>`;
+    return `<div class="bupcard blevel tr-hall"><div class="row"><b>${esc(T29('hall', { n: hall, isle: v.level, max: TREE_MAX }))}</b>${pips(hall)}</div><p class="muted">${esc(T29('hallText'))}</p>${body}</div>`;
   }
 
   /** The island's waters, tax and defence under the resources, and a raid under way over everything (docs/15 items 6–7). */

@@ -2837,7 +2837,7 @@ export interface IslePlanStepView {
 
 export interface IslePlanView {
   steps: IslePlanStepView[];
-  /** Steps left to the whole island at level 5. */
+  /** Steps left to the whole island at level 10 (docs/38). */
   left: number;
   /** Her speed-ups: the minutes in store (the shop's, the creatures' loot) and the free tokens of TOKEN_SECS each. */
   speed: { min: number; tokens: number; tokenSecs: number };

@@ -32,7 +32,7 @@ import { EN as BASE_EN, RU as BASE_RU } from '../client/src/lang/ui/base.ts';
 import { join, makeGame, onHull } from './helpers.ts';
 import { offCoast } from './helpers.ts';
 import { finishJob } from './helpers.ts';
-import { ISLE_OF_HALL, isTreeBase, treeClosure, treeCost } from '../shared/src/data/isletree.ts';
+import { ISLE_OF_HALL, RARE_GOODS, isTreeBase, treeClosure, treeCost } from '../shared/src/data/isletree.ts';
 import type { TreeId } from '../shared/src/data/isletree.ts';
 import type { FakeConn } from './helpers.ts';
 
@@ -294,13 +294,18 @@ test('the numbers hold together: plots grow, every cost fits the yard at the lev
       // (2026-10-15: the single-level buildings' later levels too — baselevels.ts, at the hall of their level)
       const single = l >= 2 && w in BUILDINGS && !isTreeBase(w);
       const tree = isTreeBase(w) || single;
-      assert.ok(c.secs > 0 && c.secs <= (tree ? 72 * 3600 : BUILD_MAX_SECS), `${w} ${l} time`);
+      // (docs/38: the levels 6..10 take the tree's days — each longer than the last, the longest under five months)
+      if (l <= 5) assert.ok(c.secs > 0 && c.secs <= (tree ? 72 * 3600 : BUILD_MAX_SECS), `${w} ${l} time`);
+      else assert.ok(c.secs > baseCost(w, l - 1).secs && c.secs <= 150 * 86_400, `${w} ${l} time`);
       assert.ok(c.silver > 0 && Number.isFinite(c.silver));
       // At the island level the step opens, without a warehouse (a warehouse raised to one below for its own steps);
       // the tree's at the hall's island level, with the warehouse the tree asks by then.
+      // (docs/38: a producer of level 6..10 at the hall of its level, whose warehouse the hall asked a level below)
       const hall = single ? singleHall(w as BuildingId, l) : l;
-      const wh = single ? Math.max(0, hall - 1) : tree ? treeClosure(w as TreeId, l).get('warehouse') ?? 0 : 0;
-      const cap = tree ? yardCap(ISLE_OF_HALL[hall], w === 'warehouse' ? l - 1 : wh) : yardCap(l, w === 'warehouse' ? l - 1 : 0);
+      const wh = single || (!tree && l > 5) ? Math.max(0, hall - 1) : tree ? treeClosure(w as TreeId, l).get('warehouse') ?? 0 : 0;
+      const cap = tree || l > 5 ? yardCap(ISLE_OF_HALL[hall], w === 'warehouse' ? l - 1 : wh) : yardCap(l, w === 'warehouse' ? l - 1 : 0);
+      // (the sea's rare goods of the levels 6..10 are brought in the hold, not kept in the yard)
+      if (l > 5) for (const g of RARE_GOODS) delete (c.goods as Record<string, number>)[g];
       for (const [g, n] of Object.entries(c.goods)) assert.ok((n ?? 0) <= cap, `${w} level ${l}: ${n} ${g} fits a yard of ${cap}`);
     }
   }

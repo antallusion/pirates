@@ -2516,6 +2516,8 @@ body.touch .base-board .bplot { cursor: default; }
 .bspeed { display: flex; flex-wrap: wrap; gap: 6px; }
 .bspeed .btn { display: inline-flex; align-items: center; gap: 3px; }
 .bactions { margin-top: 6px; }
+.tr-foot { display: flex; gap: 6px; align-items: stretch; margin-top: 4px; }
+.tr-foot > .btn { flex: 1 1 0; min-width: 0; }
 .bfoot { margin-top: 12px; font-size: 11px; line-height: 1.4; }
 /* Portrait tablets: the board above, the sheet below. */
 @media (max-aspect-ratio: 1/1) {
@@ -5679,6 +5681,10 @@ body.tac-ph .tb-top { position: absolute; top: calc(env(safe-area-inset-top, 0px
 .tr-pips { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: middle; }
 .tr-pips i { width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--brass); background: #16110d; }
 .tr-pips i.on { background: var(--gold); box-shadow: 0 0 4px rgba(214, 178, 94, 0.6); }
+/* docs/38: ten levels, smaller pips in two groups of five (the old top and the new) */
+.tr-pips10 { gap: 2px; flex-wrap: nowrap; }
+.tr-pips10 i { width: 6px; height: 6px; }
+.tr-pips10 i:nth-child(6) { margin-left: 3px; }
 .tr-asks { margin: 4px 0 2px; font-size: 12px; }
 .tr-needs { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 2px 10px; }
 .tr-needs li { font: 12px/1.35 var(--sans); white-space: nowrap; }

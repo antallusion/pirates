@@ -15,6 +15,15 @@
 //
 // Costs and times grow with every level (TREE_SILVER, TREE_TIME, TREE_GOODS) — a steady captain reaches hall 5 in about
 // three and a half weeks (tests/balance/isletree.ts, `node tools/balance-isles.ts`).
+//
+// Levels 6–10 (owner, 2026-11-03, docs/38): «надо улучшения делать до 10 … стройка всего до 10 уровня занимала 3 года без
+// ускорений … после 5 уровня должна быть супердорогой». Every building of the tree (and the producers and the base's
+// buildings that rise with the hall) goes on to 10: the time of a level ×1.94 a level (TREE_TIME 140 … 1 979 of the first
+// level's), the silver of level 5 ×3 / 6 / 11 / 20 / 36, the goods ×12 … 55 of the first and the sea's rare goods as a
+// second lock (RARE_KIT: pearls, rum and powder from 6, whalebone, scales, sulphur iron and ambergris from 8, the bosses'
+// trophies at 10). With the two free crews the whole tree to 10 takes about three years (tests/balance/isletree.ts
+// treePace). The island's level stays as the hall 1..5 made it (ISLE_OF_HALL: 10 from hall 5 on); the hall 6..10 gives
+// its own (hallBonus: outposts, crews, a caravan, the title «Пиратская столица»).
 
 import { cheapStart } from './startcost.ts';
 import type { GoodId } from './goods.ts';
@@ -27,8 +36,10 @@ export type TreeId = 'hall' | 'keep' | 'market' | 'guild' | 'dw1' | 'dw2' | 'dw3
 export const TREE_TOWN: TreeId[] = ['hall', 'keep', 'market', 'guild', 'dw1', 'dw2', 'dw3', 'dw4', 'dw5', 'dw6', 'dw7'];
 export const TREE_BASE: TreeId[] = ['warehouse', 'shipyard', 'battery', 'fort'];
 export const TREE_IDS: TreeId[] = [...TREE_TOWN, ...TREE_BASE];
-/** Every building's greatest level. */
-export const TREE_MAX = 5;
+/** Every building's greatest level (owner, 2026-11-03: 5 → 10, docs/38). */
+export const TREE_MAX = 10;
+/** The tree's greatest level before docs/38 (the island's level is full at the hall of this level: ISLE_OF_HALL). */
+export const TREE_OLD_MAX = 5;
 /** The guns are not built on the Crown's own coast (holdings.ts notSafe): the hall never asks them. */
 export const TREE_OPTIONAL: TreeId[] = ['battery', 'fort'];
 /** The core: every building the hall's last level asks (the whole tree but the optional guns). */
@@ -40,8 +51,16 @@ export const isTree = (id: string): id is TreeId => (TREE_IDS as string[]).inclu
 
 // ------------------------------------------------------------------------------------------------ the island's level
 
-/** The island's level (1..10, estate.ts ISLE_LEVELS) at each hall level: the hall carries the island. */
-export const ISLE_OF_HALL = [0, 1, 3, 5, 7, 10];
+/** The island's level (1..10, estate.ts ISLE_LEVELS) at each hall level: the hall carries the island (docs/38: the hall
+ *  6..10 keeps it at 10 and gives hallBonus instead — nobody's island level moves). */
+export const ISLE_OF_HALL = [0, 1, 3, 5, 7, 10, 10, 10, 10, 10, 10];
+
+/** What the hall 6..10 adds over the island's level (docs/38 §2.4): an outpost at 6 and 9, a builders' crew at 7 and 10,
+ *  a caravan at 8; the hall 10 is the pirates' capital. */
+export function hallBonus(hall: number): { outposts: number; crews: number; caravans: number } {
+  const h = Math.max(0, Math.floor(hall));
+  return { outposts: (h >= 6 ? 1 : 0) + (h >= 9 ? 1 : 0), crews: (h >= 7 ? 1 : 0) + (h >= 10 ? 1 : 0), caravans: h >= 8 ? 1 : 0 };
+}
 
 /** The hall an island of a level stands for (the migration of the islands raised before the tree). */
 export function hallOfIsle(level: number): number {
@@ -61,9 +80,14 @@ const HALL_NEEDS: Need[][] = [
   [['warehouse', 2], ['keep', 2], ['market', 2], ['shipyard', 1], ['guild', 1], ['dw1', 2], ['dw2', 2], ['dw3', 1]],
   [['warehouse', 3], ['keep', 3], ['market', 3], ['shipyard', 2], ['guild', 2], ['dw1', 3], ['dw2', 3], ['dw3', 2], ['dw4', 1], ['dw5', 1]],
   [['warehouse', 4], ['keep', 4], ['market', 4], ['shipyard', 3], ['guild', 3], ['dw1', 4], ['dw2', 4], ['dw3', 3], ['dw4', 3], ['dw5', 2], ['dw6', 2], ['dw7', 2]],
+  // docs/38: the hall 6..10 asks the whole core at its own level less one (nothing is left behind at the top)
+  ...[6, 7, 8, 9, 10].map((L) => (['warehouse', 'keep', 'market', 'shipyard', 'guild', 'dw1', 'dw2', 'dw3', 'dw4', 'dw5', 'dw6', 'dw7'] as TreeId[]).map((k) => [k, L - 1] as Need)),
 ];
 
 const cap = (n: number) => Math.max(0, Math.min(TREE_MAX, n));
+/** The keep a level above the building's own, as the tree asked it to level 5 (that level asked the keep at 5: no building
+ *  stands above the hall); from level 5 on the keep at the same level. */
+const above = (L: number) => (L < TREE_OLD_MAX ? L + 1 : L);
 
 /** Level L of a building: what it asks first (the hall's level among the rest). */
 export function treeNeeds(id: TreeId, level: number): Need[] {
@@ -87,11 +111,11 @@ export function treeNeeds(id: TreeId, level: number): Need[] {
     // foundry hall 3 and the shipyard (~25 000). Now a stack of tier 3 is ~3 000 silver of the island away, tier 4 ~5 000.
     case 'dw3': hall(1); add('dw2', L); add('market', L - 1); break;
     case 'dw4': hall(1); add('dw3', L); add('keep', L); break;
-    case 'dw5': hall(3); add('dw4', L); add('keep', L + 1); break;
-    case 'dw6': hall(4); add('dw5', L); add('keep', L + 1); break;
+    case 'dw5': hall(3); add('dw4', L); add('keep', above(L)); break;
+    case 'dw6': hall(4); add('dw5', L); add('keep', above(L)); break;
     case 'dw7': hall(4); add('dw6', L); add('guild', L); break;
     case 'battery': hall(1); add('keep', L); break;
-    case 'fort': hall(3); add('keep', L + 1); add('battery', 1); break;
+    case 'fort': hall(3); add('keep', above(L)); add('battery', 1); break;
   }
   return out;
 }
@@ -115,10 +139,68 @@ export interface TreeCost {
   secs: number;
 }
 
-/** Each level's silver, resources and time against the first level's. */
-export const TREE_SILVER = [0, 1, 2.5, 5.5, 11, 20];
-export const TREE_GOODS = [0, 1, 2, 3.5, 5.5, 8];
-export const TREE_TIME = [0, 1, 5, 15, 36, 72];
+/** Each level's silver, resources and time against the first level's (docs/38 §2.2–2.3: from level 6 the silver is
+ *  level 5's ×3 / 6 / 11 / 20 / 36 — 20 × those — and the time ×1.94 a level: docs/38 had ×2.1, 151 … 2 941, but its
+ *  table stopped the clock at the hall 10, and the town still rises 9 → 10 after it — with ×2.1 the whole tree took 4.2
+ *  years of the two free crews; ×1.94 makes it the owner's three, tests/balance/isletree.test.ts treePace). */
+export const TREE_SILVER = [0, 1, 2.5, 5.5, 11, 20, 60, 120, 220, 400, 720];
+export const TREE_GOODS = [0, 1, 2, 3.5, 5.5, 8, 12, 18, 26, 38, 55];
+export const TREE_TIME = [0, 1, 5, 15, 36, 72, 140, 271, 526, 1020, 1979];
+/** Level 6..10's silver against level 5's (the hall's, the producers' and the base buildings' too). */
+export const TOP_SILVER = [0, 0, 0, 0, 0, 1, 3, 6, 11, 20, 36];
+
+/** The sea's rare goods a level 6..10 asks besides (docs/38 §2.3, the second lock): two of pearls, rum and powder from
+ *  level 6, two of whalebone, serpent scales, sulphur iron and ambergris from level 8, a boss's trophy or two at level
+ *  10 — leviathan bone (the Leviathan, the reach's bosses), kraken ink (the Kraken), drowned silk and abyssal ore (the
+ *  Drowned Crown's bosses, the Abyss). Each building its own kit, by what it is. */
+export interface RareKit {
+  a: GoodId[];
+  b: GoodId[];
+  c: GoodId[];
+}
+export const RARE_KIT: Record<TreeId, RareKit> = {
+  hall: { a: ['pearls', 'rum'], b: ['ambergris', 'serpent_scale'], c: ['leviathan_bone', 'drowned_silk'] },
+  keep: { a: ['gunpowder', 'rum'], b: ['sulfur_iron', 'whalebone'], c: ['abyssal_ore'] },
+  market: { a: ['pearls', 'rum'], b: ['ambergris', 'whalebone'], c: ['kraken_ink'] },
+  guild: { a: ['pearls', 'gunpowder'], b: ['serpent_scale', 'ambergris'], c: ['kraken_ink'] },
+  dw1: { a: ['rum', 'gunpowder'], b: ['whalebone', 'sulfur_iron'], c: ['leviathan_bone'] },
+  dw2: { a: ['rum', 'gunpowder'], b: ['whalebone', 'sulfur_iron'], c: ['abyssal_ore'] },
+  dw3: { a: ['gunpowder', 'rum'], b: ['sulfur_iron', 'serpent_scale'], c: ['kraken_ink'] },
+  dw4: { a: ['gunpowder', 'rum'], b: ['sulfur_iron', 'whalebone'], c: ['abyssal_ore'] },
+  dw5: { a: ['rum', 'pearls'], b: ['serpent_scale', 'whalebone'], c: ['leviathan_bone'] },
+  dw6: { a: ['pearls', 'gunpowder'], b: ['ambergris', 'serpent_scale'], c: ['drowned_silk'] },
+  dw7: { a: ['pearls', 'rum'], b: ['ambergris', 'serpent_scale'], c: ['drowned_silk', 'abyssal_ore'] },
+  warehouse: { a: ['rum', 'gunpowder'], b: ['whalebone', 'sulfur_iron'], c: ['leviathan_bone'] },
+  shipyard: { a: ['rum', 'gunpowder'], b: ['whalebone', 'serpent_scale'], c: ['leviathan_bone', 'kraken_ink'] },
+  battery: { a: ['gunpowder', 'rum'], b: ['sulfur_iron', 'whalebone'], c: ['abyssal_ore'] },
+  fort: { a: ['gunpowder', 'pearls'], b: ['sulfur_iron', 'serpent_scale'], c: ['abyssal_ore', 'leviathan_bone'] },
+};
+/** Every rare good a level 6..10 may ask (the town's window counts them among its resources once she holds any). */
+export const RARE_GOODS: GoodId[] = [...new Set(Object.values(RARE_KIT).flatMap((k) => [...k.a, ...k.b, ...k.c]))];
+/** Units of a rare good for each thousand of the building's first-level silver, by level (index: the level). */
+const RARE_PER: Partial<Record<GoodId, number[]>> = {
+  rum: [0, 0, 0, 0, 0, 0, 20, 40, 70, 110, 160],
+  gunpowder: [0, 0, 0, 0, 0, 0, 20, 40, 70, 110, 160],
+  whalebone: [0, 0, 0, 0, 0, 0, 0, 0, 40, 70, 110],
+  pearls: [0, 0, 0, 0, 0, 0, 3, 6, 10, 15, 22],
+  serpent_scale: [0, 0, 0, 0, 0, 0, 0, 0, 4, 8, 12],
+  sulfur_iron: [0, 0, 0, 0, 0, 0, 0, 0, 4, 8, 12],
+  ambergris: [0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3],
+};
+/** A boss's trophy at level 10, for each thousand of the first level's silver. */
+const TROPHY_PER = 3;
+
+/** The rare goods level L of a building asks (none below 6). `k`: its weight (a thousand of its first-level silver). */
+export function rareGoods(id: TreeId, level: number, k: number): Partial<Record<GoodId, number>> {
+  const L = Math.max(1, Math.min(TREE_MAX, Math.round(level)));
+  const out: Partial<Record<GoodId, number>> = {};
+  if (L < 6) return out;
+  const w = Math.max(0.5, Math.min(6, k));
+  const kit = RARE_KIT[id];
+  for (const g of [...kit.a, ...(L >= 8 ? kit.b : [])]) out[g] = (out[g] ?? 0) + Math.ceil((RARE_PER[g]?.[L] ?? 0) * w);
+  if (L >= 10) for (const g of kit.c) out[g] = (out[g] ?? 0) + Math.ceil(TROPHY_PER * w);
+  return out;
+}
 
 interface Base {
   silver: number;
@@ -147,6 +229,11 @@ const BASE: Record<Exclude<TreeId, 'hall'>, Base> = {
   fort: { silver: 3_500, mins: 60, goods: { timber: 80, coal: 50, iron: 40 }, once: { weapons: 24 } },
 };
 
+/** The hall's fifth level's goods; its goods of level 6..10 against them; its rare goods' weight (rareGoods `k`). */
+const HALL5_GOODS: Partial<Record<GoodId, number>> = { timber: 800, coal: 640, iron: 260, tar: 160, pearls: 14, rum: 40 };
+const HALL_GOODS = [0, 0, 0, 0, 0, 1, 1.5, 2.25, 3, 4, 5];
+const HALL_RARE_K = 6;
+
 /** The hall's levels (its first stands from the claim, free). Balance pass 2026-10-13 (docs/31): hall 2 8 000 → 6 000
  *  and hall 3 22 000 → 15 000 (their goods a quarter less): with a third of her sea income to the island (what the
  *  army, the ship and the food leave a good captain) hall 2 stood at day 3.4 and hall 3 at day 9.5 of a steady player —
@@ -158,7 +245,16 @@ const HALL_COST: TreeCost[] = [
   { silver: 6_000, goods: { timber: 100, coal: 60, iron: 15 }, secs: 2 * 3600 },
   { silver: 15_000, goods: { timber: 200, coal: 150, iron: 45, tar: 30 }, secs: 8 * 3600 },
   { silver: 48_000, goods: { timber: 480, coal: 380, iron: 140, tar: 90, pearls: 6 }, secs: 20 * 3600 },
-  { silver: 95_000, goods: { timber: 800, coal: 640, iron: 260, tar: 160, pearls: 14, rum: 40 }, secs: 40 * 3600 },
+  { silver: 95_000, goods: HALL5_GOODS, secs: 40 * 3600 },
+  // docs/38: the hall 6..10 — level 5's silver ×3 / 6 / 11 / 20 / 36, its time ×1.94 a level (TREE_TIME against level 5's),
+  // its goods ×1.5 … ×5 of level 5's (slower than the town's ×12 … ×55 of the first: the hall's timber stays within the
+  // yard of a warehouse a level below it, yardCap), and the rare goods of its kit (rareGoods)
+  ...[6, 7, 8, 9, 10].map((L): TreeCost => {
+    const goods: Partial<Record<GoodId, number>> = {};
+    for (const [g, n] of Object.entries(HALL5_GOODS) as [GoodId, number][]) goods[g] = Math.ceil(n * HALL_GOODS[L]);
+    for (const [g, n] of Object.entries(rareGoods('hall', L, HALL_RARE_K)) as [GoodId, number][]) goods[g] = (goods[g] ?? 0) + n;
+    return { silver: 95_000 * TOP_SILVER[L], goods, secs: Math.round((40 * 3600 * TREE_TIME[L]) / TREE_TIME[5]) };
+  }),
 ];
 
 const round50 = (n: number) => Math.max(50, Math.round(n / 50) * 50);
@@ -177,6 +273,7 @@ export function treeCostOld(id: TreeId, level: number): TreeCost {
   const goods: Partial<Record<GoodId, number>> = {};
   for (const [g, n] of Object.entries(b.goods) as [GoodId, number][]) goods[g] = Math.ceil(n * TREE_GOODS[L]);
   if (L === 1) for (const [g, n] of Object.entries(b.once ?? {}) as [GoodId, number][]) goods[g] = (goods[g] ?? 0) + n;
+  for (const [g, n] of Object.entries(rareGoods(id, L, b.silver / 1000)) as [GoodId, number][]) goods[g] = (goods[g] ?? 0) + n;
   return { silver: round50(b.silver * TREE_SILVER[L]), goods, secs: Math.round(b.mins * 60 * TREE_TIME[L]) };
 }
 
@@ -184,6 +281,17 @@ export function treeCostOld(id: TreeId, level: number): TreeCost {
 
 /** Every level the tree asks before `id` may stand at `level` (itself included), as the greatest level of each. */
 export function treeClosure(id: TreeId, level: number): Map<TreeId, number> {
+  // (pure on the data: kept once worked out — the planner asks it for every step, docs/38's ten levels made it dear)
+  const key = `${id}:${level}`;
+  const was = CLOSURES.get(key);
+  if (was) return new Map(was);
+  const out = closure(id, level);
+  CLOSURES.set(key, out);
+  return new Map(out);
+}
+const CLOSURES = new Map<string, Map<TreeId, number>>();
+
+function closure(id: TreeId, level: number): Map<TreeId, number> {
   const out = new Map<TreeId, number>();
   const visit = (k: TreeId, n: number, path: string[]) => {
     if (n <= 0) return;
@@ -222,13 +330,23 @@ export function treePlan(hall = TREE_MAX): Need[] {
 // ------------------------------------------------------------------------------------------------ what each level gives
 
 /** The town hall's silver a day (a day of the sea's calendar) by its level. */
-export const HALL_DAY = [0, 60, 100, 160, 250, 400];
+export const HALL_DAY = [0, 60, 100, 160, 250, 400, 600, 900, 1_300, 1_800, 2_500];
 /** Each dwelling's growth by its level (the upgraded kind from DWELL_UP_LEVEL). */
-export const DWELL_GROWTH = [0, 1, 1.1, 1.2, 1.35, 1.5];
+export const DWELL_GROWTH = [0, 1, 1.1, 1.2, 1.35, 1.5, 1.65, 1.8, 2, 2.2, 2.5];
 export const DWELL_UP_LEVEL = 3;
+/** The hook of docs/38 §2.4 variant B (owner, 2026-11-03: a later task): from this dwelling level each tier opens a
+ *  third, elite kind. No kind is defined yet — `dwellElite` only says whether a dwelling stands that high (the server's
+ *  dwell.ts isleDwellLevels gives each tier's dwelling level for it). */
+export const DWELL_ELITE_LEVEL = 8;
+export const dwellElite = (level: number): boolean => Math.floor(level) >= DWELL_ELITE_LEVEL;
+/** The share off a man's silver hired from a dwelling of her island, by its level (docs/38 §2.4: −5 % at 6, −10 % at 7
+ *  and 8, −15 % at 9, −20 % at 10). */
+export const DWELL_HIRE_OFF = [0, 0, 0, 0, 0, 0, 0.05, 0.1, 0.1, 0.15, 0.2];
 /** The island's own ships' greatest level by the shipyard's (baseships.ts yardLevelFor reads it), and the share off the
  *  repairs of one's ship lying off the island. */
-export const SHIPYARD_REPAIR = [0, 0.1, 0.15, 0.2, 0.25, 0.3];
+export const SHIPYARD_REPAIR = [0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.5];
+/** The yard's room grows ×1.25 a warehouse level above 5 (docs/38 §2.4; base.ts yardCap). */
+export const WAREHOUSE_TOP = 1.25;
 
 // ------------------------------------------------------------------------------------------------ the board
 
@@ -256,9 +374,11 @@ export function treePatterns(): Tr[] {
     ['The island grows with its town hall.', 'Остров растёт вместе с ратушей.'],
     ['{0} on {1}: level {2}.', '{0} на острове {1}: уровень {2}.'],
     ['{0} on {1}: level {2} of 5.', '{0} на острове {1}: уровень {2} из 5.'],
+    [`{0} on {1}: level {2} of ${TREE_MAX}.`, `{0} на острове {1}: уровень {2} из ${TREE_MAX}.`],
     ['First raise {0} to level {1}.', 'Сначала поднимите: {0} до уровня {1}.'],
     ['Raise the town hall to level {0} first.', 'Сначала поднимите ратушу до уровня {0}.'],
     ['It is at its greatest: level 5.', 'Это уже наибольший уровень: 5.'],
+    [`It is at its greatest: level ${TREE_MAX}.`, `Это уже наибольший уровень: ${TREE_MAX}.`],
     ['{0} is yours: the town hall stands on it.', '{0} теперь ваш: на нём стоит ратуша.'],
     ['You hold {0} already. Moving there demolishes every building on {1}.', 'Ваш остров — {0}. Перенос туда снесёт все постройки на острове {1}.'],
     ['You hold {0} already.', 'Ваш остров уже {0}.'],

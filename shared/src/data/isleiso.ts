@@ -9,7 +9,10 @@
 import type { IslandBiome } from '../world/regions.ts';
 
 export type IsoMap = 'temperate' | 'volcanic' | 'ice' | 'jungle' | 'dry' | 'drowned';
-export type IsoStage = 's0' | 's1' | 'l1' | 'l2' | 'l3' | 'l4' | 'l5' | 'up';
+export type IsoStage = 's0' | 's1' | 'l1' | 'l2' | 'l3' | 'l4' | 'l5' | 'l6' | 'l7' | 'l8' | 'l9' | 'l10' | 'up';
+/** The greatest level a building's picture is asked at (docs/38: the tree's 10; a level not painted yet falls back to the
+ *  highest painted one below it, isoPic). */
+export const ISO_LEVELS = 10;
 
 /** The map an island of a biome is painted on (HANDOFF_PROMPT.md §2). */
 export const ISO_MAP_OF: Record<IslandBiome, IsoMap> = {
@@ -83,11 +86,21 @@ export function isoSpot(map: IsoMap, cell: [number, number], foot = ISO_SLOT): {
  *  - raising L → L+1: `up` (level 3 in scaffolding) from levels 2 and 3, else its level now, dimmed under the work;
  *  - standing: its level. */
 export function isoStage(level: number, job: { start: number; end: number; level: number } | null, now: number): { stage: IsoStage; dim: boolean } {
-  const L = Math.max(0, Math.min(5, Math.round(level)));
+  const L = Math.max(0, Math.min(ISO_LEVELS, Math.round(level)));
   if (job && (L <= 0 || job.level <= 1)) {
     const prog = (now - job.start) / Math.max(1, job.end - job.start);
     return { stage: prog < 0.5 ? 's0' : 's1', dim: false };
   }
   if (job) return L === 2 || L === 3 ? { stage: 'up', dim: false } : { stage: `l${Math.max(1, L)}` as IsoStage, dim: true };
   return { stage: `l${Math.max(1, L)}` as IsoStage, dim: false };
+}
+
+/** A building's picture id at its stage (`isle.<sheet>.<stage>`), a level not painted yet (docs/38: the levels 6..10 come
+ *  sheet by sheet) as the highest painted level below it — `has` tells whether the manifest holds an id. */
+export function isoPic(sheet: string, stage: IsoStage, has: (id: string) => boolean): string {
+  const id = `isle.${sheet}.${stage}`;
+  const m = /^l(\d+)$/.exec(stage);
+  if (!m || has(id)) return id;
+  for (let l = Number(m[1]) - 1; l >= 1; l--) if (has(`isle.${sheet}.l${l}`)) return `isle.${sheet}.l${l}`;
+  return id;
 }

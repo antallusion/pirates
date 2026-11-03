@@ -463,19 +463,30 @@ export function guildOf(portId: string, size: number): OrderId[] | null {
  *  on the fourth and the fifth. Taught free, as far as her level and Deep Mysticism let her learn them. */
 export const ISLE_GUILD_COUNT = [0, 3, 3, 2, 1, 1];
 export const ISLE_GUILD_MAX = 5;
+/** docs/38 (owner, 2026-11-03): the guild rises to 10 — its level 5 + k adds one more order to floor k (the sixth a
+ *  fourth order of level 1 … the tenth a second of level 5), drawn after the five floors' own lists, so an island's
+ *  lists never change as its guild rises. The orders are of five levels only: a higher floor would teach nothing new. */
+export const ISLE_GUILD_TOP = 10;
 
 export function isleGuildOrders(islandId: number, floors: number): OrderId[][] {
   const rng = new Rng((Math.imul(islandId + 7, 0x1b873593) ^ 0x6a11d) >>> 0);
   const out: OrderId[][] = [];
-  for (let lv = 1; lv <= Math.min(ISLE_GUILD_MAX, Math.max(0, floors)); lv++) {
+  const f = Math.max(0, Math.min(ISLE_GUILD_TOP, Math.floor(floors)));
+  const draw = (lv: number, n: number, pick: OrderId[]) => {
     const pool = LEARNABLE.filter((id) => ORDERS[id].level === lv);
-    const pick: OrderId[] = [];
-    while (pick.length < Math.min(ISLE_GUILD_COUNT[lv], pool.length)) {
+    const want = Math.min(pick.length + n, pool.length);
+    while (pick.length < want) {
       const id = rng.pick(pool);
       if (!pick.includes(id)) pick.push(id);
     }
+  };
+  // (the five floors drawn whole when the extras come, so the extras never shift a floor's own list)
+  for (let lv = 1; lv <= (f > ISLE_GUILD_MAX ? ISLE_GUILD_MAX : f); lv++) {
+    const pick: OrderId[] = [];
+    draw(lv, ISLE_GUILD_COUNT[lv], pick);
     out.push(pick);
   }
+  for (let k = 1; k <= f - ISLE_GUILD_MAX; k++) draw(k, 1, out[k - 1]);
   return out;
 }
 

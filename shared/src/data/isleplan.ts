@@ -55,7 +55,7 @@ export interface PlanStep {
 }
 
 /** The player level each hall level is for (docs/29 balance: hall 2 ~18, hall 3 ~31, hall 4 ~44, hall 5 ~52). */
-export const HALL_BAND = [0, 1, 16, 28, 40, 50];
+export const HALL_BAND = [0, 1, 16, 28, 40, 50, 53, 56, 58, 60, 60];
 /** How far under the band the hall still comes first (levels). */
 export const BAND_SLACK = 6;
 

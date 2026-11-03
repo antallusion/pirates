@@ -43,6 +43,7 @@ import type { ShipEntity } from './ship.ts';
 import { sagaNote } from './saga.ts';
 import { powerOf } from './base.ts';
 import { ISLE_POWER } from '../../../shared/src/data/baseships.ts';
+import { hallBonus } from '../../../shared/src/data/isletree.ts';
 
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
@@ -339,7 +340,8 @@ function outpostsOf(game: Game, account: number): Outpost[] {
 
 export function outpostLimit(game: Game, account: number): number {
   const h = ownIsland(game, account);
-  return h ? ISLE_LEVELS[Math.max(1, Math.min(ISLE_MAX, h.level ?? 1))].outposts : 0;
+  // (docs/38: the hall 6 and 9 add one each over the island's level)
+  return h ? ISLE_LEVELS[Math.max(1, Math.min(ISLE_MAX, h.level ?? 1))].outposts + hallBonus(h.yard?.town?.b.hall ?? 1).outposts : 0;
 }
 
 /** Found an outpost on a wild island within reach: materials from the hold, a week's claim from the region's
@@ -678,7 +680,7 @@ export function estateView(game: Game, s: PlayerSession): EstateView {
       island: h.island, name: isl.name, level: lvl, levelName: ISLE_LEVELS[lvl].name[0], slots: ownedSlots(h, isl),
       next: null, hall: Math.max(1, h.yard?.town?.b.hall ?? 1), power: powerOf(h), // docs/29: the island grows with its hall
       residents: (h.residents ?? []).map((r) => ({ id: r.id, name: residentName(r.id * 7 + h.island)[0], prof: r.prof, at: r.at ? ('b' in r.at ? r.at.b : `o:${r.at.o}`) : null, line: PROFESSION_DEFS[r.prof].lines[(r.id + Math.floor(game.wallNow() / HOUR)) % PROFESSION_DEFS[r.prof].lines.length][0] })),
-      cap: residentCap(h), refugees: p.refugees ?? 0, outposts: ISLE_LEVELS[lvl].outposts, trophies: has(h, 'trophy_hall') ? trophies(game, p, s.name) : null, visitors: h.visitors ?? 0,
+      cap: residentCap(h), refugees: p.refugees ?? 0, outposts: ISLE_LEVELS[lvl].outposts + hallBonus(h.yard?.town?.b.hall ?? 1).outposts, trophies: has(h, 'trophy_hall') ? trophies(game, p, s.name) : null, visitors: h.visitors ?? 0,
     } : null,
     outposts: outpostsOf(game, s.accountId).map((o) => outpostView(game, o, s.accountId)),
     near,

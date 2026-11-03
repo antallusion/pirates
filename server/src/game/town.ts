@@ -7,7 +7,7 @@
 
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { TOWN, TOWN_IDS, HALL_INCOME, KEEP_GROWTH, MARKET_GOODS, MARKET_MIN_SPREAD, POOL_WEEKS, marketCost, TIER_UNIT, deepAllowed, dwellingOf, isleGrowth, marketBuy, marketSell, townCost, townOf } from '../../../shared/src/data/town.ts';
-import { ISLE_OF_HALL, TREE_BASE, TREE_MAX, TREE_TOWN, isTree, isTreeTown, treeNeeds } from '../../../shared/src/data/isletree.ts';
+import { ISLE_OF_HALL, RARE_GOODS, TREE_BASE, TREE_MAX, TREE_TOWN, isTree, isTreeTown, treeNeeds } from '../../../shared/src/data/isletree.ts';
 import type { TreeId } from '../../../shared/src/data/isletree.ts';
 import { BUILDINGS } from '../../../shared/src/data/holdings.ts';
 import type { BuildingId } from '../../../shared/src/data/holdings.ts';
@@ -114,7 +114,7 @@ export function treeNeedView(h: Holding, y: Yard, id: TreeId, L: number): { id: 
 
 /** The first thing the tree still asks (null: it all stands). */
 export function treeWhy(h: Holding, y: Yard, id: TreeId, L: number): string | null {
-  if (L > TREE_MAX) return 'It is at its greatest: level 5.';
+  if (L > TREE_MAX) return `It is at its greatest: level ${TREE_MAX}.`;
   for (const n of treeNeedView(h, y, id, L)) {
     if (n.have >= n.level) continue;
     return n.id === 'hall' ? `Raise the town hall to level ${n.level} first.` : `First raise ${treeName(n.id, n.level)} to level ${n.level}.`;
@@ -131,7 +131,7 @@ export function treeName(id: TreeId, level = 1): string {
 export function townWhy(game: Game, s: PlayerSession, h: Holding, y: Yard, id: TownId): string | null {
   const L = townLevel(y, id);
   const def = TOWN[id];
-  if (L >= def.max) return isTree(id) ? 'It is at its greatest: level 5.' : 'It is at its greatest';
+  if (L >= def.max) return isTree(id) ? `It is at its greatest: level ${TREE_MAX}.` : 'It is at its greatest';
   if (y.jobs.some((j) => j.what === `t:${id}`)) return 'The builders are already at work there.';
   if (isTree(id)) {
     const why = treeWhy(h, y, id, L + 1);
@@ -193,7 +193,7 @@ export function finishTown(game: Game, h: Holding, y: Yard, isl: Island, j: Base
   const s = h.owner.kind === 'player' ? game.sessionByAccount(h.owner.id) : undefined;
   if (!s) return;
   townHooks.built?.(game, s, id, j.level); // forum 45: a step counts the building once it stands
-  game.sendTo(s, { t: 'toast', msg: isTree(id) ? `${townName(id, j.level)} on ${isl.name}: level ${j.level} of 5.` : `${townName(id, j.level)} rises on ${isl.name}.`, kind: 'good' });
+  game.sendTo(s, { t: 'toast', msg: isTree(id) ? `${townName(id, j.level)} on ${isl.name}: level ${j.level} of ${TREE_MAX}.` : `${townName(id, j.level)} rises on ${isl.name}.`, kind: 'good' });
 }
 
 // ------------------------------------------------------------------------------------------------ the town hall
@@ -322,7 +322,8 @@ export function learnAtIsle(game: Game, s: PlayerSession, id: string): string | 
 export function townHave(game: Game, s: PlayerSession, h: Holding, y: Yard): Partial<Record<GoodId, number>> {
   const near = lyingOff(game, s, h);
   const out: Partial<Record<GoodId, number>> = {};
-  for (const g of [...MARKET_GOODS, 'provisions'] as GoodId[]) out[g] = Math.floor((y.res[g] ?? 0) + (h.store[g] ?? 0) + (near ? (s.ship?.cargo[g] ?? 0) : 0));
+  // (docs/38: the sea's rare goods the levels 6..10 ask too)
+  for (const g of new Set([...MARKET_GOODS, 'provisions', ...RARE_GOODS] as GoodId[])) out[g] = Math.floor((y.res[g] ?? 0) + (h.store[g] ?? 0) + (near ? (s.ship?.cargo[g] ?? 0) : 0));
   return out;
 }
 
@@ -361,7 +362,7 @@ export function townView(game: Game, s: PlayerSession, h: Holding, y: Yard): Tow
   const mines = ownMines(game, s);
   return {
     things, keep, growthMul: KEEP_GROWTH[keep], hall: hallDaily(game, y), mines, minesDaily: minesDailyOf(game, s.accountId),
-    treasury: Math.floor(h.treasury), res: MARKET_GOODS.map((g) => ({ good: g, n: have[g] ?? 0 })), market: marketRates(game, y),
+    treasury: Math.floor(h.treasury), res: [...MARKET_GOODS.map((g) => ({ good: g, n: have[g] ?? 0 })), ...RARE_GOODS.filter((g) => !MARKET_GOODS.includes(g) && (have[g] ?? 0) > 0).map((g) => ({ good: g, n: have[g] ?? 0 }))], market: marketRates(game, y),
     deep: keepsDeep(s), near: lyingOff(game, s, h), week: weekView(game),
     ...(townHooks.landView ? { land: townHooks.landView(game, s, h, y) } : {}),
   };
