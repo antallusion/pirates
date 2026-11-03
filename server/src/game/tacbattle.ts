@@ -3268,6 +3268,12 @@ export function aiSkill(bt: TacBattle, side: 0 | 1): number {
 /** Her side's shooting: the threat of her shooters with shots left. */
 const shooting = (bt: TacBattle, side: 0 | 1): number => alive(bt).reduce((n, x) => n + (x.side === side && isShooter(x) && x.shots > 0 ? threat(bt, x) : 0), 0);
 
+/** 2026-11-03 (after the decks' voids, 8f9d5b13: the bow's planks gone, the three always amidships and close): a stack
+ *  that only walks up does not stop on a plank when another step as near is off it — the planks are the way across for
+ *  her whole side, and a small stack halted on one held the big one back while the other's fell on it piecemeal (the
+ *  ladder's crew of ⚓2–3 won 29–31% of her boardings). Worth this many steps of the way. */
+export const TAC_PLANK_STOP = 1.5;
+
 /** What the sea's mind has the active stack do. */
 export function aiChoice(bt: TacBattle, rng: Rng): TacAction {
   const s = stackById(bt, bt.active ?? -1)!;
@@ -3394,7 +3400,7 @@ export function aiChoice(bt: TacBattle, rng: Rng): TacAction {
   for (const [h] of reach) {
     const d = far(h);
     if (d >= here) continue;
-    const v = d - (guns.length && covered(h) ? TAC_COVER_STEP : 0) + (risky(h) ? 100 : 0);
+    const v = d - (guns.length && covered(h) ? TAC_COVER_STEP : 0) + (risky(h) ? 100 : 0) + (bt.cells[h] === '=' ? TAC_PLANK_STOP : 0);
     if (v < score) {
       score = v;
       td = d;

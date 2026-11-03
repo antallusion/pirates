@@ -82,7 +82,10 @@ test('worn whole, a relic assembles: its gift on top of its parts’, none short
 });
 
 test('balance at the cap: a pair of relics over the old best kit some 60%, the two pairs even, the anvil’s ceiling a few points', () => {
-  const n = 40;
+  // (2026-11-03: 120 battles a path, was 40 — the first 40 of each read Union + Crown 0.68–0.70 where all 120 read
+  //  0.66, a sample's noise of ±3 points against the bounds' few; the decks laid anew without their bows' planks,
+  //  8f9d5b13, moved its dice over the line.)
+  const n = 120;
   const uc = kitShare('union_crown', 'sets', n), oc = kitShare('orb_compass', 'sets', n), pair = kitShare('union_crown', 'orb_compass', n), forged = kitShare('forged', 'sets', n);
   assert.ok(uc >= 0.52 && uc <= 0.68, `Union + Crown vs the sets: ${uc}`);
   // docs/25 block Д (2026-10-09): a path's book lays its full share at 60 now (it faded to a tenth), so the pair that

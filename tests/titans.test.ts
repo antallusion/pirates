@@ -63,12 +63,24 @@ test('the titans stand out of the might cap: they take no room from the picked m
 test('balance: a titan in the ⚓10 ladder’s army wins it more boardings against the pirates of its level, not all of them', () => {
   const base = armyForLevel(10, 600, 7, 'player');
   const pir = armyForLevel(10, 600, 7, 'pirate');
-  const plain = winRate(base, pir, 120);
-  // The titan in the slot of her weakest stack.
-  const one = [...base.slice(0, 6).map((x) => ({ ...x })), { u: 'titan_leviathan' as UnitId, n: 1 }];
-  const lifted = winRate(one, pir, 120);
-  assert.ok(lifted > plain + 0.05, `${plain} → ${lifted}`);
-  assert.ok(lifted < 0.95, `not a war won: ${lifted}`);
+  // (2026-11-03: the Leviathan alone over one set of 120 boardings was a coin's toss — its lift is some 5 points and
+  //  the set's noise ±4: it read +6 on the decks of E10, +5 / +1 after the decks were laid anew and lost their bows'
+  //  planks (8f9d5b13). E10's own table (200 boardings each) gave the five +4.5 on the mean, the Kraken +8.5, the
+  //  Turtle +0.5. So each titan is weighed over six sets of 120, the same boardings with it and without.)
+  const SALTS = [0, 1000, 2000, 3000, 4000, 5000];
+  const plain = SALTS.reduce((n, k) => n + winRate(base, pir, 120, 1, 1, k), 0) / SALTS.length;
+  const lifts: string[] = [];
+  let sum = 0;
+  for (const u of TITAN_IDS) {
+    // The titan in the slot of her weakest stack.
+    const one = [...base.slice(0, 6).map((x) => ({ ...x })), { u, n: 1 }];
+    const lifted = SALTS.reduce((n, k) => n + winRate(one, pir, 120, 1, 1, k), 0) / SALTS.length;
+    lifts.push(`${u} ${Math.round(plain * 100)} → ${Math.round(lifted * 100)}%`);
+    sum += lifted - plain;
+    assert.ok(lifted > plain + 0.02, `${lifts.join(', ')}`);
+    assert.ok(lifted < 0.95, `not a war won: ${lifts.join(', ')}`);
+  }
+  assert.ok(sum / TITAN_IDS.length > 0.04, `on the mean: ${lifts.join(', ')}`);
 });
 
 // ------------------------------------------------------------------ the Grail
