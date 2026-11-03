@@ -152,7 +152,7 @@ test('the speed-ups from the card: the store of minutes and the tokens, both che
   const v = baseView(game, s)!;
   assert.equal(v.plan!.speed.min, 0);
   // no minutes: the server says so
-  assert.equal(useSpeed(game, s, job.id), 'No speed-ups in store: buy them in the shop.');
+  assert.equal(useSpeed(game, s, job.id), 'No speed-ups left: buy them in the shop.');
   shopState(game, s.accountId).speed = 10;
   const end0 = job.end;
   assert.equal(useSpeed(game, s, job.id), null);
@@ -162,6 +162,6 @@ test('the speed-ups from the card: the store of minutes and the tokens, both che
   s.profile!.speedups = 1;
   assert.equal(speedup(game, s, job.id, 'token'), null);
   assert.equal(s.profile!.speedups, 0);
-  assert.equal(useSpeed(game, s, 999), 'No speed-ups in store: buy them in the shop.');
+  assert.equal(useSpeed(game, s, 999), 'No speed-ups left: buy them in the shop.');
 });
 

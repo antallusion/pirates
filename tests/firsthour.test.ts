@@ -429,7 +429,7 @@ test('the starting sea is calm for a newcomer: few sharks, alone, far, off the f
   assert.ok(past.most >= CLOSE_WANT, `a captain of the ${SHELTER_LEVEL}th level keeps her sea’s beasts (${past.most})`);
 });
 
-test('a newcomer’s helmsman brushing a Crown patrol in the starting sea: they fend off — no blow, no enemy made', async () => {
+test('a newcomer’s helmsman brushing a Crown patrol in the starting sea: they fend off — her own planks a little (forum 40), none of the patrol’s, no enemy made', async () => {
   // the first-hour runs: a patrol bumped at Saltmarrow's mouth took it for a ram, turned on her and sank her
   const { makeGame, join } = await import('./helpers.ts');
   const { game } = makeGame();
@@ -449,7 +449,9 @@ test('a newcomer’s helmsman brushing a Crown patrol in the starting sea: they 
   pt.state.speed = 6;
   (game as unknown as { collideShips(): void }).collideShips();
   assert.ok(ship.state.speed < 8, 'the hulls met');
-  assert.equal(ship.hull, h0, 'no blow to her');
+  // (forum 40, 32ab5a43, the owner: «Удар о мирных нпс наносит урон своему кораблю … не считается атакой/тараном,
+  // не вызывает агрессию»: her way into him costs her a little of her own hull — far from the sinking it was)
+  assert.ok(ship.hull < h0 && h0 - ship.hull <= h0 * 0.1, `her own planks a little: ${h0} → ${ship.hull}`);
   assert.equal(pt.hull, p0, 'nor to the patrol');
   assert.ok(!pt.attackers.has(ship.id) && !ship.attackers.has(pt.id), 'no enemy made');
   assert.equal(game.isHostile(pt, ship), false);

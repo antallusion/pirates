@@ -290,10 +290,13 @@ test('the dense sea keeps the lanes, harbours and currents clear, and ships stil
     }
   }
   assert.ok(found / tried > 0.97, `${found}/${tried} routes`);
-  // And the world is still made in a blink.
-  const t0 = performance.now();
+  // And the world is still made in a blink — by this process's own CPU time, not the wall clock: the full suite runs
+  // its files side by side, and a loaded machine stretched a 0.7 s build past the mark now and then.
+  const c0 = process.cpuUsage();
   generateWorld(4242);
-  assert.ok(performance.now() - t0 < 1500, 'fast');
+  const cpu = process.cpuUsage(c0);
+  const ms = (cpu.user + cpu.system) / 1000;
+  assert.ok(ms < 1500, `fast: ${Math.round(ms)} ms of CPU`);
 });
 
 test('floating towns: small free ports on moored hulks in the open sea, with goods, a tavern and a yard', () => {

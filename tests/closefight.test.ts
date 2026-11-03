@@ -334,7 +334,11 @@ test('the action list for a stack: its «Атаковать» first (no ship\'s 
   // A finger's tap is never the mouse's click-to-fire; a click on a stack marks it and fires nothing.
   assert.match(main, /if \(!inGame \|\| e\.button !== 0 \|\| fromFinger\(e\)\) return;/);
   // (2026-10-26: the click on a stack also clears a selected place, then returns — nothing fired)
-  assert.match(main, /const mk = markAt\(e\.clientX, e\.clientY\);\s*if \(mk === 'roam'\) \{[^}]*return;\s*\}/);
+  // (forum 45, 9c3d9a45: the click's ring — about the stack — opens between the two; it only shows, never sends)
+  const clickRoam = main.match(/const mk = markAt\(e\.clientX, e\.clientY\);([\s\S]*?)\n\s*if \(mk === 'roam'\) \{[^}]*return;\s*\}/);
+  assert.ok(clickRoam, 'a click on a stack returns');
+  assert.ok(!/net\.send|fire|volley|board/i.test(clickRoam[1]), `nothing fired before the stack's return: ${clickRoam[1]}`);
+  assert.ok(clickRoam[1].split('\n').length <= 10, 'the return follows the mark at once');
   // The glass asks quietly; a refusal is shown once.
   assert.match(main, /t: 'appraise', id, quiet: true/);
   assert.match(main, /if \(m\.kind === 'bad' && refusalAgain\(m\.msg\)\) break;/);

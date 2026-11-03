@@ -1,6 +1,6 @@
 // The quick sea fight and boarding a senior (docs/23 phases 3–4, owner 2026-10-06): two ships of a level sink each other
 // with broadsides in 30 s or less; «Атаковать» runs her in alongside for the grapples (owner, 2026-10-22: only beam to
-// beam — reach.ts) in about 13 s from 700 m against a mark that fights back, a minute at the most; a green captain's laid
+// beam — reach.ts) in about 20 s from 700 m (forum 40: by the wind, no run of its own) against a mark that fights back, a minute at the most; a green captain's laid
 // broadsides strike three balls in five and better; the helm is the captain's the moment she takes it and the
 // helmsman's 1.5 s after; a lost mark gives way to the nearest threat; no chase goes on for ever; a mark two levels down
 // is settled in about three seconds; the ladder no longer bars the grapples, and a senior or a slim chance opens the
@@ -54,7 +54,12 @@ test('two ships of a level sink each other with broadsides alone in the table’
 // (Owner, 2026-10-22: the grapples fly only alongside — 12 m of water, beam to beam, the way matched — not from 96 m on
 // any bearing. Was: median and p90 ≤ 10 s within 40 s. Measured after, 20 runs a level against a hunter that fights
 // her with its broadsides: ⚓1 12.7/18.4 s, ⚓3 12.2/21.2, ⚓5 13.6/20.8, ⚓8 13.8/21.1, the slowest 52 s, none missed.)
-test('«Атаковать» alongside for the grapples in about 13 s from 700 m, a minute at the most; a green captain’s laid broadsides strike 60% and more', () => {
+// (Forum 40, 32052fc5, 2026-10-31: «с автобоем корабль разгоняется до максимальной скорости корпуса, против ветра, почти
+// без парусов» — the boarding run lost its +70 % way, ×5 pick-up and its own wind: she sails by the wind and her canvas
+// as under her own hand, so a mark to windward or running before the wind takes longer. Was median ≤ 16 s, p90 ≤ 45 s;
+// measured before (32052fc5^) ⚓1 10.9/12.7 s, ⚓3 10.1/20.2, ⚓5 12.2/18.6, ⚓8 10.8/38.4; after (97615063, the sims are
+// seeded) ⚓1 17.9/55.3, ⚓3 19.6/35.4, ⚓5 21.7/26.5, ⚓8 22.7/27.5 — still all alongside within the minute.)
+test('«Атаковать» alongside for the grapples in about 20 s from 700 m, a minute at the most; a green captain’s laid broadsides strike 60% and more', () => {
   const game = duelSea();
   for (const L of LEVELS) {
     const t: number[] = [];
@@ -62,7 +67,7 @@ test('«Атаковать» alongside for the grapples in about 13 s from 700 m
     for (let k = 0; k < 10; k++) t.push(captainRun(game, LEVEL_HULL[L], L, 700 + k, 'board', 60).sec);
     assert.ok(t.every((x) => x > 0), `⚓${L}: always alongside (${t.join(' ')})`);
     const { med, p90 } = pct(t);
-    assert.ok(med <= 16 && p90 <= 45, `⚓${L}: to the grapples median ${med} s, p90 ${p90} s`);
+    assert.ok(med <= 25 && p90 <= 58, `⚓${L}: to the grapples median ${med} s, p90 ${p90} s`);
     // (Six fights: in the close fight of 2026-10-07 three were over in 16 balls.)
     let balls = 0, hits = 0;
     for (let k = 0; k < 6; k++) {

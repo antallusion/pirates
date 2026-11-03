@@ -114,7 +114,10 @@ test('cutting grapples: Iron Grip holds them, then the defender may cut loose', 
     sh.region = game.regionAt(sh.state.x, sh.state.y);
     game.grid.upsert(sh.id, sh.state.x, sh.state.y);
   }
-  ca.push({ t: 'board', target: b.id, aggression: 'standard' });
+  // («Рискнуть» given: the even fight's chance, ~46 %, is played out by the wall clock's budget — RISK_BUDGET_MS, a
+  // handful of battles on a loaded machine — and fell under RISK_CHANCE now and then, so the window showed instead of
+  // the grapples; the window is seafight.test.ts's, the cut is this test's)
+  ca.push({ t: 'board', target: b.id, aggression: 'standard', risk: true });
   assert.ok(a.boarding, 'boarding started');
   cb.push({ t: 'board_cut' });
   assert.ok(cb.all('toast').some((t) => /chained/.test(t.msg)), 'Iron Grip');

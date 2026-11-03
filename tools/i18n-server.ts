@@ -59,6 +59,13 @@ export function extract(root = 'server/src'): string[] {
       // a letter (written in its reader's language where it is sent).
       if (ts.isCallExpression(n) && /\.log$|^console\.|mailer\.send$/.test(n.expression.getText(src))) return;
       if (ts.isNewExpression(n) && /Error$/.test(n.expression.getText(src))) return;
+      // A pair in both tongues written in place (`ru ? 'Открыть сообщение' : 'Open the post'`, the letters' buttons):
+      // already in the reader's language, never looked up in the table.
+      if (ts.isConditionalExpression(n)) {
+        const lit = (x: Any) => ts.isStringLiteral(x) || ts.isNoSubstitutionTemplateLiteral(x);
+        const cyr = (x: Any) => lit(x) && /[А-Яа-яЁё]/.test(x.text);
+        if (lit(n.whenTrue) && lit(n.whenFalse) && (cyr(n.whenTrue) || cyr(n.whenFalse))) return;
+      }
       let pat: string | null = null;
       if (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) pat = n.text;
       else if (ts.isTemplateExpression(n)) {

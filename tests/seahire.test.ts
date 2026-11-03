@@ -383,7 +383,7 @@ test('a server restart: the contract sails again with her, the time left kept; i
 });
 
 test('a relog: the guard goes back to her course while she is away, and sails again when she is back; no room: refund pro rata', async () => {
-  const { PROTOCOL_VERSION } = await import('../shared/src/constants.ts');
+  const { LOGOUT_TIMER_SEC, PROTOCOL_VERSION } = await import('../shared/src/constants.ts');
   const { FakeConn } = await import('./helpers.ts');
   const { game } = makeGame();
   const at = water(game, REGIONS.gravewater.center[0], REGIONS.gravewater.center[1]);
@@ -391,12 +391,13 @@ test('a relog: the guard goes back to her course while she is away, and sails ag
   const m = npcAt(game, 'merchant', at.x + 200, at.y, 3);
   hire(game, s, m.id, 10);
   c.close();
-  steps(game, 35); // the linger, then she is gone
+  steps(game, LOGOUT_TIMER_SEC + 5); // the linger (forum 45, 47812ff0: 2 min, was 30 s), then she is gone
   assert.equal(hiresOf(game, s.accountId).length, 0);
   assert.equal(m.ownerId, null, 'her own course again');
   const kept = s.profile!.seaHire!;
   assert.equal(kept.length, 1);
-  assert.ok(kept[0].left > 500 && kept[0].left < 600, `${kept[0].left} s left`);
+  // (her 10 minutes ran on while her ship lingered: what is kept is the rest)
+  assert.ok(kept[0].left > 600 - LOGOUT_TIMER_SEC - 20 && kept[0].left < 600 - LOGOUT_TIMER_SEC + 5, `${kept[0].left} s left`);
   // back: a new connection with her token
   const c2 = new FakeConn();
   game.attach(c2 as never);
