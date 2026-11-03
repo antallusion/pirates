@@ -5,6 +5,7 @@ sheets, cut and baked into assets/isle/ and registered in assets/manifest.json a
     python tools/art/isle_iso.py            # bake everything (runs at below-normal priority)
     python tools/art/isle_iso.py hall mine  # only these sheets
     python tools/art/isle_iso.py --sheet out.png   # a contact sheet of the baked cells, for a look
+    python tools/art/isle_iso.py --ten [ids]       # the levels 6..10 sheets (assets/future/isle_iso_10/isle10_<id>.png, docs/38)
 
 Each sheet is 4 x 2 cells on flat magenta: s0 (the plot marked out), s1 (the frame in scaffolding), l1..l5, up (level
 3 in scaffolding). The cells are not cut on a grid: the sheet is keyed (process.py chroma_key) and its shapes found
@@ -33,6 +34,12 @@ OUT = os.path.join(ASSETS, 'isle')
 MANIFEST = os.path.join(ASSETS, 'manifest.json')
 
 STAGES = ['s0', 's1', 'l1', 'l2', 'l3', 'l4', 'l5', 'up']
+# The levels 6..10 (docs/38, 2026-11-03): their own sheets, 4 × 2 like the old ones, in assets/future/isle_iso_10/isle10_<id>.png:
+# a copy of level 5 as the yardstick (not baked: it only checks that each new level stands taller), l6..l10, levels 8 and 9
+# in scaffolding.
+SRC10 = os.path.join(ASSETS, 'future', 'isle_iso_10')
+STAGES10 = [None, 'l6', 'l7', 'l8', 'l9', 'l10', 'up2', 'up3']
+STAGES10P = [None, 'l6', 'l7', 'l8', 'l9', 'l10']
 MAPS = ['temperate', 'volcanic', 'ice', 'jungle']
 # One cell of a plot's diamond in the baked file (a 3 x 3 plot about 256 px wide, the brief's phone size).
 UNIT = 86
@@ -53,14 +60,14 @@ def below_normal():
         pass
 
 
-def shapes(alpha):
-    """The sheet's eight shapes: each the cell its bottom stands in, the small bits joined to the nearest."""
+def shapes(alpha, cols=4, nrows=2):
+    """The sheet's shapes (cols × rows of them): each the cell its bottom stands in, the small bits joined to the nearest."""
     solid = alpha > 24
     lab, n = ndimage.label(ndimage.binary_closing(solid, iterations=2))
     if n == 0:
         return {}
     H, W = alpha.shape
-    cw, ch = W / 4, H / 2
+    cw, ch = W / cols, H / nrows
     # Neighbours touching (smoke, a crane's rope): a shape wider than a cell is cut at its emptiest column near each
     # cells' line it spans.
     for _ in range(12):
@@ -68,7 +75,7 @@ def shapes(alpha):
         if not wide:
             break
         k, xs = wide[0]
-        lines = [m * cw for m in (1, 2, 3) if xs.start + 0.25 * cw < m * cw < xs.stop - 0.25 * cw]
+        lines = [m * cw for m in range(1, cols) if xs.start + 0.25 * cw < m * cw < xs.stop - 0.25 * cw]
         if not lines:
             break
         line = lines[0]
@@ -94,7 +101,7 @@ def shapes(alpha):
         rows = np.nonzero(m.any(1))[0]
         yb = ys.start + rows.max()
         xb = xs.start + np.nonzero(m[rows.max()])[0].mean()
-        c = int(min(3, xb // cw)) + 4 * int(min(1, (yb - 4) // ch))
+        c = int(min(cols - 1, xb // cw)) + cols * int(min(nrows - 1, (yb - 4) // ch))
         cells.setdefault(c, []).append(k)
     # the bits: to the shape whose box (widened) holds them, else dropped
     for k in small:
@@ -142,8 +149,14 @@ def diamond(mask):
     return best, bx, yb
 
 
-def bake_sheet(sid, man):
-    src = os.path.join(SRC, f'isle_{sid}.png')
+def bake_sheet(sid, man, ten=False):
+    # the levels 6..10 sheets (docs/38): 4 × 2 cells — the level-5 yardstick, l6..l10, up2 and up3 (levels 8, 9 in scaffolding)
+    stages, cols, rows = (STAGES10, 4, 2) if ten else (STAGES, 4, 2)
+    src = os.path.join(SRC10, f'isle10_{sid}.png') if ten else os.path.join(SRC, f'isle_{sid}.png')
+    if ten and Image.open(src).height > Image.open(src).width:
+        # the tall portrait sheet (its cells tall and narrow, so the buildings stand tall): 3 × 2, the yardstick and l6..l10
+        stages, cols, rows = STAGES10P, 3, 2
+    remote = f'future/isle_iso_10/isle10_{sid}.png' if ten else f'future/isle_iso/isle_{sid}.png'
     img = Image.open(src)
     img.load()
     keyed = chroma_key(img, np.array([255, 0, 255], np.float32))
@@ -154,9 +167,9 @@ def bake_sheet(sid, man):
         a[..., 3] = np.clip((al - 70) * (255 / 185), 0, 255).astype(np.uint8)
     keyed = clean_alpha(Image.fromarray(a, 'RGBA'))
     alpha = np.asarray(keyed.getchannel('A'))
-    cells = shapes(alpha)
-    if len(cells) != 8:
-        print(f'{sid}: {len(cells)} shapes, not 8 (cells {sorted(cells)})')
+    cells = shapes(alpha, cols, rows)
+    if len(cells) != cols * rows:
+        print(f'{sid}: {len(cells)} shapes, not {cols * rows} (cells {sorted(cells)})')
     f = foot(sid)
     notes = []
     found = {}
@@ -166,9 +179,17 @@ def bake_sheet(sid, man):
         y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
         found[c] = diamond(alpha[y0:y1, x0:x1] * m[y0:y1, x0:x1] > 128)
     med = float(np.median([w for w, _, _ in found.values()]))
-    for c, stage in enumerate(STAGES):
+    tall = {}
+    for c in cells:
+        ys, _ = np.nonzero(cells[c])
+        tall[c] = (ys.max() - ys.min()) / max(1, found[c][0])
+    for c, stage in enumerate(stages):
         if c not in cells:
             continue
+        if stage is None:
+            continue
+        if ten and 0 in tall and stage.startswith('l') and tall[c] < tall[0] * 1.02:
+            notes.append(f'LOW:{stage}')
         m = cells[c]
         ys, xs = np.nonzero(m)
         y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
@@ -186,11 +207,11 @@ def bake_sheet(sid, man):
         save(im, os.path.join(ASSETS, local), 86)
         man['assets'][aid] = {
             'local': local,
-            'remote': f'future/isle_iso/isle_{sid}.png',
+            'remote': remote,
             'fit': f'isle:{f}',
             'anchor': [round(cx * k), round(yb * k)],
             'foot': f,
-            'rev': 20261015,
+            'rev': 20261103 if ten else 20261015,
         }
         notes.append(f'{stage}:{w}')
     print(f'{sid:18s} foot {f}  diamond widths ' + ' '.join(notes))
@@ -235,8 +256,16 @@ def main(argv):
         return contact(argv[1])
     os.makedirs(OUT, exist_ok=True)
     man = json.load(open(MANIFEST, encoding='utf-8'))
-    sheets = sorted(f[5:-4] for f in os.listdir(SRC) if f.startswith('isle_') and f.endswith('.png') and not f.startswith('isle_map_'))
     only = [a for a in argv if not a.startswith('--')]
+    if '--ten' in argv:
+        sheets = sorted(f[7:-4] for f in os.listdir(SRC10) if f.startswith('isle10_') and f.endswith('.png'))
+        for sid in sheets:
+            if only and sid not in only:
+                continue
+            bake_sheet(sid, man, ten=True)
+        write_manifest(man)
+        return
+    sheets = sorted(f[5:-4] for f in os.listdir(SRC) if f.startswith('isle_') and f.endswith('.png') and not f.startswith('isle_map_'))
     for sid in sheets:
         if only and sid not in only:
             continue
