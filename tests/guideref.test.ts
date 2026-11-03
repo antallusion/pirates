@@ -157,8 +157,8 @@ test('the search index contains every article title and every reference entry, i
 test('the built site: the guide in both tongues, in the nav, in the sitemap with its hreflang pair', () => {
   for (const p of ['guide/index.html', 'en/guide/index.html', ...GUIDE.map((a) => `guide/${a.id}.html`), ...REF_KINDS.map((k) => `guide/reference/${k}.html`), ...REF_KINDS.map((k) => `en/guide/reference/${k}.html`)]) assert.ok(existsSync(join(SITE, p)), p);
   const home = readFileSync(join(SITE, 'index.html'), 'utf8');
-  assert.match(home, /href="\/site\/guide\/"[^>]*>.*Книга/);
-  assert.match(readFileSync(join(SITE, 'en', 'index.html'), 'utf8'), /href="\/site\/en\/guide\/"[^>]*>.*Guide/);
+  assert.match(home, /href="\/site\/guide\/"[^>]*>.*Энциклопедия/);
+  assert.match(readFileSync(join(SITE, 'en', 'index.html'), 'utf8'), /href="\/site\/en\/guide\/"[^>]*>.*Encyclopedia/);
   const g = readFileSync(join(SITE, 'guide', 'index.html'), 'utf8');
   assert.match(g, /<link rel="alternate" hreflang="en" href="https:\/\/gravetidegame\.com\/site\/en\/guide\/">/);
   assert.match(g, /<title>Лоцманская книга/);

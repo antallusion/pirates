@@ -55,7 +55,7 @@ const KIND_LEAD: Record<RefKind, Tr> = {
 };
 
 const W: Record<string, Tr> = {
-  guide: ['Guide', 'Книга'], book: ['The Pilot’s Book', 'Лоцманская книга'], ref: ['Reference', 'Справочник'],
+  guide: ['Encyclopedia', 'Энциклопедия'], book: ['The Pilot’s Book', 'Лоцманская книга'], ref: ['Reference', 'Справочник'],
   kicker: ['The game’s encyclopedia', 'Энциклопедия игры'],
   lead: ['How the sea works: sailing, battle, trade, the island and the army — step by step, with pictures. And the reference of every creature, ship, item, building and good.', 'Как устроено море: плавание, бой, торговля, остров и армия — по шагам и с картинками. И справочник всех существ, кораблей, предметов, построек и товаров.'],
   search: ['Search the book and the reference…', 'Поиск по книге и справочнику…'], searchRef: ['Search by name…', 'Поиск по названию…'],
