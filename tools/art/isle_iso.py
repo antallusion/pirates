@@ -80,8 +80,8 @@ def shapes(alpha, cols=4, nrows=2):
             break
         line = lines[0]
         lo, hi = int(line - 70), int(line + 70)
-        cols = (lab[:, lo:hi] == k + 1).sum(0)
-        cut = lo + int(np.argmin(cols))
+        prof = (lab[:, lo:hi] == k + 1).sum(0)
+        cut = lo + int(np.argmin(prof))
         n += 1
         right = lab == k + 1
         right[:, :cut] = False
