@@ -532,3 +532,24 @@ export function servicePortView(game: Game, s: PlayerSession, port: Port): Servi
     wares: mine ? wares(game, s, port).map((w) => ({ item: w.item, price: w.price, sold: sv!.bought.includes(w.key) })) : [],
   };
 }
+
+/** The ranks put back once, on the boot after the deploy (production has no admin chat): Эдуард's Commodore of the
+ *  Crown, lost when he bought the League's patent (forum, post 70; owner 2026-11-04: «применить все фиксы»). */
+const RESTORES_ONCE: readonly { ref: string; name: string; id: ServiceId; rank: number }[] = [
+  { ref: 'restore:2026-11-04:eduard', name: 'Эдуард', id: 'crown', rank: 4 },
+];
+export function serviceRestoreBoot(game: Game): void {
+  const done = game.db.getKv<string[]>('service_restore_done') ?? [];
+  let changed = false;
+  for (const r of RESTORES_ONCE) {
+    if (done.includes(r.ref)) continue;
+    try {
+      console.log(`[service] ${adminService(game, [r.name, r.id, String(r.rank)])}`);
+      done.push(r.ref);
+      changed = true;
+    } catch (e) {
+      console.log(`[service] ${(e as Error).message}`);
+    }
+  }
+  if (changed) game.db.setKv('service_restore_done', done);
+}

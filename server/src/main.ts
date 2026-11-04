@@ -4,6 +4,7 @@
 
 import { tributeBoot } from './game/tribute.ts';
 import { namesBoot } from './game/names.ts';
+import { serviceRestoreBoot } from './game/marque.ts';
 import { onboardingReport } from './game/onboarding.ts';
 import { createServer } from 'node:http';
 import { dirname, resolve } from 'node:path';
@@ -192,6 +193,7 @@ game.start();
 if (!process.env.ZONE) giftBoot(game);
 if (!process.env.ZONE) tributeBoot(game); // «дань» to the players who help (tribute.ts)
 if (!process.env.ZONE) namesBoot(game); // the names the filter refuses, put right (names.ts)
+if (!process.env.ZONE) serviceRestoreBoot(game); // the ranks put back once (marque.ts)
 // Dedicated gateways relay their players here over the internal link.
 const link = process.env.LINK_PORT
   ? new LinkServer({ secret: process.env.LINK_SECRET ?? '', zone: process.env.ZONE_NAME ?? 'main', attach: (c) => game.attach(c) })

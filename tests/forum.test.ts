@@ -143,7 +143,7 @@ test('anti-spam: the honeypot, the time trap, a new member’s links and the rat
   assert.equal(code(() => svc.createTopic(fresh, { section: 'general', title: 'Тема', body: 'текст', website: '', t: FRESH_TOPIC_MS - 100 })), 'trap', 'a new member takes longer');
   assert.equal(code(() => svc.createTopic(fresh, { section: 'general', title: 'Тема', body: 'купи https://spam.example/x', ...form })), 'links');
   assert.equal(code(() => svc.createTopic(fresh, { section: 'general', title: 'Тема', body: 'смотри https://gravetidegame.com/site/', ...form })), 'ok', 'our own links are fine');
-  const t = svc.store.freshTopics(false, 1)[0];
+  const t = svc.store.freshTopics(false, 500).find((x) => x.title === 'Тема')!; // (the thread just written)
   assert.equal(code(() => svc.reply(fresh, { topic: t.id, body: 'раз', ...form })), 'ok');
   assert.equal(code(() => svc.reply(fresh, { topic: t.id, body: 'два', ...form })), 'rate');
   clock.t += 50_000;

@@ -100,7 +100,13 @@ test('a ship sent for from another harbour «плывёт к вам»; the serve
   ship.docked = far.id;
   p.docked = far.id;
   c.push({ t: 'berth', action: 'swap', index: 0 });
-  assert.match(c.last('toast')!.msg, new RegExp(`The Test Wake sails to you from ${game.portById(home)!.name}: she comes in 2 min, if you are still in port\\.`));
+  // (forum post 71, 2026-11-04: a berthed ship lies in her own harbour — elsewhere she is brought over, not called)
+  assert.match(c.last('toast')!.msg, new RegExp(`The Test Wake lies at ${game.portById(home)!.name}: change into her there, or have her brought here\\.`));
+  assert.equal(p.berthCall ?? null, null);
+  ship.docked = home;
+  p.docked = home;
+  c.push({ t: 'berth', action: 'swap', index: 0 });
+  assert.ok(p.berthCall, 'in her own harbour she is brought alongside');
   // her hold filled past the sloop's while she waited: refused when the ship comes, said why
   ship.cargo = { iron: 400 } as never; // (a trade good: planks are a light store since 2026-11-02)
   wall.t += BERTH_CALL_MS;
