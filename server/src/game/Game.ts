@@ -186,7 +186,8 @@ export const BOARD_LOSS_PURSE = 0.08;
 export const BOARD_LOSS_SHIELD = 180;
 import { stepBridges } from './bridgefx.ts';
 import { bumpBlow } from './bump.ts'; // forum 40: a bump costs her own hull
-import { BERTH_MEN_ASK, berthCallOff, berthCallSecond, berthsFull, buyBerth, buyFigurehead, buyPlan, callBerth, launchBuild, orderBuild, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
+import { BERTH_MEN_ASK, berthCallOff, berthCallSecond, berthsFull, buyBerth, buyFigurehead, buyPlan, callBerth, launchBuild, moveBerth, orderBuild, rehireAshore, sellBerth, stepBuiltShip, swapBerth } from './shipbuilding.ts';
+import { ASHORE_DAYS } from '../../../shared/src/data/berths.ts';
 import { ISLE_REACH, NEAR_FIGHT, abandonQuest, acceptQuest, answerOffer, bandRefusal, portBand, jobSanctions, questCargoLost, questEvent, questLandsHere, questHere, questXpOf, shareQuest, skipGuideStep, swearOath, switchPath } from './quests.ts';
 import { dailyRollover } from './dailies.ts';
 import { commonCollect, commonView, stepCommon } from './commongoal.ts';
@@ -2292,10 +2293,17 @@ export class Game {
     if (s.profile) changeRep(s.profile, faction, delta);
   }
 
-  /** A change of hulls that would leave men ashore (shipbuilding.ts BERTH_MEN_ASK): asked of her, not refused. */
+  /** A change of hulls with more men than the new one sleeps (shipbuilding.ts BERTH_MEN_ASK): asked of her, not refused,
+   *  with where they go (forum, Эдуард, post 72: nobody is paid off) — aboard the ship she leaves at the berth, or (a hull
+   *  traded in) ashore in this port for ASHORE_DAYS. */
   private menAsk(s: PlayerSession, why: string | null, again: Extract<ServerMsg, { t: 'berth_ask' }>['again']): string | null {
     if (!why || !why.endsWith(` ${BERTH_MEN_ASK}`)) return why;
-    this.sendTo(s, { t: 'berth_ask', men: Math.max(1, parseInt(why, 10) || 1), again });
+    const men = Math.max(1, parseInt(why, 10) || 1);
+    const ship = s.ship;
+    const traded = again.t === 'shipyard' && !again.keep && !ship?.cls.premium;
+    const port = ship?.docked ? this.portById(ship.docked) : null;
+    const room = ship ? Math.max(0, ship.crew - men) : undefined;
+    this.sendTo(s, { t: 'berth_ask', men, again, ...(room !== undefined ? { room } : {}), ...(traded ? { ashore: { port: port?.name ?? '', days: ASHORE_DAYS } } : { stay: ship?.loadout.name ?? '' }) });
     return null;
   }
 
@@ -3958,7 +3966,12 @@ export class Game {
           this.pushSelf(s, true);
           return;
         }
+        // «Перегнать сюда» (forum, Эдуард, post 70): a ship berthed elsewhere sailed round to this harbour.
+        if (msg.action === 'move') return portAction((pt) => moveBerth(this, s, pt, Math.trunc(Number(msg.index))));
         return portAction((pt) => (msg.action === 'sell' ? sellBerth(this, s, pt, Math.trunc(Number(msg.index))) : this.menAsk(s, callBerth(this, s, pt, Math.trunc(Number(msg.index)), msg.force === true), { t: 'berth', action: 'swap', index: Math.trunc(Number(msg.index)) })));
+      case 'crew_ashore':
+        // «Ваши люди на берегу» (forum post 72): her men waiting in this port, back aboard free.
+        return portAction((pt) => rehireAshore(this, s, pt));
       case 'plan_buy':
         return portAction((pt) => buyPlan(this, s, pt, msg.classId));
       case 'figurehead_buy':
@@ -4739,7 +4752,7 @@ export class Game {
           case 'no_board': // docs/24 C1: in port
             return err(setNoBoard(this, s, !!msg.on));
           case 'patent': // «Каперский патент» (owner, 2026-11-02): in a lawful harbour
-            return err(buyPatent(this, s));
+            return err(buyPatent(this, s, msg.confirm === true));
           case 'duel':
             return err(challengeDuel(this, s, msg.name, !!msg.fleet));
           case 'duel_answer':
@@ -4798,7 +4811,8 @@ export class Game {
           }
           case 'yard_berth': {
             const yard = islandYard(this, s, id);
-            return done(typeof yard === 'string' ? yard : swapBerth(this, s, yard, Math.trunc(Number(msg.index))));
+            // (at her island at once: the men over the hull's hammocks stay aboard the one she leaves — forum post 72)
+            return done(typeof yard === 'string' ? yard : swapBerth(this, s, yard, Math.trunc(Number(msg.index)), true));
           }
         }
         return;

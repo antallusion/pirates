@@ -2399,7 +2399,8 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'berth_ask':
       // forum 2026-10-30: the new hull has no hammocks for all her men — asked, then sent again with `force`
-      void ask(menAskText(m.men), LB('menYes')).then((ok) => ok && net.send({ ...m.again, force: true }));
+      // (forum post 72: told where the men go — aboard the ship left at the berth, or ashore here; nobody paid off)
+      void ask(menAskText(m.men, { stay: m.stay, ashore: m.ashore, room: m.room }), LB('menYes')).then((ok) => ok && net.send({ ...m.again, force: true }));
       break;
     case 'route':
       onRoute(m);

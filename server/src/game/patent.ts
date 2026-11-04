@@ -17,8 +17,10 @@ import { RANK_DISCOUNT } from '../../../shared/src/data/marque.ts';
 import { SKULL_PAD } from '../../../shared/src/data/colours.ts';
 import {
   PATENT_CUT, PATENT_LEVEL, PATENT_MAX_MS, PATENT_MS, PATENT_REP_BOARDED, PATENT_REP_SUNK, PATENT_SALLY_R, PATENT_SALLY_SEC, PATENT_SAY,
-  PATENT_WATERS_R, isIssuer, patentAllies, patentBought, patentEnemies, patentPrice, patentTithe, stanceOf,
+  PATENT_WATERS_R, isIssuer, patentAllies, patentBought, patentClash, patentEnemies, patentPrice, patentTithe, stanceOf,
 } from '../../../shared/src/data/patent.ts';
+import { resign, sanitizeService } from './marque.ts';
+import type { ServiceRec } from './marque.ts';
 import type { PatentIssuer } from '../../../shared/src/data/patent.ts';
 import type { PatentOfferView, PatentView } from '../../../shared/src/protocol.ts';
 import { dist } from '../../../shared/src/math.ts';
@@ -145,8 +147,16 @@ export function patentBlocked(game: Game, s: PlayerSession, port: Port | null | 
   return null;
 }
 
-/** Buy (or renew) the patent of the harbour she is in. */
-export function buyPatent(game: Game, s: PlayerSession): string | null {
+/** Her service, if this patent is its enemy's (patentClash): bought only once she has said yes, and it ends the service. */
+export function patentServiceClash(p: Profile, by: PatentIssuer): ServiceRec | null {
+  const sv = sanitizeService(p);
+  return sv && patentClash(sv.id, by) ? sv : null;
+}
+
+/** Buy (or renew) the patent of the harbour she is in. Her service stands — its rank, merit, pay and titles — unless the
+ *  issuer is its enemy (forum, Эдуард, post 70): then `confirm` must be given (the card's warning said what is lost),
+ *  and she leaves the service first. */
+export function buyPatent(game: Game, s: PlayerSession, confirm = false): string | null {
   const p = s.profile, ship = s.ship;
   if (!p || !ship) return 'No ship';
   if (!ship.docked) return 'Patents are sold in port.';
@@ -156,6 +166,9 @@ export function buyPatent(game: Game, s: PlayerSession): string | null {
   const by = port!.faction as PatentIssuer;
   const cost = patentCost(p, by);
   if (p.gold < cost) return lackSilver(cost, p.gold);
+  const clash = patentServiceClash(p, by);
+  if (clash && !confirm) return PATENT_SAY.clash;
+  if (clash) resign(game, s);
   p.gold -= cost;
   game.db.ledger(s.accountId, 'patent', -cost, by);
   const now = game.wallNow();
@@ -257,5 +270,8 @@ export function patentOfferView(game: Game, s: PlayerSession): PatentOfferView |
   if (!p || !port || port.raft || !isIssuer(port.faction)) return null;
   const by = port.faction;
   const held = patentOf(game, p);
-  return { by, price: patentCost(p, by), days: PATENT_MS / 86_400_000, enemies: patentEnemies(by), allies: patentAllies(by), blocked: patentBlocked(game, s, port), renew: held?.by === by, level: PATENT_LEVEL };
+  const sv = sanitizeService(p);
+  // (her service beside the offer: kept — rank and pay — or, the issuer its enemy, lost: forum post 70)
+  const service = sv ? { id: sv.id, rank: sv.rank, keeps: !patentClash(sv.id, by) } : undefined;
+  return { by, price: patentCost(p, by), days: PATENT_MS / 86_400_000, enemies: patentEnemies(by), allies: patentAllies(by), blocked: patentBlocked(game, s, port), renew: held?.by === by, level: PATENT_LEVEL, ...(service ? { service } : {}) };
 }

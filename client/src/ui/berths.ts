@@ -1,16 +1,16 @@
 // «Причал» (forum, Нефигугум 2026-10-30, post 26: «купив новый корабль старый пропадает навсегда? нет ни какого ангара/
 // причала»). The rules are the server's (shipbuilding.ts berthCap / swapBerth / buyBerth, ports.ts shipyardBuy):
 //  - the port's «Причал» page: her stored ships as cards — the picture, ⚓, hull, the class's numbers, her fittings —
-//    «Пересесть» at any harbour with a yard, «Продать» where she lies; the berths used of all, «+1 место» for doubloons;
+//    «Пересесть» and «Продать» in the port where she lies, «Перегнать сюда» from any other (forum post 70); the berths used of all, «+1 место» for doubloons;
 //  - the trade-in's two ways: «Обменять (сдать старый)» and «Купить и оставить старый на причале»;
 //  - the escorts' line in the yard's repair card («Починить сопровождение»).
 
 import type { ClientMsg, PortView } from '../../../shared/src/protocol.ts';
-import { BERTH_PRICE, BERTHS_CAP, BERTHS_FREE } from '../../../shared/src/data/berths.ts';
+import { ASHORE_DAYS, BERTH_PRICE, BERTHS_CAP, BERTHS_FREE, berthMoveQuote } from '../../../shared/src/data/berths.ts';
 import { levelRange } from '../../../shared/src/data/shiplevel.ts';
 import { GUNS, SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
-import { dict } from '../i18n.ts';
+import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/berth.ts';
 import type { ClientState } from '../state.ts';
 import { assetUrl } from '../assets.ts';
@@ -40,26 +40,37 @@ export function hullStats(classId: ShipClassId): string {
 export function berthsCard(view: PortView, state: ClientState): string {
   const self = state.self!;
   const cap = self.berthCap ?? BERTHS_FREE;
-  const yard = view.shipyard.tier > 0;
   const cur = SHIP_CLASSES[self.loadout.classId];
   const call = self.berthCall ?? null;
   const rows = self.berths.map((b, i) => {
     const c = SHIP_CLASSES[b.classId];
     const art = assetUrl(c.sprite);
     const isle = b.port.startsWith('isle:');
-    const here = b.port === view.portId;
-    const where = isle ? LB('isle') : LB('where', { port: placeName(state.ports.find((p) => p.id === b.port)?.name ?? b.port) });
-    const can = !isle && (here || yard);
+    const moving = b.move ?? null;
+    const here = b.port === view.portId && !moving;
+    // forum, Эдуард, post 70: she lies in her own port — changed into only there; from any other, «Перегнать сюда»
+    const lies = state.ports.find((p) => p.id === b.port);
+    const now = state.ports.find((p) => p.id === view.portId);
+    const metres = lies && now ? Math.hypot(lies.x - now.x, lies.y - now.y) : 0;
+    const name = (id: string) => placeName(state.ports.find((p) => p.id === id)?.name ?? id);
+    const km = (Math.round(metres / 100) / 10).toLocaleString(lang() === 'ru' ? 'ru-RU' : 'en-GB');
+    const where = isle ? LB('isle') : moving ? '' : here ? LB('whereHere') : LB('lies', { port: name(b.port), km });
+    const can = !isle && here;
     // forum 40: the ship sent for — her countdown, «Отменить» in place of «Пересесть»
     const coming = call?.index === i && call.port === view.portId;
-    const tip = coming ? LB('callOffHint') : isle ? LB('isle') : !yard && !here ? LB('noYard') : LB('swapHint');
+    const tip = coming ? LB('callOffHint') : isle ? LB('isle') : moving ? LB('movingHint') : !here ? LB('elsewhere', { port: name(b.port) }) : LB('swapHint');
+    const quote = !isle && !moving && !here && lies && now && !view.portId.startsWith('isle:') ? berthMoveQuote(metres) : null;
+    const mins = quote ? Math.ceil(quote.ms / 60_000) : 0;
+    const move = quote ? `<button type="button" class="btn btn-small btn-primary bth-move" data-act="berth_move" data-i="${i}" title="${esc(LB('moveHint', { min: mins, port: name(b.port) }))}" ${self.gold < quote.price ? 'disabled' : ''}>${esc(LB('move'))} · ${money(quote.price)} · ${esc(LB('moveTime', { min: mins }))}</button>` : '';
+    const going = moving ? `<small class="bth-coming bth-going" title="${esc(LB('movingHint'))}">${icon('stat_sails', '', 'ico-xs')}${etaHtml('moving', moving.at, '', name(moving.to))}</small>` : '';
+    const aboard = b.crew ? `<small class="bth-crew" title="${esc(LB('aboardHint'))}">${icon('stat_crew', '', 'ico-xs')}${esc(LB('aboard', { n: b.crew }))}</small>` : '';
     const guns = b.guns ? GUNS[b.guns[0]]?.name ?? '' : '';
     const meta = [b.level ? LB('lvl', { n: b.level }) : levelSpan(b.classId), LB('hull', { n: b.hull }), b.mods ? LB('mods', { n: b.mods }) : '', guns].filter(Boolean).join(' · ');
     return `<div class="card hull-card bth-card" data-berth="${i}"><div class="hull-art">${art ? `<img src="${art}" alt="" draggable="false" />` : ''}</div>
       <div class="hull-text"><b>${esc(placeName(b.name))}</b>${trophyTag(b.trophy)} <span class="muted">${esc(c.name)}</span>
-        <small class="bth-meta">${esc(meta)}</small>${hullStats(b.classId)}<small class="muted bth-where">${esc(where)}</small>
+        <small class="bth-meta">${esc(meta)}</small>${hullStats(b.classId)}${where ? `<small class="bth-where${here || isle ? ' muted' : ' bth-away'}">${esc(where)}</small>` : ''}${going}${aboard}
       ${coming ? `<small class="bth-coming" title="${esc(LB('comingHint'))}">${icon('stat_sails', '', 'ico-xs')}${etaHtml('coming', call.at)}</small>` : ''}</div>
-      <span class="bth-btns"><button type="button" class="btn btn-small${can && !coming ? ' btn-primary' : ''}" data-act="berth_swap" data-i="${i}" title="${esc(tip)}" ${can ? '' : 'disabled'}>${esc(LB(coming ? 'callOff' : 'swap'))}</button>${here && !isle && !coming ? `<button type="button" class="btn btn-small btn-danger" data-act="berth_sell" data-i="${i}" title="${esc(LB('sellHint'))}">${esc(LB('sell'))}</button>` : ''}</span></div>`;
+      <span class="bth-btns">${move}<button type="button" class="btn btn-small${can && !coming ? ' btn-primary' : ''}" data-act="berth_swap" data-i="${i}" title="${esc(tip)}" ${can ? '' : 'disabled'}>${esc(LB(coming ? 'callOff' : 'swap'))}</button>${here && !isle && !coming ? `<button type="button" class="btn btn-small btn-danger" data-act="berth_sell" data-i="${i}" title="${esc(LB('sellHint'))}">${esc(LB('sell'))}</button>` : ''}</span></div>`;
   }).join('');
   const more = cap < BERTHS_CAP
     ? `<button type="button" class="btn btn-small bth-buy" data-act="berth_buy" title="${esc(LB('buyHint', { n: BERTH_PRICE, max: BERTHS_CAP }))}">${esc(LB('buy'))} · ${fmt(BERTH_PRICE)}${icon('doubloon', '◈', 'ico-xs')}</button>`
@@ -80,8 +91,8 @@ export function etaText(at: number): string {
 
 /** A line with a live countdown in it: the words round it, the time ticking by itself (tickEtas) — the markup itself
  *  does not change from second to second, so a window that redraws only when its markup changes is left alone. */
-function etaHtml(key: 'coming' | 'comingLine', at: number, name = ''): string {
-  const [a, b] = LB(key, { name: placeName(name), t: '|T|' }).split('|T|');
+function etaHtml(key: 'coming' | 'comingLine' | 'moving', at: number, name = '', port = ''): string {
+  const [a, b] = LB(key, { name: placeName(name), port, t: '|T|' }).split('|T|');
   return `${esc(a)}<b class="bth-eta" data-eta="${at}">${etaText(at)}</b>${esc(b ?? '')}`;
 }
 
@@ -134,9 +145,12 @@ export function chooseTrade(state: ClientState, view: PortView, classId: ShipCla
   });
 }
 
-/** The server asks: men will not fit the hull (shipbuilding.ts BERTH_MEN_ASK). */
-export function menAskText(n: number): string {
-  return LB('menAsk', { n });
+/** The server asks: men will not fit the hull (shipbuilding.ts BERTH_MEN_ASK) — and says where they go (forum, Эдуард,
+ *  post 72: nobody is paid off): aboard the ship left at the berth, or ashore in this port for ASHORE_DAYS. */
+export function menAskText(n: number, where: { stay?: string; ashore?: { port: string; days: number }; room?: number } = {}): string {
+  const room = where.room !== undefined ? LB('menRoom', { room: where.room }) : '';
+  if (where.ashore) return `${LB('menAshore', { n, port: placeName(where.ashore.port), days: where.ashore.days || ASHORE_DAYS })}${room}`;
+  return `${LB('menStay', { n, ship: placeName(where.stay ?? '') })}${room}`;
 }
 
 export type { ClientMsg };

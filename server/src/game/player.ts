@@ -72,7 +72,7 @@ import { dailyView, newDaily, sanitizeDaily } from './dailies.ts';
 import type { DailyState } from '../../../shared/src/data/dailies.ts';
 import { berthCap, calledBerth, sanitizeShipbuilding } from './shipbuilding.ts';
 import type { BerthCall } from './shipbuilding.ts';
-import type { Berth, BuildOrder } from './shipbuilding.ts';
+import type { Ashore, Berth, BuildOrder } from './shipbuilding.ts';
 import type { FigureheadId, Plan } from '../../../shared/src/data/shipbuild.ts';
 import type { Oath, QuestLog } from './quests.ts';
 import { clampLevel, initialLevel, shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
@@ -86,7 +86,7 @@ import type { OfficerRole, TraitId } from '../../../shared/src/data/crew.ts';
 import type { SagaEntry } from '../../../shared/src/data/saga.ts';
 import type { LogEntry } from '../../../shared/src/data/captainlog.ts';
 import type { RenownProfile } from './renown.ts';
-import { armyFromSave, armySlots } from '../../../shared/src/data/army.ts';
+import { armyFromSave, armyMen, armySlots } from '../../../shared/src/data/army.ts';
 import type { ArmyStack } from '../../../shared/src/data/army.ts';
 import { heroOf, heroView } from './hero.ts';
 import type { HeroRec } from './hero.ts';
@@ -159,6 +159,8 @@ export interface Profile {
   berthsBought?: number;
   /** A berthed ship sent for, on her way to her (forum 40, shipbuilding.ts callBerth). */
   berthCall?: BerthCall | null;
+  /** Her men waiting ashore after a hull was traded in with more of them than the new one sleeps (forum post 72). */
+  ashore?: Ashore[];
   figureheads: FigureheadId[]; // carved figureheads found, not yet fitted
   exotic: Partial<Record<GoodId, number>>; // units bought in lawless waters (Exotic Goods)
   salvageDay: number; // Salvage King: the game day of the last raising
@@ -749,7 +751,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     pathSwitchAt: p.pathSwitchAt,
     builds: p.builds.map((b) => ({ id: b.id, port: b.port, classId: b.classId, name: b.name, done: b.done, start: b.start, frame: b.build.frame, plank: b.build.plank, quality: b.build.quality })),
     plans: p.plans.map((x) => ({ id: x.id, classId: x.classId, quality: x.quality, variants: x.variants, uses: x.uses })),
-    berths: p.berths.map((b) => ({ port: b.port, name: b.loadout.name, classId: b.loadout.classId, hull: Math.round(b.hull * 100), level: shipLevelOf(b.loadout), mods: Object.values(b.loadout.modules ?? {}).reduce((a, n) => a + (n ?? 0), 0), guns: [b.loadout.guns.port, b.loadout.guns.starboard], ...(b.loadout.mount ? { mount: b.loadout.mount } : {}), ...(b.loadout.trophy ? { trophy: b.loadout.trophy } : {}) })),
+    berths: p.berths.map((b) => ({ port: b.port, ...(b.move ? { move: { to: b.move.to, at: b.move.at } } : {}), ...(b.army?.length ? { crew: armyMen(b.army) } : {}), name: b.loadout.name, classId: b.loadout.classId, hull: Math.round(b.hull * 100), level: shipLevelOf(b.loadout), mods: Object.values(b.loadout.modules ?? {}).reduce((a, n) => a + (n ?? 0), 0), guns: [b.loadout.guns.port, b.loadout.guns.starboard], ...(b.loadout.mount ? { mount: b.loadout.mount } : {}), ...(b.loadout.trophy ? { trophy: b.loadout.trophy } : {}) })),
     berthCap: berthCap(p),
     // forum 40: the ship sent for — which berth, from where, when she comes (wall ms)
     berthCall: p.berthCall && calledBerth(p) >= 0 ? { index: calledBerth(p), name: p.berthCall.name, port: p.berthCall.port, at: p.berthCall.at } : null,

@@ -129,6 +129,9 @@
 .fy-km { font-variant-numeric: tabular-nums; opacity: 0.85; white-space: nowrap; font-size: 13px; }
 .fy-row--locked { opacity: 0.6; filter: grayscale(0.85); }
 .fy-row--locked small { opacity: 1; font-style: italic; }
+/* forum, Эдуард, post 71: a hub whose harbour is closed to her — the reason in red, whole (it wraps), no passage */
+.fy-row--closed { background: rgba(160, 40, 30, 0.12); }
+.fy-row--closed .fy-to small.fy-closed { color: var(--bad, #e2675a); opacity: 1; white-space: normal; flex-basis: 100%; display: flex; gap: 4px; align-items: flex-start; line-height: 1.25; }
 .fy-row .fy-go { min-height: 44px; min-width: 128px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .fy-price { white-space: nowrap; }
 .fy--compact .fy-row { min-height: 40px; }

@@ -5913,6 +5913,10 @@ html.app-paused *, html.app-paused *::before, html.app-paused *::after { animati
 .yd-esc small { font-size: 11px; line-height: 1.3; display: block; }
 /* forum 40: the berthed ship sent for — her countdown on her card and in the port's head (berths.ts berthCallFigure) */
 .bth-card .bth-coming { display: flex; align-items: center; gap: 4px; margin-top: 3px; font: 600 12px var(--sans); color: var(--gold, #e0b45a); }
+/* forum, Эдуард, post 70/72: where she lies (another port: amber), «Перегнать сюда», the men left aboard */
+.bth-card .bth-away { display: block; color: var(--k-warn, #e6a04a); font-weight: 600; }
+.bth-card .bth-crew { display: flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 11.5px; color: var(--k-bone, #cfc3a3); }
+.bth-btns .bth-move { white-space: normal; line-height: 1.15; min-height: 44px; text-align: center; }
 .bth-eta { font-variant-numeric: tabular-nums; color: var(--gold, #e0b45a); }
 .w-fig.bth-fig { cursor: pointer; gap: 4px; border-color: rgba(224, 180, 90, 0.55); color: var(--bone, #e8d9a8); font: inherit; background: rgba(40, 28, 12, 0.72); white-space: nowrap; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; }
 .w-fig.bth-fig > span { overflow: hidden; text-overflow: ellipsis; }

@@ -11,7 +11,9 @@ import type { Colours } from '../../../shared/src/data/colours.ts';
 import { SF } from '../../../shared/src/protocol.ts';
 import type { ClientMsg, PatentOfferView, PatentView, ShipInfo } from '../../../shared/src/protocol.ts';
 import { PATENT_CUT } from '../../../shared/src/data/patent.ts';
-import { dict } from '../i18n.ts';
+import { RANKS, SERVICES } from '../../../shared/src/data/marque.ts';
+import { ask } from './confirm.ts';
+import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/flags.ts';
 import type { ClientState } from '../state.ts';
 import { esc, icon } from './dom.ts';
@@ -158,11 +160,33 @@ export function patentCard(state: ClientState): string {
   const lines = [L('pt.prey', { list: names(enemies) }), L('pt.l1'), L('pt.l2', { allies: names([by, ...allies]) }), L('pt.l3', { cut: Math.round(PATENT_CUT * 100) })];
   const cost = offer ? offer.price.toLocaleString('ru-RU') : '';
   const btn = offer && !offer.blocked
-    ? `<button type="button" class="btn btn-small fl-pat-buy" data-patent="1"${(state.self?.gold ?? 0) < offer.price ? ' disabled' : ''}>${esc(offer.renew ? L('pt.renew', { days, cost }) : L('pt.buy', { cost }))}</button>`
+    ? `<button type="button" class="btn btn-small fl-pat-buy" data-patent="1"${serviceClashAsk(offer) ? ` data-ask="${esc(serviceClashAsk(offer))}"` : ''}${(state.self?.gold ?? 0) < offer.price ? ' disabled' : ''}>${esc(offer.renew ? L('pt.renew', { days, cost }) : L('pt.buy', { cost }))}</button>`
     : '';
   const why = offer?.blocked ? `<p class="fl-pat-why">${esc(serverWords(offer.blocked))}</p>` : !offer ? `<p class="fl-pat-why">${esc(L('pt.atSea'))}</p>` : '';
+  const sv = patentServiceLine(offer);
   return `<div class="fl-opt fl-opt--patent fl-pat${held ? ' on' : ''}" role="group" aria-label="${esc(L('pt.title'))}">
-    ${icon(`faction_${by}`, '⚓', 'fl-pat-ico')}<span class="fl-t"><b>${esc(L('pt.title'))}</b><span class="fl-whose">${esc(L('pt.whose', { city: FACTIONS[by].short, days }))}</span><small>${lines.map((x, i) => `<span class="fl-ln${i === 0 ? ' fl-prey' : ''}">${esc(x)}</span>`).join('')}</small>${state_}</span>${btn}</div>${why}`;
+    ${icon(`faction_${by}`, '⚓', 'fl-pat-ico')}<span class="fl-t"><b>${esc(L('pt.title'))}</b><span class="fl-whose">${esc(L('pt.whose', { city: FACTIONS[by].short, days }))}</span><small>${lines.map((x, i) => `<span class="fl-ln${i === 0 ? ' fl-prey' : ''}">${esc(x)}</span>`).join('')}</small>${state_}</span>${btn}</div>${sv}${why}`;
+}
+
+/** Her service beside the patent's offer (forum, Эдуард, post 70: «потерял все регалии и привилегии Короны, хотя Лига —
+ *  союзник Короны»): kept — said in green, so nobody fears for it; lost (the issuer its enemy) — said in red, and asked
+ *  again before the silver moves. */
+function serviceWords(offer: PatentOfferView): { of: string; to: string; rank: string; by: string } | null {
+  const v = offer.service;
+  if (!v) return null;
+  const ru = lang() === 'ru' ? 1 : 0;
+  return { of: SERVICES[v.id].of[ru].replace(/^of /, ''), to: L(`sv.to.${v.id}`), rank: RANKS[v.rank]?.[ru] ?? '', by: FACTIONS[offer.by].short };
+}
+export function patentServiceLine(offer: PatentOfferView | null | undefined): string {
+  const w = offer ? serviceWords(offer) : null;
+  if (!offer?.service || !w) return '';
+  if (!offer.service.keeps) return `<p class="fl-pat-sv fl-pat-sv--lose" role="alert">${icon('danger', '⚠', 'ico-sm')}<span>${esc(L('pt.svLose', w))}</span></p>`;
+  return `<p class="fl-pat-sv fl-pat-sv--keep">${icon('ok', '✓', 'ico-sm')}<span>${esc(L(offer.service.id === offer.by ? 'pt.svOwn' : 'pt.svKeep', w))}</span></p>`;
+}
+/** The question before a patent of her service's enemy (the buy button carries it), or '' when the patent keeps it. */
+export function serviceClashAsk(offer: PatentOfferView | null | undefined): string {
+  const w = offer?.service && !offer.service.keeps ? serviceWords(offer) : null;
+  return w ? L('pt.svAsk', w) : '';
 }
 
 /** «6 дн. 23 ч» / «5 ч 12 мин» left on a patent. */
@@ -206,7 +230,11 @@ export function portHint(): string {
 /** The card's buttons: an order for colours, boarding on or off. */
 export function bindColours(root: HTMLElement, send: (m: ClientMsg) => void): void {
   root.querySelectorAll<HTMLButtonElement>('[data-pardon]').forEach((el) => (el.onclick = () => send({ t: 'pardon' })));
-  root.querySelectorAll<HTMLButtonElement>('[data-patent]').forEach((el) => (el.onclick = () => send({ t: 'pvp', action: 'patent' })));
+  root.querySelectorAll<HTMLButtonElement>('[data-patent]').forEach((el) => (el.onclick = () => {
+    // (her service's enemy's patent: the warning first, the silver only on yes — forum post 70)
+    if (el.dataset.ask) void ask(el.dataset.ask, L('pt.svGo'), L('pt.svNo')).then((ok) => ok && send({ t: 'pvp', action: 'patent', confirm: true }));
+    else send({ t: 'pvp', action: 'patent' });
+  }));
   root.querySelectorAll<HTMLButtonElement>('[data-colours]').forEach((el) => (el.onclick = () => send({ t: 'pvp', action: 'colours', flag: el.dataset.colours as Colours })));
   root.querySelectorAll<HTMLButtonElement>('[data-noboard]').forEach((el) => (el.onclick = () => send({ t: 'pvp', action: 'no_board', on: el.dataset.noboard === '1' })));
 }

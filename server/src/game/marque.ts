@@ -11,7 +11,7 @@ import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { itemValue, makeItem } from '../../../shared/src/data/items.ts';
 import { encodeLook } from '../../../shared/src/data/looks.ts';
 import {
-  BAN_MS, MARK_R, ORDER_FAIL_MERIT, ORDER_MIN_SEC, ORDER_NEED, ORDER_PAY, QUARRY_R, RANK_DISCOUNT, RANK_PAY, RANK_RARITY,
+  BAN_MS, MARK_R, ORDER_FAIL_MERIT, ORDER_MIN_SEC, ORDER_NEED, ORDER_PAY, QUARRY_R, RANK_DISCOUNT, RANK_MERIT, RANK_PAY, RANK_RARITY,
   RANKS, SERVICES, SERVICE_IDS, SUNSET_HOUR, liveryOf, rankOf, serviceTitle,
 } from '../../../shared/src/data/marque.ts';
 import type { OrderKind, ServiceId } from '../../../shared/src/data/marque.ts';
@@ -272,9 +272,80 @@ function complete(game: Game, s: PlayerSession): void {
   game.pushSelf(s, true);
 }
 
+// ------------------------------------------------------------------ an officer's rank put back (forum, Эдуард, post 70)
+
+/** Her service set to a rank by hand (the harbour master's: `/service name flag rank`): its merit at least the rank's,
+ *  its title, its pay from today; an order in hand kept if the flag is the same. */
+export function setServiceRank(game: Game, p: Profile, id: ServiceId, rank: number, s?: PlayerSession | null): void {
+  const r = Math.max(0, Math.min(RANKS.length - 1, Math.trunc(rank)));
+  const was = sanitizeService(p);
+  const same = was?.id === id ? was : null;
+  p.service = { id, merit: Math.max(same?.merit ?? 0, RANK_MERIT[r]), rank: r, payDay: same?.payDay ?? -1, order: same?.order ?? null, bought: same?.bought ?? [] };
+  if (id === 'crown' && !p.oath) p.oath = 'marque';
+  delete p.serviceBan;
+  setTitle(p, id, r);
+  if (s) {
+    for (let k = 1; k <= r; k++) unlockDeed(game, s, `${id}_${k}`);
+    game.sendTo(s, { t: 'toast', msg: `The Admiralty restores your rank: ${serviceTitle(id, r)}.`, kind: 'gold' });
+    refresh(game, s);
+  }
+}
+
+/** Ranks waiting for a captain who is ashore (by her name, lower case): put on when she comes aboard. Kept in the kv. */
+const RESTORE_KEY = 'service_restore';
+type Restores = Record<string, { id: ServiceId; rank: number }>;
+const restores = new WeakMap<Game, Restores>();
+function restoreBook(game: Game): Restores {
+  let r = restores.get(game);
+  if (!r) restores.set(game, (r = game.db.getKv<Restores>(RESTORE_KEY) ?? {}));
+  return r;
+}
+
+/** `/service <name> <crown|league|confederacy> <0-4>`: her service set to that rank now if she is aboard, else when she
+ *  next comes aboard (once). `/service <name>`: what she holds. */
+export function adminService(game: Game, args: string[]): string {
+  const rank = Number(args[args.length - 1]);
+  const id = args[args.length - 2] as ServiceId;
+  if (args.length >= 3 && (SERVICE_IDS as string[]).includes(id) && Number.isInteger(rank) && rank >= 0 && rank < RANKS.length) {
+    const name = args.slice(0, -2).join(' ');
+    const s = game.sessionByName(name);
+    if (s?.profile) {
+      setServiceRank(game, s.profile, id, rank, s);
+      game.saveSession(s);
+      return `${s.name}: ${serviceTitle(id, rank)}, merit ${s.profile.service!.merit}.`;
+    }
+    const book = restoreBook(game);
+    book[name.toLowerCase()] = { id, rank };
+    game.db.setKv(RESTORE_KEY, book);
+    return `${name} is not aboard: ${serviceTitle(id, rank)} is put on when she next comes aboard.`;
+  }
+  const name = args.join(' ');
+  if (!name) return 'Usage: /service name [crown|league|confederacy 0-4]';
+  const p = game.sessionByName(name)?.profile;
+  const sv = p ? sanitizeService(p) : null;
+  const queued = restoreBook(game)[name.toLowerCase()];
+  return `${name}: ${p ? (sv ? `${serviceTitle(sv.id, sv.rank)}, merit ${sv.merit}` : 'serves no one') : 'not aboard'}${queued ? `; waiting: ${serviceTitle(queued.id, queued.rank)}` : ''}.`;
+}
+
+/** A rank waiting for her (adminService): put on as she comes aboard, once. */
+function claimRestore(game: Game, s: PlayerSession): void {
+  const book = restoreBook(game);
+  const key = s.name.toLowerCase();
+  const r = book[key];
+  if (!r || !s.profile) return;
+  delete book[key];
+  game.db.setKv(RESTORE_KEY, book);
+  const sv = sanitizeService(s.profile);
+  if (sv && sv.id === r.id && sv.rank >= r.rank) return; // (she earned it back meanwhile)
+  setServiceRank(game, s.profile, r.id, r.rank, s);
+  game.saveSession(s);
+}
+
 /** Every two seconds: the law's eye on the lawful services' officers; sunsets; the patrol marks; the quarry sails. */
 export function stepService(game: Game): void {
+  const waiting = Object.keys(restoreBook(game)).length > 0;
   for (const s of game.sessions) {
+    if (waiting) claimRestore(game, s);
     const p = s.profile;
     const sv = p ? sanitizeService(p) : null;
     if (!p || !sv) continue;

@@ -54,7 +54,9 @@ import { ESCORT_OFFERS } from './fleet.ts';
 import { farVoyage } from './questlocal.ts';
 import { bandRefusal, eventFavor, farOf, payOptions, portBand, questBand, questBandBlocked, questDest, questIsleBlocked, questOffers, questXpOf, shipLevelOfQuest } from './quests.ts';
 import { todaysElite } from './elite.ts';
-import { berthFit, berthsFull, berthsFullWhy, BERTH_MEN_ASK, woodAvailable } from './shipbuilding.ts';
+import { ashoreHere, berthFit, berthsFull, berthsFullWhy, BERTH_MEN_ASK, landMen, woodAvailable } from './shipbuilding.ts';
+import { armyMen, armyTidy } from '../../../shared/src/data/army.ts';
+import { ASHORE_DAYS } from '../../../shared/src/data/berths.ts';
 import { PLAN_REP, WOODS, YARD_FACTIONS_WITH_PLANS, carvedAt } from '../../../shared/src/data/shipbuild.ts';
 import type { WoodId } from '../../../shared/src/data/shipbuild.ts';
 import { CAPTAINS_HOUSES } from '../../../shared/src/data/quests.ts';
@@ -613,13 +615,17 @@ export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: S
   if (p.gold < cost) return lackMore(`Needs ${cost} silver after trade-in`, cost, p.gold);
   const gun = defaultGunFor(def);
   const newLoadout: ShipLoadout = { classId, name: ship.loadout.name, guns: { port: gun, starboard: gun }, modules: {}, mount: def.fixedMount };
-  // Her army goes across with her: men past the new hull's hammocks are asked about first (forum 2026-10-30).
+  // Her army goes across with her: men past the new hull's hammocks are asked about first (forum 2026-10-30) — and never
+  // paid off (forum, Эдуард, post 72): kept, the old ship keeps them aboard at her berth; traded in, they wait ashore
+  // here ASHORE_DAYS and sign on again free in the tavern when there is room.
   const fit = berthFit(s, newLoadout);
   if (fit.menOver > 0 && !force) return `${fit.menOver} ${BERTH_MEN_ASK}`;
   const back = keep ? null : takeGearBack(p, ship.loadout); // the old hull's gear comes ashore into the locker
   if (back) return back;
   p.gold -= cost;
-  if (keep) p.berths.push({ port: port.id, loadout: ship.loadout, hull: ship.hull / Math.max(1, ship.stats.hullMax) });
+  const oldName = ship.loadout.name;
+  const left = fit.menOver > 0 ? ship.loseMen(fit.menOver) : [];
+  if (keep) p.berths.push({ port: port.id, loadout: ship.loadout, hull: ship.hull / Math.max(1, ship.stats.hullMax), ...(left.length ? { army: armyTidy(left) } : {}) });
   // The old deck mount is sold back to the yard.
   else if (ship.loadout.mount) {
     const back = Math.round(MOUNTS[ship.loadout.mount].price * 0.4);
@@ -630,6 +636,14 @@ export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: S
   p.loadout = newLoadout;
   ship.gunsDisabled = { port: 0, starboard: 0 };
   ship.recompute(game.now);
+  if (left.length) {
+    const n = armyMen(left);
+    if (keep) game.toastShip(ship, `${n} men stay aboard the ${oldName} at the berth: they come back aboard when you change into her again.`, 'info');
+    else {
+      landMen(game, p, port.id, left);
+      game.toastShip(ship, `${n} of your men go ashore here: they wait in the tavern ${ASHORE_DAYS} days and sign on again free when there is room.`, 'info');
+    }
+  }
   ship.hull = ship.stats.hullMax;
   ship.sails = ship.stats.sailHpMax;
   ship.rudderHp = 1;
@@ -874,6 +888,12 @@ export function buyChart(game: Game, s: PlayerSession, port: Port, region: Regio
   return null;
 }
 
+/** «Ваши люди на берегу» (forum post 72): her men waiting in this port, and till when. */
+function ashoreView(game: Game, p: Profile, port: string): Pick<TavernView, 'ashore'> {
+  const a = ashoreHere(game, p, port);
+  return a ? { ashore: { n: armyMen(a.army), until: a.until } } : {};
+}
+
 function tavernView(game: Game, port: Port, p: Profile, ship: ShipEntity, s?: PlayerSession): TavernView {
   const t = tavernOf(game, port);
   const costs = {} as Record<Profession, number>;
@@ -889,5 +909,6 @@ function tavernView(game: Game, port: Port, p: Profile, ship: ShipEntity, s?: Pl
     officers: t.officers.map((o) => ({ ...o, taken: t.hired.includes(o.id) || (!!o.unique && (p.company.uniquesGone.includes(o.unique) || p.company.officers.some((x) => x.unique === o.unique))) })),
     pressGang: REGIONS[port.region].safety === 'lawless',
     dregs: REGIONS[port.region].safety === 'lawless' && ship.rank('cmd_press_gang') >= 2,
+    ...ashoreView(game, p, port.id),
   };
 }

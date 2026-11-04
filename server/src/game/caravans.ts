@@ -21,6 +21,7 @@ import { isNight } from '../../../shared/src/constants.ts';
 import { dist } from '../../../shared/src/math.ts';
 import type { CaravanView } from '../../../shared/src/protocol.ts';
 import { Rng } from '../../../shared/src/rng.ts';
+import type { ArmyStack } from '../../../shared/src/data/army.ts';
 import type { Cargo, ShipLoadout } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
@@ -62,7 +63,8 @@ export interface Caravan {
   /** A turned captain at the helm, with his gifts and loyalty (docs/12 P10 #16). */
   skipperRec?: Skipper;
   island: number;
-  ships: { loadout: ShipLoadout; hull: number }[];
+  /** (`army`: the men left aboard her at the berth sail with her and come home with her — forum post 72) */
+  ships: { loadout: ShipLoadout; hull: number; army?: ArmyStack[] }[];
   escorts: number;
   task: CaravanTask;
   outposts: string[];
@@ -241,13 +243,13 @@ export function launchCaravan(game: Game, s: PlayerSession, o: LaunchOrder): str
   const slots = caravanSlots(game, s);
   if (mine.length >= slots) return `Your island sends no more caravans: ${mine.length} at sea.`;
   const key = `isle:${h.island}`;
-  const idx = [...new Set((o.ships ?? []).map((i) => Math.trunc(Number(i))))].filter((i) => p.berths[i]?.port === key && ['trade', 'all', 'fish'].includes(hullRole(p.berths[i].loadout.classId)));
+  const idx = [...new Set((o.ships ?? []).map((i) => Math.trunc(Number(i))))].filter((i) => p.berths[i]?.port === key && !p.berths[i].move && ['trade', 'all', 'fish'].includes(hullRole(p.berths[i].loadout.classId)));
   if (!idx.length) return 'Only cargo hulls berthed at your island sail in a caravan.';
   const escorts = Math.max(0, Math.min(MAX_ESCORTS, Math.trunc(Number(o.escorts) || 0)));
   const S = cs(game);
   const c: Caravan = {
     id: `cv_${s.accountId}_${S.seq++}_${Math.floor(game.now)}`, owner: s.accountId, ownerName: s.name, name: `${s.name}'s Caravan`, skipper: '', island: h.island,
-    ships: idx.map((i) => ({ loadout: p.berths[i].loadout, hull: p.berths[i].hull })), escorts, task: o.task,
+    ships: idx.map((i) => ({ loadout: p.berths[i].loadout, hull: p.berths[i].hull, ...(p.berths[i].army?.length ? { army: p.berths[i].army } : {}) })), escorts, task: o.task,
     outposts: (o.outposts ?? []).filter((id) => outposts(game)[id]?.owner === s.accountId), port: o.port && game.portById(o.port) ? o.port : null, port2: o.port2 && game.portById(o.port2) ? o.port2 : null,
     goods: (o.goods ?? []).filter((g) => GOODS[g]), minPrice: Math.max(0.5, Math.min(1.5, Number(o.minPrice) || 0.9)),
     orders: { repeat: !!o.orders?.repeat, avoidLawless: !!o.orders?.avoidLawless, nightInPort: !!o.orders?.nightInPort, onAttack: (['fight', 'flee', 'dump', 'surrender'] as OnAttack[]).includes(o.orders?.onAttack) ? o.orders.onAttack : 'flee' },
@@ -684,8 +686,9 @@ function finish(game: Game, c: Caravan): void {
   // The hulls to their berths, what she could not unload with them.
   const p = s?.profile;
   const key = `isle:${c.island}`;
-  if (p) for (const x of c.ships) p.berths.push({ port: key, loadout: x.loadout, hull: x.hull });
-  else pendingBerths(game, c.owner, c.ships.map((x) => ({ port: key, loadout: x.loadout, hull: x.hull })));
+  const home = c.ships.map((x) => ({ port: key, loadout: x.loadout, hull: x.hull, ...(x.army?.length ? { army: x.army } : {}) }));
+  if (p) p.berths.push(...home);
+  else pendingBerths(game, c.owner, home);
   delete caravans(game)[c.id];
   touch(game);
   if (s) game.sendTo(s, { t: 'toast', msg: `Caravan ${c.name} is home.`, kind: 'good' });
@@ -693,15 +696,15 @@ function finish(game: Game, c: Caravan): void {
 }
 
 /** Berths waiting for an owner who was away when her caravan came home. */
-function pendingBerths(game: Game, account: number, list: { port: string; loadout: ShipLoadout; hull: number }[]): void {
-  const all = game.db.getKv<Record<string, { port: string; loadout: ShipLoadout; hull: number }[]>>('caravan_berths') ?? {};
+function pendingBerths(game: Game, account: number, list: { port: string; loadout: ShipLoadout; hull: number; army?: ArmyStack[] }[]): void {
+  const all = game.db.getKv<Record<string, { port: string; loadout: ShipLoadout; hull: number; army?: ArmyStack[] }[]>>('caravan_berths') ?? {};
   all[account] = [...(all[account] ?? []), ...list];
   game.db.setKv('caravan_berths', all);
 }
 
 /** On a captain's return: the hulls that came home while she was away. */
 export function claimBerths(game: Game, s: PlayerSession): void {
-  const all = game.db.getKv<Record<string, { port: string; loadout: ShipLoadout; hull: number }[]>>('caravan_berths');
+  const all = game.db.getKv<Record<string, { port: string; loadout: ShipLoadout; hull: number; army?: ArmyStack[] }[]>>('caravan_berths');
   const mine = all?.[s.accountId];
   if (!mine?.length || !s.profile) return;
   s.profile.berths.push(...mine);

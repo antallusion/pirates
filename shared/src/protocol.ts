@@ -193,7 +193,11 @@ export type ClientMsg =
   | { t: 'oath'; oath: 'code' | 'marque' }
   | { t: 'build'; req: { classId: ShipClassId; name: string; frame: WoodId; plank: WoodId; rares: Partial<Record<RareSlot, GoodId>>; figurehead?: FigureheadId; planId?: string; master?: boolean } }
   | { t: 'build_launch'; id: string }
-  | { t: 'berth'; action: 'swap' | 'sell'; index: number; /** «Пересесть»: the men over her hammocks paid off (asked first). */ force?: boolean }
+  | { t: 'berth'; action: 'swap' | 'sell'; index: number; /** «Пересесть»: the men over her hammocks told where they go — aboard the ship left at the berth (asked first; forum post 72). */ force?: boolean }
+  /** «Перегнать сюда» (forum, Эдуард, post 70): a ship berthed in another harbour sailed round to this one. */
+  | { t: 'berth'; action: 'move'; index: number }
+  /** «Ваши люди на берегу» (forum post 72): her men waiting in this port come back aboard, free, as far as there is room. */
+  | { t: 'crew_ashore' }
   | { t: 'berth'; action: 'buy' }
   /** The yard's tree of hulls (docs/20): learn a hull with her parents' experience and the free pool. */
   | { t: 'research'; classId: ShipClassId }
@@ -438,7 +442,7 @@ export type ClientMsg =
   /** docs/24 D1–D2: the colours ordered in port (they go up a while after), and «Абордаж: выкл» (C1, in port). */
   | { t: 'pvp'; action: 'colours'; flag: Colours }
   | { t: 'pvp'; action: 'no_board'; on: boolean }
-  | { t: 'pvp'; action: 'patent' } // «Каперский патент» (owner, 2026-11-02): buy or renew in a lawful harbour
+  | { t: 'pvp'; action: 'patent'; /** her service's enemy's patent: she was warned and said yes (forum post 70) */ confirm?: boolean } // «Каперский патент» (owner, 2026-11-02): buy or renew in a lawful harbour
   | { t: 'pvp'; action: 'duel'; name: string; fleet: boolean }
   | { t: 'pvp'; action: 'duel_answer'; id: number; accept: boolean }
   | { t: 'pvp'; action: 'forfeit' }
@@ -875,7 +879,7 @@ export interface PrivateState {
   /** Shipbuilding (docs/02 §3). */
   builds: { id: string; port: string; classId: ShipClassId; name: string; done: number; start: number; frame: WoodId; plank: WoodId; quality: PlanQuality }[];
   plans: { id: string; classId: ShipClassId | null; quality: PlanQuality; variants: VariantId[]; uses: number }[];
-  berths: { port: string; name: string; classId: ShipClassId; hull: number; /** Her ⚓, her fittings' levels in all, her guns (port, starboard), her deck mount (forum 2026-10-30: «Причал»). */ level?: number; mods?: number; guns?: [GunId, GunId]; mount?: MountId; trophy?: TrophyHistory }[];
+  berths: { port: string; /** «Перегнать сюда» under way: where to, in by (wall ms; forum post 70). */ move?: { to: string; at: number }; /** The men left aboard her (forum post 72). */ crew?: number; name: string; classId: ShipClassId; hull: number; /** Her ⚓, her fittings' levels in all, her guns (port, starboard), her deck mount (forum 2026-10-30: «Причал»). */ level?: number; mods?: number; guns?: [GunId, GunId]; mount?: MountId; trophy?: TrophyHistory }[];
   /** Her berths in all: the free ones (two) and those bought (server shipbuilding.ts berthCap). */
   berthCap?: number;
   /** A berthed ship sent for (forum 40: «Пересесть» takes two minutes): her berth's index, her name, the harbour she
@@ -979,7 +983,8 @@ export interface FerryView {
   /** `locked`: a hub she has not discovered yet (never visited, under her fog): greyed, no passage. */
   /** `price`: hers (the flag's ×2, the quest's ×0.25); `base`: the plain price; `quest`: the hub nearest an active
    *  quest's goal («скидка за задание», forum post 49). */
-  routes: { to: string; km: number; price: number; base?: number; quest?: boolean; locked?: boolean }[];
+  /** `closed`: the hub's harbour would not take her — why (the server's words; forum post 71): marked, no passage. */
+  routes: { to: string; km: number; price: number; base?: number; quest?: boolean; locked?: boolean; closed?: string }[];
   left: number;
   why: string | null;
   /** She flies the pirate flag: every price ×2. */
@@ -1090,6 +1095,9 @@ export interface TavernView {
   officers: { id: string; name: string; role: OfficerRole; level: number; traits: TraitId[]; price: number; loyalty: number; unique?: string; story?: string; rep?: number; taken: boolean }[];
   pressGang: boolean;
   dregs: boolean;
+  /** «Ваши люди на берегу» (forum post 72): her men waiting in this port after a hull was traded in, signed on again
+   *  free while there is room, until its time is up (wall ms). */
+  ashore?: { n: number; until: number };
 }
 
 export interface PortView {
@@ -2266,7 +2274,7 @@ export type ServerMsg =
   | { t: 'board_risk'; risk: BoardRisk }
   /** «Пересесть» or a new hull (forum 2026-10-30): `men` of her army will not fit the hull — asked, then sent `again` with
    *  `force` (they are paid off ashore). */
-  | { t: 'berth_ask'; men: number; again: Extract<ClientMsg, { t: 'berth'; action: 'swap' | 'sell' }> | Extract<ClientMsg, { t: 'shipyard'; action: 'buy_ship' }> }
+  | { t: 'berth_ask'; men: number; again: Extract<ClientMsg, { t: 'berth'; action: 'swap' | 'sell' }> | Extract<ClientMsg, { t: 'shipyard'; action: 'buy_ship' }>; /** Where they go (forum post 72: nobody is paid off): aboard the ship she leaves at the berth (her name), or ashore in this port for `days`. */ stay?: string; ashore?: { port: string; days: number }; /** The new hull's hammocks. */ room?: number }
   /** docs/25 item 64: a mate of her group boards (or is boarded) within reach: she may come aboard (null: no longer). */
   | { t: 'board_offer'; offer: BoardOffer | null }
   /** The chance for the target line (docs/23 item 49). */
@@ -3631,6 +3639,9 @@ export interface PatentOfferView {
   blocked: string | null;
   renew: boolean;
   level: number;
+  /** Her service (letters of marque) beside the offer: `keeps` — the patent leaves its rank and pay as they are; false —
+   *  the issuer is its enemy and buying ends it (asked first; forum, Эдуард, post 70). */
+  service?: { id: 'crown' | 'league' | 'confederacy'; rank: number; keeps: boolean };
 }
 
 export interface DuelView {

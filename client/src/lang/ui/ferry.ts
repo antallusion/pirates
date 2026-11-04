@@ -25,6 +25,9 @@ export const EN = {
   pirate: 'Under the pirate flag every passage costs double.',
   haven: 'Quiet harbour',
   havenT: 'Within 1 km of a hub no captain attacks another',
+  closed: 'Port closed to you: {why}',
+  closedT: 'The harbour there would not take you: the passage would leave you at sea with no harbour, so it is not sold',
+  closedBtn: 'Closed',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -51,4 +54,7 @@ export const RU: Record<keyof typeof EN, string> = {
   pirate: 'Под пиратским флагом любой переход стоит вдвое дороже.',
   haven: 'Тихая гавань',
   havenT: 'В 1 км от узла капитаны друг на друга не нападают',
+  closed: 'Порт закрыт для вас: {why}',
+  closedT: 'Гавань там вас не примет: переход оставил бы вас в море без гавани, поэтому туда не продают',
+  closedBtn: 'Закрыт',
 };

@@ -15,6 +15,10 @@
 //  - the trip: she casts off (Game.undock), the helmsman takes the course to the other hub's anchorage and the passage
 //    (passage.ts) begins at once — ×10, untouchable and unable to act — even with VOYAGE.on off; it ends VOYAGE_TAIL
 //    short, her own way back, the helmsman brings her in and she puts in by herself («Причалить» given for her);
+//  - never to a hub whose port is closed to her (forum, Эдуард, post 71: «с патентом Лиги переход из Грейвсенда меня
+//    пропустил в Фогмут, а там мой патент враждебен… порты закрыты, переход на откате, вокруг пираты и патруль»): the
+//    harbour master there would not take her (player.ts canDock — her patent's enemy, her standing, her skulls), so the
+//    list marks it «Порт закрыт для вас: <причина>» and the passage is refused, nothing paid, no cooldown;
 //  - only to a hub she has DISCOVERED (Нефигугум, post 24, topic 7: «не активными переходы в порты которые еще закрыты
 //    … под туманом»): put in there once, or its water out of her fog of war (fog.ts) — the others greyed on her
 //    screens, refused here.
@@ -28,6 +32,7 @@ import { autosailOf, startAutosail, stopAutosail } from './autosail.ts';
 import type { Game } from './Game.ts';
 import { SELF_IN_BATTLE_WHY, inBattle } from './inbattle.ts';
 import { beginFerry, voyaging } from './passage.ts';
+import { canDock } from './player.ts';
 import type { PlayerSession } from './player.ts';
 import { refitHolds } from './refit.ts';
 import { fogSeen } from '../../../shared/src/data/fog.ts';
@@ -45,7 +50,16 @@ export const FERRY_WORDS = {
   laden: 'No passage with trade goods filling more than 60% of the hold (the ship’s stores do not count): sell or store the cargo first.',
   noWay: 'No open water leads there now: the passage is off, nothing paid.',
   unknown: 'Discover that port first.',
+  closed: 'That port is closed to you: the passage would leave you at sea with no harbour.',
 } as const;
+
+/** Why the hub's harbour would not take her (canDock's reason), or null: the list marks it, the passage is refused. */
+export function hubClosed(game: Game, s: PlayerSession, to: string): string | null {
+  const p = s.profile, port = game.portById(to);
+  if (!p || !port) return null;
+  const d = canDock(p, port.faction);
+  return d.ok ? null : d.reason ?? FERRY_WORDS.closed;
+}
 
 /** «The next passage in N min» (translated with its number on the client). */
 export function cooldownWords(sec: number): string {
@@ -154,9 +168,10 @@ export function ferryView(game: Game, s: PlayerSession, portId: string): FerryVi
     const d = hubDistance(game, portId, to);
     if (d === null) continue;
     const base = ferryPrice(d), quest = hubs.has(to);
-    routes.push({ to, km: Math.round(d / 100) / 10, price: ferryPriceFor(base, { pirate, quest }), base, ...(quest ? { quest: true } : {}), ...(portKnown(game, s, to) ? {} : { locked: true }) });
+    const closed = hubClosed(game, s, to);
+    routes.push({ to, km: Math.round(d / 100) / 10, price: ferryPriceFor(base, { pirate, quest }), base, ...(quest ? { quest: true } : {}), ...(portKnown(game, s, to) ? {} : { locked: true }), ...(closed ? { closed } : {}) });
   }
-  routes.sort((a, b) => Number(!!a.locked) - Number(!!b.locked) || a.km - b.km);
+  routes.sort((a, b) => Number(!!a.locked) - Number(!!b.locked) || Number(!!a.closed) - Number(!!b.closed) || a.km - b.km);
   const ship = s.ship;
   return { routes, left: ferryLeft(game, s), why: ship && ship.docked === portId ? blocked(game, s, ship) : null, ...(pirate ? { pirate: true } : {}) };
 }
@@ -188,6 +203,12 @@ export function ferryGo(game: Game, s: PlayerSession, to: string): string | null
   if (!portKnown(game, s, to)) return FERRY_WORDS.unknown;
   const why = blocked(game, s, ship);
   if (why) return why;
+  const shut = hubClosed(game, s, to);
+  if (shut) {
+    // (two lines, as the yard says it: the harbour master's own reason, then the refusal)
+    game.sendTo(s, { t: 'toast', msg: shut, kind: 'bad' });
+    return FERRY_WORDS.closed;
+  }
   if (p.gold < price) return `The passage costs ${price} silver.`;
   const out = game.undock(s);
   if (out) return out;
