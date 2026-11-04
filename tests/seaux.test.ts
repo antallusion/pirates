@@ -311,7 +311,7 @@ test('the captain\'s portrait opens her menu: six tiles, the bead\'s news first,
   const css = readFileSync(new URL('../client/seahud.css', import.meta.url), 'utf8');
   assert.match(css, /body\.simple\.touch #hud-captain \{ pointer-events: auto;/);
   const main = readFileSync(new URL('../client/src/main.ts', import.meta.url), 'utf8');
-  assert.match(main, /hud\.onCaptain = \(\) => \{[\s\S]{0,200}toggleCaptainMenu\(/);
+  assert.match(main, /hud\.onCaptain = \([^)]*\) => \{[\s\S]{0,200}toggleCaptainMenu\(/);
   const hud = readFileSync(new URL('../client/src/ui/hud.ts', import.meta.url), 'utf8');
   assert.match(hud, /el\.setAttribute\('role', 'button'\);\s*el\.tabIndex = 0;/);
 });
