@@ -38,7 +38,7 @@ export function ferryHtml(state: ClientState, view: FerryView, here: boolean, le
     // forum, Эдуард, post 71: a hub whose harbour would not take her (her patent's enemy, her standing) — red, refused
     if (r.closed) {
       const shut = here ? `<button type="button" class="btn btn-small fy-go" disabled title="${esc(LF('closedT'))}">${esc(LF('closedBtn'))}</button>` : '';
-      return `<div class="fy-row fy-row--closed" title="${esc(LF('closedT'))}"><span class="fy-to">${icon(`faction_${p.faction}`, '', 'ico-sm')}<b>${esc(placeName(p.name))}</b><small class="fy-closed">${icon('danger', '⚠', 'ico-xs')}${esc(LF('closed', { why: serverText(r.closed) }))}</small></span><span class="fy-km">${esc(LF('km', { km: dec1(r.km) }))}</span>${shut}</div>`;
+      return `<div class="fy-row fy-row--closed" title="${esc(LF('closedT'))}"><span class="fy-to">${icon(`faction_${p.faction}`, '', 'ico-sm')}<b>${esc(placeName(p.name))}</b><small class="fy-closed">${icon('danger', '⚠', 'ico-xs')}${esc(LF('closed', { why: lowerFirst(serverText(r.closed)) }))}</small></span><span class="fy-km">${esc(LF('km', { km: dec1(r.km) }))}</span>${shut}</div>`;
     }
     const can = here && !why && gold >= r.price;
     // (forum post 49: her price — the pirate flag's ×2, a quest's hub ×0.25 — and the plain one struck through by it)
@@ -109,3 +109,8 @@ export function drawHavenRing(g: CanvasRenderingContext2D, x: number, y: number,
 }
 
 export { isFerryHub };
+
+/** «Ваш патент…» after a colon reads «ваш патент…» (a reason set into the closed hub's line). */
+function lowerFirst(t: string): string {
+  return t ? t.charAt(0).toLocaleLowerCase() + t.slice(1) : t;
+}

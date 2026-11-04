@@ -119,9 +119,9 @@
 .fl-pat-buy { flex: none; min-height: 40px; white-space: nowrap; }
 .fl-pat-why { margin: 2px 0 4px !important; font-size: 12px !important; line-height: 1.3; color: var(--k-warn, #e6a04a); text-align: left; }
 /* forum, Эдуард, post 70: her service beside the patent — kept (green) or lost (red, asked again before buying) */
-.fl-pat-sv { display: flex; gap: 6px; align-items: flex-start; margin: 4px 0 6px !important; font-size: 12.5px !important; line-height: 1.3; text-align: left; }
-.fl-pat-sv--keep { color: var(--good, #8fd07a); }
-.fl-pat-sv--lose { color: var(--bad, #e2675a); font-weight: 600; }
+.card p.fl-pat-sv, .fl-pat-sv { font-family: var(--sans); display: flex; gap: 6px; align-items: flex-start; margin: 4px 0 6px !important; font-size: 12.5px !important; line-height: 1.3; text-align: left; }
+.card p.fl-pat-sv--keep, .fl-pat-sv--keep { color: var(--good, #8fd07a); }
+.card p.fl-pat-sv--lose, .fl-pat-sv--lose { background: rgba(160, 40, 30, 0.14); border: 1px solid rgba(208, 106, 94, 0.5); border-radius: 6px; padding: 6px 8px; color: var(--bad, #e2675a); font-weight: 600; }
 .fl-chip--privateer span { color: #e0c98a; }
 @container (max-width: 560px) {
   .fl-pat { flex-wrap: wrap; }
