@@ -58,7 +58,9 @@ test('the seed: every category and section in both tongues, the two pinned offic
   assert.ok(news.topics.some((t) => t.title === WELCOME.title[0]));
   // the seed and the threads run once
   const again = new ForumService({ store: svc.store, link, now: () => Date.now() });
-  assert.equal(again.home(null, 'ru').stats.topics, 2 + THREADS_28.length);
+  // (forum post 69: each news and patch-notes topic with its discussion beside it, made once too)
+  const newsTopics = 2 + THREADS_28.filter((t) => t.section === 'news' || t.section === 'patches').length;
+  assert.equal(again.home(null, 'ru').stats.topics, 2 + THREADS_28.length + newsTopics);
 });
 
 test('a member is made from her game account, with her captain, guild, deeds and rank', () => {

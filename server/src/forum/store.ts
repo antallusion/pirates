@@ -42,6 +42,8 @@ CREATE INDEX IF NOT EXISTS forum_notifications_user ON forum_notifications(user_
 CREATE TABLE IF NOT EXISTS forum_reports (id INTEGER PRIMARY KEY, post_id INTEGER NOT NULL, reporter_id INTEGER NOT NULL, reason TEXT NOT NULL, created_at INTEGER NOT NULL, resolved_by INTEGER, resolved_at INTEGER);
 CREATE TABLE IF NOT EXISTS forum_uploads (id INTEGER PRIMARY KEY, owner_id INTEGER NOT NULL, file TEXT NOT NULL UNIQUE, mime TEXT NOT NULL, size INTEGER NOT NULL, created_at INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS forum_uploads_owner ON forum_uploads(owner_id, created_at);
+CREATE TABLE IF NOT EXISTS forum_discuss (news_id INTEGER PRIMARY KEY, talk_id INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS forum_discuss_talk ON forum_discuss(talk_id);
 CREATE VIRTUAL TABLE IF NOT EXISTS forum_fts USING fts5(kind UNINDEXED, ref UNINDEXED, text, tokenize = 'unicode61 remove_diacritics 2');
 `;
 
@@ -369,6 +371,36 @@ export class ForumStore {
   uploadedSince(owner: number, since: number): { n: number; bytes: number } {
     const r = this.get<R>('SELECT COUNT(*) AS c, COALESCE(SUM(size), 0) AS b FROM forum_uploads WHERE owner_id = ? AND created_at >= ?', owner, since);
     return { n: n(r?.c), bytes: n(r?.b) };
+  }
+
+  // ------------------------------------------------------------------------------------------ the news' discussions
+  // (forum post 69: a news topic is the staff's; its players' talk is a companion topic in the discussions, discuss.ts)
+  discussOf(newsId: number): number | undefined {
+    const r = this.get<R>('SELECT talk_id FROM forum_discuss WHERE news_id = ?', newsId);
+    return r ? n(r.talk_id) : undefined;
+  }
+  newsOf(talkId: number): number | undefined {
+    const r = this.get<R>('SELECT news_id FROM forum_discuss WHERE talk_id = ?', talkId);
+    return r ? n(r.news_id) : undefined;
+  }
+  setDiscuss(newsId: number, talkId: number): void {
+    this.run('INSERT INTO forum_discuss (news_id, talk_id) VALUES (?, ?) ON CONFLICT(news_id) DO UPDATE SET talk_id = excluded.talk_id', newsId, talkId);
+  }
+  /** A post carried to another topic (its id, author, date, quote and reactions kept; its bell follows it). */
+  movePost(postId: number, topicId: number): void {
+    this.run('UPDATE forum_posts SET topic_id = ? WHERE id = ?', topicId, postId);
+    this.run('UPDATE forum_notifications SET topic_id = ? WHERE post_id = ?', topicId, postId);
+  }
+  /** A topic's posts numbered again by their dates, and its counts and last post taken from them. */
+  recountTopic(id: number): void {
+    const rows = this.all<PostRow>('SELECT * FROM forum_posts WHERE topic_id = ? ORDER BY created_at, id', id);
+    rows.forEach((p, i) => {
+      if (p.num !== i + 1) this.run('UPDATE forum_posts SET num = ? WHERE id = ?', i + 1, p.id);
+    });
+    const first = rows[0];
+    const last = rows[rows.length - 1];
+    if (!first || !last) return;
+    this.run('UPDATE forum_topics SET replies = ?, first_post_id = ?, last_post_id = ?, last_author_id = ?, last_post_at = ? WHERE id = ?', rows.length - 1, first.id, last.id, last.author_id, last.created_at, id);
   }
 
   // ------------------------------------------------------------------------------------------ search

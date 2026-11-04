@@ -6,6 +6,7 @@
 import { plainText } from '../../../shared/src/forum/markdown.ts';
 import { SYSTEM_ID } from './seed.ts';
 import type { ForumStore } from './store.ts';
+import { ensureDiscussion } from './discuss.ts';
 
 interface Thread { section: string; title: string; body: string; pinned?: boolean }
 
@@ -515,7 +516,11 @@ export function postReplies29(store: ForumStore, now: number): number {
       const asked = r.to !== null ? store.post(r.to) : undefined;
       const topic = sec ? store.sectionTopics(sec.id, true, 0, 500).find((x) => x.title === r.topic) : asked && store.topic(asked.topic_id)?.title === r.topic ? store.topic(asked.topic_id) : undefined;
       if (!topic) return;
-      const mine = store.topicPosts(topic.id, 0, 1000).filter((p) => p.author_id === SYSTEM_ID);
+      // forum post 69: a news topic's talk lives in its discussion (discuss.ts): an answer to a post carried there goes
+      // there, and an answer already there is not written again
+      const talkId = store.discussOf(topic.id);
+      const talk = talkId !== undefined ? store.topic(talkId) : undefined;
+      const mine = [topic, ...(talk ? [talk] : [])].flatMap((x) => store.topicPosts(x.id, 0, 1000)).filter((p) => p.author_id === SYSTEM_ID);
       if (mine.some((p) => p.body_md === r.body)) return;
       // (the owner changed the facts after the answer went up: the answer to that post is rewritten, not doubled)
       const was = r.to !== null ? mine.find((p) => p.reply_to === r.to) : undefined;
@@ -526,15 +531,16 @@ export function postReplies29(store: ForumStore, now: number): number {
         return;
       }
       const to = r.to !== null ? store.post(r.to) : undefined;
-      const replyTo = to && to.topic_id === topic.id ? to.id : null;
+      const where = talk && to && to.topic_id === talk.id ? talk : topic;
+      const replyTo = to && to.topic_id === where.id ? to.id : null;
       const at = now + i * 1000;
-      const p = store.addPost(topic.id, SYSTEM_ID, r.body, replyTo, at);
-      store.touchTopic(topic.id, p.id, SYSTEM_ID, at, false);
+      const p = store.addPost(where.id, SYSTEM_ID, r.body, replyTo, at);
+      store.touchTopic(where.id, p.id, SYSTEM_ID, at, false);
       store.setPost(p.id, { official: 1 });
       store.index('p', p.id, plainText(r.body));
       store.bump(SYSTEM_ID, 'posts', 1);
       store.bump(SYSTEM_ID, 'official', 1);
-      if (to && replyTo !== null && to.author_id !== SYSTEM_ID) store.notify(to.author_id, 'reply', SYSTEM_ID, topic.id, p.id, at);
+      if (to && replyTo !== null && to.author_id !== SYSTEM_ID) store.notify(to.author_id, 'reply', SYSTEM_ID, where.id, p.id, at);
       n++;
     });
   });
@@ -557,6 +563,7 @@ export function postOfficial(store: ForumStore, section: string, title: string, 
     store.bump(SYSTEM_ID, 'posts', 1);
     store.bump(SYSTEM_ID, 'topics', 1);
     store.bump(SYSTEM_ID, 'official', 1);
+    ensureDiscussion(store, store.topic(tid)!, now); // forum post 69: the news' discussion beside it
   });
   return true;
 }

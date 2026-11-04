@@ -74,7 +74,7 @@ test('every name a player types: the guest\'s and the provider\'s captain, the s
   const s = game.attach(fresh as unknown as WsConnection);
   fresh.push({ t: 'hello', v: PROTOCOL_VERSION, name: 'Cid Fresh' });
   fresh.push({ t: 'create_captain', captain: 'corsair', shipName: 'Залупа' });
-  assert.equal(s.profile, null, 'no captain under a coarse ship\'s name');
+  assert.equal(s.profile === null, true,'no captain under a coarse ship\'s name');
   assert.ok(fresh.all('err').some((m) => m.msg === NAME_BAD));
   fresh.push({ t: 'create_captain', captain: 'corsair', shipName: 'Чёрная Каракатица' });
   assert.equal(s.profile?.shipName, 'Чёрная Каракатица');

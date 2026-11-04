@@ -174,7 +174,8 @@ export function postCard(p: any, topic: any): string {
   const role = p.official ? 'var(--c-official)' : tint(a);
   const me = state.me.user;
   const actions: string[] = [];
-  if (me && topic && (!topic.locked || state.staff)) {
+  // (forum post 69: a news topic is answered in its discussion, not here — no «Ответить», no «Цитата»)
+  if (me && topic && !topic.noReply && (!topic.locked || state.staff)) {
     actions.push(act('reply', 'reply', t('reply'), p.id));
     actions.push(act('quote', 'quote', t('quote'), p.id));
   }
