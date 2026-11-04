@@ -6048,9 +6048,9 @@ html.app-paused *, html.app-paused *::before, html.app-paused *::after { animati
 .map-find .mf-n { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .map-find .mf-k { grid-column: 3; grid-row: 1; font: 11px/1 var(--k-font-sans, Inter, sans-serif); color: rgba(216, 210, 196, 0.6); text-transform: lowercase; }
 .map-find .mf-d { grid-column: 2 / 4; grid-row: 2; font: 12px/1.2 var(--k-font-sans, Inter, sans-serif); color: #c9b48a; }
-.map-find .mf-pick { display: flex; align-items: center; gap: 8px; padding: 6px 4px 2px; border-top: 1px solid rgba(196, 160, 102, 0.45); }
-.map-find .mf-pn { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-.map-find .mf-pn b { color: var(--gold); font: 600 15px/1.2 var(--serif); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-find .mf-pick { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px 8px; padding: 6px 4px 2px; border-top: 1px solid rgba(196, 160, 102, 0.45); }
+.map-find .mf-pn { flex: 1 1 120px; min-width: 0; display: flex; flex-direction: column; }
+.map-find .mf-pn b { color: var(--gold); font: 600 15px/1.2 var(--serif); overflow-wrap: anywhere; }
 .map-find .mf-pn small { color: #c9b48a; font-size: 12px; }
 .map-find .mf-sail { flex: 0 0 auto; white-space: nowrap; }
 @media (max-height: 420px) {
@@ -6058,5 +6058,6 @@ html.app-paused *, html.app-paused *::before, html.app-paused *::after { animati
   .map-find .mf-q { padding: 5px 8px; font-size: 14px; }
   .map-find .mf-x { width: 32px; height: 32px; }
   .map-find .mf-list { max-height: 150px; }
+  .map-find:has(.mf-pick) .mf-list { max-height: 80px; } /* (a place picked: the list steps back, the chart shows) */
   .map-find .mf-hit { min-height: 36px; padding: 3px 5px; }
 }
