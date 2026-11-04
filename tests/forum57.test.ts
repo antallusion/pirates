@@ -221,5 +221,6 @@ test('the healer\'s offer: a part of a kind says why — the free hammocks', () 
   assert.equal(row.room, 24);
   assert.match(row.why!, /Free hammocks aboard: 24/);
   const ru = readFileSync(new URL('../client/src/lang/ui/waystation.ts', import.meta.url), 'utf8');
-  assert.match(ru, /'room': 'пало за сутки: \{n\} · встанут в строй сейчас: \{k\}'/);
+  assert.match(ru, /'room': 'встанут в строй сейчас: \{k\} из \{n\}'/);
+  assert.match(ru, /'fell': 'пало: \{n\}'/);
 });

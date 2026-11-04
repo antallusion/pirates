@@ -76,7 +76,7 @@ export class WayWindow {
       const scroll = !r.prem && v.scrolls > 0 && r.room > 0 && !v.why;
       const why = r.why ? serverText(r.why) : '';
       return `<div class="way-row${r.room <= 0 ? ' off' : ''}">${unitIcon(r.u, 'way-face')}
-        <div class="way-rt"><b>${esc(unitName(r.u))} <span class="way-n">${esc(L('fell', { n: fmt(r.n) }))}</span></b>${r.room < r.n ? `<span class="muted">${esc([L('room', { k: r.room, n: r.n }), why].filter(Boolean).join(' — '))}</span>` : ''}</div>
+        <div class="way-rt"><b>${esc(unitName(r.u))} <span class="way-n">${esc(L('fell', { n: fmt(r.n) }))}</span></b>${r.room < r.n ? `<span class="muted">${esc([L('room', { k: r.room, n: r.n }), why].filter(Boolean).join(' · '))}</span>` : ''}</div>
         <span class="way-price">${priceHtml(r)}</span>
         <span class="way-btns">${scroll ? `<button class="btn btn-small" data-wscroll="${r.u}" title="${esc(L('scroll'))}">${icon('ui_phial', '', 'ico-sm')}</button>` : ''}<button class="btn btn-small${ok ? ' btn-primary' : ''}" data-wres="${r.u}"${ok ? '' : ' disabled'}>${esc(L('res'))}</button></span></div>`;
     }).join('');
