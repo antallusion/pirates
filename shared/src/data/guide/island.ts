@@ -1,6 +1,6 @@
 // «Лоцманская книга» · Остров: claiming, the town and its dwellings, costs and the treasury, «Завезти», demolishing,
 // the guided first steps, the forge and the workshop, the producers, the island boats, «Где взять», the rush.
-// Numbers as in the code on 2026-11-02 (shared/src/data/isletree.ts, startcost.ts, town.ts, base.ts, islandboats.ts,
+// Numbers as in the code on 2026-11-02, levels 6–10 and the elites on 2026-11-04 (docs/38; shared/src/data/isletree.ts, startcost.ts, town.ts, base.ts, islandboats.ts,
 // shop.ts; server/src/game/baseclaim.ts, islefirst.ts, raze.ts, base.ts). Shots: tools/guide/shots-qa.mjs.
 import type { GuideArticle } from './types.ts';
 
@@ -130,22 +130,22 @@ export const ARTICLES: GuideArticle[] = [
       {
         img: img('isle-town', 2),
         text: [
-          'The Town Hall pays silver into the treasury every dawn (60 to 400 a day) and raises the island\'s level. No building may stand higher than the Hall. Its name grows with the level: the Council House, the Town Office, the Governor\'s House…',
-          'Ратуша каждый рассвет платит серебро в казну (от 60 до 400 в день) и поднимает уровень острова. Ни одно здание не может быть выше ратуши. Имя растёт с уровнем: Дом совета, Городская управа, Губернаторский дом…',
+          'The Town Hall pays silver into the treasury every dawn (60 a day at level 1, 400 at 5, 2 500 at 10) and raises the island\'s level. No building may stand higher than the Hall. Its name grows with the level: the Council House, the Town Office, the Governor\'s House…',
+          'Ратуша каждый рассвет платит серебро в казну (60 в день на 1-м уровне, 400 на 5-м, 2 500 на 10-м) и поднимает уровень острова. Ни одно здание не может быть выше ратуши. Имя растёт с уровнем: Дом совета, Городская управа, Губернаторский дом…',
         ],
       },
       {
         img: img('isle-town', 3),
         text: [
-          'Seven dwellings: Crew Quarters, Marine Barracks, Shooting Range, Gun Yard, Veterans\' Den, Admiralty, Shrine of the Drowned. Each opens its tier for hire; from level 3 it trains the upgraded kind.',
-          'Семь жилищ: Кубрик, Казарма морпехов, Стрельбище, Пушечный двор, Притон ветеранов, Адмиралтейство, Святилище утопленников. Каждое открывает свой ранг для найма, с 3-го уровня — улучшенный.',
+          'Seven dwellings: Crew Quarters, Marine Barracks, Shooting Range, Gun Yard, Veterans\' Den, Admiralty, Shrine of the Drowned. Each opens its tier for hire; from level 3 it trains the upgraded kind, from level 8 a third, elite one.',
+          'Семь жилищ: Кубрик, Казарма морпехов, Стрельбище, Пушечный двор, Притон ветеранов, Адмиралтейство, Святилище утопленников. Каждое открывает свой ранг для найма, с 3-го уровня — улучшенный вид, с 8-го — третий, элитный.',
         ],
       },
       {
         img: img('isle-town', 4),
         text: [
-          'The Keep makes every dwelling grow more men: the Citadel (level 3) by half, the Castle (level 5) twice. The Market trades resources, the Guild of Orders teaches orders.',
-          'Крепость даёт всем жилищам больше бойцов: цитадель (3-й уровень) в полтора раза, замок (5-й) вдвое. Рынок меняет ресурсы, Гильдия приказов учит приказам.',
+          'The Keep makes every dwelling grow more men: the Citadel (level 3) by half, the Castle (level 5) twice, level 10 three times. The Market trades resources, the Guild of Orders teaches orders.',
+          'Крепость даёт всем жилищам больше бойцов: цитадель (3-й уровень) в полтора раза, замок (5-й) вдвое, 10-й уровень — втрое. Рынок меняет ресурсы, Гильдия приказов учит приказам.',
         ],
       },
       {
@@ -156,7 +156,58 @@ export const ARTICLES: GuideArticle[] = [
         ],
       },
     ],
-    related: ['isle-cost', 'isle-first', 'army-tiers'],
+    related: ['isle-ten', 'isle-cost', 'army-elite', 'army-tiers'],
+    window: 'isle',
+  },
+  {
+    id: 'isle-ten',
+    section: 'island',
+    title: ['Levels 6 to 10: the island\'s long road', 'Уровни 6–10: долгая дорога острова'],
+    tags: ['level 10', 'levels', 'upgrade', 'hall', 'capital', 'rare goods', 'уровень 10', 'десятый', 'уровни', 'улучшение', 'ратуша', 'пиратская столица', 'редкие товары', 'до 10'],
+    summary: [
+      'All fifteen buildings of the town rise to level 10: more silver, more men, cheaper hire, ⚓10 ships and the island\'s elite.',
+      'Все пятнадцать построек города растут до 10-го уровня: больше серебра и бойцов, дешевле найм, корабли ⚓10 и элита острова.',
+    ],
+    slides: [
+      {
+        img: img('isle-ten', 1),
+        text: [
+          'The Town Hall, the Keep, the Market, the Guild, the seven dwellings, the Warehouse, the Shipyard, the battery and the fort now rise to level 10, and the producers with them. Nothing stands above the Hall, and each new Hall level asks the core buildings one level below it. The island\'s own level is full (10) from Hall 5.',
+          'Ратуша, Крепость, Рынок, Гильдия, семь жилищ, Склад, Верфь, батарея и форт теперь растут до 10-го уровня, а с ними и промыслы. Выше ратуши ничего не построить, а для каждого нового уровня ратуши основные постройки должны стоять на уровень ниже. Сам остров становится 10-го уровня уже с ратуши 5.',
+        ],
+        show: { open: 'isle', point: '[data-iside="town"]' },
+      },
+      {
+        img: img('isle-ten', 2),
+        text: [
+          'The Hall 6–10 pays 600, 900, 1 300, 1 800 and 2 500 silver a day and gives more: an outpost at 6 and 9, a builders\' crew at 7 and 10, a caravan at 8, and at 10 the title «Pirate Capital».',
+          'Ратуша 6–10 платит в день 600, 900, 1 300, 1 800 и 2 500 серебра и даёт больше: аванпост на 6-м и 9-м, бригаду строителей на 7-м и 10-м, караван на 8-м, а на 10-м — титул «Пиратская столица».',
+        ],
+      },
+      {
+        img: img('isle-ten', 3),
+        text: [
+          'Dwellings grow ×1.65 at level 6 up to ×2.5 at 10, the Keep ×2.2 up to ×3 for all of them. Men of a dwelling of level 6–10 cost less: −5 % at 6, −10 % at 7 and 8, −15 % at 9, −20 % at 10 — on the island, at waystations and in ports with no dwelling of that tier. From level 8 the dwelling trains its elite.',
+          'Жилища дают прирост ×1,65 на 6-м уровне и до ×2,5 на 10-м, Крепость — от ×2,2 до ×3 для всех сразу. Бойцы из жилища 6–10-го уровня дешевле: −5 % на 6-м, −10 % на 7-м и 8-м, −15 % на 9-м, −20 % на 10-м — на острове, на плавучих стоянках и в портах, где нет своего жилища этого ранга. С 8-го уровня жилище готовит элиту.',
+        ],
+        show: { open: 'hire' },
+      },
+      {
+        img: img('isle-ten', 4),
+        text: [
+          'The Shipyard builds the island\'s own ⚓9 ships from level 6 and ⚓10 from 7 (a ship of the line, a great indiaman); repairs off the island are 35–50 % cheaper. The Market trades at better rates, the Guild adds an order to the book with each level, the Warehouse holds ×1.25 more with each level above 5.',
+          'Верфь строит свои корабли ⚓9 с 6-го уровня и ⚓10 с 7-го (линейный корабль, великий индиаман), а ремонт у острова дешевле на 35–50 %. Рынок меняет выгоднее, Гильдия с каждым уровнем добавляет приказ в книгу, Склад вмещает в 1,25 раза больше за каждый уровень выше 5-го.',
+        ],
+      },
+      {
+        img: img('isle-ten', 5),
+        text: [
+          'The price: level 6 costs three times level 5 in silver, level 10 thirty-six times. Besides timber, coal and iron they ask the sea\'s rare goods: pearls, rum and powder from level 6, whalebone, serpent scales, sulphur iron and ambergris from 8, a boss\'s trophy at 10. With two crews the whole town to 10 is about three years: extra crews and speed-ups shorten it.',
+          'Цена: 6-й уровень стоит втрое дороже 5-го серебром, 10-й — в тридцать шесть раз. Кроме брёвен, угля и железа нужны редкие товары моря: жемчуг, ром и порох с 6-го уровня, китовый ус, змеиная чешуя, серное железо и амбра с 8-го, трофей босса на 10-м. С двумя бригадами весь город до 10-го — около трёх лет; дополнительные бригады и ускорения сокращают путь.',
+        ],
+      },
+    ],
+    related: ['isle-town', 'isle-cost', 'army-elite', 'isle-boats'],
     window: 'isle',
   },
   {
@@ -193,12 +244,12 @@ export const ARTICLES: GuideArticle[] = [
       {
         img: img('isle-cost', 4),
         text: [
-          'Builders: «Brigades» at the bottom. One crew at first, a second from island level 3. Each brigade builds one thing at a time.',
-          'Строители — «Бригады» внизу. Сначала одна бригада, вторая — с 3-го уровня острова. Каждая строит что-то одно.',
+          'Builders: «Brigades» at the bottom. One crew at first, a second from island level 3, a third at Town Hall 7 and a fourth at Hall 10. Each brigade builds one thing at a time.',
+          'Строители — «Бригады» внизу. Сначала одна бригада, вторая — с 3-го уровня острова, третья — с ратуши 7, четвёртая — с ратуши 10. Каждая строит что-то одно.',
         ],
       },
     ],
-    related: ['isle-haul', 'isle-rush', 'isle-where'],
+    related: ['isle-ten', 'isle-haul', 'isle-rush', 'isle-where'],
     window: 'isle',
   },
   {
@@ -352,8 +403,8 @@ export const ARTICLES: GuideArticle[] = [
       {
         img: img('isle-producers', 2),
         text: [
-          'Each level adds half again (×3 at level 5), then the island\'s land decides: on some islands a producer gives more, on some it cannot be built at all.',
-          'Каждый уровень добавляет половину (×3 на 5-м), а дальше решает земля острова: где-то промысел даёт больше, а где-то его вовсе нельзя поставить.',
+          'Each level adds half again (×3 at level 5, ×5.5 at level 10: producers rise with the Town Hall up to 10), then the island\'s land decides: on some islands a producer gives more, on some it cannot be built at all.',
+          'Каждый уровень добавляет половину (×3 на 5-м, ×5,5 на 10-м: промыслы растут вместе с ратушей до 10-го), а дальше решает земля острова: где-то промысел даёт больше, а где-то его вовсе нельзя поставить.',
         ],
       },
       {
@@ -403,8 +454,8 @@ export const ARTICLES: GuideArticle[] = [
       {
         img: img('isle-boats', 3),
         text: [
-          'Press «Send the boats». Island prices plus a small delivery fee: the farther you are and the lower the Town Hall, the dearer.',
-          'Нажмите «Отправить шлюпы». Цены островные плюс небольшая плата за доставку: чем дальше вы и чем ниже ратуша, тем дороже.',
+          'Press «Send the boats». Island prices plus a small delivery fee: the farther you are and the lower the Town Hall, the dearer. The island\'s elite never go by boat: they are hired only on the island.',
+          'Нажмите «Отправить шлюпы». Цены островные плюс небольшая плата за доставку: чем дальше вы и чем ниже ратуша, тем дороже. Элиту острова шлюпы не возят — её нанимают только на самом острове.',
         ],
       },
       {

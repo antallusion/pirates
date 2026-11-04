@@ -23,8 +23,8 @@ export const ARTICLES: GuideArticle[] = [
       {
         img: 'sea-helm-2.webp',
         text: [
-          '«+» and «−» beside the wheel add or take in one step of sail. There are four steps: a quarter, a half, three quarters and full; the pips between the buttons show which is set.',
-          '«+» и «−» рядом со штурвалом прибавляют или убавляют паруса на одну ступень. Ступеней четыре: четверть, половина, три четверти и полные. Огоньки между кнопками показывают, сколько поднято сейчас.',
+          '«+» and «−» beside the wheel add or take in one step of sail. There are four steps: a quarter, a half, three quarters and full; the pips between the buttons show which is set. The rudder needs way: dead in the water she turns at about a fifth of her rate, in full from a third of her top speed.',
+          '«+» и «−» рядом со штурвалом прибавляют или убавляют паруса на одну ступень. Ступеней четыре: четверть, половина, три четверти и полные. Огоньки между кнопками показывают, сколько поднято сейчас. Руль слушается только на ходу: без хода корабль поворачивает примерно впятеро медленнее, в полную силу — примерно с трети своей скорости.',
         ],
       },
       {

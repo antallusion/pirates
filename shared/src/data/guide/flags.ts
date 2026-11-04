@@ -162,8 +162,8 @@ export const ARTICLES: GuideArticle[] = [
       },
       {
         text: [
-          'The rules: 20 % of your prize silver goes to the city, PvP points ×0.75, enemy patrols hunt you within 9 km of their ports and their ports are closed to you. Attack a ship that is neither an enemy nor an ally of your city — that is piracy: the patent burns and you get a skull.',
-          'Правила: 20 % добытого серебра уходит городу, очки ПвП ×0,75, вражеские патрули охотятся на вас в 9 км от своих портов, а их порты для вас закрыты. Напали на корабль, который городу ни враг, ни союзник, — это пиратство: патент сгорает, и вы получаете череп.',
+          'The rules: 20 % of your prize silver goes to the city, PvP points ×0.75, enemy patrols hunt you within 9 km of their ports and their ports are closed to you. Attack a ship that is neither an enemy nor an ally of your city — that is piracy: the patent burns and you get a skull. A patent never takes your service to a flag (the card «Service to the flag»): an ally\'s patent keeps your rank and pay, and the card says so in green; a patent of your service\'s enemy is sold only after a red warning and your confirmation.',
+          'Правила: 20 % добытого серебра уходит городу, очки ПвП ×0,75, вражеские патрули охотятся на вас в 9 км от своих портов, а их порты для вас закрыты. Напали на корабль, который городу ни враг, ни союзник, — это пиратство: патент сгорает, и вы получаете череп. Службу флагу (карточка «Служба флагу») патент не отнимает: с патентом союзника звание и жалованье остаются, и карточка пишет это зелёным; патент врага вашей службы продаётся только после красного предупреждения и подтверждения.',
         ],
         img: 'flags-patent-3.webp',
       },

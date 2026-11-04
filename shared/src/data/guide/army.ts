@@ -82,8 +82,8 @@ export const ARTICLES: GuideArticle[] = [
       {
         img: img('army-island', 2),
         text: [
-          'Away from the island they cost a quarter more (marines: 75 instead of 60). Deckhands always come from the tavern. On the island itself the price is the plain one, but the ship must lie off it.',
-          'Вдали от острова они на четверть дороже (морпехи: 75 вместо 60). Юнги всегда берутся в таверне. На самом острове цена обычная, но корабль должен стоять у берега.',
+          'Away from the island they cost a quarter more (marines: 75 instead of 60). Deckhands always come from the tavern. On the island itself the price is the plain one, but the ship must lie off it. A dwelling of level 6–10 takes 5 to 20 % off its men\'s price.',
+          'Вдали от острова они на четверть дороже (морпехи: 75 вместо 60). Юнги всегда берутся в таверне. На самом острове цена обычная, но корабль должен стоять у берега. Жилище 6–10-го уровня снимает с цены своих бойцов от 5 до 20 %.',
         ],
       },
       {
@@ -101,7 +101,57 @@ export const ARTICLES: GuideArticle[] = [
         ],
       },
     ],
-    related: ['army-hire', 'isle-town', 'isle-boats'],
+    related: ['army-hire', 'army-elite', 'isle-ten', 'isle-boats'],
+    window: 'hire',
+  },
+  {
+    id: 'army-elite',
+    section: 'army',
+    title: ['The island\'s elite', 'Элита острова'],
+    tags: ['elite', 'dwelling', 'level 8', 'bosun', 'grenadier', 'deadeye', 'mortar', 'corsair', 'admiral', 'horror', 'элита', 'элитные', 'боцманы', 'гренадеры', 'снайперы', 'мортирные', 'клинки корсаров', 'адмиральская гвардия', 'ужасы глубин', '8 уровень'],
+    summary: [
+      'A dwelling of level 8 or more trains a third, elite kind of its tier: hired only on your own island.',
+      'Жилище 8-го уровня и выше готовит третий, элитный вид своего ранга — его нанимают только на вашем острове.',
+    ],
+    slides: [
+      {
+        img: img('army-elite', 1),
+        text: [
+          'Seven elites, one per tier: Bosuns (deckhands), Sea grenadiers (marines), Deadeyes (musketeers), Mortar crews (gunners), Corsair blades (boarders), the Admiral\'s guard (guards) and Horrors of the deep (the drowned).',
+          'Семь элитных видов, по одному на ранг: Боцманы (юнги), Морские гренадеры (морпехи), Снайперы (мушкетёры), Мортирные расчёты (канониры), Клинки корсаров (абордажники), Адмиральская гвардия (гвардия) и Ужасы глубин (утопленники).',
+        ],
+      },
+      {
+        img: img('army-elite', 2),
+        text: [
+          'Raise the dwelling to level 8 and come to your island: the elite have their own row under the dwelling in the hire window. They are never sold in a port, at a waystation or by the island\'s boats.',
+          'Поднимите жилище до 8-го уровня и приходите к своему острову: у элиты своя строка под жилищем в окне найма. В портах, на плавучих стоянках и шлюпами с острова её не купить.',
+        ],
+        show: { open: 'hire' },
+      },
+      {
+        img: img('army-elite', 3),
+        text: [
+          'Their own pool: half the dwelling\'s weekly growth, at least one a week. They cost about 1.6 times the upgraded kind, less the dwelling\'s share off (−10 % at level 8, −20 % at 10), and fight worth every coin.',
+          'У элиты свой запас: половина недельного прироста жилища, не меньше одного бойца в неделю. Стоят примерно в 1,6 раза дороже улучшенного вида, минус скидка жилища (−10 % на 8-м, −20 % на 10-м), и стоят своих денег в бою.',
+        ],
+      },
+      {
+        img: img('army-elite', 4),
+        text: [
+          'Each brings a craft: bosuns never lose their nerve; grenadiers stand behind shields and their splinters hit the foe beside; deadeyes shoot at any range and every fourth shot pins a stack; mortar crews lob over heads at full harm.',
+          'У каждого свой приём: боцманы никогда не теряют присутствия духа; гренадеры стоят за щитами, а осколки их гранат задевают соседа; снайперы бьют на любую дальность, и каждый четвёртый выстрел пригвождает отряд; мортирные расчёты бьют навесом через головы в полную силу.',
+        ],
+      },
+      {
+        img: img('army-elite', 5),
+        text: [
+          'Corsair blades strike twice unanswered and bring luck to the whole crew; the Admiral\'s guard is a wall of shields that answers every blow; the Horrors of the deep sweep the deck and freeze the living. Horrors, like the drowned, serve only the Choir and cursed ships.',
+          'Клинки корсаров бьют дважды без ответа и приносят удачу всей команде; Адмиральская гвардия — стена щитов, отвечающая на каждый удар; Ужасы глубин метут палубу и сковывают живых ужасом. Они, как и утопленники, служат только Хору и проклятым кораблям.',
+        ],
+      },
+    ],
+    related: ['army-island', 'isle-ten', 'isle-town'],
     window: 'hire',
   },
   {

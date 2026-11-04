@@ -25,15 +25,15 @@ export const ARTICLES: GuideArticle[] = [
       {
         img: 'travel-ferry-2.webp',
         text: [
-          'Each row is a hub with its price: 800 silver for the nearest pair, up to 15 000 for the farthest. A hub you have not discovered yet is greyed out: «Discover this port first».',
-          'Каждая строка — узел и цена: 800 серебра за ближайшую пару, до 15 000 за самую дальнюю. Ещё не открытый узел — серый: «Сначала откройте этот порт».',
+          'Each row is a hub with its price: 800 silver for the nearest pair, up to 15 000 for the farthest. A hub you have not discovered yet is greyed out: «Discover this port first». A hub whose harbour would not take you (an enemy of your patent, your standing, your skulls) is red, «Port closed to you: <why>», and is not sold.',
+          'Каждая строка — узел и цена: 800 серебра за ближайшую пару, до 15 000 за самую дальнюю. Ещё не открытый узел — серый: «Сначала откройте этот порт». Узел, где гавань вас не примет (враг вашего патента, репутация, черепа), — красный: «Порт закрыт для вас: причина», туда переход не продаётся.',
         ],
       },
       {
         img: 'travel-ferry-3.webp',
         text: [
-          'Press the price button and you are off. The ship sails there by herself at ten times the speed; no one can touch her and she cannot act.',
-          'Нажмите кнопку с ценой — и в путь. Корабль сам идёт туда в десять раз быстрее; его никто не тронет, и сам он ничего делать не может.',
+          'Press the price button: the game asks, say, «Passage to Port Gravesend for 4 500 silver?» — check the port and press «Set sail». The ship sails there by herself at ten times the speed; no one can touch her and she cannot act.',
+          'Нажмите кнопку с ценой: игра спросит, например, «Переход в Грейвсенд за 4 500 серебра?» — проверьте порт и нажмите «Отправиться». Корабль сам идёт туда в десять раз быстрее; его никто не тронет, и сам он ничего делать не может.',
         ],
       },
       {
