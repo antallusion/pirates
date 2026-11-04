@@ -216,3 +216,15 @@ export function namesAdmin(game: Game, args: string[]): string {
   }
   return 'Usage: /names scan · /names fix <id|all>';
 }
+
+/** On every boot (one process only): the names the filter refuses are put right at once, as `/names fix all` would
+ *  (owner, 2026-11-04: «найти все новые посты на форуме, применить все фиксы» — Эдуард's post 66). New names are refused
+ *  at the door, so after the first boot there is nothing left to do. */
+export function namesBoot(game: Game): void {
+  try {
+    const line = namesAdmin(game, ['fix', 'all']);
+    if (!/nothing to fix/.test(line)) console.log(`[names] ${line}`);
+  } catch (e) {
+    console.log(`[names] ${(e as Error).message}`);
+  }
+}

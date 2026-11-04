@@ -3,6 +3,7 @@
 // (server/src/gateway.ts, net/link.ts); without them it serves players directly.
 
 import { tributeBoot } from './game/tribute.ts';
+import { namesBoot } from './game/names.ts';
 import { onboardingReport } from './game/onboarding.ts';
 import { createServer } from 'node:http';
 import { dirname, resolve } from 'node:path';
@@ -190,6 +191,7 @@ game.start();
 // The thank-you letter of 2026-10-28 (server/src/game/gift28.ts): once, on the boot after the deploy (one process only).
 if (!process.env.ZONE) giftBoot(game);
 if (!process.env.ZONE) tributeBoot(game); // «дань» to the players who help (tribute.ts)
+if (!process.env.ZONE) namesBoot(game); // the names the filter refuses, put right (names.ts)
 // Dedicated gateways relay their players here over the internal link.
 const link = process.env.LINK_PORT
   ? new LinkServer({ secret: process.env.LINK_SECRET ?? '', zone: process.env.ZONE_NAME ?? 'main', attach: (c) => game.attach(c) })
