@@ -30,6 +30,10 @@ export const SERVER_RU_H4: Record<string, string> = {
   'Come alongside first: within the grapples’ reach.': 'Сначала подойдите борт о борт — на бросок крючьев.',
   'They are gone': 'Их уже нет',
   'They will not yield to you.': 'Они вам не уступят.',
+  // forum post 67: the drowned talk to a captain with their shrine on her island
+  'The drowned talk only to a captain with a Drowned Shrine on her island.': 'Утопленники ведут переговоры только с капитаном, у которого на острове есть Святилище утопленников.',
+  'The {0} hear you out: some would sign on, or they let you pass.': '{0}: вас выслушали — часть готова перейти к вам, или вас пропустят.',
+  'The {0} hear you out: they will let you pass.': '{0}: вас выслушали и готовы пропустить.',
   'They will not sail with you.': 'Они не пойдут с вами.',
   'No hammocks or slots for them aboard.': 'На борту нет ни коек, ни свободных отрядов для них.',
   'A guard stands off the mine: beat them first.': 'Перед шахтой стоят стражи: сначала разбейте их.',

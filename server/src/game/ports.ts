@@ -3,6 +3,7 @@
 
 import { escortMends, escortRepairCost, repairEscorts } from './fleet.ts';
 import { ferryView } from './ferry.ts';
+import { fogReveal } from './fog.ts'; // forum post 68: a bought chart's yards out of the fog
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { researchWhy } from './research.ts';
 import { worldGoalSale } from './worldgoals.ts';
@@ -829,19 +830,38 @@ function coveHidden(game: Game, islandId: number, accountId: number): boolean {
   return !all.some((h) => h && mayUse(game, h, accountId)) && all.some((h) => !!h && h.buildings.some((b) => b.id === 'hidden_cove'));
 }
 
-function chartForRegion(game: Game, s: PlayerSession, port: Port, region: RegionId): Island[] {
-  return game.world.islands
-    .filter((is) => is.region === region && !is.minor && !is.hidden && !s.discovered.has(is.id) && !coveHidden(game, is.id, s.accountId))
+/** The islands a sea's chart inks in: the fifteen nearest she has not charted (`paid`: what the price is reckoned on),
+ *  then the sea's shipyards she has not found (they come with it). */
+function chartForRegion(game: Game, s: PlayerSession, port: Port, region: RegionId): Island[] & { paid: Island[] } {
+  const open = (is: Island) => is.region === region && !is.minor && !is.hidden && !s.discovered.has(is.id) && !coveHidden(game, is.id, s.accountId);
+  const list = game.world.islands
+    .filter(open)
     .sort((a, b) => dist(a.x, a.y, port.x, port.y) - dist(b.x, b.y, port.x, port.y))
     .slice(0, 15);
+  const paid = [...list];
+  // Forum post 68 (Эдуард: «если игроку лень исследовать, он может купить карту региона, вот тогда и открыть данные
+  // островов»): the chart of a sea has every shipyard of it inked in — the chart's «Верфи» shows a yard only once found.
+  const have = new Set(list.map((is) => is.id));
+  for (const p of game.world.ports) {
+    if (p.region !== region || p.shipyardTier <= 0 || p.raft) continue;
+    const is = game.world.islands[p.islandId];
+    if (is && !have.has(is.id) && open(is)) {
+      have.add(is.id);
+      list.push(is);
+    }
+  }
+  return Object.assign(list, { paid });
 }
+
+/** Forum post 68: the sea's charts ×2 (the tester's own ask: «только цену лучше поднять»). */
+export const CHART_PRICE_MUL = 2;
 
 function chartRegions(port: Port): RegionId[] {
   return REGION_IDS.filter((r) => r === port.region || dist(REGIONS[r].center[0], REGIONS[r].center[1], port.x, port.y) < 42000);
 }
 
-function chartPrice(list: Island[], port: Port): number {
-  return Math.round(list.reduce((a, is) => a + islandChartValue(is, port), 0) * 0.8 + 40);
+export function chartPrice(list: Island[], port: Port): number {
+  return Math.round((list.reduce((a, is) => a + islandChartValue(is, port), 0) * 0.8 + 40) * CHART_PRICE_MUL);
 }
 
 export function chartView(game: Game, s: PlayerSession, port: Port): PortView['charts'] {
@@ -852,7 +872,7 @@ export function chartView(game: Game, s: PlayerSession, port: Port): PortView['c
     offers: chartRegions(port)
       .map((region) => {
         const list = chartForRegion(game, s, port, region);
-        const price = chartPrice(list, port);
+        const price = chartPrice(list.paid, port);
         return { region, name: `Chart of ${REGIONS[region].name}`, islands: list.length, price };
       })
       .filter((o) => o.islands > 0),
@@ -876,12 +896,15 @@ export function buyChart(game: Game, s: PlayerSession, port: Port, region: Regio
   if (!chartRegions(port).includes(region)) return 'No chart of those waters here';
   const list = chartForRegion(game, s, port, region);
   if (!list.length) return 'You already know everything this chart shows';
-  const price = chartPrice(list, port);
+  const price = chartPrice(list.paid, port);
   const p = s.profile!;
   if (p.gold < price) return lackMore(`The chart costs ${price} silver`, price, p.gold);
   p.gold -= price;
   // Bought knowledge charts the islands but earns no discovery experience — you did not sail there.
   for (const is of list) game.chartIsland(s, is);
+  // (a yard's quay out of the fog too, so the chart's «Верфи» shows it: forum post 68)
+  const inked = new Set(list.map((is) => is.id));
+  for (const yp of game.world.ports) if (yp.region === region && yp.shipyardTier > 0 && inked.has(yp.islandId)) fogReveal(game, s, yp.x, yp.y, 1200);
   p.chartsBought.push(...list.map((is) => is.id));
   game.db.ledger(s.accountId, 'chart_bought', -price, `${region} @ ${port.id}`);
   game.sendTo(s, { t: 'toast', msg: `${list.length} islands inked onto your chart.`, kind: 'info' });

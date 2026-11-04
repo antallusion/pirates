@@ -6034,3 +6034,36 @@ html.app-paused *, html.app-paused *::before, html.app-paused *::after { animati
   .map-wrap .map-bar .map-x .k-btn-l { display: none; }
   .map-wrap .map-bar .map-x .k-btn-ico { width: 22px; height: 22px; margin: 0; }
 }
+/* «Найти» on the chart (Эдуард, forum post 65): a place she knows, by its name — the field at the chart's top left, the
+   hits under it (how far, which way), the one tapped with «Проложить курс». Its button keeps its word on a phone too. */
+@media (max-height: 420px) {
+  .map-wrap .map-bar .map-x[data-mfind] .k-btn-l { display: inline; }
+  .map-wrap .map-bar .map-x[data-mfind] .k-btn-ico { width: 18px; height: 18px; margin: 0 4px 0 0; }
+}
+.map-find { position: absolute; z-index: 4; top: 8px; left: 8px; width: min(340px, calc(100% - 16px)); display: flex; flex-direction: column; gap: 4px; padding: 6px; background: rgba(8, 9, 11, 0.9); border: 1px solid rgba(196, 160, 102, 0.7); border-radius: 4px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6); max-height: calc(100% - 16px); }
+.map-find .mf-top { display: flex; align-items: center; gap: 6px; }
+.map-find .mf-lens { flex: 0 0 auto; opacity: 0.85; }
+.map-find .mf-q { margin: 0; flex: 1 1 auto; min-width: 0; padding: 7px 10px; font-size: 15px; }
+.map-find .mf-x { position: static; flex: 0 0 auto; width: 36px; height: 36px; font-size: 16px; }
+.map-find .mf-list { display: flex; flex-direction: column; overflow-y: auto; min-height: 0; max-height: 250px; overscroll-behavior: contain; }
+.map-find .mf-none { margin: 4px 2px; font-size: 12.5px; line-height: 1.35; }
+.map-find .mf-hit { display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto auto; column-gap: 8px; align-items: center; min-height: 40px; padding: 4px 6px; border: 0; border-bottom: 1px solid rgba(196, 160, 102, 0.18); background: none; color: var(--bone); text-align: left; cursor: pointer; font: 14px/1.2 var(--serif); }
+.map-find .mf-hit:hover, .map-find .mf-hit.on { background: rgba(224, 184, 98, 0.14); }
+.map-find .mf-hit.on .mf-n { color: var(--gold); }
+.map-find .mf-hit .mf-ico { grid-row: 1 / 3; }
+.map-find .mf-n { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-find .mf-k { grid-column: 3; grid-row: 1; font: 11px/1 var(--k-font-sans, Inter, sans-serif); color: rgba(216, 210, 196, 0.6); text-transform: lowercase; }
+.map-find .mf-d { grid-column: 2 / 4; grid-row: 2; font: 12px/1.2 var(--k-font-sans, Inter, sans-serif); color: #c9b48a; }
+.map-find .mf-pick { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px 8px; padding: 6px 4px 2px; border-top: 1px solid rgba(196, 160, 102, 0.45); }
+.map-find .mf-pn { flex: 1 1 120px; min-width: 0; display: flex; flex-direction: column; }
+.map-find .mf-pn b { color: var(--gold); font: 600 15px/1.2 var(--serif); overflow-wrap: anywhere; }
+.map-find .mf-pn small { color: #c9b48a; font-size: 12px; }
+.map-find .mf-sail { flex: 0 0 auto; white-space: nowrap; }
+@media (max-height: 420px) {
+  .map-find { top: 4px; left: 4px; padding: 4px; width: min(300px, calc(100% - 8px)); }
+  .map-find .mf-q { padding: 5px 8px; font-size: 14px; }
+  .map-find .mf-x { width: 32px; height: 32px; }
+  .map-find .mf-list { max-height: 150px; }
+  .map-find:has(.mf-pick) .mf-list { max-height: 80px; } /* (a place picked: the list steps back, the chart shows) */
+  .map-find .mf-hit { min-height: 36px; padding: 3px 5px; }
+}

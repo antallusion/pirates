@@ -77,6 +77,8 @@ const EN = {
   pay: 'Pay',
   follow: 'Follow',
   following: 'Followed',
+  onMap: 'Show on chart',
+  onMapT: 'Open the chart on the place this step asks for',
   sail: 'Sail there',
   sailHint: 'The helmsman takes her there, puts in or lands the party as the step asks, and goes on to the next step',
   sailPort: 'Sail after casting off',
@@ -143,6 +145,8 @@ const RU: typeof EN = {
   pay: 'Плата',
   follow: 'Следовать',
   following: 'Отслеживается',
+  onMap: 'Показать на карте',
+  onMapT: 'Открыть карту на месте, куда ведёт этот шаг',
   sail: 'Плыть',
   sailHint: 'Рулевой поведёт корабль к месту, сам зайдёт в порт или высадит десант, как просит шаг, и поведёт к следующему шагу',
   sailPort: 'Плыть после выхода',
@@ -204,6 +208,8 @@ export class Journal {
   openLog: (() => void) | null = null;
   /** «Плыть» (ux2): the course to the quest's place, and on to its next steps (main.ts, goalrun.ts). */
   onSail: (key: string) => void = () => {};
+  /** «Показать на карте» (Эдуард, forum post 65: an officer's «отвези меня на остров…»): the chart open on the step's place. */
+  onShowMap: (x: number, y: number) => void = () => {};
   /** A port's page for a quest step done there («В лавку», «На рынок», «Нанять»): main.ts opens the port window on it. */
   onPortTab: (tab: string) => void = () => {};
   /** Another tab of «Журнал»: the company's pages (main.ts). */
@@ -256,6 +262,12 @@ export class Journal {
       const name = root.querySelector<HTMLInputElement>(`input[data-wfor="${id}"]`)?.value ?? '';
       this.send({ t: 'wonder', id, name });
     }));
+    root.querySelector<HTMLElement>('[data-jmap]')?.addEventListener('click', () => {
+      const t = q?.target;
+      if (!t) return;
+      setTracked(q.id);
+      this.onShowMap(t.x, t.y);
+    });
     root.querySelector<HTMLElement>('[data-follow]')?.addEventListener('click', () => {
       setTracked(this.chosen);
       this.render(root, state);
@@ -439,6 +451,7 @@ export class Journal {
       <div class="jr-acts">
         ${((a) => (a ? actButton(q.id, a, 'btn btn-small btn-primary') : ''))(hereAct(q, state.self?.dockedAt))}
         ${hereAct(q, state.self?.dockedAt) ? '' : `<button class="btn btn-small btn-primary jr-sail" data-jsail data-hint="${esc(L('sailHint'))}" title="${esc(L('sailHint'))}">${icon('stat_sails', '', 'ico-sm')}${esc(L(docked ? 'sailPort' : 'sail'))}${far !== null && !q.target?.region ? ` · ${esc(distWords(far))}` : ''}</button>`}
+        ${q.target ? `<button class="btn btn-small jr-map" data-jmap title="${esc(L('onMapT'))}">${icon('menu_map', '', 'ico-sm')}${esc(L('onMap'))}</button>` : ''}
         <button class="btn btn-small${tracked ? ' on' : ''}" data-follow ${tracked ? 'disabled' : ''}>${esc(L(tracked ? 'following' : 'follow'))}</button>
         ${canShare ? `<button class="btn btn-small" data-share>${esc(L('share'))}</button>` : ''}
         ${q.category === 'elite' && !inGroup ? `<button class="btn btn-small" data-lfg title="${esc(L('lfgHint'))}">${esc(L('lfg'))}</button>` : ''}

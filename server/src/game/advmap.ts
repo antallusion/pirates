@@ -47,7 +47,7 @@ import { mineState } from './mines.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { seasonId } from './seasons.ts';
 import type { ShipEntity } from './ship.ts';
-import { keepsDeep } from './town.ts';
+import { hasDrownedShrine, keepsDeep } from './town.ts';
 import { readObelisk } from './grail.ts';
 import { haulNote, haulPeek, haulTake } from './seahaul.ts';
 
@@ -290,8 +290,10 @@ export function guardRatio(game: Game, s: PlayerSession, g: AdvGuard): number {
 }
 
 /** HoMM3's neutrals before a far stronger army: the deep's things flee, men may sign on (the Choir's and the cursed
- *  ships take the drowned too), by the guard's own hash for the week. */
+ *  ships take the drowned too), by the guard's own hash for the week. The drowned (Эдуард, forum post 67) hear only a
+ *  captain with the Drowned Shrine on her island: without it they never yield — the fight alone. */
 export function guardOffer(game: Game, s: PlayerSession, g: AdvGuard): 'join' | 'flee' | null {
+  if (drownedGuard(g.kind) && !hasDrownedShrine(game, s)) return null;
   if (guardRatio(game, s, g) < JOIN_RATIO) return null;
   const j = GUARDS[g.kind].join;
   if (j === 'never') return 'flee';
@@ -397,6 +399,27 @@ export function guardLooted(game: Game, p: Profile, g: AdvGuard): boolean {
   return v !== undefined && v >= thisWeek(game) + 1;
 }
 
+/** The drowned of the adventure map: the wreck's dead crew (forum post 67). */
+export function drownedGuard(kind: AdvGuard['kind']): boolean {
+  return kind === 'wreck';
+}
+
+/** Why the drowned do not talk to her (the server's word; the client's ring says it before the tap). */
+export const DROWNED_NO_TALK = 'The drowned talk only to a captain with a Drowned Shrine on her island.';
+
+/** «Переговоры» (the ring's talk with a guard, forum post 67): her boats hail them — far off, the helmsman takes her
+ *  within hail first; there, their answer (HoMM3's: before a far stronger army they yield — sign on or let her pass —
+ *  else they will not), and the card over the sea shows the choice. */
+function guardTalk(game: Game, s: PlayerSession, g: AdvGuard): string | null {
+  const ship = s.ship!;
+  if (!guardReach(game, ship, g)) return approach(game, s, { x: g.x, y: g.y, reach: GUARD_DEAL_R, r: OBJ_R, near: () => !!s.ship && guardReach(game, s.ship, g, -4) }, 'Too far');
+  const offer = guardOffer(game, s, g);
+  if (!offer) return 'They will not yield to you.';
+  game.toastShip(ship, offer === 'join' ? `The ${guardName(g)} hear you out: some would sign on, or they let you pass.` : `The ${guardName(g)} hear you out: they will let you pass.`, 'info');
+  sendCard(game, s, true);
+  return null;
+}
+
 /** The guard's card answered: fight (board it at once), take the men who would sign on, or let them go. */
 export function guardChoice(game: Game, s: PlayerSession, id: string, choice: string): string | null {
   const g = adv(game).guardById.get(id);
@@ -405,6 +428,9 @@ export function guardChoice(game: Game, s: PlayerSession, id: string, choice: st
   if (!guardUp(game, g)) return 'They are gone';
   if (dist(ship.state.x, ship.state.y, g.x, g.y) > GUARD_CARD_R) return 'Too far';
   if (ship.boarding) return 'Not now';
+  // the drowned talk only to a captain with their shrine on her island (forum post 67; the ring's «Переговоры»)
+  if (choice !== 'fight' && drownedGuard(g.kind) && !hasDrownedShrine(game, s)) return DROWNED_NO_TALK;
+  if (choice === 'talk') return guardTalk(game, s, g);
   // (no offer of theirs: said at once, not sailed in for)
   if (choice !== 'fight' && !guardOffer(game, s, g)) return 'They will not yield to you.';
   if (choice !== 'fight' && !guardReach(game, ship, g)) return approach(game, s, { x: g.x, y: g.y, reach: GUARD_DEAL_R, r: OBJ_R, near: () => !!s.ship && guardReach(game, s.ship, g, -4) }, 'Too far');
@@ -764,7 +790,7 @@ export function advView(game: Game, s: PlayerSession): AdvView {
     guards.push({ id: g.id, kind: g.kind, x: g.x, y: g.y, level: g.level, men: armyMen(guardMenOf(game, g)), down: !guardUp(game, g), ...(ship ? { e: ship.id } : {}) });
   }
   const ap = advOf(p);
-  return { objs, guards, pieces: piecesOf(game, p).length, of: a.map.objs.filter((o) => o.kind === 'obelisk').length, grail: ap.built ? 'built' : ap.held ? 'held' : 'none' };
+  return { objs, guards, pieces: piecesOf(game, p).length, of: a.map.objs.filter((o) => o.kind === 'obelisk').length, grail: ap.built ? 'built' : ap.held ? 'held' : 'none', ...(hasDrownedShrine(game, s) ? { shrine: true } : {}) };
 }
 
 export function sendAdv(game: Game, s: PlayerSession, force: boolean): void {

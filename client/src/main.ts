@@ -383,6 +383,11 @@ function autosailTo(wp: { x: number; y: number }, near?: number): void {
 }
 // ux2: «Плыть» on a quest of the journal or the chart — the course to its place and on through its steps.
 journal.onSail = (key) => startGoal(key);
+// «Показать на карте» (Эдуард, forum post 65): the chart open on the quest step's place
+journal.onShowMap = (x, y) => {
+  openModal('map');
+  worldMap.focus(state, x, y);
+};
 journal.onPortTab = (tab) => { if (!state.portView) return; portScreen.showTab(tab, null, state); openModal('port'); }; // owner, 2026-10-23: a quest step's shop or table
 worldMap.onGoal = (key) => startGoal(key);
 worldMap.onFoes = () => foeFinder.open(); // forum 45
@@ -5205,7 +5210,8 @@ function targetChoices(about: string): { choices: TmChoice[]; name: string; x: n
     const pos = { name: beast ? BEASTS[beast].name[lang() === 'ru' ? 1 : 0] : s.info.isPlayer ? s.info.captainName : placeName(s.info.name), x: renderer.sx(s.cur.x), y: renderer.sy(s.cur.y), r: Math.max(18, SHIP_CLASSES[s.info.classId].length * 0.5 * renderer.zoom) };
     const ok = !!f?.attackable;
     const pm = patentMarkOf(s.info, s.cur.flags);
-    const choices = shipRing({ kind: mk, isPlayer: s.info.isPlayer, attackOk: ok, boardNow: ok && canBoardNow(id), struck: !!(s.cur.flags & SF.SURRENDERED), running: state.pursuit?.target === id ? state.pursuit.mode : null, patent: pm === 'prey' || pm === 'piracy' ? pm : null });
+    const gm = guardOfEntity(state, id); // forum post 67: the drowned's «Переговоры» with the Drowned Shrine on her island
+    const choices = shipRing({ kind: mk, isPlayer: s.info.isPlayer, attackOk: ok, boardNow: ok && canBoardNow(id), struck: !!(s.cur.flags & SF.SURRENDERED), running: state.pursuit?.target === id ? state.pursuit.mode : null, patent: pm === 'prey' || pm === 'piracy' ? pm : null, drowned: gm?.kind === 'wreck' ? (state.adv?.shrine ? 'shrine' : 'none') : null });
     return choices.length ? { ...pos, choices, info: true } : { ...pos, choices: [{ id: 'info', art: 'bt_book', label: seaWord('tm.info'), title: seaWord('tm.infoT') }] };
   }
   if (kind === 'roam') {
@@ -5290,7 +5296,13 @@ function pickTargetChoice(id: TmId, about: string): void {
       openDetail(`ship:${n}`);
       return;
     }
-    if (id === 'talk') return openHail(n);
+    if (id === 'talk') {
+      // the drowned's «Переговоры» (forum post 67): her boats hail the guard — the server checks the shrine, sails her
+      // within hail, and the card over the sea shows their answer
+      const gm = guardOfEntity(state, n);
+      if (gm) return void net.send({ t: 'h4', action: 'guard', id: gm.id, choice: 'talk' });
+      return openHail(n);
+    }
     if (id === 'sink' || id === 'release') return void net.send({ t: 'surrender', id: n, fate: id });
     // «Атаковать» under colours that forbid it: why, and the one tap to the flag card — nothing sent, no mark taken
     // (owner, 2026-11-01)

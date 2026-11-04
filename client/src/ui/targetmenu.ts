@@ -30,6 +30,8 @@ export interface TmChoice {
   on?: boolean;
   /** Not lawful now (owner, 2026-11-01: «Атаковать» under the city flag at a merchant): shown dimmed, a tap says why. */
   off?: boolean;
+  /** A small line under its word (forum post 67: «Переговоры — со Святилищем утопленников на острове»). */
+  sub?: string;
 }
 
 /** A tap that opened the choices cannot pick one this soon (the same finger lifting). */
@@ -166,7 +168,7 @@ export class TargetMenu {
   /** Open (or redraw) the choices about a target. */
   show(about: string, choices: TmChoice[], name: string, info = false): void {
     if (!choices.length) return this.hide();
-    const key = `${about}|${info ? 'i|' : ''}${choices.map((c) => `${c.id}:${c.art}:${c.label}:${c.on ? 1 : 0}${c.off ? 'x' : ''}`).join(',')}`;
+    const key = `${about}|${info ? 'i|' : ''}${choices.map((c) => `${c.id}:${c.art}:${c.label}:${c.on ? 1 : 0}${c.off ? 'x' : ''}${c.sub ?? ''}`).join(',')}`;
     if (!this.isOpen || this.about !== about) {
       this.openedAt = performance.now();
       this.keep();
@@ -178,7 +180,7 @@ export class TargetMenu {
       this.el.classList.toggle('tm-single', choices.length === 1 && choices[0].id !== 'info');
       this.el.setAttribute('aria-label', L('tm.aria', { name }));
       this.el.innerHTML = choices.map((c, i) => `<button type="button" class="tm-item${c.on ? ' on' : ''}${c.off ? ' off' : ''}" role="menuitem" data-tm="${c.id}" style="--tm-i:${i}" aria-label="${esc(c.title)}" title="${esc(c.title)}"${c.on ? ' aria-pressed="true"' : ''}>`
-        + `<span class="tm-pic">${icon(c.art, '•', 'tm-ico')}</span><span class="tm-l">${esc(c.label)}</span></button>`).join('')
+        + `<span class="tm-pic">${icon(c.art, '•', 'tm-ico')}</span><span class="tm-l">${esc(c.label)}${c.sub ? `<small class="tm-sub">${esc(c.sub)}</small>` : ''}</span></button>`).join('')
         // «Подробнее» (owner, 2026-10-30): a small ⓘ on the ring's free side, outside its layout (detail.ts card)
         + (info ? `<button type="button" class="tm-extra" role="menuitem" data-tm="info" aria-label="${esc(L('tm.infoT'))}" title="${esc(L('tm.infoT'))}">ⓘ</button>` : '');
     }

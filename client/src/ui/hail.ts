@@ -37,6 +37,9 @@ export interface RingFacts {
   running: 'guns' | 'board' | null;
   /** Under her privateer patent (owner, 2026-11-02): her patent's prey (no skull), or piracy (the patent burns). */
   patent?: 'prey' | 'piracy' | null;
+  /** The drowned of the map (the wreck's dead crew — Эдуард, forum post 67): 'shrine' — her island has the Drowned
+   *  Shrine, they talk («Переговоры»); 'none' — they do not, and the ring says where the talks come from. */
+  drowned?: 'shrine' | 'none' | null;
 }
 
 /** Men aboard who answer a hail: any captain, any ship of the sea's but the deep's — not a captain's escort (she
@@ -56,6 +59,12 @@ export function shipRing(f: RingFacts): TmChoice[] {
   const fight: TmChoice = { id: 'fight', art: 'talent_gun_rolling_broadside', label: LS('tm.attack'), title: f.struck ? LS('tm.fightStruck') : f.attackOk ? (f.patent === 'prey' ? L('patPreyT') : f.patent === 'piracy' ? L('patPiracyT') : L('attackT')) : L('attackOffT'), on: f.attackOk && f.running === 'guns' };
   if (!f.attackOk) fight.off = true;
   out.push(fight);
+  // the drowned (forum post 67): «Переговоры» with the Drowned Shrine on her island; without it «Атаковать» and the hint
+  if (f.kind === 'deep' && f.drowned === 'shrine') {
+    out.push({ id: 'talk', art: 'role_deep_pastor', label: L('parley'), title: L('parleyT') });
+    return out;
+  }
+  if (f.kind === 'deep' && f.drowned === 'none') fight.sub = L('parleyNeed');
   if (f.kind === 'deep') return out; // the deep's: «Атаковать» alone (owner, 2026-10-31)
   if (f.attackOk && f.boardNow) out.push({ id: 'board', art: 'ab_red_hook_boarding', label: LS('tm.board'), title: L('boardT'), on: f.running === 'board' });
   if (f.struck && f.attackOk) {

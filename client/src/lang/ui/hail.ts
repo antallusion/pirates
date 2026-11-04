@@ -4,6 +4,9 @@
 export const EN = {
   'talk': 'Talk',
   'talkT': 'Hail her: hire, talks, a word — what she has to say',
+  'parley': 'Parley',
+  'parleyT': 'Hail the drowned: far stronger, they sign on or let you pass (your Drowned Shrine speaks for you)',
+  'parleyNeed': 'Parley — with a Drowned Shrine on your island',
   'attackT': 'Attack: the guns — broadside on and fire, keeping the distance',
   'attackOffT': 'Attack: not under these colours — tap to see why',
   'boardT': 'Board her: grapples away now (within 100 m)',
@@ -39,6 +42,9 @@ export const EN = {
 export const RU: Record<keyof typeof EN, string> = {
   'talk': 'Поговорить',
   'talkT': 'Окликнуть: нанять, переговоры, слово — что она скажет',
+  'parley': 'Переговоры',
+  'parleyT': 'Окликнуть утопленников: если вы намного сильнее, они перейдут к вам или пропустят (за вас говорит Святилище утопленников)',
+  'parleyNeed': 'Переговоры — со Святилищем утопленников на острове',
   'attackT': 'Атаковать: пушками — бортом к ней и огонь, держа дистанцию',
   'attackOffT': 'Атаковать: не под этим флагом — нажмите, чтобы узнать почему',
   'boardT': 'На абордаж: крючья за борт сейчас (ближе 100 м)',
