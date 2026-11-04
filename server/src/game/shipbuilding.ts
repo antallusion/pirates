@@ -26,6 +26,7 @@ import type { Port } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { grantDeed } from './progression.ts';
+import { badName, NAME_BAD } from '../../../shared/src/namefilter.ts';
 
 /** «Причал» (forum, Нефигугум 2026-10-30: «купив новый корабль старый пропадает навсегда? нет ни какого ангара»): BERTHS_FREE
  *  berths free (two, the owner 2026-10-30), one more for BERTH_PRICE doubloons each (300), BERTHS_CAP in all. */
@@ -143,6 +144,7 @@ export function orderBuild(game: Game, s: PlayerSession, port: Port, r: BuildReq
   const p = s.profile!;
   const q = quoteBuild(game, s, port, r);
   if (q.error) return q.error;
+  if (badName(String(r.name ?? ''))) return NAME_BAD; // forum post 66
   const name = String(r.name ?? '').replace(/[^\p{L}\p{N} '\-]/gu, '').trim().slice(0, 28) || SHIP_CLASSES[r.classId].name;
   p.gold -= q.cost;
   game.db.ledger(s.accountId, 'build', -q.cost, `${r.classId} @ ${port.id}`);

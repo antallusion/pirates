@@ -12,6 +12,7 @@ import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import { tattooCount } from './tattoos.ts';
 import { sagaNote } from './saga.ts';
+import { badName, NAME_BAD } from '../../../shared/src/namefilter.ts';
 
 interface Rec {
   first: string;
@@ -89,6 +90,7 @@ export function nameWonder(game: Game, s: PlayerSession, id: string, nameRaw: st
   if (r.named) return 'That wonder is named already.';
   const name = String(nameRaw ?? '').trim().replace(/\s+/g, ' ');
   if (!WONDER_NAME_RE.test(name)) return 'Three to twenty-four letters, spaces or apostrophes';
+  if (badName(name)) return NAME_BAD; // forum post 66
   r.named = name;
   game.db.setKv('wonders', recs);
   for (const o of game.sessions) game.sendTo(o, { t: 'toast', msg: `WORLD: ${s.name} names a wonder of the sea: ${name}.`, kind: 'info' });

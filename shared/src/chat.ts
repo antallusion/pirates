@@ -7,6 +7,7 @@
 //  - which links may be followed (our own domain only; every other one stays words).
 
 import { matchAllAfter } from './lookbehind.ts';
+import { badWord } from './namefilter.ts';
 
 /** The longest line, in characters. */
 export const CHAT_MAX = 300;
@@ -218,6 +219,15 @@ export function maskBadWords(text: string): string {
   };
   for (const m of ruCoarse(folded(text))) hit(m.index, m[0].length);
   for (const m of text.matchAll(EN_BAD)) hit(m.index!, m[0].length);
+  // the name filter's wider list, word by word (forum post 66): «п.и.д.о.р», «pidor», «гитлер», «дрочила» — the first
+  // letter kept, the rest up to its last letter stars (the quotes and stops around it stay)
+  for (const m of text.matchAll(/\S+/g)) {
+    if (!badWord(m[0])) continue;
+    const lead = Math.max(0, m[0].search(/[\p{L}\p{N}]/u));
+    let end = m[0].length;
+    while (end > lead && !/[\p{L}\p{N}]/u.test(m[0][end - 1])) end--;
+    hit(m.index! + lead, end - lead);
+  }
   return chars.join('');
 }
 

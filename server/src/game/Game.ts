@@ -115,6 +115,8 @@ import { hullStep } from './strike.ts';
 import type { Island, Port, RaisedIsland, World } from '../../../shared/src/world/worldgen.ts';
 import type { AuthService } from '../auth.ts';
 import { sanitizeName } from '../auth.ts';
+import { badName, NAME_BAD } from '../../../shared/src/namefilter.ts'; // forum post 66
+import { namesAdmin, namesStaff, renameCaptain } from './names.ts';
 import type { GameConn } from '../net/conn.ts';
 import type { Db } from '../persistence/db.ts';
 import type { SharedState } from '../persistence/redis.ts';
@@ -4876,12 +4878,22 @@ export class Game {
       // ---- docs/28, the chat (server/src/game/chat.ts); the tester's commands stay here
       case 'chat': {
         const text = cleanChat(msg.text);
+        // forum post 66: the names the filter refuses, listed and fixed by the server's admins on any server (names.ts)
+        if (!msg.ch && /^\/names(?:\s|$)/i.test(text) && (adminEnabled() || namesStaff(s.accountId))) {
+          this.sendTo(s, { t: 'toast', msg: namesAdmin(this, text.trim().split(/\s+/).slice(1)), kind: 'info' });
+          return;
+        }
         if (!msg.ch && text.startsWith('/') && adminEnabled() && !chatCommand(text)) {
           const reply = runAdmin(this, s, text);
           if (reply) this.sendTo(s, { t: 'toast', msg: reply, kind: 'info' });
           return;
         }
         return err(chatIn(this, s, msg));
+      }
+      case 'rename': {
+        // forum post 66: her free rename (names.ts)
+        const why = renameCaptain(this, s, msg.name);
+        return this.sendTo(s, why ? { t: 'renamed', ok: false, error: why } : { t: 'renamed', ok: true, name: s.name });
       }
       case 'chat_hist':
         return chatHist(this, s, typeof msg.peer === 'string' ? msg.peer : undefined);
@@ -4976,6 +4988,8 @@ export class Game {
     if (!CAPTAIN_IDS.includes(captain)) return this.sendTo(s, { t: 'err', msg: 'Unknown captain' });
     // owner, 2026-10-19: a premium captain is bought first (captainshop.ts); a captain saved before keeps hers
     if (!ownsCaptain(this, s.accountId, captain)) return this.sendTo(s, { t: 'err', msg: 'That captain is sold for doubloons' });
+    // forum post 66: a coarse ship's name is refused, not quietly replaced (she chooses another)
+    if (badName(String(rawShipName ?? ''))) return this.sendTo(s, { t: 'err', msg: NAME_BAD });
     const shipName = sanitizeName(rawShipName ?? '') ?? CAPTAINS[captain].epithet;
     const port = this.portById(START_PORT)!;
     s.profile = newProfile(captain, shipName, port.id, this.now);

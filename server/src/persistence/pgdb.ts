@@ -390,6 +390,21 @@ export class PgDatabase implements Db {
     return [...this.captains.values()].map((c) => ({ account_id: c.account_id, name: this.accounts.get(c.account_id)?.name ?? '', data: c.data }));
   }
 
+  allAccountNames(): { id: number; name: string }[] {
+    return [...this.accounts.values()].map((a) => ({ id: a.id, name: a.name })).sort((a, b) => a.id - b.id);
+  }
+
+  renameAccount(id: number, name: string): boolean {
+    const a = this.accounts.get(id);
+    const other = this.byName.get(name.toLowerCase());
+    if (!a || (other && other.id !== id)) return false;
+    this.byName.delete(a.name.toLowerCase());
+    a.name = name;
+    this.byName.set(name.toLowerCase(), a);
+    this.write('UPDATE accounts SET name = $1 WHERE id = $2', [name, id]);
+    return true;
+  }
+
   silverHoldings(): { account_id: number; gold: number; bank: number }[] {
     return [...this.captains.values()].map((c) => ({ account_id: c.account_id, gold: c.gold, bank: c.bank }));
   }

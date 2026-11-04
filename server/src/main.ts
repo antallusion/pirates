@@ -40,6 +40,7 @@ import { ForumService } from './forum/service.ts';
 import { gameLink } from './forum/gamelink.ts';
 import { postOfficial } from './forum/posts28.ts';
 import { setPvpNews } from './game/pvprank.ts';
+import { setRenameHook } from './game/names.ts'; // forum post 66
 import { forumRoutes } from './http/forum-routes.ts';
 import { SiteRating } from './game/siterating.ts';
 import { SiteProfile } from './game/siteprofile.ts';
@@ -98,6 +99,8 @@ const forum = new ForumService({
 const handleForum = forumRoutes(forum, auth);
 // The PvP season's results in the forum's News (owner, 2026-10-30; server/src/game/pvprank.ts).
 setPvpNews((title, body) => void postOfficial(forum.store, 'news', title, body, Date.now()));
+// A captain's new name (forum post 66, server/src/game/names.ts): her forum nickname follows at once.
+setRenameHook((account, name) => forum.store.setUserName(account, name));
 // The website's captains' rating and shop (owner, 2026-10-20): YooKassa when YOOKASSA_SHOP_ID and YOOKASSA_SECRET_KEY are
 // set, else the test mode (its fake checkout opens with GRAVETIDE_PAY_TEST=1 or for SITE_ADMINS / FORUM_ADMINS).
 const rating: SiteRating = new SiteRating(game, { banned: (acc): boolean => forum.store.user(acc)?.role === 'banned' });

@@ -36,6 +36,7 @@ import type { PlayerSession } from './player.ts';
 import { deliver } from './post.ts';
 import type { ShipEntity } from './ship.ts';
 import { fresh } from './onboarding.ts';
+import { badName, NAME_BAD } from '../../../shared/src/namefilter.ts';
 
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
@@ -269,6 +270,7 @@ export function foundGuild(game: Game, s: PlayerSession, rawName: string, rawTag
   if (!/^[\p{L}\p{N} '\-]{3,24}$/u.test(name)) return 'A guild name is 3–24 letters';
   // (any alphabet's capitals: a Russian captain's «СП» was refused, the field's own placeholder reading «ТЕГ»)
   if (!/^[\p{Lu}\p{N}]{2,4}$/u.test(tag)) return 'A tag is 2–4 letters or digits';
+  if (badName(name) || badName(tag)) return NAME_BAD; // forum post 66
   const st = game.guilds.store(game);
   for (const g of Object.values(st.guilds)) {
     if (g.name.toLowerCase() === name.toLowerCase()) return 'That name is taken';

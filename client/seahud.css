@@ -847,6 +847,9 @@ body.simple:not(.touch) #hud-prompt .act-btn { --h: 30px; font-size: 12px; }
 .cap-acc .cap-row > .k-btn, .cap-acc .cap-switch { min-height: var(--f-tap, 34px); padding: 0 14px; }
 .cap-acc .cap-switch { align-self: flex-start; background: none; border-color: transparent; color: var(--k-haze); text-decoration: underline; }
 .cap-acc .cap-msg:empty { display: none; }
+/* forum post 66: the free rename's refusal stands out ("Имя не подходит: выберите другое") */
+.cap-acc .cap-msg.cap-bad { color: #ff9a8a; font-weight: 600; }
+.cap-acc .cap-msg:not(.cap-bad):not(:empty) { color: var(--k-bone); }
 
 /* ---------- Owner, 2026-10-16: the battle's order bar, threat line, deployment, log, why and replay ----------
    The order of the round: the face on its turn ringed in gold; a stack given another turn by high morale wears «+1» and

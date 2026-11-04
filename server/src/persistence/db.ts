@@ -104,6 +104,10 @@ export interface Db {
   silverHoldings(): { account_id: number; gold: number; bank: number }[];
   /** Every saved captain with her account's name (the website's captains' rating reads them, at most once a minute). */
   allCaptains(): { account_id: number; name: string; data: string }[];
+  /** Every account's id and name (the name filter's scan, forum post 66). */
+  allAccountNames(): { id: number; name: string }[];
+  /** A captain's new name (a free rename, or the administration's fix of a coarse one): false when it is taken. */
+  renameAccount(id: number, name: string): boolean;
   /** When the account was made and its captain last seen (her last sign-in or save, whichever is later): the website's
    *  captain card (siteprofile.ts). Optional: a store without it shows neither. */
   seenOf?(accountId: number): { created: number; seen: number } | undefined;
@@ -279,6 +283,17 @@ export class Database implements Db {
 
   allCaptains(): { account_id: number; name: string; data: string }[] {
     return this.db.prepare('SELECT c.account_id AS account_id, a.name AS name, c.data AS data FROM captains c JOIN accounts a ON a.id = c.account_id').all() as { account_id: number; name: string; data: string }[];
+  }
+
+  allAccountNames(): { id: number; name: string }[] {
+    return this.db.prepare('SELECT id, name FROM accounts ORDER BY id').all() as { id: number; name: string }[];
+  }
+
+  renameAccount(id: number, name: string): boolean {
+    const other = this.accountByName(name);
+    if (other && other.id !== id) return false;
+    this.db.prepare('UPDATE accounts SET name = ? WHERE id = ?').run(name, id);
+    return true;
   }
 
   seenOf(accountId: number): { created: number; seen: number } | undefined {
