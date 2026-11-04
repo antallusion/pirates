@@ -31,6 +31,8 @@ import type { PlayerSession } from './player.ts';
 import { GRAIL_GROWTH, GRAIL_SILVER } from '../../../shared/src/data/advmap.ts';
 import { grailRaised, grailToRaise } from './grail.ts';
 import { razeView } from './raze.ts';
+import { ownIsland } from './estate.ts';
+import { yardOf } from './base.ts';
 
 export interface TownState {
   /** Each town building's level. */
@@ -62,6 +64,13 @@ export const townName = (id: TownId, level: number): string => TOWN[id].names[Ma
 export function keepsDeep(s: PlayerSession): boolean {
   const ship = s.ship;
   return deepAllowed(ship?.curse ?? 0, s.profile?.reputation.choir ?? 0, !!ship?.hasFlag('crew_of_drowned'));
+}
+
+/** Эдуард, forum post 67 («мы строим на острове Святилище утопленников и нанимаем их на службу, и переговоры не
+ *  ведём!»): her own island has the Drowned Shrine (the town's dw7, any level) — the drowned at sea talk to her. */
+export function hasDrownedShrine(game: Game, s: PlayerSession): boolean {
+  const h = ownIsland(game, s.accountId);
+  return !!h && townLevel(yardOf(game, h), 'dw7') >= 1;
 }
 
 // ------------------------------------------------------------------------------------------------ the dwellings' men

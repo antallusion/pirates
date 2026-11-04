@@ -102,8 +102,8 @@ export const ARTICLES: GuideArticle[] = [
       {
         img: 'sea-chart-2.webp',
         text: [
-          '«Where am I» centres the chart on your ship, zooms in and makes your mark pulse for a moment. Lost after scrolling far? One tap.',
-          '«Где я» ставит ваш корабль в центр карты, приближает и на миг заставляет вашу отметку мигать. Улистали далеко — один тап, и вы снова видите себя.',
+          '«Where am I» centres the chart on your ship, zooms in and makes your mark pulse for a moment. Lost after scrolling far? One tap. «Find» looks up an island or port you know by its first letters: a tap centres the chart on it, «Set course» sails there.',
+          '«Где я» ставит ваш корабль в центр карты, приближает и на миг заставляет вашу отметку мигать. Улистали далеко — один тап, и вы снова видите себя. «Найти» ищет знакомый остров или порт по первым буквам: тап — карта на нём, «Проложить курс» — плыть туда.',
         ],
         show: { open: 'map', point: '[data-mwhere]' },
       },

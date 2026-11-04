@@ -41,6 +41,8 @@ export interface AdvView {
   of: number;
   /** Her Grail: none yet, dug up and waiting to be raised in her town, or standing there. */
   grail: 'none' | 'held' | 'built';
+  /** Forum post 67: her island has the Drowned Shrine — the drowned at sea talk to her (the ring's «Переговоры»). */
+  shrine?: boolean;
 }
 
 /** The guard's card: its men, and — her army much the stronger — their offer. */
@@ -117,7 +119,7 @@ export interface PuzzleView {
 
 export type H4ClientMsg =
   | { t: 'h4'; action: 'visit'; id: string; choice?: string }
-  | { t: 'h4'; action: 'guard'; id: string; choice: 'fight' | 'join' | 'flee' }
+  | { t: 'h4'; action: 'guard'; id: string; choice: 'fight' | 'join' | 'flee' | 'talk' } // 'talk': the ring's «Переговоры» (forum post 67)
   | { t: 'h4'; action: 'puzzle' }
   | { t: 'h4'; action: 'dig' };
 

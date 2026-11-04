@@ -19,8 +19,8 @@ export const ARTICLES: GuideArticle[] = [
       {
         img: img('faq-big-ships', 1),
         text: [
-          'Chart → «Shipyards»: «Shipyard 2 · ⚓1–6» — the yard\'s rank and the ship levels it sells. Undiscovered yards of rank 2+ show dimly, without a name: sail and find them.',
-          'Карта → «Верфи»: «Верфь 2 · ⚓1–6» — ранг верфи и уровни кораблей, что она продаёт. Неоткрытые верфи ранга 2+ видны тускло, без названия: плывите искать.',
+          'Chart → «Shipyards»: «Shipyard 2 · ⚓1–6» — the yard\'s rank and the ship levels it sells. Only the yards you have found are shown: sail and find them, or buy a sea’s chart in port («Charts»).',
+          'Карта → «Верфи»: «Верфь 2 · ⚓1–6» — ранг верфи и уровни кораблей, что она продаёт. Видны только найденные верфи: плывите искать или купите карту моря в порту («Карты»).',
         ],
         show: { open: 'map', point: '[data-mlayer="yards"]' },
       },

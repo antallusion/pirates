@@ -339,17 +339,17 @@ export const ARTICLES: GuideArticle[] = [
     id: 'exp-chart',
     section: 'explore',
     title: ['The chart of the known sea', 'Карта известного моря'],
-    tags: ['chart', 'map', 'layers', 'legend', 'key', 'where am i', 'карта', 'слои', 'условные знаки', 'где я', 'найти врага', 'к острову'],
+    tags: ['chart', 'map', 'layers', 'legend', 'key', 'where am i', 'карта', 'слои', 'условные знаки', 'где я', 'найти врага', 'к острову', 'find', 'search', 'найти', 'поиск', 'поиск острова'],
     summary: [
-      'Key M. Layers pick what is drawn; «Key» explains every mark; buttons find you, your island and a foe.',
-      'Клавиша M. Слои выбирают, что рисовать; «Условные знаки» объясняют каждый значок; кнопки находят вас, ваш остров и врага.',
+      'Key M. Layers pick what is drawn; «Key» explains every mark; buttons find you, your island, a foe — and «Find» a place you know by its name.',
+      'Клавиша M. Слои выбирают, что рисовать; «Условные знаки» объясняют каждый значок; кнопки находят вас, ваш остров, врага, а «Найти» — знакомое место по имени.',
     ],
     slides: [
       {
         img: img('exp-chart', 1),
         text: [
-          'Layers: «Ports», «Goals», «Lairs», «Treasure», «All» and «Shipyards» (with the yard\'s rank and ship levels, e.g. «Shipyard 2 · ⚓1–6»).',
-          'Слои: «Порты», «Цели», «Логова», «Сокровища», «Всё» и «Верфи» (с рангом верфи и уровнями кораблей, например «Верфь 2 · ⚓1–6»).',
+          'Layers: «Ports», «Goals», «Lairs», «Treasure», «All» and «Shipyards» (with the yard\'s rank and ship levels, e.g. «Shipyard 2 · ⚓1–6»: only the yards you have found, or those of a sea whose chart you bought).',
+          'Слои: «Порты», «Цели», «Логова», «Сокровища», «Всё» и «Верфи» (с рангом верфи и уровнями кораблей, например «Верфь 2 · ⚓1–6»: только найденные верфи или верфи моря, чью карту вы купили).',
         ],
         show: { open: 'map' },
       },

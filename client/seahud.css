@@ -581,6 +581,8 @@ body.touch .tm-l { font-size: 12.5px; line-height: 18px; }
 /* One choice left (owner, 2026-10-31: a thing of the deep — «Атаковать» alone): one big button, its word bold */
 .tm.tm-single .tm-item, body.touch .tm.tm-single .tm-item { width: 60px; height: 60px; }
 .tm.tm-single .tm-l { font-size: 14px; line-height: 20px; font-weight: 700; color: var(--k-gold); padding: 3px 10px; }
+/* forum post 67: the drowned's «Атаковать» says where the talks come from («Переговоры — со Святилищем…») */
+.tm-sub { display: block; font: 400 11px/14px var(--k-font-sans); color: rgba(200, 222, 214, 0.86); letter-spacing: 0; }
 
 /* ---------- pictures in round frames elsewhere (the crop check): inside the frame's circle, the badge on the rim */
 .k-wheel-ico { width: 26px; height: 26px; border-radius: 14%; }

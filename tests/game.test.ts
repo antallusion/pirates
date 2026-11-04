@@ -286,7 +286,7 @@ test('cartography: charts sell once per port, bought charts reveal islands witho
   assert.ok(p.xp === xp0 && p.level === lvl0, 'no discovery XP from bought charts');
   game.pushPort(s);
   assert.equal(c.last('port')!.view!.charts.sellable, 0, 'bought charts cannot be resold');
-  assert.ok(offer.price < 1200, `a starting captain can afford a chart (${offer.price})`);
+  assert.ok(offer.price < 2400, `a starting captain can save for a chart (${offer.price}; ×2 since forum post 68)`);
 });
 
 test('sightings and market intel are remembered with timestamps', () => {
