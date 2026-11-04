@@ -59,6 +59,8 @@ test('two ships of a level sink each other with broadsides alone in the table’
 // as under her own hand, so a mark to windward or running before the wind takes longer. Was median ≤ 16 s, p90 ≤ 45 s;
 // measured before (32052fc5^) ⚓1 10.9/12.7 s, ⚓3 10.1/20.2, ⚓5 12.2/18.6, ⚓8 10.8/38.4; after (97615063, the sims are
 // seeded) ⚓1 17.9/55.3, ⚓3 19.6/35.4, ⚓5 21.7/26.5, ⚓8 22.7/27.5 — still all alongside within the minute.)
+// (Owner, 2026-11-04: «ускорь, но не существенно» — BOARD_RUN +10 % way, +50 % pick-up: ⚓1 16.6/19.1 s, ⚓3 15.9/18,
+// ⚓5 21/24.7, ⚓8 20.8/23.2; the slow runs before the wind at ⚓1 no longer near the minute. Was p90 ≤ 58 s.)
 test('«Атаковать» alongside for the grapples in about 20 s from 700 m, a minute at the most; a green captain’s laid broadsides strike 60% and more', () => {
   const game = duelSea();
   for (const L of LEVELS) {
@@ -67,7 +69,7 @@ test('«Атаковать» alongside for the grapples in about 20 s from 700 m
     for (let k = 0; k < 10; k++) t.push(captainRun(game, LEVEL_HULL[L], L, 700 + k, 'board', 60).sec);
     assert.ok(t.every((x) => x > 0), `⚓${L}: always alongside (${t.join(' ')})`);
     const { med, p90 } = pct(t);
-    assert.ok(med <= 25 && p90 <= 58, `⚓${L}: to the grapples median ${med} s, p90 ${p90} s`);
+    assert.ok(med <= 25 && p90 <= 35, `⚓${L}: to the grapples median ${med} s, p90 ${p90} s`);
     // (Six fights: in the close fight of 2026-10-07 three were over in 16 balls.)
     let balls = 0, hits = 0;
     for (let k = 0; k < 6; k++) {

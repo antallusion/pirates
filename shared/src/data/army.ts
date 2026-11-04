@@ -176,13 +176,13 @@ const BASE_UNITS: Record<MenId | EliteId | BeastId | SeaBeastId, UnitDef> = {
   // docs/38 §2.4 B: the elites (tests/balance/elite.test.ts: a silver's worth of them no more than ~10% over the
   // upgraded kind's, an army with them against one without at the same silver 50–60%). Their face is the upgraded
   // kind's portrait, their figure the upgraded kind's until their own sheet is painted (unitart.ts FIGURES).
-  bosun: E('bosun', 1, 'deckhand', { atk: 5, def: 4, dmin: 2, dmax: 3, hp: 7, speed: 5, init: 7, shots: 0, specials: ['steady'], art: 'portrait.giver_old_salt_m', cost: 38 }),
-  sea_grenadier: E('sea_grenadier', 2, 'marine', { atk: 10, def: 10, dmin: 3, dmax: 5, hp: 13, speed: 5, init: 9, shots: 0, specials: ['shield_wall', 'chain'], art: 'portrait.giver_garrison_captain_m', cost: 100 }),
-  deadeye: E('deadeye', 3, 'musketeer', { atk: 10, def: 5, dmin: 3, dmax: 4, hp: 9, speed: 3, init: 8, shots: 8, specials: ['shooter', 'no_penalty', 'bind'], art: 'portrait.pirate_23', cost: 125 }),
-  mortar_crew: E('mortar_crew', 4, 'gunner', { atk: 11, def: 7, dmin: 5, dmax: 9, hp: 15, speed: 3, init: 6, shots: 4, specials: ['shooter', 'blast', 'no_penalty'], art: 'portrait.pirate_00', cost: 225 }),
-  corsair_blade: E('corsair_blade', 5, 'boarder', { atk: 14, def: 11, dmin: 6, dmax: 8, hp: 22, speed: 7, init: 11, shots: 0, specials: ['double_strike', 'no_retaliation', 'fortune'], art: 'portrait.pirate_16', cost: 300 }),
-  admiral_guard: E('admiral_guard', 6, 'guard', { atk: 18, def: 17, dmin: 9, dmax: 12, hp: 36, speed: 6, init: 11, shots: 0, specials: ['leader', 'steady', 'retaliate_all', 'shield_wall'], art: 'portrait.pirate_21', cost: 520 }),
-  deep_horror: E('deep_horror', 7, 'drowned', { atk: 20, def: 18, dmin: 12, dmax: 18, hp: 55, speed: 5, init: 10, shots: 0, specials: ['undead', 'fear', 'sweep', 'terror'], art: 'icon.ab_deep_call', cost: 770, deep: true }),
+  bosun: E('bosun', 1, 'deckhand', { atk: 6, def: 4, dmin: 2, dmax: 4, hp: 10, speed: 5, init: 7, shots: 0, specials: ['steady'], art: 'portrait.giver_old_salt_m', cost: 48 }),
+  sea_grenadier: E('sea_grenadier', 2, 'marine', { atk: 12, def: 12, dmin: 4, dmax: 6, hp: 16, speed: 5, init: 9, shots: 0, specials: ['shield_wall', 'chain'], art: 'portrait.giver_garrison_captain_m', cost: 130 }),
+  deadeye: E('deadeye', 3, 'musketeer', { atk: 11, def: 6, dmin: 3, dmax: 6, hp: 10, speed: 3, init: 8, shots: 8, specials: ['shooter', 'no_penalty', 'bind'], art: 'portrait.pirate_23', cost: 160 }),
+  mortar_crew: E('mortar_crew', 4, 'gunner', { atk: 13, def: 8, dmin: 6, dmax: 10, hp: 17, speed: 3, init: 6, shots: 4, specials: ['shooter', 'blast', 'no_penalty'], art: 'portrait.pirate_00', cost: 255 }),
+  corsair_blade: E('corsair_blade', 5, 'boarder', { atk: 17, def: 13, dmin: 7, dmax: 10, hp: 25, speed: 7, init: 11, shots: 0, specials: ['double_strike', 'no_retaliation', 'fortune'], art: 'portrait.pirate_16', cost: 385 }),
+  admiral_guard: E('admiral_guard', 6, 'guard', { atk: 20, def: 19, dmin: 10, dmax: 14, hp: 41, speed: 6, init: 11, shots: 0, specials: ['leader', 'steady', 'retaliate_all', 'shield_wall'], art: 'portrait.pirate_21', cost: 640 }),
+  deep_horror: E('deep_horror', 7, 'drowned', { atk: 23, def: 21, dmin: 14, dmax: 21, hp: 62, speed: 5, init: 10, shots: 0, specials: ['undead', 'fear', 'sweep', 'terror'], art: 'icon.ab_deep_call', cost: 960, deep: true }),
 };
 
 /** The world's armies: each faction's kind fights with the numbers of the pirate kind whose place it takes, its plain

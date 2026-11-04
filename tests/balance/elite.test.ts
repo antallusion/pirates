@@ -1,11 +1,12 @@
 // docs/38 §2.4 variant B (owner, 2026-11-03): the elite kinds of the island's dwellings of level 8 and up — a fair price.
 //
-// A man of an elite kind is some +20–25% over the upgraded kind of his tier in every number and brings a craft more,
+// A man of an elite kind is some +35–50% over the upgraded kind of his tier in every number and brings a craft more
+// (owner 2026-11-04: the price ×1.6 of the upgraded kind, «давай поднимем» — the numbers raised to match it),
 // so a hammock holds more fight with him; but a silver's worth of them is no stronger than a silver's worth of the
 // upgraded kind (the battle's own square law, armyWeight, within ~10%), and the ladder's armies with every upgraded
 // stack swapped for its tier's elite at the same silver win about half their boardings against the same armies
-// without — 50–60% on the whole. (At the ×1.6 price first thought of the elites lost: 0–28%; the square law makes a
-// man +25% in every number worth ~×1.3 the silver.)
+// without — 50–60% on the whole. (At ×1.6 with only +25% they lost 0–28%: the square law makes a man +25% in every number
+// worth ~×1.3 the silver, so ×1.6 asks some +40%.)
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -24,11 +25,11 @@ test('docs/38 §2.4 B: an elite kind for each of the seven tiers — over the up
     assert.equal(UNITS[d.base].upgrade, up.id, `${e}: the plain and upgraded pair kept`);
     assert.equal(!!d.deep, !!up.deep, `${e}: the deep's own as its tier's`);
     // its numbers some +20–25% over the upgraded kind's (the pace and the shots not less), a craft more
-    for (const k of ['atk', 'def', 'hp'] as const) assert.ok(d[k] >= up[k] * 1.15 && d[k] <= up[k] * 1.4, `${e}: ${k} ${d[k]} over ${up[k]}`);
+    for (const k of ['atk', 'def', 'hp'] as const) assert.ok(d[k] >= up[k] * 1.3 && d[k] <= up[k] * 1.7, `${e}: ${k} ${d[k]} over ${up[k]}`);
     assert.ok(d.dmin + d.dmax >= (up.dmin + up.dmax) * 1.1, `${e}: its blow`);
     assert.ok(d.speed >= up.speed && d.init >= up.init && d.shots >= up.shots, `${e}: pace, initiative, shots`);
     assert.ok(up.specials.every((s) => d.specials.includes(s)) && d.specials.length > up.specials.length, `${e}: the upgraded kind's craft and one more`);
-    assert.ok(d.cost > up.cost * 1.2 && d.cost < up.cost * 1.7, `${e}: ${d.cost} silver over ${up.cost}`);
+    assert.ok(d.cost >= up.cost * 1.55 && d.cost <= up.cost * 1.65, `${e}: ${d.cost} silver over ${up.cost}`);
   }
   // the strongest of its tier first in the army's row
   assert.deepEqual(armyTidy([{ u: 'marine', n: 5 }, { u: 'sea_grenadier', n: 2 }, { u: 'sea_guard', n: 3 }]).map((x) => x.u), ['sea_grenadier', 'sea_guard', 'marine']);
