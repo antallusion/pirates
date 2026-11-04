@@ -28,7 +28,7 @@ import { dec1, esc, fmt, icon, money } from './dom.ts';
 import { openSheet } from './kit/sheet.ts';
 import type { SheetHandle } from './kit/sheet.ts';
 import { placeName } from './maps.ts';
-import { LF, ferryHtml } from './ferry.ts';
+import { LF, askFerry, ferryHtml } from './ferry.ts';
 
 const L = dict(EN, RU);
 
@@ -225,9 +225,9 @@ export function openPortCard(state: ClientState, portId: string): void {
     // «Переход» from the card (owner, 2026-10-30): she lies in the hub — the trip begins, the card goes
     sheet.body.addEventListener('click', (e) => {
       const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-ferry]');
-      if (!b || b.disabled) return;
-      deps?.send({ t: 'ferry', to: b.dataset.ferry! });
-      sheet?.close('button');
+      if (!b || b.disabled || !deps) return;
+      const send = deps.send;
+      void askFerry(b, send).then((went) => { if (went) sheet?.close('button'); }); // post 90: the port named first
     });
     timer = setInterval(render, 5000); // the way and the countdown as she sails
   } else {

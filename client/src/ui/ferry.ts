@@ -14,6 +14,7 @@ import { EN, RU } from '../lang/ui/ferry.ts';
 import type { ClientState } from '../state.ts';
 import { dec1, esc, icon, money } from './dom.ts';
 import { placeName } from './maps.ts';
+import { ask } from './confirm.ts';
 
 export const LF = dict(EN, RU);
 
@@ -44,7 +45,7 @@ export function ferryHtml(state: ClientState, view: FerryView, here: boolean, le
     // (forum post 49: her price — the pirate flag's ×2, a quest's hub ×0.25 — and the plain one struck through by it)
     const was = r.base !== undefined && r.base !== r.price ? `<s class="fy-was">${money(r.base)}</s>` : '';
     const btn = here
-      ? `<button type="button" class="btn btn-small${can ? ' btn-primary' : ''} fy-go" data-ferry="${esc(r.to)}" ${can ? '' : 'disabled'} title="${esc(gold < r.price ? LF('short') : '')}">${esc(LF('go'))} ${money(r.price)}</button>`
+      ? `<button type="button" class="btn btn-small${can ? ' btn-primary' : ''} fy-go" data-ferry="${esc(r.to)}" data-ferry-name="${esc(placeName(p.name))}" data-ferry-price="${r.price}" ${can ? '' : 'disabled'} title="${esc(gold < r.price ? LF('short') : '')}">${esc(LF('go'))} ${money(r.price)}</button>`
       : `<span class="fy-price">${money(r.price)}</span>`;
     const quest = r.quest ? `<em class="fy-quest" title="${esc(LF('questT'))}">${icon('tab_quests', '', 'ico-xs')}${esc(LF('quest'))}</em>` : '';
     return `<div class="fy-row${r.quest ? ' fy-row--quest' : ''}"><span class="fy-to">${icon(`faction_${p.faction}`, '', 'ico-sm')}<b>${esc(placeName(p.name))}</b><small>${esc(REGIONS[p.region].name)}${quest ? ' · ' : ''}${quest}</small></span><span class="fy-km">${esc(LF('km', { km: dec1(r.km) }))}${was}</span>${btn}</div>`;
@@ -59,13 +60,24 @@ export function ferryCard(state: ClientState, view: FerryView): string {
   return `<div class="card fy-card"><h4 class="card-h">${icon('build_lighthouse', '⛵', 'ico-md')}${esc(LF('title'))}</h4>${ferryHtml(state, view, true)}</div>`;
 }
 
-/** Its buttons wired: the order to the server. */
+/** The question before a passage (forum, Эдуард, post 90, topic 7: «пробовал сделать переход Холлоумир — Грейвсенд, а
+ *  приехал на Тайдрэк»): the harbour window and the card are drawn anew every few seconds, a row could slide under the
+ *  finger and the passage went at once — now the port and the price are named first and the order carries the port the
+ *  question named, whatever the list does meanwhile. */
+export async function askFerry(b: HTMLButtonElement, send: (m: ClientMsg) => void): Promise<boolean> {
+  const to = b.dataset.ferry;
+  if (!to || b.disabled) return false;
+  const name = b.dataset.ferryName ?? to, price = Number(b.dataset.ferryPrice ?? 0);
+  if (!(await ask(LF('ask', { to: name, price: price.toLocaleString('ru-RU') }), LF('askYes'), LF('askNo')))) return false;
+  send({ t: 'ferry', to });
+  return true;
+}
+
+/** Its buttons wired: the question, then the order to the server. */
 export function bindFerry(root: HTMLElement, send: (m: ClientMsg) => void): void {
   root.querySelectorAll<HTMLButtonElement>('[data-ferry]').forEach((b) => (b.onclick = (e) => {
     e.stopPropagation();
-    if (b.disabled) return;
-    b.disabled = true;
-    send({ t: 'ferry', to: b.dataset.ferry! });
+    void askFerry(b, send);
   }));
 }
 

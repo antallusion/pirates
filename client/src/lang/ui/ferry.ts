@@ -28,6 +28,9 @@ export const EN = {
   closed: 'Port closed to you: {why}',
   closedT: 'The harbour there would not take you: the passage would leave you at sea with no harbour, so it is not sold',
   closedBtn: 'Closed',
+  ask: 'Passage to {to} for {price} silver?',
+  askYes: 'Set sail',
+  askNo: 'Cancel',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -57,4 +60,7 @@ export const RU: Record<keyof typeof EN, string> = {
   closed: 'Порт закрыт для вас: {why}',
   closedT: 'Гавань там вас не примет: переход оставил бы вас в море без гавани, поэтому туда не продают',
   closedBtn: 'Закрыт',
+  ask: 'Переход в {to} за {price} серебра?',
+  askYes: 'Отправиться',
+  askNo: 'Отмена',
 };
