@@ -119,7 +119,7 @@ export const ARTICLES: GuideArticle[] = [
         img: 'combat-ammo-3.webp',
         text: [
           '«Fire» fills up as the guns reload. Changing the shot costs part of a reload, so choose before the volley. Hold «Fire» for 1.2 s for a charged broadside: let go near the end of the charge for a tighter, harder volley.',
-          '«Огонь» наполняется по мере перезарядки. Смена снаряда съедает часть перезарядки — выбирайте до залпа. Удержите «Огонь» 1,2 секунды — заряженный залп: отпустите ближе к концу заряда, и он ляжет кучнее и сильнее.',
+          '«Огонь» наполняется по мере перезарядки. Смена зарядов съедает часть перезарядки орудий — выбирайте заряды до залпа. Удержите «Огонь» 1,2 секунды — заряженный залп: отпустите ближе к концу заряда, и он ляжет кучнее и сильнее.',
         ],
       },
     ],

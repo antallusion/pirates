@@ -801,6 +801,8 @@ input[type=range] { accent-color: var(--gold); }
 .rose-node.off .rose-ico { filter: grayscale(1) brightness(0.55); }
 .rose-pts { position: absolute; right: -5px; bottom: -3px; min-width: 20px; height: 18px; padding: 0 4px; border-radius: 9px; background: #1a1208; border: 1px solid var(--gold); color: var(--gold); font: 700 10px/16px var(--sans); text-align: center; }
 .rose-native { position: absolute; left: -3px; top: -3px; color: var(--gold); font-size: 13px; font-style: normal; text-shadow: 0 0 3px #000, 0 0 3px #000; }
+.rose-pick { position: absolute; right: -3px; top: -3px; color: var(--gold); font-size: 13px; font-style: normal; text-shadow: 0 0 3px #000, 0 0 3px #000; }
+.tal-pick { display: block; color: var(--gold); font-weight: 600; }
 .rose-core { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 128px; display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; pointer-events: none; }
 .rose-core-ico { width: 60px; height: 60px; object-fit: contain; filter: drop-shadow(0 2px 4px #000); }
 .rose-core b { font: 400 15px var(--serif); color: var(--bone); line-height: 1.1; }

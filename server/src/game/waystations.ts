@@ -168,6 +168,8 @@ function planOf(s: PlayerSession, rows: readonly { u: UnitId; n: number }[]): Pl
     const prem = resPremium(r.u);
     let room = Math.min(r.n, hammocks);
     let why: string | undefined;
+    // (forum 57: «предлагают воскресить юнг 24/43» — a part of a kind says why the rest waits)
+    if (room > 0 && room < r.n) why = `Free hammocks aboard: ${room} — the rest wait.`;
     if (d.deep && !deep) {
       room = 0;
       why = 'Only a captain of the Choir or of a cursed ship keeps the drowned.';
@@ -182,10 +184,12 @@ function planOf(s: PlayerSession, rows: readonly { u: UnitId; n: number }[]): Pl
       const might = mightRoom(army, r.u, ship.shipLevel, ship.stats.crewMax, ship.armySlots);
       if (might < room) {
         room = Math.max(0, might);
+        if (room > 0) why = `Your crew is as strong as a ship of level ${ship.shipLevel} carries: ${room} of them stand again.`;
         if (!room) why = `Your crew is as strong as a ship of level ${ship.shipLevel} carries: raise her level for better men.`;
       }
       if (d.tier >= PICKED_TIER && picked < room) {
         room = Math.max(0, picked);
+        if (room > 0) why = `A ship of level ${ship.shipLevel} berths ${pickedMax(s)} picked men (tier 4 and up) at most: ${room} of them stand again.`;
         if (!room) why = `A ship of level ${ship.shipLevel} berths ${pickedMax(s)} picked men (tier 4 and up) at most.`;
       }
     }

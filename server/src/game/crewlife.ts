@@ -20,6 +20,9 @@ import { tx } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { RegionId } from '../../../shared/src/world/regions.ts';
 import { logNote } from './captainlog.ts';
+import { recordFallen } from './waystations.ts'; // forum 57: the wounded who die below are her fallen
+import { UNITS } from '../../../shared/src/data/army.ts';
+import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
 import { officerFactor } from './crew.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
@@ -168,6 +171,46 @@ export function playerWounded(target: ShipEntity, killed: number): number {
   return n;
 }
 
+/** The wounded of a hit by kind (forum 57): taken off what fell the cheapest kinds first, as the record of the fallen
+ *  reckons them (waystations.ts recordShot) — a gift stack's dead are never carried below. */
+export function noteWounded(ship: ShipEntity, fell: readonly ArmyStack[], wounded: number): void {
+  let w = Math.max(0, Math.floor(wounded));
+  for (const x of fell.filter((k) => !k.g).sort((a, b) => (UNITS[a.u]?.tier ?? 0) - (UNITS[b.u]?.tier ?? 0))) {
+    if (w <= 0) break;
+    const k = Math.min(w, x.n);
+    ship.woundedKinds[x.u] = (ship.woundedKinds[x.u] ?? 0) + k;
+    w -= k;
+  }
+}
+
+/** `n` of her wounded taken off the kinds known (the best men first); what kinds they were. */
+export function takeWounded(ship: ShipEntity, n: number): { u: UnitId; n: number }[] {
+  const out: { u: UnitId; n: number }[] = [];
+  let left = Math.max(0, Math.floor(n));
+  const kinds = Object.keys(ship.woundedKinds).sort((a, b) => (UNITS[b as UnitId]?.tier ?? 0) - (UNITS[a as UnitId]?.tier ?? 0));
+  for (const u of kinds) {
+    if (left <= 0) break;
+    const k = Math.min(left, ship.woundedKinds[u]);
+    if (k <= 0) continue;
+    ship.woundedKinds[u] -= k;
+    if (ship.woundedKinds[u] <= 0) delete ship.woundedKinds[u];
+    out.push({ u: u as UnitId, n: k });
+    left -= k;
+  }
+  return out;
+}
+
+/** `n` of her wounded back on deck as the men they were; any of no known kind (an older save) as hands. */
+export function woundedBack(ship: ShipEntity, n: number): void {
+  let left = Math.max(0, Math.floor(n));
+  for (const x of takeWounded(ship, left)) {
+    if (!UNITS[x.u]) continue;
+    ship.addMen(x.u, x.n);
+    left -= x.n;
+  }
+  if (left > 0) ship.crew += left;
+}
+
 /** The surgeons aboard: the trade's men, and the captain's own Ship's Surgeon (a surgeon a rank). */
 export function surgeonsOf(s: PlayerSession): number {
   return (s.profile?.company.pools.surgeon ?? 0) + (s.ship?.rank('srv_ships_surgeon') ?? 0);
@@ -179,19 +222,27 @@ function stepWounded(game: Game, s: PlayerSession, st: LifeState): void {
   const now = game.now;
   if (!st.restored) {
     st.restored = true;
-    if (c.wounded > ship.wounded) ship.wounded = c.wounded;
+    if (c.wounded > ship.wounded) {
+      ship.wounded = c.wounded;
+      ship.woundedKinds = { ...(c.woundedKinds ?? {}) };
+    }
   }
+  c.woundedKinds = ship.woundedKinds;
   if (ship.wounded <= 0 || st.woundAt === -Infinity) st.woundAt = now - 1;
   if (ship.wounded <= 0) {
     c.wounded = 0;
+    ship.woundedKinds = {};
+    c.woundedKinds = ship.woundedKinds;
     return;
   }
   const room = Math.max(0, ship.stats.crewMax - ship.crew);
   // In harbour the port's surgeons take them all at once.
   if (ship.docked) {
     const back = Math.min(ship.wounded, room);
-    ship.crew += back;
+    woundedBack(ship, back);
     ship.wounded = 0;
+    ship.woundedKinds = {};
+    c.woundedKinds = ship.woundedKinds;
     c.wounded = 0;
     c.woundAcc = { heal: 0, die: 0, med: 0 };
     if (back > 0) game.toastShip(ship, `The harbour's surgeons send ${back} wounded back to duty.`, 'good');
@@ -212,7 +263,7 @@ function stepWounded(game: Game, s: PlayerSession, st: LifeState): void {
   let healed = Math.min(Math.floor(acc.heal + 1e-9), ship.wounded, room);
   acc.heal -= Math.floor(acc.heal + 1e-9);
   if (healed > 0) {
-    ship.crew += healed;
+    woundedBack(ship, healed);
     ship.wounded -= healed;
     if (surgeons > 0) practise(game, s, 'surgeon', healed * PRACTICE_GAIN.healed);
     if (med) {
@@ -230,6 +281,9 @@ function stepWounded(game: Game, s: PlayerSession, st: LifeState): void {
   const died = Math.min(Math.floor(acc.die + 1e-9), ship.wounded);
   acc.die -= Math.floor(acc.die + 1e-9);
   if (died > 0) {
+    // (forum 57: the men who die below are her fallen, as what they were — the healer offers them)
+    const dead = takeWounded(ship, died);
+    if (dead.length) recordFallen(game, s, dead);
     ship.wounded -= died;
     ship.crewDeaths += died; // the dead weigh on the living (crew.ts)
     logNote(game, s, 'wounded_died', [], died);

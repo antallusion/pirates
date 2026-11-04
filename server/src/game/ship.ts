@@ -312,6 +312,7 @@ export class ShipEntity {
   pendingDump: { good: GoodId; qty: number; at: number } | null = null; // cargo going over the side
   voyageStart = 0; // world time she left port (0 = in port / NPC)
   wounded = 0; // Ship's Surgeon: back on deck after the fight
+  woundedKinds: Record<string, number> = {}; // …the kinds they were (forum 57; crewlife.ts woundedBack)
   woundedTally = 0; // a captain's ship: men wounded (not killed) since her last fight was logged (docs/16 #20)
   woundCarry = 0; // a captain's ship: the fraction of a wounded man carried to the next blow (docs/16 #19)
   planking = 0; // Double Planking buffer
@@ -329,6 +330,10 @@ export class ShipEntity {
   companyKey = ''; // last applied crew modifiers
   fleetId: string | null = null; // a hired escort's record in her commander's fleet
   escortIndex = 0; // her station in the formation
+  /** Her own merchant, fisher or scout from the island's yard (forum 70, Эдуард): she keeps close by her captain, inside
+   *  the warships' cover, and goes for nobody — the warships fight for her. `auxSlot`: her side of her captain. */
+  escortAux = false;
+  auxSlot = 0;
   formation: Formation = 'line'; // a flagship's current signal
   // Abyssal (server/src/game/abyssfx.ts).
   seaRot: { stacks: number; until: number; by: number } | null = null;

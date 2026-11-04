@@ -94,7 +94,7 @@ export const AFFIXES: Record<AffixId, AffixDef> = {
   armor: { stat: 'armor', v: 0.01, name: ['Armour', 'Броня'] },
   speed: { stat: 'maxSpeed', v: 0.015, name: ['Speed', 'Ход'] },
   turn: { stat: 'turnRate', v: 0.02, name: ['Turning', 'Поворот'] },
-  reload: { stat: 'reloadMul', v: -0.02, name: ['Reload', 'Перезарядка'] },
+  reload: { stat: 'reloadMul', v: -0.02, name: ['Reload', 'Перезарядка орудий'] },
   damage: { stat: 'gunDamageMul', v: 0.02, name: ['Gun damage', 'Урон орудий'] },
   range: { stat: 'rangeMul', v: 0.025, name: ['Range', 'Дальность'] },
   spread: { stat: 'spreadMul', v: -0.03, name: ['Spread', 'Разброс'] },
@@ -310,7 +310,7 @@ export const SETS: Record<SetId, SetDef> = {
     id: 'admiralty', name: ['The Admiralty', 'Адмиралтейство'],
     pieces: { hat: ['Admiral’s Bicorne', 'Двууголка адмирала'], coat: ['Dress Uniform', 'Парадный мундир'], sash: ['Admiralty Sash', 'Лента Адмиралтейства'], battery: ['Regulation Gun Gear', 'Уставная оснастка орудий'], plating: ['Navy Planking', 'Флотская обшивка'], banner: ['Admiral’s Flag', 'Адмиральский флаг'] },
     bonus: [
-      { n: 2, mods: { reloadMul: -0.03 }, text: ['Reload −3%', 'Перезарядка −3%'] },
+      { n: 2, mods: { reloadMul: -0.03 }, text: ['Reload −3%', 'Перезарядка орудий −3%'] },
       { n: 4, mods: { hullMax: 0.05, moraleRegen: 0.1 }, text: ['+5% hull, steadier crew', '+5% к корпусу, команда стойче'] },
       { n: 6, mods: { gunDamageMul: 0.04 }, flags: ['line_of_battle'], text: ['+4% gun damage; the line of battle', '+4% к урону орудий; линия баталии'] },
     ],
@@ -338,7 +338,7 @@ export const SETS: Record<SetId, SetDef> = {
     pieces: { hat: ['Master Gunner’s Cap', 'Шапка мастер-канонира'], sash: ['Linstock Sash', 'Перевязь с пальником'], pistols: ['Priming Pistols', 'Затравочные пистоли'], spyglass: ['Fall-of-Shot Glass', 'Труба для пристрелки'], battery: ['Master Gunner’s Quoins', 'Клинья мастер-канонира'], plating: ['Gun-Deck Lining', 'Обшивка батарейной палубы'] },
     bonus: [
       { n: 2, mods: { spreadMul: -0.04 }, text: ['Spread −4%', 'Разброс −4%'] },
-      { n: 4, mods: { reloadMul: -0.03, shotSpeed: 0.05 }, text: ['Reload −3%; the balls fly 5% faster', 'Перезарядка −3%; ядра летят на 5% быстрее'] },
+      { n: 4, mods: { reloadMul: -0.03, shotSpeed: 0.05 }, text: ['Reload −3%; the balls fly 5% faster', 'Перезарядка орудий −3%; ядра летят на 5% быстрее'] },
       { n: 6, mods: { gunDamageMul: 0.03 }, flags: ['skipping_shot'], text: ['+3% gun damage; a ball that falls short skips on into her', '+3% к урону орудий; недолёт рикошетит в борт'] },
     ],
   },

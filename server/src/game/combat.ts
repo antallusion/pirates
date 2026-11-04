@@ -37,7 +37,7 @@ import { addHeat, upwindOf } from './talentfx.ts';
 import { callPatrols } from './tradefx.ts';
 import { unmask } from './smugglefx.ts';
 import { survivalOnHit, woundedOf } from './survivalfx.ts';
-import { gunPractice } from './crewlife.ts';
+import { gunPractice, noteWounded } from './crewlife.ts';
 import { isMonster } from './explorefx.ts';
 import { isNight } from '../../../shared/src/constants.ts';
 import { onCrewKilled, onCrit, onHullDamage } from './mind.ts';
@@ -1079,6 +1079,7 @@ export function killMen(game: Game, target: ShipEntity, killed: number, source: 
   const giftDead = fell.reduce((a, x) => a + (x.g ? x.n : 0), 0);
   const wounded = woundedOf(game, target, Math.max(0, killed - giftDead));
   target.wounded += wounded;
+  if (target.isPlayer) noteWounded(target, fell, wounded); // forum 57: by the kinds they were
   // docs/35: a captain's dead to the guns go on her record of the fallen (the wounded below come back by themselves;
   // the Drowned's crew rises by itself).
   if (target.isPlayer && !target.hasFlag('crew_of_drowned')) recordShot(game, game.sessionOf(target), fell, wounded);

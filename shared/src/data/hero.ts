@@ -180,9 +180,9 @@ export const SKILLS: Record<SkillId, SkillDef> = {
     T('Turning +10%, closer to the wind by 4°; Wind orders +30%.', 'Поворот +10%, круче к ветру на 4°; приказы Ветра +30%.'),
     T('Turning +15%, closer to the wind by 6°; Wind orders +50%.', 'Поворот +15%, круче к ветру на 6°; приказы Ветра +50%.')] },
   artillery: { id: 'artillery', name: ['Artillery', 'Артиллерия'], icon: 'tree_gunnery', tree: 'gunnery', text: [
-    T('Guns +4%, reload −3%; shooters in a boarding +10%; Fire orders +15%.', 'Орудия +4%, перезарядка −3%; стрелки в абордаже +10%; приказы Огня +15%.'),
-    T('Guns +8%, reload −6%; shooters in a boarding +20%; Fire orders +30%.', 'Орудия +8%, перезарядка −6%; стрелки в абордаже +20%; приказы Огня +30%.'),
-    T('Guns +12%, reload −9%; shooters in a boarding +30%; Fire orders +50%.', 'Орудия +12%, перезарядка −9%; стрелки в абордаже +30%; приказы Огня +50%.')] },
+    T('Guns +4%, reload −3%; shooters in a boarding +10%; Fire orders +15%.', 'Орудия +4%, перезарядка орудий −3%; стрелки в абордаже +10%; приказы Огня +15%.'),
+    T('Guns +8%, reload −6%; shooters in a boarding +20%; Fire orders +30%.', 'Орудия +8%, перезарядка орудий −6%; стрелки в абордаже +20%; приказы Огня +30%.'),
+    T('Guns +12%, reload −9%; shooters in a boarding +30%; Fire orders +50%.', 'Орудия +12%, перезарядка орудий −9%; стрелки в абордаже +30%; приказы Огня +50%.')] },
   boarding: { id: 'boarding', name: ['Boarding', 'Абордаж'], icon: 'bt_charge', tree: 'boarding', text: [
     T('Melee blows in a boarding +10%; boarding power +5%.', 'Удары в рукопашной +10%; сила абордажа +5%.'),
     T('Melee blows in a boarding +20%; boarding power +10%.', 'Удары в рукопашной +20%; сила абордажа +10%.'),
@@ -228,7 +228,7 @@ export const SKILLS: Record<SkillId, SkillDef> = {
 /** What a grandmaster of each skill does (docs/19 E2): the fourth rank, won in a trial of mastery. */
 export const GM_TEXT: Record<SkillId, [string, string]> = {
   navigation: T('Turning +18%, closer to the wind by 7°; Wind orders +60%.', 'Поворот +18%, круче к ветру на 7°; приказы Ветра +60%.'),
-  artillery: T('Guns +14%, reload −10%; shooters in a boarding +32%; Fire orders +60%.', 'Орудия +14%, перезарядка −10%; стрелки в абордаже +32%; приказы Огня +60%.'),
+  artillery: T('Guns +14%, reload −10%; shooters in a boarding +32%; Fire orders +60%.', 'Орудия +14%, перезарядка орудий −10%; стрелки в абордаже +32%; приказы Огня +60%.'),
   boarding: T('Melee blows in a boarding +32%; boarding power +17%.', 'Удары в рукопашной +32%; сила абордажа +17%.'),
   armor: T('Your stacks take 16% less in a boarding; the ship 10% less at sea.', 'Ваши отряды получают на 16% меньше урона в абордаже; корабль на 10% меньше в море.'),
   tactics: T('Your first three blows draw no answer; the first round your shooters +3 initiative (an expert’s tactics are the whole art).', 'Ваши первые три удара остаются без ответа; в первом раунде у ваших стрелков инициатива +3 (тактика эксперта — уже всё искусство).'),

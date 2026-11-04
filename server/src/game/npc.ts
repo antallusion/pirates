@@ -6,7 +6,7 @@
 
 import { hiddenSpot } from './questspot.ts'; // forum post 55: a quest's quarry out of sight
 import { patentHunted } from './patent.ts'; // «Каперский патент» (owner, 2026-11-02)
-import { fleesFrom, honourSpares } from './flaglaw.ts'; // forum 34: the three flags and the sea's own ships
+import { fleesFrom, honourSpares, peacefulNpc } from './flaglaw.ts'; // forum 34: the three flags and the sea's own ships
 import { untouchable } from './inbattle.ts'; // owner, 2026-10-22
 import { convoyFoe, raidEscort } from './raiding.ts';
 import { joinedRaid } from './npcwars.ts';
@@ -334,7 +334,9 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
     // (forum 2026-10-30, Нефигугум: «сопровождение нападает на них» — her squadron by the guards' rule too: it answers
     // whoever fired on her or on it, joins her own mark, and starts nothing with a ship at peace; the old rule took any
     // ship that ever traded a blow with her, a bump included, for a foe for good)
-    if (npc.hiredBy !== undefined || npc.fleetId) return !!owner && hiredFoe(game, npc, owner, other);
+    // (forum 70, Эдуард: «боевой корабль из моего конвоя … постоянно агрился на патруль» — every guard of a captain's,
+    // the Admiral's hired escort too, by that rule: a patrol her patent sets on her is answered, never fired on first)
+    if (npc.hiredBy !== undefined || npc.fleetId || owner?.isPlayer) return !!owner && hiredFoe(game, npc, owner, other);
     const lately = (m: Map<number, number>, id: number) => (m.get(id) ?? -999) > game.now - 120;
     return !!owner && (game.isHostile(other, owner) || lately(owner.attackers, other.id) || lately(other.attackers, owner.id));
   }
@@ -428,10 +430,55 @@ export function hiredFoe(game: Game, npc: ShipEntity, owner: ShipEntity, other: 
   if (other.isPlayer && safe) return false;
   const lately = (m: Map<number, number>, id: number) => (m.get(id) ?? -999) > now - 120;
   if (lately(owner.attackers, other.id) || lately(npc.attackers, other.id) || lately(other.attackers, owner.id)) return true;
+  // (forum 70: whoever fires on a ship of her squadron — her merchant above all — is the squadron's foe)
+  const wards = wardsOf(game, owner);
+  for (const w of wards) if (w !== npc && lately(w.attackers, other.id)) return true;
   const run = pursuitOf(owner);
   if (run && run.target === other.id) return true;
-  if (!safe && !other.isPlayer && game.npcs.get(other.id)?.target === owner.id && npcHostileTo(game, other, owner)) return true;
+  // A raider bearing down on her or on a ship of her squadron is gone for before the first shot — never a patrol, a
+  // hunter, an escort or a peaceful ship of any flag: one her patent (or her flag) sets on her is answered when it fires,
+  // not fired on first (forum 70).
+  if (!safe && !other.isPlayer && !LAW_ROLES.has(other.npcRole as NpcRole) && !peacefulNpc(game, other)) {
+    const t = game.npcs.get(other.id)?.target;
+    if (t === owner.id && npcHostileTo(game, other, owner)) return true;
+    if (t !== null && t !== undefined && wards.some((k) => k.id === t)) return true;
+  }
   return false;
+}
+
+/** The roles a captain's guard never fires on first, whoever they sail for (forum 70). */
+const LAW_ROLES = new Set<NpcRole>(['patrol', 'hunter', 'escort', 'merchant', 'fisher']);
+
+/** Her squadron's ships at sea (her own, hired, the Admiral's escort, her guards hired at sea), once a tick. */
+const wardCache = new WeakMap<ShipEntity, { tick: number; list: ShipEntity[] }>();
+export function wardsOf(game: Game, owner: ShipEntity): ShipEntity[] {
+  const c = wardCache.get(owner);
+  if (c && c.tick === game.tick) return c.list;
+  const list: ShipEntity[] = [];
+  game.forShipsNear(owner.state.x, owner.state.y, HIRE_LEASH, (o) => {
+    if (o.ownerId === owner.id && o.alive && !o.prize) list.push(o);
+  });
+  wardCache.set(owner, { tick: game.tick, list });
+  return list;
+}
+
+/** Whether `o` is on her or on a ship of her squadron: fired on one of them lately, or her brain's mark is one. */
+function onWard(game: Game, owner: ShipEntity, o: ShipEntity): boolean {
+  const t = game.npcs.get(o.id)?.target;
+  const lately = (m: Map<number, number>) => (m.get(o.id) ?? -999) > game.now - 30;
+  if (t === owner.id || lately(owner.attackers)) return true;
+  for (const w of wardsOf(game, owner)) if (t === w.id || lately(w.attackers)) return true;
+  return false;
+}
+
+/** A guard's choice of foe: one on her captain or her squadron counts as this much nearer (forum 70: the warship
+ *  goes to the merchant's help rather than for the nearest sail). */
+export const WARD_PULL = 400;
+
+/** Her own merchant's, fisher's or scout's station: close abeam of her captain, a little forward, one on each side
+ *  (inside the warships' formation, forum 70). */
+export function auxStation(slot: number): { x: number; y: number } {
+  return slot % 2 ? { x: -48, y: 12 } : { x: 48, y: 12 };
 }
 
 /** A hired ship's station off her captain's beam (the first to starboard, the second to port), metres (x across, y along). */
@@ -632,14 +679,21 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
   let threatD = Infinity;
   let prey: ShipEntity | null = null;
   let preyD = Infinity;
+  let preyScore = Infinity;
+  const guarded = ship.ownerId !== null && !ship.prize ? game.ships.get(ship.ownerId) : undefined;
+  const ward = guarded?.isPlayer ? guarded : undefined;
   game.forShipsNear(ship.state.x, ship.state.y, calm ? Math.min(ship.stats.detection * NPC_SIGHT, CALM_LOOK) : ship.stats.detection * NPC_SIGHT, (o) => {
     if (o.id === ship.id || !o.alive || o.docked) return;
     if ((brain.spared.get(o.id) ?? 0) > now) return;
     const d = dist(ship.state.x, ship.state.y, o.state.x, o.state.y);
     if (d > detectionRange(game, ship, o)) return;
-    if (!calm && npcHostileTo(game, ship, o) && d < preyD) {
-      preyD = d;
-      prey = o;
+    if (!calm && !ship.escortAux && npcHostileTo(game, ship, o)) {
+      const score = ward && onWard(game, ward, o) ? d - WARD_PULL : d;
+      if (score < preyScore) {
+        preyScore = score;
+        preyD = d;
+        prey = o;
+      }
     }
     // (a merchant or a fisher runs from a black flag before the first shot: forum 34, flaglaw.ts)
     if ((game.isHostile(o, ship) || (calm && fleesFrom(game, ship, o, d))) && d < threatD) {
@@ -703,6 +757,8 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
   // A hired guard battered to half her hull breaks off and keeps by her captain (seahire.ts): she is paid to guard, not
   // to sink with her (owner, 2026-10-25: «заметно легче, но не прогулка» — at full fight she won an elite's battle alone).
   if (ship.hiredBy !== undefined && ship.hull < ship.stats.hullMax * HIRE_BREAK_OFF) prey = null;
+  // Her own merchant, fisher or scout goes for nobody: she keeps her station by her captain (forum 70).
+  if (ship.escortAux) prey = null;
 
   if (brain.fireship !== undefined) {
     fireshipThink(game, ship, brain);
@@ -835,7 +891,7 @@ function think(game: Game, ship: ShipEntity, brain: NpcBrain): void {
     if (owner && owner.docked && ship.hiredBy !== undefined) return waitOffHarbour(game, ship, brain, owner);
     if (owner) {
       // Keep station in the flagship's formation (hired escorts), off her beam (hired at sea), or astern of her.
-      const off = ship.fleetId ? formationOffset(owner.formation, ship.escortIndex) : ship.hiredBy !== undefined ? hireStation(ship.hireSlot) : { x: 0, y: -70 };
+      const off = ship.escortAux ? auxStation(ship.auxSlot) : ship.fleetId ? formationOffset(owner.formation, ship.escortIndex) : ship.hiredBy !== undefined ? hireStation(ship.hireSlot) : { x: 0, y: -70 };
       const f = headingVec(owner.state.heading), r = headingVec(owner.state.heading + Math.PI / 2);
       const tx = owner.state.x + f.x * off.y + r.x * off.x, ty = owner.state.y + f.y * off.y + r.y * off.x;
       const d = dist(ship.state.x, ship.state.y, tx, ty);

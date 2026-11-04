@@ -394,7 +394,7 @@ export function shipLaunch(game: Game, s: PlayerSession, id: string): string | n
   const why = launchWhy(game, s, h, x);
   if (why) return why;
   const p = s.profile!;
-  const e: FleetEscort = { id: x.id, classId: x.classId, name: nameOf(x), hull: Math.max(0.25, x.hull), own: x.id, level: x.level };
+  const e: FleetEscort = { id: x.id, classId: x.classId, name: nameOf(x), hull: Math.max(0.25, x.hull), own: x.id, level: x.level, role: x.role };
   p.fleet.escorts.push(e);
   x.state = 'sea';
   spawnEscortShip(game, s, e, p.fleet.escorts.length - 1);

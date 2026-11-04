@@ -130,7 +130,7 @@ test('no auto-dock: sailing through a harbour\'s waters leaves her at sea; «П�
   assert.equal(c.last('port')?.view, null);
 });
 
-test('the island screen stops her: sails down, no way on, the helmsman\'s course dropped', () => {
+test('the «halt» order stops her (the island screen no longer sends it, forum 57): sails down, no way on, the helmsman\'s course dropped', () => {
   const { game } = makeGame();
   const { c, s } = captain(game, 'Isle');
   c.push({ t: 'undock' });

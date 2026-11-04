@@ -149,7 +149,7 @@ export const SHIP_GIFTS: Partial<Record<FleetClassId, ShipGift>> = {
   thunderer: {
     kind: 'toll', cd: 25, r: 175, secs: 4, hull: 0.03, foe: { reloadMul: 0.15 }, fx: 'lightning',
     name: ['Lightning Rods', 'Громоотводы'],
-    text: ['In a fight, every 25 s lightning leaps from her rods to every enemy engaged with her within 175 m: 3% of its hull, and its gun crews reel — reloads 15% slower for 4 s.', 'В бою каждые 25 с молния бьёт с её громоотводов в каждого врага, что бьётся с ней, в 175 м: 3% корпуса, и расчёты оглушены — перезарядка на 15% медленнее 4 с.'],
+    text: ['In a fight, every 25 s lightning leaps from her rods to every enemy engaged with her within 175 m: 3% of its hull, and its gun crews reel — reloads 15% slower for 4 s.', 'В бою каждые 25 с молния бьёт с её громоотводов в каждого врага, что бьётся с ней, в 175 м: 3% корпуса, и расчёты оглушены — перезарядка орудий на 15% медленнее 4 с.'],
   },
   wyvern_galleass: {
     kind: 'toll', cd: 30, r: 200, secs: 6, morale: 6, foe: { turnRate: -0.25 }, fx: 'war_cry',
@@ -285,7 +285,7 @@ export const SHIP_GIFTS: Partial<Record<FleetClassId, ShipGift>> = {
   viper: {
     kind: 'strike', chance: 0.33, cd: 10, secs: 6, morale: 3, foe: { reloadMul: 0.15 },
     name: ['Venom', 'Яд'],
-    text: ['A ball of hers that strikes home one time in three chokes the gun deck: reloads 15% slower for 6 s and −3 morale; once in 10 s.', 'Её ядро, попавшее в цель, в одном случае из трёх душит орудийную палубу: перезарядка на 15% медленнее 6 с и −3 к боевому духу; раз в 10 с.'],
+    text: ['A ball of hers that strikes home one time in three chokes the gun deck: reloads 15% slower for 6 s and −3 morale; once in 10 s.', 'Её ядро, попавшее в цель, в одном случае из трёх душит орудийную палубу: перезарядка орудий на 15% медленнее 6 с и −3 к боевому духу; раз в 10 с.'],
   },
   // ---- the haulers
   leviathan_ark: {

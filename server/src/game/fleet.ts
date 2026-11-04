@@ -20,6 +20,8 @@ import { ownPortMends, ownShipLost } from './baseships.ts';
 import { hiresOf } from './seahire.ts';
 import type { EscortMendView } from '../../../shared/src/protocol.ts';
 import { ownParity } from '../../../shared/src/data/baseships.ts';
+import type { OwnRole } from '../../../shared/src/data/baseships.ts';
+import { ownIsland } from './estate.ts';
 
 export type Formation = 'line' | 'wedge' | 'ring';
 export const FORMATIONS: Formation[] = ['line', 'wedge', 'ring'];
@@ -32,6 +34,8 @@ export interface FleetEscort {
   /** One of the captain's own ships from her island's shipyard (docs/15 item 4): her record there, and her level. */
   own?: string;
   level?: number;
+  /** Her own ship's role (forum 70: a merchant, fisher or scout keeps close and fights nobody). */
+  role?: OwnRole;
 }
 
 export interface Fleet {
@@ -125,6 +129,13 @@ export function spawnEscortShip(game: Game, s: PlayerSession, e: FleetEscort, i:
   if (parity < 1) {
     esc.effects.push({ id: 'own_parity', until: 1e12, mods: { hullMax: parity - 1, gunDamageMul: parity - 1 } });
     esc.recompute(game.now);
+  }
+  // (forum 70, Эдуард: «грузовой корабль его сразу потопил первый встреченный пират» — her own merchant, fisher or scout
+  // keeps close by her inside the warships' cover and starts nothing; the record of an older save is read off the yard)
+  const role = e.own ? (e.role ??= ownIsland(game, s.accountId)?.yard?.ships?.find((k) => k.id === e.own)?.role) : undefined;
+  if (role && role !== 'war') {
+    esc.escortAux = true;
+    esc.auxSlot = escortsOf(game, owner).filter((k) => k.escortAux).length;
   }
   esc.ownerId = owner.id;
   esc.fleetId = e.id;

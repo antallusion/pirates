@@ -146,6 +146,8 @@ import { menLost, npcArmy } from './army.ts';
 /** The priorities of the sea (docs/17 H1): a ship taken by boarding gives all her hold that survived the fight and her
  *  whole purse; one sunk by the guns a quarter of her hold and three-tenths of her purse. The captain learns more from
  *  a ship carried than from one sent down. */
+/** «Призовая команда» (forum 57): her boats bring in a sunk ship's casks from this far (metres). */
+export const PRIZE_BOATS_R = 250;
 export const SINK_LOOT = 0.25;
 export const SINK_PURSE = 0.3;
 /** A ship of the sea beaten: the two choices only (owner, 2026-10-18; shared/src/data/outcome.ts). */
@@ -1226,14 +1228,17 @@ export class Game {
         this.loot.delete(l.id);
         continue;
       }
-      this.grid.query(l.x, l.y, 60, (id) => {
+      // («Призовая команда», forum 57: «по морскому праву приз — это отправить шлюпку забрать груз с тонущего врага»):
+      // her boats bring in a sunk ship's casks from PRIZE_BOATS_R off — she need not sail onto the wreck)
+      this.grid.query(l.x, l.y, l.wreck ? PRIZE_BOATS_R + 40 : 60, (id) => {
         const s = this.ships.get(id);
         if (!s || !s.isPlayer || !s.alive || s.docked || s.ghost) return;
         if (s.hasEffect('submerged') || s.hasEffect('ghost_return')) return; // a ghost cannot haul casks aboard
         if (l.ownerOnly !== undefined && s.accountId !== l.ownerOnly) return;
         if (l.claim && l.claim.until > now && s.accountId !== l.claim.account && !sameGroupAccounts(this, s.accountId, l.claim.account)) return;
         if (l.jetsam && l.jetsam.until > now && s.accountId === l.jetsam.account) return; // her own jetsam: not straight back aboard
-        if (dist(s.state.x, s.state.y, l.x, l.y) > s.stats.length / 2 + 30) return;
+        const reach = l.wreck && s.rank('brd_prize_crew') > 0 ? Math.max(PRIZE_BOATS_R, s.stats.length / 2 + 30) : s.stats.length / 2 + 30;
+        if (dist(s.state.x, s.state.y, l.x, l.y) > reach) return;
         this.pickupLoot(s, l);
       });
     }
@@ -2703,6 +2708,7 @@ export class Game {
     if (Object.keys(saved).length) this.sendTo(s, { t: 'toast', msg: `The boats saved ${Object.entries(saved).map(([g, n]) => `${n} ${GOODS[g as GoodId].name}`).join(', ')}.`, kind: 'good' });
     ship.voyageStart = 0;
     ship.wounded = 0;
+    ship.woundedKinds = {};
     for (const a of AMMO_IDS) ship.ammo[a] = Math.floor(ship.ammo[a] * 0.5);
     ship.crew = Math.max(Math.round(ship.stats.crewMin * 0.6), ship.crew - crewLost);
     ship.morale = 50;

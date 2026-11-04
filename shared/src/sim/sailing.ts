@@ -155,6 +155,17 @@ export function targetSpeed(state: SailState, p: SailParams, wind: WindSample): 
   return p.maxSpeed * eff * windFactor * windPush(rel, windS) * sailFactor * sailShape(p.sailHealth, crew * p.loadFactor) * p.speedMul;
 }
 
+/** The share of her full turn rate a ship has at a standstill (forum 57). */
+export const STEER_DEAD = 0.22;
+/** The share of her top speed at which she answers the helm in full. */
+export const STEER_FULL_AT = 0.5;
+
+/** Steerage way: the share of her turn rate her rudder gives at this speed — STEER_DEAD dead in the water, rising
+ *  straight to 1 at STEER_FULL_AT of her top speed. */
+export function steerageAt(speed: number, maxSpeed: number): number {
+  return STEER_DEAD + (1 - STEER_DEAD) * clamp(Math.abs(speed) / Math.max(1, maxSpeed * STEER_FULL_AT), 0, 1);
+}
+
 export function stepSailing(s: SailState, input: SailInput, p: SailParams, wind: WindSample, current: { x: number; y: number }, dt: number): SailState {
   const sailRate = p.sailChangeRate * (0.5 + 0.5 * p.crewFactor);
   const sail = approach(s.sail, clamp(input.sailTarget, 0, 1), sailRate * dt);
@@ -178,8 +189,10 @@ export function stepSailing(s: SailState, input: SailInput, p: SailParams, wind:
   // A hard-over rudder bleeds way.
   speed = Math.max(0, speed - Math.abs(rudder) * speed * 0.05 * Math.max(0, 1 + (tal?.turnDrag ?? 0)) * dt);
 
-  // Even a stopped ship can come about slowly (boats, sweeps, backed sails), so nobody is stuck in irons.
-  const steerage = clamp(0.5 + speed / Math.max(1, p.maxSpeed * 0.6), 0.5, 1);
+  // Her rudder bites by the way she has on (forum 57: «разворачивается на месте без разгона»): dead in the water she
+  // comes round only slowly (boats, sweeps, backed sails — STEER_DEAD of her rate, so nobody is stuck in irons), and
+  // she answers her helm in full from half her top speed.
+  const steerage = steerageAt(speed, p.maxSpeed);
   const rudderEff = 0.3 + 0.7 * p.rudderHealth;
   let turn = p.turnRate;
   if (tal?.stormRider) turn *= wind.strength >= 0.75 ? 1.25 : wind.strength < 0.35 ? 0.85 : 1;

@@ -20,6 +20,22 @@ import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { EN as PB_EN, RU as PB_RU } from '../lang/ui/pathbook.ts';
 
 const L = dict(EN, RU);
+
+/** The talents her Path stands on outside the ability nodes (forum 57, Пофигум: «★ стоит на Живучести, а „Усиленный
+ *  нос“ — удар тарана — без отметки»): talent → the ability of hers it strengthens. Marked ★ on its card and its tree. */
+export const PATH_PICKS: Partial<Record<CaptainId, Record<string, string>>> = {
+  reaver: { shp_reinforced_bow: 'ramming_speed', brd_match_speed: 'ramming_speed' },
+};
+
+/** The talents of a tree marked ★ for her Path, by the ability each strengthens. */
+function picksIn(captain: CaptainId, tree: TreeId): string[] {
+  const picks = PATH_PICKS[captain] ?? {};
+  return TALENTS.filter((x) => x.tree === tree && picks[x.id]).map((x) => picks[x.id]);
+}
+
+function abilityName(captain: CaptainId, id: string): string {
+  return CAPTAINS[captain].abilities.find((a) => a.id === id)?.name ?? id;
+}
 const points = (n: number) => `${n} ${plural(n, L('point.one'), L('point.few'), L('point.many'))}`;
 
 type View = TreeId | 'bridges' | 'deeds';
@@ -48,7 +64,9 @@ export class TalentScreen {
       const f = Math.min(1, pts / 26);
       const off = !TREES[t].playable;
       const native = TREES[t].native.includes(self.captain);
-      return `<button class="rose-node ${sel === t ? 'active' : ''} ${off ? 'off' : ''}" data-view="${t}" style="--a:${i * 36}deg;--f:${(f * 360).toFixed(0)}deg" title="${esc(TREES[t].name)}" aria-label="${esc(TREES[t].name)}">${icon(`tree_${t}`, '✦', 'rose-ico')}${pts ? `<span class="rose-pts">${pts}</span>` : ''}${native ? `<i class="rose-native" title="${esc(L('nativeTip'))}">◆</i>` : ''}</button>`;
+      const picks = picksIn(self.captain, t);
+      const star = picks.length ? `<i class="rose-pick" title="${esc(L('pickTip', { name: [...new Set(picks)].map((a) => abilityName(self.captain, a)).join(', ') }))}">★</i>` : '';
+      return `<button class="rose-node ${sel === t ? 'active' : ''} ${off ? 'off' : ''}" data-view="${t}" style="--a:${i * 36}deg;--f:${(f * 360).toFixed(0)}deg" title="${esc(TREES[t].name)}" aria-label="${esc(TREES[t].name)}">${icon(`tree_${t}`, '✦', 'rose-ico')}${pts ? `<span class="rose-pts">${pts}</span>` : ''}${native ? `<i class="rose-native" title="${esc(L('nativeTip'))}">◆</i>` : ''}${star}</button>`;
     }).join('');
     const coreArt = selTree ? `tree_${selTree}` : sel === 'bridges' ? 'ab_form_line' : 'goal';
     const coreName = selTree ? TREES[selTree].name : sel === 'bridges' ? L('bridges') : L('deeds');
@@ -124,6 +142,12 @@ function skillLine(id: string, captain: CaptainId): string {
   return `<small class="tal-book">${icon(`ab_${hook.skill}`, '', 'ico-xs')}${esc(L(hook.kind === 'power' ? 'skill.power' : 'skill.dur', { name, n: Math.round(hook.per * 100) }))}</small>`;
 }
 
+/** ★ on a talent her Path stands on (forum 57). */
+function pickLine(id: string, captain: CaptainId): string {
+  const a = PATH_PICKS[captain]?.[id];
+  return a ? `<small class="tal-pick">${esc(L('pick', { name: abilityName(captain, a) }))}</small>` : '';
+}
+
 /** docs/18 item 6: what a talent also lifts in the path book in a boarding (its sea side as it was). */
 function bookLine(id: string): string {
   const t = TALENT_BOOK[id];
@@ -142,7 +166,7 @@ function card(x: TalentDef, self: NonNullable<ClientState['self']>, ctx: { level
   const pips = `<span class="pips">${Array.from({ length: x.maxRank }, (_, i) => `<i class="${i < rank ? 'on' : ''}"></i>`).join('')}</span>`;
   return `<div class="talent ${rank ? 'has' : ''} ${rank >= x.maxRank ? 'max' : ''} ${x.keystone ? 'keystone' : ''} ${locked ? 'locked' : ''}" data-id="${x.id}"${detailAttr(`talent:${x.id}:${Math.max(1, rank)}`, { hold: true })} title="${esc(why ? serverText(why) : L('learn'))}">
     <span class="dc-tap talent-ico-tap"${detailAttr(`talent:${x.id}:${Math.max(1, rank)}`)}>${icon(`talent_${x.id}`, '', 'talent-ico') || icon(art, '✦', 'talent-ico')}</span><div class="talent-body"><div class="talent-top"><b>${esc(x.name)}</b>${x.active ? `<span class="tag">${esc(L('active'))}</span>` : ''}${pips}${forgettable ? `<span class="forget" data-forget="${x.id}" title="${esc(L('forget'))}">×</span>` : ''}</div>
-    <small>${esc(keyless(x.description))}</small>${skillLine(x.id, self.captain)}${bookLine(x.id)}${locked && why ? `<small class="why">${icon('danger', '', 'ico-xs')}${esc(serverText(why))}</small>` : ''}</div></div>`;
+    <small>${esc(keyless(x.description))}</small>${pickLine(x.id, self.captain)}${skillLine(x.id, self.captain)}${bookLine(x.id)}${locked && why ? `<small class="why">${icon('danger', '', 'ico-xs')}${esc(serverText(why))}</small>` : ''}</div></div>`;
 }
 
 function deeds(have: string[]): string {

@@ -120,7 +120,7 @@ const N = (id: string, branch: Branch, tier: 1 | 2 | 3, max: number, icon: strin
 export const MASTERY: MasteryNode[] = [
   // Admiral: the fleet and the broadsides (her sea side, within the talents' caps).
   N('adm_broadside', 'admiral', 1, 2, 'bt_volley', T('Weight of metal', 'Вес залпа'), T('Guns +2% a rank.', 'Орудия +2% за ранг.'), { sea: { gunDamageMul: 0.02 } }),
-  N('adm_drill', 'admiral', 1, 2, 'ab_double_shot', T('Gun drill', 'Орудийная муштра'), T('Reload 2% quicker a rank.', 'Перезарядка на 2% быстрее за ранг.'), { sea: { reloadMul: -0.02 } }),
+  N('adm_drill', 'admiral', 1, 2, 'ab_double_shot', T('Gun drill', 'Орудийная муштра'), T('Reload 2% quicker a rank.', 'Перезарядка орудий на 2% быстрее за ранг.'), { sea: { reloadMul: -0.02 } }),
   N('adm_long', 'admiral', 2, 1, 'tree_gunnery', T('Long nines', 'Длинные девятифунтовки'), T('Gun range +4%.', 'Дальность орудий +4%.'), { sea: { rangeMul: 0.04 } }),
   N('adm_grape', 'admiral', 2, 1, 'ab_admiralty_barrage', T('Grape and canister', 'Картечь и картуши'), T('Shot kills 6% more of her men.', 'Ядра и картечь выбивают на 6% больше людей.'), { sea: { crewKillMul: 0.06 } }),
   N('adm_chain', 'admiral', 2, 1, 'ab_hard_over', T('Chain and bar', 'Книппели'), T('Her canvas takes 6% more.', 'Её паруса получают на 6% больше.'), { sea: { sailDamageMul: 0.06 } }),

@@ -926,7 +926,8 @@ baseWindow.onLayout = () => { if (modal === 'base') refreshModal(); };
 /** Her island (owner, 2026-10-15: «кнопка входа на остров … отдельное абсолютно новое окно с постройками»): the island
  *  screen over the whole screen; without an island of her own, the old window says how to have one. */
 function openBase(): void {
-  if (!isleScene.isOpen) haltForIsle();
+  // (forum 57: «при открытии острова кораблик стоит в сети, его можно атаковать, а он тупо останавливается» — the island
+  // screen no longer halts her: she keeps her way, her course, the helmsman's run and her guns' order under it)
   if (state.self?.homeIsle === null || state.self?.homeIsle === undefined) {
     baseWindow.tab = 'plots';
     baseWindow.open();
@@ -946,20 +947,6 @@ function openBase(): void {
   if (hud.chatPanel.isOpen) hud.chatPanel.close();
   isleKey = selfKeyFor('base');
   isleScene.enter(state);
-}
-/** Owner, 2026-10-16 («переходя на остров корабль должен останавливаться»): going onto her island stops her at sea —
- *  sails down, no way on, the helmsman's course, a goal's run, «В порт» and a landing's run dropped; the server does it
- *  (Game.halt) and her helm here keeps the sails down. */
-function haltForIsle(): void {
-  if (!inGame || state.self?.dockedAt || !state.ownDisplay) return;
-  touch.course = null;
-  goalRun = null;
-  homeRun = null;
-  claimRun = null;
-  pendingDock = null;
-  setMark(null);
-  state.input.sail = 0;
-  net.send({ t: 'halt' });
 }
 /** The island's first steps' finger (owner, 2026-10-28): on the island at its building's «Построить», in a harbour's
  *  hire window at the marines; the HUD's line itself only for a while after the step comes (then the story's finger). */

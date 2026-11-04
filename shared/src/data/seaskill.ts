@@ -172,12 +172,12 @@ export const SEA_SKILLS: Record<string, SeaSkill> = {
   },
   form_line: {
     id: 'form_line', captain: 'admiral', key: 'Z', by: { spread: [0.3, 0.33, 0.35, 0.38, 0.4], reload: [0.08, 0.085, 0.09, 0.095, 0.1], dur: 15 }, pow: ['reload'], fmt: { spread: 'pct', reload: 'pct', dur: 'sec' },
-    text: ['Signal flags: she and allies within 250 m get spread −{spread} and reload −{reload} for {dur}.', 'Сигнальные флаги: ей и союзникам в 250 м разброс −{spread} и перезарядка −{reload} на {dur}.'],
+    text: ['Signal flags: she and allies within 250 m get spread −{spread} and reload −{reload} for {dur}.', 'Сигнальные флаги: ей и союзникам в 250 м разброс −{spread} и перезарядка орудий −{reload} на {dur}.'],
     facets: {
       3: [F('Close order', 'Плотный строй', 'Spread −10% more and damage +5%.', 'Разброс ещё −10% и урон +5%.', { add: { spread: 0.1, dmg: 0.05 } }),
         F('Long signal', 'Долгий сигнал', 'The line holds 5 s longer.', 'Строй держится на 5 с дольше.', { add: { dur: 5 } })],
       5: [F('Chain of command', 'Цепь команды', 'In the line she and hers have her passive twice over.', 'В строю её пассивка действует вдвое — и на неё саму.', { add: { chain: 1 } }),
-        F('Line of battle', 'Линия баталии', 'The reload part of it +25%.', 'Перезарядка строя +25%.', { mul: { reload: 1.25 } })],
+        F('Line of battle', 'Линия баталии', 'The reload part of it +25%.', 'Ускорение перезарядки орудий строя +25%.', { mul: { reload: 1.25 } })],
     },
     node: { talent: 'cmd_line_of_battle', kind: 'power', per: 0.2 },
   },

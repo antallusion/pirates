@@ -63,6 +63,9 @@ export interface Company {
   practice: Pools;
   /** The wounded below, kept with her between voyages (docs/16 #19), and the fractions of healing, dying, medicine. */
   wounded: number;
+  /** …by the kinds they were (forum 57: a sailor wounded comes back a sailor, not a deckhand; those who die below
+   *  go on her record of the fallen as what they were). Older saves: none known, they come back as hands. */
+  woundedKinds?: Record<string, number>;
   woundAcc: { heal: number; die: number; med: number };
   /** When the frightened last walked off at a harbour (world seconds; DESERT_EVERY). */
   desertedAt?: number;
