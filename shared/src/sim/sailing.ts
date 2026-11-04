@@ -157,8 +157,10 @@ export function targetSpeed(state: SailState, p: SailParams, wind: WindSample): 
 
 /** The share of her full turn rate a ship has at a standstill (forum 57). */
 export const STEER_DEAD = 0.22;
-/** The share of her top speed at which she answers the helm in full. */
-export const STEER_FULL_AT = 0.5;
+/** The share of her top speed at which she answers the helm in full (30 %, as before the rule: from half her top speed a
+ *  ⚓8 lying broadside on in the close fight, under reefed canvas, could not keep her guns on her mark — closefight.test,
+ *  beastfight.test, autoscroll.test; the rule bites below it, where a ship has next to no way). */
+export const STEER_FULL_AT = 0.3;
 
 /** Steerage way: the share of her turn rate her rudder gives at this speed — STEER_DEAD dead in the water, rising
  *  straight to 1 at STEER_FULL_AT of her top speed. */
@@ -191,7 +193,7 @@ export function stepSailing(s: SailState, input: SailInput, p: SailParams, wind:
 
   // Her rudder bites by the way she has on (forum 57: «разворачивается на месте без разгона»): dead in the water she
   // comes round only slowly (boats, sweeps, backed sails — STEER_DEAD of her rate, so nobody is stuck in irons), and
-  // she answers her helm in full from half her top speed.
+  // she answers her helm in full from STEER_FULL_AT of her top speed.
   const steerage = steerageAt(speed, p.maxSpeed);
   const rudderEff = 0.3 + 0.7 * p.rudderHealth;
   let turn = p.turnRate;

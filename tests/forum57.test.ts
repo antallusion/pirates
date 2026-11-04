@@ -41,13 +41,13 @@ function turned(speed: number, secs: number): number {
   return h;
 }
 
-test('steerage way: dead in the water she turns at a fifth of her rate, in full from half her top speed', () => {
+test('steerage way: dead in the water she turns at a fifth of her rate, in full from 30 % of her top speed (the fight keeps its helm)', () => {
   assert.ok(STEER_DEAD >= 0.2 && STEER_DEAD <= 0.25);
-  assert.equal(STEER_FULL_AT, 0.5);
+  assert.equal(STEER_FULL_AT, 0.3);
   assert.equal(steerageAt(0, 12), STEER_DEAD);
-  assert.equal(steerageAt(6, 12), 1);
+  assert.equal(steerageAt(3.6, 12), 1);
   assert.equal(steerageAt(12, 12), 1);
-  assert.ok(Math.abs(steerageAt(3, 12) - (STEER_DEAD + (1 - STEER_DEAD) / 2)) < 1e-9, 'straight between');
+  assert.ok(Math.abs(steerageAt(1.8, 12) - (STEER_DEAD + (1 - STEER_DEAD) / 2)) < 1e-9, 'straight between');
   const still = turned(0, 3), half = turned(6, 3);
   assert.ok(still > 0.05, `a stopped ship still comes round a little (${still.toFixed(2)} rad)`);
   assert.ok(still / half < 0.26 && still / half > 0.18, `stopped ${still.toFixed(2)} vs at half speed ${half.toFixed(2)}`);
