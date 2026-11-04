@@ -13,6 +13,7 @@ import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { applyThroneTitles, throneHall } from './citadels.ts'; // docs/19 E8: the Masters of the Throne
 import { applyArenaTitles, arenaHall } from './arena.ts'; // docs/19 E14: the Champions of the Colosseum
+import { badName, NAME_BAD } from '../../../shared/src/namefilter.ts';
 
 const DAY = 24 * 3600_000;
 const SEASON_MS = SEASON_DAYS * DAY;
@@ -222,6 +223,7 @@ export function seasonAction(game: Game, s: PlayerSession, action: string, value
       if (names[is.id]) return `She is already named ${names[is.id]}`;
       const name = String(value ?? '').trim().replace(/\s+/g, ' ');
       if (!NAME_RE.test(name)) return 'Three to twenty-four letters, spaces or apostrophes';
+      if (badName(name)) return NAME_BAD; // forum post 66
       if (game.world.islands.some((i) => i.name.toLowerCase() === name.toLowerCase())) return 'The sea already has an island of that name';
       names[is.id] = name;
       game.db.setKv('island_names', names);

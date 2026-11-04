@@ -8,6 +8,7 @@ import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypt
 import type { Mailer } from './mail.ts';
 import { MailRejected, OutboxMailer } from './mail.ts';
 import type { AccountRow, Db } from './persistence/db.ts';
+import { badName, NAME_BAD } from '../../shared/src/namefilter.ts';
 
 export interface AuthResult {
   accountId: number;
@@ -84,6 +85,7 @@ export class AuthService {
   register(rawName: string): AuthResult | AuthError {
     const name = sanitizeName(rawName ?? '');
     if (!name) return { error: 'Name must be 3–20 letters, digits, spaces, apostrophes or dashes.' };
+    if (badName(name)) return { error: NAME_BAD }; // forum post 66: no coarse words, no slurs
     if (this.db.accountByName(name)) return { error: 'That name is already sailing these waters.' };
     const token = randomBytes(24).toString('base64url');
     const accountId = this.db.createAccount(name, hashToken(token));
@@ -111,7 +113,7 @@ export class AuthService {
     if (this.db.accountByEmail(email)) return { error: 'An account with that e-mail already exists.' };
     // (the name is checked before a letter goes: a refused name sends nothing)
     const name = sanitizeName(rawName ?? '');
-    if (!name || this.db.accountByName(name)) return this.register(rawName) as AuthError;
+    if (!name || badName(name) || this.db.accountByName(name)) return this.register(rawName) as AuthError;
     // The letter goes first (owner, 2026-10-11): an address the mail service refuses makes no account at all.
     const raw = randomBytes(24).toString('base64url');
     if ((await this.mailVerification(email, raw, locale)) === 'invalid') return { error: CHECK_EMAIL };
@@ -218,7 +220,7 @@ export class AuthService {
       return this.issue(byEmail);
     }
     let base = sanitizeName(displayName.replace(/[^\p{L}\p{N} _'-]/gu, ' ').slice(0, 16)) ?? 'Captain';
-    if (base.length < 3) base = 'Captain';
+    if (base.length < 3 || badName(base)) base = 'Captain'; // (a provider's coarse display name is not taken: forum post 66)
     let name = base;
     for (let i = 2; this.db.accountByName(name); i++) name = `${base.slice(0, 16)} ${i}`;
     const r = this.register(name) as AuthResult;

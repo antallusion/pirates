@@ -19,6 +19,7 @@ import { forumExcerpt } from '../../../shared/src/data/forumletter.ts';
 import type { ForumLetterKind, ForumNote } from '../../../shared/src/data/forumletter.ts';
 import { seed, SYSTEM_ID } from './seed.ts';
 import { postReplies29, postThreads28 } from './posts28.ts';
+import { ensureDiscussion, isNewsSection, migrateNewsTalk } from './discuss.ts';
 import type { ForumStore, PostRow, SectionRow, TopicRow, UserRow } from './store.ts';
 
 export type Lang = 'ru' | 'en';
@@ -156,6 +157,8 @@ export class ForumService {
     seed(this.store, this.now());
     postThreads28(this.store, this.now());
     postReplies29(this.store, this.now());
+    // forum post 69: the news are the staff's; their players' talk is carried to the companion topics (discuss.ts)
+    migrateNewsTalk(this.store, this.now());
     for (const id of this.admins) if (this.store.user(id)) this.store.setRole(id, 'admin');
     for (const id of this.mods) if (this.store.user(id) && !this.admins.has(id)) this.store.setRole(id, 'moderator');
   }
@@ -359,10 +362,25 @@ export class ForumService {
     }
     const rows = this.store.topicPosts(t.id, (p - 1) * POSTS_PER_PAGE, POSTS_PER_PAGE);
     const users = this.store.users([t.author_id, ...rows.map((r) => r.author_id)]);
+    // forum post 69: a news topic is read, not answered, by the players: its discussion is linked under the news and in
+    // place of the reply box (made here if a hidden news topic is shown again, or the companion went missing)
+    const news = isNewsSection(s);
+    const talkId = news && !t.hidden ? ensureDiscussion(this.store, t, now) : null;
+    const talk = talkId !== null ? this.store.topic(talkId) : undefined;
+    const base = lang === 'ru' ? '/site/forum/' : '/site/en/forum/';
+    const posts = this.postViews(me, rows, lang, users);
+    if (talk) {
+      const first = posts.find((x) => x.id === t.first_post_id);
+      if (first && first.html) first.html += `<p class="f-discuss-link"><a href="${base}t/${talk.id}">${lang === 'ru' ? 'Обсудить на форуме →' : 'Discuss on the forum →'}</a></p>`;
+    }
+    const of = this.store.newsOf(t.id);
+    const ofNews = of !== undefined ? this.store.topic(of) : undefined;
     return {
       topic: this.topicView(t, users, undefined, lang), section: this.sectionView(s, lang), page: p, pages, total,
-      posts: this.postViews(me, rows, lang, users),
-      can: { reply: !!me && me.role !== 'banned' && (!t.locked || staff), mod: staff, admin },
+      posts,
+      can: { reply: !!me && me.role !== 'banned' && (!t.locked || staff) && (!news || staff), mod: staff, admin },
+      ...(talk ? { discuss: { id: talk.id, title: maskBadWords(talk.title), replies: talk.replies } } : {}),
+      ...(ofNews && (!ofNews.hidden || staff) ? { news: { id: ofNews.id, title: maskBadWords(ofNews.title) } } : {}),
     };
   }
 
@@ -414,6 +432,7 @@ export class ForumService {
     const me = this.canWrite(me0);
     const s = this.store.sectionBySlug(String(b.section ?? '')) ?? fail('not_found', 404);
     if (s.staff_only && !isStaff(me.role)) fail('forbidden', 403);
+    const isNews = isNewsSection(s);
     const title = cleanTitle(b.title);
     const body = cleanBody(b.body, POST_MAX);
     this.guard(me, b, `${title}\n${body}`, FRESH_TOPIC_MS);
@@ -427,6 +446,8 @@ export class ForumService {
       this.store.bump(me.id, 'topics', 1);
       this.store.index('t', tid, title);
       this.store.index('p', p.id, plainText(body));
+      // forum post 69: a news topic opens with its discussion beside it
+      if (isNews) ensureDiscussion(this.store, this.store.topic(tid)!, now);
       return { topicId: tid, postId: p.id };
     });
     this.notifyBody(me, out.topicId, out.postId, body, new Set([me.id]));
@@ -439,6 +460,8 @@ export class ForumService {
     const staff = isStaff(me.role);
     if (t.hidden && !staff) fail('not_found', 404);
     if (t.locked && !staff) fail('locked', 403);
+    // forum post 69: the news and the patch notes are answered by the staff only (the players talk in the discussion)
+    if (!staff && isNewsSection(this.store.section(t.section_id))) fail('forbidden', 403);
     const body = cleanBody(b.body, POST_MAX);
     let replyTo: number | null = Number(b.replyTo) || null;
     const rp = replyTo ? this.store.post(replyTo) : undefined;

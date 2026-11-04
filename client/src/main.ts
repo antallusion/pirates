@@ -72,7 +72,8 @@ import { LF } from './ui/ferry.ts'; // owner, 2026-10-30: «Переход» bet
 import { VOYAGE_MUL } from '../../shared/src/data/passage.ts';
 import { AutosailPill, FirstTips, autosailRequest, autosailStopText, routeLabel, tipForMsg, tipForState } from './ui/ease.ts';
 import { claimNear, claimSpot, tapTarget } from './ui/sailto.ts'; // seaux: sail-to on tap
-import { toggleCaptainMenu } from './ui/capmenu.ts'; // seaux: the captain's menu on her portrait
+import { captainMenuOpen, toggleCaptainMenu } from './ui/capmenu.ts';
+import { NAME_BAD } from '../../shared/src/namefilter.ts'; // forum post 66 // seaux: the captain's menu on her portrait
 import { actBarHtml, attackRelevant, WATCH_RAIDER, buildActs, findInfo, landKeyAct, markInfo, slowWord } from './ui/actbar.ts';
 import { FIND_REACH, FIND_SLOW, findGap } from '../../shared/src/data/seafinds.ts';
 import type { FindView } from '../../shared/src/findproto.ts';
@@ -2450,7 +2451,7 @@ function onMessage(m: ServerMsg): void {
           btn.textContent = L('continueAs', { name: localStorage.getItem(CAPTAIN_KEY)! });
           btn.classList.remove('hidden');
         }
-      } else if (!inGame && m.msg === 'That captain is sold for doubloons') {
+      } else if (!inGame && (m.msg === 'That captain is sold for doubloons' || m.msg === NAME_BAD)) {
         // (a premium captain refused at the choice: the screen back, the reason under its button)
         $('screen-captain').classList.remove('hidden');
         const why = document.getElementById('captain-why');
@@ -2461,6 +2462,10 @@ function onMessage(m: ServerMsg): void {
       // A phone's small refusals (reloading, not on the beam) flash the button and buzz instead (docs/23 item 29).
       else if (touch.enabled && ((pettyOf(m.msg) === 'special' && seaAbil.flash()) || seaHud.petty(m.msg))) break;
       else hud.toast(serverText(m.msg), 'bad');
+      break;
+    case 'renamed':
+      renameWait?.(m);
+      renameWait = null;
       break;
     case 'welcome':
       bootMark(m.hasCaptain ? 'welcome' : 'welcome: no captain');
@@ -2531,6 +2536,11 @@ function onMessage(m: ServerMsg): void {
     case 'self':
     case 'self_patch':
       runTestBattle();
+      // forum post 66: a coarse name changed by the administration: her free rename's page, once a load
+      if (!renameAsked && (state.self?.renames ?? 0) > 0 && !captainMenuOpen() && !modal) {
+        renameAsked = true;
+        setTimeout(() => hud.onCaptain?.('rename'), 1500);
+      }
       noteNewQuests(); // ux2: a quest just taken is followed, its mark on the sea
       noteHearsay(state.self); // a whisper just bought becomes her mark (docs/16 #14)
       arenaMoments(); // docs/19 E14: the Colosseum's draft opens its tab, its bout closes the window
@@ -3980,11 +3990,23 @@ hud.onAbility = (id) => sendAbility(id);
 // seaux (2026-10-11, owner: «Нажимая на иконку капитана должны быть какие-то окошки настроек … щас ничего не происходит»):
 // her portrait, on a phone and on a desk, opens the captain's menu — her sheet, «Умения», the talents, the journal, the
 // settings, the account — with what its gold bead was about first.
-hud.onCaptain = () => {
+hud.onCaptain = (start?: 'rename') => {
   const self = state.self;
   if (!self) return;
   if (modal) closeModal();
-  toggleCaptainMenu({ name: self.name, level: self.level, pts: self.talentPoints }, {
+  toggleCaptainMenu({ name: self.name, level: self.level, pts: self.talentPoints, renames: self.renames ?? 0 }, {
+    // forum post 66: her free rename, answered by the server's 'renamed'
+    rename: (name) => new Promise((done) => {
+      renameWait?.({ ok: false });
+      renameWait = done;
+      net.send({ t: 'rename', name });
+      setTimeout(() => {
+        if (renameWait === done) {
+          renameWait = null;
+          done({ ok: false });
+        }
+      }, 8000);
+    }),
     open: (id) => (id === 'hero' || id === 'skills' ? openHero(id) : id === 'replays' ? tactical.openReplays() : id === 'promo' ? openPromoCode() : id === 'book' ? guide.open() : openModal(id)),
     support: (email, message) => authPost('/auth/support', { email, message, token: localStorage.getItem('gravetide.token') ?? '', website: '', t: String(Math.round(performance.now())), lang: lang() }),
     logout: () => {
@@ -3993,9 +4015,13 @@ hud.onCaptain = () => {
     },
     confirm: (q) => ask(q),
     text: (s) => serverText(s),
-  });
+  }, start);
   hud.redrawCaptain(); // the bead seen: out
 };
+/** The answer to her free rename now on its way (forum post 66). */
+let renameWait: ((r: { ok: boolean; name?: string; error?: string }) => void) | null = null;
+/** The free rename's page opened by itself once a load, the first time she is aboard with one waiting. */
+let renameAsked = false;
 hud.onAmmo = (id) => net.send({ t: 'ammo', ammo: id as 'round' });
 hud.onTalent = (id) => sendTalent(id);
 hud.onAmmoCycle = () => cycleAmmo(1);

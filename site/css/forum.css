@@ -409,6 +409,15 @@ a.f-gm-i:hover, .f-member:hover { border-color: rgba(245, 196, 81, 0.28); transf
 .f-login h3 { font-size: 26px; margin-bottom: 6px; }
 .f-login p { margin: 0; color: #c4bdae; }
 .f-login-ico { width: 72px; height: auto; filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.7)); }
+/* forum post 69: the news' discussion, in place of the reply box; its link under the news; the way back from it */
+.f-discuss { border-color: rgba(245, 196, 81, 0.45); background: linear-gradient(180deg, rgba(245, 196, 81, 0.08), rgba(245, 196, 81, 0.02)); }
+.f-discuss .f-discuss-n { margin-top: 6px; color: var(--muted); font-size: 14px; }
+.f-discuss + .f-reply { margin-top: 18px; }
+.f-discuss-link { margin: 18px 0 0; padding-top: 12px; border-top: 1px solid var(--line2); }
+.f-discuss-link a { font-weight: 700; font-size: 17px; color: #f5c451; text-decoration: none; }
+.f-discuss-link a:hover, .f-discuss-link a:focus-visible { text-decoration: underline; }
+.f-ofnews { margin: 0 0 16px; padding: 12px 16px; justify-content: flex-start; flex-wrap: wrap; text-align: left; }
+.f-ofnews a { color: #f5c451; font-weight: 700; }
 .f-toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 80; max-width: min(560px, calc(100% - 28px)); padding: 12px 20px; border-radius: 14px; background: rgba(12, 17, 28, 0.96); border: 1px solid rgba(245, 196, 81, 0.35); color: var(--text); font-size: 14px; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6); transform: translate(-50%, 140%); opacity: 0; transition: transform 0.35s var(--ease), opacity 0.35s; pointer-events: none; }
 .f-toast.on { transform: translate(-50%, 0); opacity: 1; }
 .f-toast.err { border-color: rgba(196, 85, 74, 0.6); }

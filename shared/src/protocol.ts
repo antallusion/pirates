@@ -99,6 +99,7 @@ export type ClientMsg =
   | { t: 'hero'; action: 'skill' | 'focus' | 'learn' | 'cast' | 'buy' | 'view'; pick?: number; id?: string; index?: number }
   | { t: 'hello'; v: number; token?: string; name?: string }
   | { t: 'create_captain'; captain: CaptainId; shipName: string; tutorial?: boolean } // tutorial: the First Watch (docs/07 §13)
+  | { t: 'rename'; name: string } // forum post 66: her free rename (server/src/game/names.ts)
   /** The captains' choice (owner, 2026-10-19: premium captains cost money): `view` asks which she owns; `buy` buys a
    *  premium captain for doubloons before she takes command (the top-up, if short, by the shop's own `premium` stars). */
   | { t: 'captain_shop'; action: 'view' | 'buy'; captain?: CaptainId }
@@ -802,6 +803,8 @@ export interface PrivateState {
   /** Rest ashore (docs/11 P6): battle experience still to come double. */
   rested: number;
   talentPoints: number;
+  /** Free renames of her captain waiting (forum post 66: the administration changed a coarse name; server names.ts). */
+  renames?: number;
   talents: TalentRanks;
   deeds: string[];
   tokens: number;
@@ -2140,6 +2143,7 @@ export type ServerMsg =
       /** docs/36: a campaign quest's completion line, and its place (the chapter, the quest in it of its size, the campaign's
        *  quests done of all) */ line?: string; campaign?: { ch: number; k: number; size: number; at: number; total: number } }
   | { t: 'welcome'; v: number; token: string; accountId: number; name: string; hasCaptain: boolean; worldSize: number; time: number }
+  | { t: 'renamed'; ok: boolean; name?: string; error?: string } // forum post 66: the answer to 'rename'
   | { t: 'init'; self: PrivateState; ports: PortPublic[]; currents: CurrentData[]; whirlpools: WhirlpoolData[]; discovered: number[]; time: number; entityId: number; sectors?: SectorData[] }
   /** `warn`: a storm front that will cross her course (docs/16 #10) — which, in how many seconds, from which bearing. */
   | { t: 'fronts'; list: FrontData[]; forecast: boolean; warn?: FrontWarn | null }

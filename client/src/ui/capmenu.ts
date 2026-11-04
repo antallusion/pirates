@@ -25,7 +25,12 @@ export const CAP_ITEMS: readonly { id: CapItem; art: string; glyph: string }[] =
   { id: 'account', art: 'menu_cabin', glyph: '☗' },
 ];
 
+/** Who the menu is about: her name, level, talent points and free renames waiting. */
+export interface CapWho { name: string; level: number; pts: number; renames?: number }
+
 export interface CapHooks {
+  /** Her free rename (forum post 66): the server's answer. */
+  rename?(name: string): Promise<{ ok: boolean; name?: string; error?: string }>;
   open(item: Exclude<CapItem, 'account'>): void;
   /** A letter to the support desk (the title screen's own endpoint). */
   support(email: string, message: string): Promise<{ ok?: boolean; error?: string }>;
@@ -59,12 +64,24 @@ export function markCaptainSeen(pts: number, level: number): void {
 }
 
 /** The menu's body: the news first (a row with its button), then the six tiles. */
-export function capMenuHtml(o: { name: string; level: number; pts: number }, was = seen()): string {
+export function capMenuHtml(o: CapWho, was = seen()): string {
   const news: string[] = [];
+  // forum post 66: the administration changed a coarse name and left her a free rename
+  if ((o.renames ?? 0) > 0) news.push(`<div class="cap-news fresh"><i class="cs-pts" aria-hidden="true"></i><span>${esc(L('renameNews'))}</span><button type="button" class="k-btn k-btn--primary k-btn--sm" data-cap="rename">${esc(L('renameGo'))}</button></div>`);
   if (o.pts > 0) news.push(`<div class="cap-news${o.pts > was.pts ? ' fresh' : ''}"><i class="cs-pts" aria-hidden="true"></i><span>${esc(L('pts', { n: o.pts }))}</span><button type="button" class="k-btn k-btn--primary k-btn--sm" data-cap="talents">${esc(L('ptsGo'))}</button></div>`);
   if (was.lv > 0 && o.level > was.lv) news.push(`<div class="cap-news fresh"><i class="cs-pts" aria-hidden="true"></i><span>${esc(L('rank', { n: o.level }))}</span><button type="button" class="k-btn k-btn--secondary k-btn--sm" data-cap="hero">${esc(L('rankGo'))}</button></div>`);
   const tiles = CAP_ITEMS.map((x) => `<button type="button" class="k-btn k-btn--secondary cap-tile" data-cap="${x.id}" title="${esc(L(`${x.id}T`))}">${icon(x.art, x.glyph, 'cap-ico')}<span class="k-btn-l">${esc(L(x.id))}</span>${x.id === 'talents' && o.pts > 0 ? `<b class="k-badge" aria-hidden="true">${o.pts}</b>` : ''}</button>`).join('');
   return `<div class="cap-menu-body"><div class="cap-who"><b>${esc(o.name)}</b> <span class="muted">${esc(L('lv', { n: o.level }))}</span></div>${news.join('')}<div class="cap-tiles">${tiles}</div></div>`;
+}
+
+/** Her free rename's page (forum post 66): the new name, the server's answer under it. */
+export function renameHtml(name: string): string {
+  return `<form class="cap-acc cap-rename" novalidate>
+    <p class="muted">${esc(L('renameLead'))}</p>
+    <label class="cap-f"><span>${esc(L('renameField'))}</span><input name="name" maxlength="20" minlength="3" autocomplete="off" spellcheck="false" value="${esc(name)}" required /></label>
+    <p class="cap-msg muted" role="status"></p>
+    <div class="cap-row"><button type="button" class="k-btn k-btn--secondary k-btn--sm" data-acc="back">${esc(L('back'))}</button><button type="submit" class="k-btn k-btn--primary k-btn--sm">${esc(L('renameSave'))}</button></div>
+  </form>`;
 }
 
 /** The account's page: a letter to the support desk, another account. */
@@ -85,7 +102,7 @@ let sheet: SheetHandle | null = null;
 export const captainMenuOpen = (): boolean => !!sheet?.open;
 
 /** Opens (or, open, closes) the captain's menu; what the bead was about is seen. */
-export function toggleCaptainMenu(o: { name: string; level: number; pts: number }, hooks: CapHooks): void {
+export function toggleCaptainMenu(o: CapWho, hooks: CapHooks, start?: 'rename'): void {
   if (sheet?.open) return void sheet.close('code');
   const was = seen();
   sheet = openSheet({ title: L('title'), body: capMenuHtml(o, was), height: 'auto', cls: 'cap-menu', id: 'cap-menu' });
@@ -93,6 +110,7 @@ export function toggleCaptainMenu(o: { name: string; level: number; pts: number 
   const body = sheet.body;
   const wire = () => {
     body.querySelectorAll<HTMLElement>('[data-cap]').forEach((b) => b.addEventListener('click', () => {
+      if (b.dataset.cap === 'rename') return rename();
       const id = b.dataset.cap as CapItem;
       if (id === 'account') return account();
       sheet?.close('button');
@@ -120,5 +138,32 @@ export function toggleCaptainMenu(o: { name: string; level: number; pts: number 
       if (r.ok) (form.elements.namedItem('message') as HTMLTextAreaElement).value = '';
     });
   };
+  const rename = () => {
+    body.innerHTML = renameHtml(o.name);
+    const form = body.querySelector<HTMLFormElement>('form')!;
+    const msg = form.querySelector<HTMLElement>('.cap-msg')!;
+    const input = form.elements.namedItem('name') as HTMLInputElement;
+    input.focus();
+    input.select();
+    form.querySelector<HTMLElement>('[data-acc="back"]')!.addEventListener('click', () => {
+      body.innerHTML = capMenuHtml(o, { pts: o.pts, lv: o.level });
+      wire();
+    });
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!hooks.rename) return;
+      msg.classList.remove('cap-bad');
+      const r = await hooks.rename(input.value.trim());
+      if (r.ok) {
+        o = { ...o, name: r.name ?? o.name, renames: Math.max(0, (o.renames ?? 1) - 1) };
+        msg.textContent = L('renamed', { name: o.name });
+        form.querySelector<HTMLButtonElement>('[type="submit"]')!.disabled = true;
+      } else {
+        msg.textContent = r.error ? hooks.text(r.error) : L('noAnswer');
+        msg.classList.add('cap-bad');
+      }
+    });
+  };
   wire();
+  if (start === 'rename' && (o.renames ?? 0) > 0) rename();
 }

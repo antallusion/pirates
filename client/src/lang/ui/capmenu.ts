@@ -37,6 +37,13 @@ export const EN = {
   switch: 'Sign in with another account',
   switchQ: 'Leave this account on this device and go to the sign-in screen?',
   back: 'Back',
+  // the free rename (forum post 66: the administration changed a coarse name)
+  renameNews: 'A free rename is yours',
+  renameGo: 'Change name',
+  renameLead: 'Choose your captain a new name: 3–20 letters, digits, spaces or dashes. Coarse words and slurs will not do.',
+  renameField: 'New name',
+  renameSave: 'Save the name',
+  renamed: 'Done: you sail as {name} now.',
 } as const;
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -75,4 +82,10 @@ export const RU: Record<keyof typeof EN, string> = {
   switch: 'Войти в другой аккаунт',
   switchQ: 'Выйти из этого аккаунта на этом устройстве и перейти к экрану входа?',
   back: 'Назад',
+  renameNews: 'Вам доступна бесплатная смена имени',
+  renameGo: 'Сменить имя',
+  renameLead: 'Придумайте капитану новое имя: от 3 до 20 букв, цифр, пробелов или дефисов. Грубые слова и оскорбления не подойдут.',
+  renameField: 'Новое имя',
+  renameSave: 'Сохранить имя',
+  renamed: 'Готово: теперь вы ходите под именем {name}.',
 };

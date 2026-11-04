@@ -235,6 +235,8 @@ export interface Profile {
   pennants: string[];
   pennant: string | null;
   nameRights: number;
+  /** Free renames of her captain (forum post 66: a coarse name changed by the administration leaves her one; names.ts). */
+  renames?: number;
   pantheon: string[];
   /** The First Watch and the Captain's Goals (onboarding.ts). */
   tutorial: Tutorial;
@@ -683,6 +685,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     ...(world.adm ? { adm: world.adm } : {}), // docs/19 E15
     rested: Math.round(p.rested ?? 0),
     talentPoints: talentPointsAvailable(p),
+    ...(p.renames ? { renames: p.renames } : {}), // forum post 66: a free rename waiting (names.ts)
     deeds: p.deeds,
     tokens: p.tokens,
     loadouts: { slots: loadoutSlots(p.level), active: p.activeLoadout, filled: Array.from({ length: loadoutSlots(p.level) }, (_, i) => i === p.activeLoadout || Object.keys(p.loadouts[i] ?? {}).length > 0), switchAt: p.loadoutSwitchAt },
@@ -916,6 +919,7 @@ export function sanitizeProfile(raw: Profile): Profile {
   p.pennants ??= [];
   p.pennant ??= null;
   p.nameRights ??= 0;
+  p.renames = Math.max(0, Math.min(9, Math.trunc(Number(p.renames) || 0)));
   p.pantheon ??= [];
   sanitizeTutorial(p);
   p.bossKills ??= {};

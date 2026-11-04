@@ -18,6 +18,7 @@ import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { podOfShip } from './omenpod.ts';
+import { badName, NAME_BAD } from '../../../shared/src/namefilter.ts';
 
 export interface CompanionRec {
   kind: 'orca';
@@ -183,6 +184,7 @@ export function companionAction(game: Game, s: PlayerSession, action: string, ar
     case 'name': {
       const name = (arg ?? '').replace(/[<>{}"`]/g, '').trim().slice(0, 20);
       if (!name) return 'A name of one to twenty letters.';
+      if (badName(name)) return NAME_BAD; // forum post 66
       c.name = name;
       break;
     }

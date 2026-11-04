@@ -96,13 +96,17 @@ ${d.can.admin ? `<button type="button" class="f-chip" data-tm="official" data-v=
     : '';
   const head = `<div class="f-bar">${crumbs([[t('home'), href()], [d.section.title, href(`s/${d.section.slug}`)], [`#${tp.id}`, null]])}<span class="f-topic-badges">${badges(tp)}</span>${pager(d.page, d.pages, link)}</div>`;
   const foot = `<div class="f-bar end">${pager(d.page, d.pages, link)}</div>`;
-  const posts = d.posts.map((p: any) => postCard(p, tp)).join('');
+  const posts = d.posts.map((p: any) => postCard(p, d.discuss && !d.can.reply ? { ...tp, noReply: true } : tp)).join('');
+  // forum post 69: a news topic is the staff's; its players' talk is a topic of its own, linked here instead of a reply box
+  const discuss = d.discuss ? `<section class="f-login f-discuss panel reveal" id="f-discuss"><img class="f-login-ico" src="${K('ico/forum')}" alt="" width="72" height="72" loading="lazy" decoding="async"><div><h3>${esc(t('discuss_h'))}</h3><p>${esc(t('discuss_text'))}</p><p class="f-discuss-n">${esc(d.discuss.title)} · ${esc(count(d.discuss.replies, 'replies'))}</p></div><a class="btn-gold" href="${href(`t/${d.discuss.id}`)}">${esc(t('discuss_btn'))}</a></section>` : '';
+  const ofNews = d.news ? `<p class="f-note f-ofnews">${ico('news', 'f-ico')}<span>${esc(t('news_of'))} «${esc(d.news.title)}»</span> <a href="${href(`t/${d.news.id}`)}">${esc(t('news_go'))} →</a></p>` : '';
   let after = '';
-  if (!state.me.user) after = loginCta();
+  if (d.discuss && !d.can.reply) after = discuss;
+  else if (!state.me.user) after = loginCta();
   else if (state.me.user.role === 'banned') after = `<p class="f-note">${ico('locked', 'f-ico')}${esc(t('banned_text'))}</p>`;
   else if (!d.can.reply) after = `<p class="f-note">${ico('locked', 'f-ico')}${esc(t('locked_text'))}</p>`;
-  else after = `<section class="f-reply panel" id="f-reply"><h3>${ico('reply', 'f-ico')}${esc(t('reply'))}</h3><div class="f-reply-ed"></div></section>`;
-  c.root.innerHTML = `${head}${modBar}<div class="f-posts">${posts}</div>${foot}${after}`;
+  else after = `${discuss}<section class="f-reply panel" id="f-reply"><h3>${ico('reply', 'f-ico')}${esc(t('reply'))}</h3>${d.discuss ? `<p class="muted">${esc(t('discuss_staff'))}</p>` : ''}<div class="f-reply-ed"></div></section>`;
+  c.root.innerHTML = `${head}${modBar}${ofNews}<div class="f-posts">${posts}</div>${foot}${after}`;
 
   let ed: Editor | null = null;
   const host = c.root.querySelector('.f-reply-ed') as HTMLElement | null;

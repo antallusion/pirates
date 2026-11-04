@@ -362,7 +362,7 @@ export class Hud {
   /** The exchange of doubloons into silver (owner, 2026-10-30): the «+» by her silver. */
   onExchange: () => void = () => {};
   /** The simple HUD's captain on a desk: a click opens her sheet (main.ts). */
-  onCaptain: () => void = () => {};
+  onCaptain: (start?: 'rename') => void = () => {};
   /** Owner, 2026-10-28 (armyadvice.ts): the weak army's hint — the island, or the hire window here (main.ts). */
   onAdvice: (to: 'isle' | 'hire') => void = () => {};
   /** Owner, 2026-10-28 (islefirst.ts): the island's first steps — the building's card on the island, the hire window. */
