@@ -14,6 +14,8 @@ export const SERVER_RU_PASSAGE: Record<string, string> = {
   'Quiet harbour: no captain attacks another by a ferry hub.': 'Тихая гавань: у порта-узла капитаны друг на друга не нападают.',
   'No open water leads there now: the passage is off, nothing paid.': 'Чистой воды туда сейчас нет: переход отменён, серебро не списано.',
   'Discover that port first.': 'Сначала откройте этот порт.',
+  // forum, Эдуард, post 71: no passage into a harbour that would not take her
+  'That port is closed to you: the passage would leave you at sea with no harbour.': 'Порт назначения закрыт для вас — вы оказались бы в море без гавани. Переход не начат, серебро не списано.',
   'The next passage in {0} min.': 'Следующий переход через {0} мин.',
   'The passage costs {0} silver.': 'Переход стоит {0} серебра.',
 };

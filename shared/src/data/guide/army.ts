@@ -307,8 +307,8 @@ export const ARTICLES: GuideArticle[] = [
     title: ['Berths: keeping several ships', 'Причал: несколько кораблей'],
     tags: ['berths', 'ships', 'swap', 'keep', 'buy', 'причал', 'пересесть', 'корабли', 'стоянка', 'оставить старый'],
     summary: [
-      '3 berths are free besides the ship you sail; each more costs 300 doubloons, up to 10. Swapping takes 2 minutes.',
-      'Три места на причале бесплатно, кроме корабля под вами; каждое следующее — 300 дублонов, до десяти. Пересесть — 2 минуты.',
+      '3 berths are free besides the ship you sail; each more costs 300 doubloons, up to 10. A kept ship lies in her own port: swap there (2 minutes) or bring her round.',
+      'Три места на причале бесплатно, кроме корабля под вами; каждое следующее — 300 дублонов, до десяти. Корабль стоит в своём порту: пересесть там (2 минуты) или перегнать его.',
     ],
     slides: [
       {
@@ -330,8 +330,8 @@ export const ARTICLES: GuideArticle[] = [
       {
         img: img('army-berths', 3),
         text: [
-          'To change ships press «Board her» on a kept ship — in any port with a shipyard. Your army and hold move with you (if the hold fits).',
-          'Чтобы сменить корабль, нажмите «Пересесть» у корабля на причале — в любом порту с верфью. Армия и трюм переходят с вами (если трюм вмещает).',
+          'To change ships press «Board her» on a kept ship — in the port where she lies («Lies here»). Your army and hold move with you (if the hold fits). Men the smaller hull has no hammocks for are never paid off: they stay aboard the ship you leave and come back when you change into her again; a hull traded in at the yard leaves them ashore in that port for 7 days — «Your men ashore» in its tavern signs them on again free.',
+          'Чтобы сменить корабль, нажмите «Пересесть» у корабля на причале — в том порту, где он стоит («Стоит здесь»). Армия и трюм переходят с вами (если трюм вмещает). Лишних людей, которым не хватает коек, не увольняют: они остаются на борту прежнего корабля и вернутся, когда пересядете на него; если старый корабль сдан на верфи, люди 7 дней ждут на берегу в этом порту — «Ваши люди на берегу» в таверне вернут их бесплатно.',
         ],
       },
       {
@@ -344,8 +344,8 @@ export const ARTICLES: GuideArticle[] = [
       {
         img: img('army-berths', 5),
         text: [
-          'The ship sails to you from her last mooring: «Coming to you 1:58». Stay in port — leaving cancels the call.',
-          'Корабль плывёт к вам с прошлой стоянки: «Плывёт к вам 1:58». Оставайтесь в порту — выход в море отменит вызов.',
+          'In her port she is warped round in 2 minutes: «Coming to you 1:58» — stay in port, leaving cancels it. In any other port the card says «Lies at <port> · <km>» and offers «Bring her here»: a delivery crew sails her round for the ferry’s price between the two ports, a minute per 2 km (at least 10), and she lies at this port’s berth.',
+          'В её порту корабль подводят к борту за 2 минуты: «Плывёт к вам 1:58» — оставайтесь в порту, выход в море отменит вызов. В любом другом порту на карточке написано «Стоит в <порт> · <км>» и есть кнопка «Перегнать сюда»: перегонная команда приведёт его за цену перехода между этими портами, минута на 2 км (не меньше 10), и он встанет у здешнего причала.',
         ],
       },
     ],

@@ -19,6 +19,8 @@
 
 import { factionRelation } from './factions.ts';
 import type { FactionId } from './factions.ts';
+import { SERVICES } from './marque.ts';
+import type { ServiceId } from './marque.ts';
 
 export type PatentIssuer = 'crown' | 'league' | 'harpoon';
 export const PATENT_ISSUERS: readonly PatentIssuer[] = ['crown', 'league', 'harpoon'];
@@ -73,6 +75,17 @@ export function patentAllies(issuer: PatentIssuer): FactionId[] {
   return ALL.filter((f) => stanceOf(issuer, f) === 'ally');
 }
 
+/** A patent and her service (letters of marque, marque.ts; forum, Эдуард, post 70: «Я состоял в гильдии Корона,
+ *  дослужился до Командора с жалованием. Купил патент Лиги и потерял все регалии и привилегии Короны, хотя Лига —
+ *  союзник Короны»): a patent never touches the rank, the merit, the pay or the titles of her service — the issuer is
+ *  her service's own flag, an ally or a stranger to it, and she serves on under it. Only a patent of her service's ENEMY
+ *  (its declared enemies, or a flag it stands at PATENT_ENEMY_REL or worse with: the Brethren and the Crown) is
+ *  incompatible with it: bought only after a plain warning, and then she leaves the service (no ban, no standing lost). */
+export function patentClash(service: ServiceId | null | undefined, by: PatentIssuer): boolean {
+  if (!service || service === by) return false;
+  return (SERVICES[service].enemies as FactionId[]).includes(by) || factionRelation(service, by) <= PATENT_ENEMY_REL;
+}
+
 /** Said (the server's sentences; their Russian is client/src/lang/server.ru.flags.ts). */
 export const PATENT_SAY = {
   protectedShip: 'Your patent protects the ships of its own flag and its allies.',
@@ -90,6 +103,7 @@ export const PATENT_SAY = {
   struck: 'Other colours are up: your privateer patent is void.',
   wanted: 'The law wants you: your privateer patent is void.',
   hunted: 'Privateer! An enemy patrol puts out after you.',
+  clash: 'This patent is your service’s enemy’s: buying it ends your service. Confirm first.',
 } as const;
 
 /** The issuer's name in a sentence: «of the Crown» / «Короны». */
@@ -122,6 +136,7 @@ export function patentPatterns(): [string, string][] {
     [PATENT_SAY.struck, 'Поднят другой флаг: каперский патент недействителен.'],
     [PATENT_SAY.wanted, 'Вас ищет закон: каперский патент недействителен.'],
     [PATENT_SAY.hunted, 'Капер! За вами вышел вражеский патруль.'],
+    [PATENT_SAY.clash, 'Это патент врага вашей службы: купив его, вы уйдёте со службы. Сначала подтвердите.'],
     ['Patents are sold in port.', 'Патенты продают в порту.'],
   ];
   for (const by of PATENT_ISSUERS) {

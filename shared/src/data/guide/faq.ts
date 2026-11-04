@@ -175,8 +175,8 @@ export const ARTICLES: GuideArticle[] = [
       {
         img: img('faq-berths', 3),
         text: [
-          'Changing ships takes 2 minutes: the ship sails to you from her last mooring. A ship kept at your island is taken out at the island.',
-          'Пересесть — 2 минуты: корабль плывёт к вам с прошлой стоянки. Корабль, оставленный у вашего острова, забирают у острова.',
+          'A kept ship lies in the port where you left her: change into her there (2 minutes). From another port press «Bring her here»: the ferry’s price, a minute per 2 km (at least 10). A ship kept at your island is taken out at the island.',
+          'Корабль на причале стоит в том порту, где вы его оставили: пересесть можно там (2 минуты). Из другого порта нажмите «Перегнать сюда»: цена как у перехода, минута на 2 км (не меньше 10). Корабль у вашего острова забирают у острова.',
         ],
       },
     ],

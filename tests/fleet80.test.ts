@@ -368,7 +368,7 @@ function captain(name: string, sea?: Game): { game: Game; conn: FakeConn; s: Pla
   return { game, conn, s, ship: s.ship! };
 }
 
-test('a premium purchase delivers the hull and her own creatures — hands paid off at the quay if her hammocks are full', () => {
+test('a premium purchase delivers the hull and her own creatures — hands with no hammock stay aboard the old ship at her berth (forum post 72)', () => {
   const { game, conn, s, ship } = captain('Corsair Buyer');
   ship.setArmy([{ u: 'deckhand', n: 20 }, { u: 'marine', n: 10 }]);
   const before = game.db.doubloons(s.accountId);
@@ -387,7 +387,8 @@ test('a premium purchase delivers the hull and her own creatures — hands paid 
     const b = SHIP_CLASSES[c].premium!.beasts![0];
     assert.equal(x.ship.army.find((y) => y.u === b.u)?.n, b.n, `${c}: ${b.n} ${b.u} aboard`);
   }
-  // A full crew: as many of her lowest hands as her own need are paid off, and she is sold.
+  // A full crew: as many of her lowest hands as her own need stay aboard the old ship at her berth (forum, Эдуард,
+  // post 72: nobody paid off), and she is sold.
   const f = captain('Full Crew');
   onHull(f.game, f.ship, 'frigate', 6);
   f.ship.setArmy([{ u: 'deckhand', n: 200 }, { u: 'marine', n: 20 }]);
@@ -395,7 +396,10 @@ test('a premium purchase delivers the hull and her own creatures — hands paid 
   assert.equal(f.ship.loadout.classId, 'dragon_junk');
   assert.equal(f.ship.army.find((x) => x.u === 'dragon_lancer')?.n, 16, 'her lancers aboard');
   assert.equal(f.ship.crew, f.ship.stats.crewMax, 'every hammock full, none over');
-  assert.ok(f.conn.all('toast').some((t) => /^16 hands are paid off at the quay/.test(t.msg)), 'sixteen hands paid off for sixteen lancers');
+  const aboard = (f.s.profile!.berths.at(-1)!.army ?? []).reduce((a, x) => a + x.n, 0);
+  assert.equal(f.ship.crew - 16 + aboard, 220, 'nobody paid off: the rest aboard the frigate at her berth');
+  assert.ok(aboard >= 16, 'at least sixteen for sixteen lancers');
+  assert.ok(f.conn.all('toast').some((t) => new RegExp(`^${aboard} men stay aboard the .* at the berth`).test(t.msg)), 'said where they are');
 });
 
 test('her own creatures come back to her in port, up to the number she came with, aboard her only', () => {
@@ -631,7 +635,7 @@ test('every word of the fleet in both languages: the hulls, the gifts, the creat
   assert.equal(ru.size, NEW.length, 'no two new hulls share a Russian name');
   assert.ok(!ru.has(DATA_RU['ships.SHIP_CLASSES.man_o_war.name']), 'nor one of the old');
   const table = serverTable();
-  const mine = extract('server/src/game').filter((x) => /come back aboard the|paid off at the quay|bought with doubloons|came for doubloons/.test(x));
+  const mine = extract('server/src/game').filter((x) => /come back aboard the|stay aboard the|paid off at the quay|bought with doubloons|came for doubloons/.test(x));
   assert.ok(mine.length >= 3, `the fleet's sentences found (${mine.length})`);
   for (const x of mine) assert.ok(table[x] !== undefined, `untranslated: ${x}`);
   for (const c of PREMIUM) {

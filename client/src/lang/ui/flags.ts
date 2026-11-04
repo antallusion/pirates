@@ -64,6 +64,16 @@ export const EN = {
   'pt.piracyAsk': '{name} is no enemy of your patent. Attacking her is piracy: the patent burns and you get a skull.',
   'pt.piracyGo': 'Attack anyway',
   'pt.piracyNo': 'Hold fire',
+  // forum, Эдуард, post 70: the patent and her service (letters of marque)
+  'pt.svKeep': 'Your service to {to} stays: {rank}, the pay and the titles are kept — {by} is its ally.',
+  'pt.svOwn': 'Your service to {to} stays: {rank}, the pay and the titles are kept.',
+  'pt.svLose': 'A patent of the enemy of {of}: you will leave the service of {to}, the rank of {rank} will be lost.',
+  'pt.svAsk': 'A patent of the enemy of {of}: you will leave the service of {to}, the rank of {rank}, its pay and its titles will be lost. Buy it anyway?',
+  'pt.svGo': 'Buy and leave the service',
+  'pt.svNo': 'Keep my service',
+  'sv.to.crown': 'the Crown',
+  'sv.to.league': 'the League',
+  'sv.to.confederacy': 'the Brethren',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -123,4 +133,13 @@ export const RU: Record<keyof typeof EN, string> = {
   'pt.piracyAsk': '«{name}» — не враг вашему патенту. Нападение — пиратство: патент сгорит, получите череп.',
   'pt.piracyGo': 'Всё равно атаковать',
   'pt.piracyNo': 'Не стрелять',
+  'pt.svKeep': 'Служба {to} сохраняется: звание «{rank}», жалованье и регалии остаются — {by} её союзник.',
+  'pt.svOwn': 'Служба {to} сохраняется: звание «{rank}», жалованье и регалии остаются.',
+  'pt.svLose': 'Патент врага {of}: вы покинете службу {to}, звание «{rank}» будет потеряно.',
+  'pt.svAsk': 'Патент врага {of}: вы покинете службу {to}, звание «{rank}», жалованье и регалии будут потеряны. Всё равно купить?',
+  'pt.svGo': 'Купить и уйти со службы',
+  'pt.svNo': 'Остаться на службе',
+  'sv.to.crown': 'Короне',
+  'sv.to.league': 'Лиге',
+  'sv.to.confederacy': 'Братству',
 };

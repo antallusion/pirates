@@ -35,6 +35,11 @@ export function ferryHtml(state: ClientState, view: FerryView, here: boolean, le
       const lock = here ? `<button type="button" class="btn btn-small fy-go" disabled>${esc(LF('go'))}</button>` : '';
       return `<div class="fy-row fy-row--locked" title="${esc(LF('locked'))}"><span class="fy-to">${icon('weather_fog', '🌫', 'ico-sm')}<b>${esc(placeName(p.name))}</b><small>${esc(LF('locked'))}</small></span><span class="fy-km">${esc(LF('km', { km: dec1(r.km) }))}</span>${lock}</div>`;
     }
+    // forum, Эдуард, post 71: a hub whose harbour would not take her (her patent's enemy, her standing) — red, refused
+    if (r.closed) {
+      const shut = here ? `<button type="button" class="btn btn-small fy-go" disabled title="${esc(LF('closedT'))}">${esc(LF('closedBtn'))}</button>` : '';
+      return `<div class="fy-row fy-row--closed" title="${esc(LF('closedT'))}"><span class="fy-to">${icon(`faction_${p.faction}`, '', 'ico-sm')}<b>${esc(placeName(p.name))}</b><small class="fy-closed">${icon('danger', '⚠', 'ico-xs')}${esc(LF('closed', { why: serverText(r.closed) }))}</small></span><span class="fy-km">${esc(LF('km', { km: dec1(r.km) }))}</span>${shut}</div>`;
+    }
     const can = here && !why && gold >= r.price;
     // (forum post 49: her price — the pirate flag's ×2, a quest's hub ×0.25 — and the plain one struck through by it)
     const was = r.base !== undefined && r.base !== r.price ? `<s class="fy-was">${money(r.base)}</s>` : '';

@@ -95,41 +95,41 @@ test('a new hull: «Обменять» trades the old one in; «Купить и 
   assert.equal(ship.loadout.classId, 'pinnace');
 });
 
-test('«Пересесть» at any harbour with a yard: the berthed ship out with her fittings, the old one in her place there; the army and hold go across', () => {
+test('«Пересесть» in the harbour she lies in: the berthed ship out with her fittings, the old one in her place there; the army and hold go across (forum post 70: never from another harbour)', () => {
   const { game, c, s } = inPort('Swap Sal');
   const p = s.profile!;
   const ship = s.ship!;
   ship.crew = 10;
+  const home = ship.docked!;
   c.push({ t: 'shipyard', action: 'buy_ship', classId: 'cutter', keep: true });
   assert.equal(p.berths[0].loadout.classId, 'sloop');
-  // sail her to another harbour with a yard (the berth is at Saltmarrow)
-  const far = game.world.ports.find((x) => x.shipyardTier > 0 && x.id !== ship.docked)!;
+  assert.equal(p.berths[0].port, home);
+  // sail her to another harbour with a yard: the sloop lies at home, not here (forum, Эдуард, post 70)
+  const far = game.world.ports.find((x) => x.shipyardTier > 0 && x.id !== home)!;
   ship.docked = far.id;
   p.docked = far.id;
+  c.push({ t: 'berth', action: 'swap', index: 0 });
+  assert.match(c.last('toast')!.msg, /lies at .*: change into her there, or have her brought here/);
+  assert.equal(ship.loadout.classId, 'cutter', 'refused away from her port');
+  // back home: she is warped round in two minutes
+  ship.docked = home;
+  p.docked = home;
   ship.cargo = { rum: 3 } as never;
   const men = ship.crew;
   c.push({ t: 'berth', action: 'swap', index: 0 });
   berthArrives(game, s); // (forum 40: she comes in two minutes)
   assert.equal(ship.loadout.classId, 'sloop', 'she sails the berthed sloop');
   assert.equal(p.berths[0].loadout.classId, 'cutter', 'the cutter takes the berth');
-  assert.equal(p.berths[0].port, far.id, 'berthed where she changed');
+  assert.equal(p.berths[0].port, home, 'berthed where she changed');
   assert.equal(ship.cargo.rum, 3, 'the hold went across');
   assert.equal(ship.crew, Math.min(men, ship.stats.crewMax), 'the men went across');
   // an island's caravan hull is taken out at the island, not here
   p.berths.push({ port: 'isle:1', loadout: { ...p.berths[0].loadout, name: 'Isle Hull' }, hull: 1 });
   c.push({ t: 'berth', action: 'swap', index: 1 });
   assert.match(c.last('toast')!.msg, /berthed at your island/);
-  // a harbour with no yard
-  const noYard = game.world.ports.find((x) => !(x.shipyardTier > 0));
-  if (noYard) {
-    ship.docked = noYard.id;
-    p.docked = noYard.id;
-    c.push({ t: 'berth', action: 'swap', index: 0 });
-    assert.match(c.last('toast')!.msg, /No yard here/);
-  }
 });
 
-test('«Пересесть» into a smaller hull: a hold she cannot take is refused; men she has no hammocks for are asked about, then paid off', () => {
+test('«Пересесть» into a smaller hull: a hold she cannot take is refused; men she has no hammocks for are asked about, then stay aboard the ship she leaves (forum post 72)', () => {
   const { game, c, s } = inPort('Small Swap');
   const p = s.profile!;
   const ship = s.ship!;
@@ -152,11 +152,16 @@ test('«Пересесть» into a smaller hull: a hold she cannot take is refu
   const ask = c.last('berth_ask');
   assert.ok(ask, 'asked, not refused');
   assert.equal(ask!.men, berthFit(s, p.berths[0].loadout).menOver);
+  assert.equal(ask!.stay, ship.loadout.name, 'told they stay aboard the ship she leaves');
   assert.equal(ship.loadout.classId, 'brig', 'nothing done before the answer');
+  const all = ship.crew;
   c.push({ ...ask!.again, force: true });
   berthArrives(game, s);
   assert.equal(ship.loadout.classId, 'sloop');
   assert.ok(ship.crew <= ship.stats.crewMax);
+  const aboard = (p.berths[0].army ?? []).reduce((a, x) => a + x.n, 0);
+  assert.equal(p.berths[0].loadout.classId, 'brig');
+  assert.equal(ship.crew + aboard, all, 'nobody paid off: the rest stay aboard the brig at her berth');
 });
 
 // ------------------------------------------------------------------------------------------------ 4. the escorts' repair

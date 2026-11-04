@@ -452,6 +452,12 @@ export class PortScreen {
         return this.send({ t: 'build_launch', id: d.id! });
       case 'berth_swap':
         return this.send({ t: 'berth', action: 'swap', index: Number(d.i) });
+      case 'berth_move':
+        // «Перегнать сюда» (forum, Эдуард, post 70): her berthed ship sailed round from her port
+        return this.send({ t: 'berth', action: 'move', index: Number(d.i) });
+      case 'crew_ashore':
+        // «Ваши люди на берегу» (forum post 72): back aboard, free
+        return this.send({ t: 'crew_ashore' });
       case 'berth_sell':
         void ask(L('confirm.berthSell')).then((ok) => ok && this.send({ t: 'berth', action: 'sell', index: Number(d.i) }));
         return;
@@ -873,7 +879,11 @@ ${orders}${berths}</div>` : ''}`;
         <span class="w-row-n">${money(tv.costs[k])}</span>
         <span class="w-row-b"><button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="crew" data-prof="${k}" data-n="1" ${(tv.stock[k] ?? 0) > 0 && room > 0 ? '' : 'disabled'}>${esc(L('btn.hire'))}</button><button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="crew" data-prof="${k}" data-n="-1" aria-label="${esc(L('tavern.discharge'))}" ${co.pools[k] > 0 ? '' : 'disabled'}>−</button></span></div>`).join('');
     const rough = `<div class="w-quick">${quickBtn({ label: W('tv.discharge'), data: { act: 'crew', n: -5 } })}${tv.dregs ? quickBtn({ label: L('tavern.dregs'), hint: L('tavern.dregsTitle'), data: { act: 'dregs' } }) : ''}${tv.pressGang ? quickBtn({ label: L('tavern.press'), hint: L('tavern.pressTitle'), data: { act: 'press' } }) : ''}</div>`;
-    return `${hire}${sec(W('tv.officers', { n: co.officers.length, max: co.slots }))}<div class="mk-list">${officers}</div>
+    // «Ваши люди на берегу» (forum, Эдуард, post 72): the men of a hull traded in here, back aboard free while there is room
+    const ash = tv.ashore;
+    const ashore = ash && ash.n > 0 ? `<div class="card tv-ashore"><div class="tv-hire-h">${icon('stat_crew', '', 'ico-md')}<span><b>${esc(LB('ashoreT'))}</b><small class="muted">${esc(LB('ashoreN', { n: ash.n, d: Math.max(1, Math.ceil((ash.until - Date.now()) / 86_400_000)) }))}</small></span></div>
+      ${quickBtn({ label: LB('ashoreGo'), sub: esc(LB('ashoreRoom', { n: room })), primary: room > 0, disabled: room <= 0, hint: LB('ashoreHint'), data: { act: 'crew_ashore' } })}</div>` : '';
+    return `${ashore}${hire}${sec(W('tv.officers', { n: co.officers.length, max: co.slots }))}<div class="mk-list">${officers}</div>
       ${more(W('tv.more'), `${sec(L('tavern.tradesmen'))}<div class="mk-list">${trades}</div>${rough}`, 'tv-more')}`;
   }
 

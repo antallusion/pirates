@@ -16,7 +16,7 @@
 //  - Islands: up to six guild islands (leased from the treasury by vice-admirals); a base on one raises it through
 //    five levels (+2 slots a level, weekly upkeep from the island's treasury).
 
-import { berthsFull } from './shipbuilding.ts';
+import { berthsFull, landMen } from './shipbuilding.ts';
 import { lackMore, lackRoom } from '../../../shared/src/data/buyfail.ts';
 import { legacyIslands } from '../../../shared/src/world/worldgen.ts';
 import { gyardView } from './guildyard.ts';
@@ -646,9 +646,10 @@ export function giveShip(game: Game, s: PlayerSession, berth: number): string | 
   const p = s.profile!;
   if (!g || !rankAtLeast(member(g, s.accountId), 'captain')) return 'Captains and up give hulls to the guild';
   const b = p.berths[berth];
-  if (!b || b.port !== s.ship?.docked) return 'No ship of yours berthed here';
+  if (!b || b.port !== s.ship?.docked || b.move) return 'No ship of yours berthed here';
   if (b.loadout.guild) return 'That hull already belongs to a guild';
   p.berths.splice(berth, 1);
+  landMen(game, p, b.port, b.army ?? []); // (the men aboard her go ashore here, theirs to sign on again: forum post 72)
   g.fleet.push({ id: g.nextId++, loadout: b.loadout, hull: b.hull, port: b.port, lentTo: null, deposit: 0, giver: s.name });
   log(game, g, `${s.name} gives the ${b.loadout.name} to the guild fleet.`);
   return null;

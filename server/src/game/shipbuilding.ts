@@ -8,7 +8,11 @@ import { researchWhy } from './research.ts';
 import { takeGearBack } from './gear.ts';
 import { refitHolds } from './refit.ts';
 import { pointsInTree } from '../../../shared/src/data/talents.ts';
-import { BERTH_CALL_MS, BERTH_PRICE, BERTHS_CAP, BERTHS_FREE } from '../../../shared/src/data/berths.ts';
+import { ASHORE_DAYS, ASHORE_MS, BERTH_CALL_MS, BERTH_PRICE, BERTHS_CAP, BERTHS_FREE, berthMoveQuote } from '../../../shared/src/data/berths.ts';
+import { armyMen, armyRemove, armyTidy } from '../../../shared/src/data/army.ts';
+import type { ArmyStack } from '../../../shared/src/data/army.ts';
+import { lackSilver } from '../../../shared/src/data/buyfail.ts';
+import { reconcile } from './crew.ts';
 import { cargoVolume, computeShipStats } from '../../../shared/src/sim/shipstats.ts';
 import { move as moveDoubloons, sendBalance } from './premium.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -59,9 +63,22 @@ export interface BuildOrder {
 }
 
 export interface Berth {
+  /** The harbour she lies in (`isle:<n>`: her island's yard). She is changed into only there (forum, Эдуард, post 70). */
   port: string;
   loadout: ShipLoadout;
   hull: number; // fraction
+  /** The men left aboard her (forum post 72: the men a smaller hull had no hammocks for stay with her, not paid off). */
+  army?: ArmyStack[];
+  /** «Перегнать сюда»: a delivery crew sails her from `from` to `to`, in by `at` (wall ms). */
+  move?: { from: string; to: string; at: number } | null;
+}
+
+/** The men waiting ashore in a port (a hull traded in with more men than the new one has hammocks for): «Ваши люди на
+ *  берегу» in its tavern, signed on again free while there is room, until `until` (wall ms). */
+export interface Ashore {
+  port: string;
+  army: ArmyStack[];
+  until: number;
 }
 
 export interface BuildRequest {
@@ -179,37 +196,88 @@ export function launchBuild(game: Game, s: PlayerSession, port: Port, orderId: s
   if (o.port !== port.id) return `She is being built at ${game.portById(o.port)?.name ?? o.port}`;
   if (o.done > game.now) return `Not finished yet (${Math.ceil((o.done - game.now) / 60)} min)`;
   if (berthsFull(p)) return berthsFullWhy(p);
-  p.berths.push({ port: port.id, loadout: ship.loadout, hull: ship.hull / ship.stats.hullMax });
+  const old: Berth = { port: port.id, loadout: ship.loadout, hull: ship.hull / ship.stats.hullMax };
+  p.berths.push(old);
   const cls = SHIP_CLASSES[o.classId];
   const gun = defaultGunFor(cls);
   const loadout: ShipLoadout = { classId: o.classId, name: o.name, guns: { port: gun, starboard: gun }, modules: {}, mount: cls.fixedMount, build: o.build };
   p.builds = p.builds.filter((x) => x !== o);
-  setShip(game, s, loadout, 1);
+  const left = setShip(game, s, loadout, 1); // (the men over her hammocks stay aboard the old ship: forum post 72)
+  if (left.length) old.army = left;
   if (o.build.excellent) grantDeed(game, s, 'deed_masterwork_ship');
   game.toastShip(ship, `The ${o.name} slides down the ways${o.build.excellent ? ' — Excellent work, the yard will talk of her for years' : ''}. Your old ship is berthed here.`, 'gold');
+  menLeftToast(game, s, armyMen(left), old.loadout.name);
   return null;
 }
 
 /** What changing into this hull would leave behind: the men over her hammocks, the hold over hers (the army and the cargo
  *  go across with the captain; forum 2026-10-30). */
-export function berthFit(s: PlayerSession, loadout: ShipLoadout): { menOver: number; holdOver: number; hold: number } {
+export function berthFit(s: PlayerSession, loadout: ShipLoadout): { menOver: number; holdOver: number; hold: number; crewMax: number } {
   const ship = s.ship!;
   const st = computeShipStats(loadout, ship.captain, ship.talents, ship.effects, ship.worn, ship.hero);
   const vol = cargoVolume(ship.cargo, st.contrabandVolumeMul, st.materialVolumeMul, st.provisionVolumeMul, st.cursedVolumeMul);
-  return { menOver: Math.max(0, ship.crew - st.crewMax), holdOver: Math.max(0, Math.ceil(vol - st.holdVolume)), hold: Math.floor(st.holdVolume) };
+  return { menOver: Math.max(0, ship.crew - st.crewMax), holdOver: Math.max(0, Math.ceil(vol - st.holdVolume)), hold: Math.floor(st.holdVolume), crewMax: st.crewMax };
 }
 
-/** Words the client asks again with (`force`): men who will not fit are paid off ashore. */
+/** Words the client asks again with (`force`): the men who will not fit — told where they go (aboard the ship left at
+ *  the berth, or ashore in this port for ASHORE_DAYS), never paid off (forum, Эдуард, post 72). */
 export const BERTH_MEN_ASK = 'men will not fit';
 
-/** Why she cannot change into berth `index` here now, or null (or the men's question: `${n} ${BERTH_MEN_ASK}`). */
+/** The men over her hammocks stayed aboard the ship left at the berth: said once. */
+function menLeftToast(game: Game, s: PlayerSession, n: number, name: string): void {
+  if (n > 0) game.toastShip(s.ship, `${n} men stay aboard the ${name} at the berth: they come back aboard when you change into her again.`, 'info');
+}
+
+/** A berth's harbour, put right if her save names none (a port no longer on the chart, a berth of an older save): her
+ *  last port if it has a yard, else the nearest harbour with a yard to it, else Gravesend (the Crown's capital, where
+ *  every captain starts). */
+function berthHome(game: Game, p: Profile): string {
+  const last = game.portById(p.lastPort);
+  if (last && last.shipyardTier > 0) return last.id;
+  const near = last ? game.world.ports.filter((x) => x.shipyardTier > 0 && !x.raft).sort((a, b) => Math.hypot(a.x - last.x, a.y - last.y) - Math.hypot(b.x - last.x, b.y - last.y))[0] : null;
+  return near?.id ?? 'gravesend';
+}
+
+/** Her berths as they lie now: a delivery come in is put in its harbour (and said, if `s` is aboard); a berth naming no
+ *  harbour is given one (berthHome). Asked before anything reads where a berthed ship lies, and every second. */
+export function settleBerths(game: Game, p: Profile, s?: PlayerSession): void {
+  const now = game.wallNow();
+  for (const b of p.berths ?? []) {
+    if (typeof b.port !== 'string' || (!b.port.startsWith('isle:') && !game.portById(b.port))) b.port = berthHome(game, p);
+    const m = b.move;
+    if (!m) continue;
+    if (!game.portById(m.to)) {
+      b.move = null;
+      continue;
+    }
+    if (m.at > now) continue;
+    b.port = m.to;
+    b.move = null;
+    if (s?.ship) game.toastShip(s.ship, `The ${b.loadout.name} has come into ${game.portById(m.to)!.name}: she lies at the berth there.`, 'good');
+  }
+}
+
+/** «Перегнать сюда»: her price and time from where she lies to `port` (null: she lies here, at an island, or is under
+ *  way). */
+export function berthMoveOffer(game: Game, b: Berth, port: Port): { price: number; ms: number; km: number } | null {
+  if (b.move || b.port === port.id || b.port.startsWith('isle:') || port.id.startsWith('isle:')) return null;
+  const from = game.portById(b.port);
+  if (!from) return null;
+  const d = Math.hypot(from.x - port.x, from.y - port.y);
+  return { ...berthMoveQuote(d), km: Math.round(d / 100) / 10 };
+}
+
+/** Why she cannot change into berth `index` here now, or null (or the men's question: `${n} ${BERTH_MEN_ASK}`). Only in
+ *  the harbour she lies in (forum, Эдуард, post 70): from anywhere else she is brought round first («Перегнать сюда»). */
 function swapWhy(game: Game, s: PlayerSession, port: Port, index: number, force: boolean): string | null {
   const p = s.profile!;
   const ship = s.ship!;
+  settleBerths(game, p, s);
   const b = p.berths[index];
   if (!b) return 'No such berth';
+  if (b.move) return `The ${b.loadout.name} is on her way to ${game.portById(b.move.to)?.name ?? b.move.to}: change into her when she comes in.`;
   if (b.port !== port.id && b.port.startsWith('isle:')) return 'She is berthed at your island: take her out at its yard';
-  if (b.port !== port.id && !(port.shipyardTier > 0)) return 'No yard here: change ships at a harbour with a shipyard';
+  if (b.port !== port.id) return `The ${b.loadout.name} lies at ${game.portById(b.port)?.name ?? b.port}: change into her there, or have her brought here.`;
   const refitting = refitHolds(game, p);
   if (refitting) return refitting; // the yard has her on the ways
   if (ship.loadout.legendary && b.loadout.legendary) return 'Cannot do that now';
@@ -219,20 +287,46 @@ function swapWhy(game: Game, s: PlayerSession, port: Port, index: number, force:
   return null;
 }
 
-/** «Пересесть» (forum 2026-10-30): swap the ship she sails for one of her berths — at any harbour with a yard (the berth
- *  sends her round), not an island's caravan hull (taken out at the island). The ship she leaves takes the berth here, her
- *  fittings, guns, gear and level with her. Her army and her hold go across with the captain: a hold the new hull cannot
- *  take is refused (sell or store the rest first); men she has no hammocks for are asked about once (`force`: paid off).
- *  At once: her island's yard, where the hull lies by her (forum 40: a harbour's «Пересесть» is callBerth's). */
+/** «Пересесть» (forum 2026-10-30; post 70): swap the ship she sails for one of her berths — in the harbour that ship lies
+ *  in (an island's at its yard). The ship she leaves takes the berth here, her fittings, guns, gear and level with her.
+ *  Her army and her hold go across with the captain: a hold the new hull cannot take is refused (sell or store the rest
+ *  first); the men aboard the berthed ship join her; the men she has no hammocks for stay aboard the ship she leaves
+ *  (post 72: asked about once, `force`, never paid off). At once: her island's yard (a harbour's is callBerth's). */
 export function swapBerth(game: Game, s: PlayerSession, port: Port, index: number, force = false): string | null {
   const p = s.profile!;
   const ship = s.ship!;
   const why = swapWhy(game, s, port, index, force);
   if (why) return why;
   const b = p.berths[index];
-  p.berths.splice(index, 1, { port: port.id, loadout: ship.loadout, hull: ship.hull / ship.stats.hullMax });
-  setShip(game, s, b.loadout, b.hull);
+  const old: Berth = { port: port.id, loadout: ship.loadout, hull: ship.hull / ship.stats.hullMax };
+  p.berths.splice(index, 1, old);
+  const left = setShip(game, s, b.loadout, b.hull, b.army ?? []);
+  if (left.length) old.army = left;
   game.toastShip(ship, `You take the ${b.loadout.name} out of her berth.`, 'info');
+  menLeftToast(game, s, armyMen(left), old.loadout.name);
+  return null;
+}
+
+/** «Перегнать сюда» (forum, Эдуард, post 70): a ship berthed in another harbour is sailed round to this one by a
+ *  delivery crew — the ferry's price between the two (berthMoveQuote), a minute for every two kilometres, ten at least;
+ *  she lies at this harbour's berth when she comes in, the men aboard her with her. */
+export function moveBerth(game: Game, s: PlayerSession, port: Port, index: number): string | null {
+  const p = s.profile!;
+  settleBerths(game, p, s);
+  const b = p.berths[index];
+  if (!b) return 'No such berth';
+  if (b.move) return `The ${b.loadout.name} is already on her way to ${game.portById(b.move.to)?.name ?? b.move.to}.`;
+  if (b.port === port.id) return 'She already lies here.';
+  if (b.port.startsWith('isle:')) return 'She is berthed at your island: take her out at its yard';
+  if (p.berthCall && calledBerth(p) === index) return 'She is on her way to you: call her off first';
+  const q = berthMoveOffer(game, b, port);
+  if (!q) return 'No delivery crew sails from there.';
+  if (p.gold < q.price) return lackSilver(q.price, p.gold);
+  p.gold -= q.price;
+  game.db.ledger(s.accountId, 'berth_move', -q.price, `${b.port}>${port.id}`);
+  b.move = { from: b.port, to: port.id, at: game.wallNow() + q.ms };
+  game.toastShip(s.ship, `A delivery crew sails the ${b.loadout.name} from ${game.portById(b.port)?.name ?? b.port}: she comes into the berth here in ${Math.ceil(q.ms / 60_000)} min (${q.price} silver).`, 'good');
+  game.pushSelf(s, true);
   return null;
 }
 
@@ -285,6 +379,7 @@ export function callBerth(game: Game, s: PlayerSession, port: Port, index: numbe
 /** Every second: the ship sent for comes alongside (and is changed into), or her captain sailed first (she goes back). */
 export function berthCallSecond(game: Game, s: PlayerSession): void {
   const p = s.profile, ship = s.ship;
+  if (p?.berths?.some((b) => b.move)) settleBerths(game, p, s); // a delivery come in (forum post 70)
   const c = p?.berthCall;
   if (!p || !ship || !c) return;
   if (ship.docked !== c.port) return berthCallOff(game, s);
@@ -331,7 +426,8 @@ export function buyBerth(game: Game, s: PlayerSession): string | null {
 export function sellBerth(game: Game, s: PlayerSession, port: Port, index: number): string | null {
   const p = s.profile!;
   const b = p.berths[index];
-  if (!b || b.port !== port.id) return 'No such ship berthed here';
+  settleBerths(game, p, s);
+  if (!b || b.port !== port.id || b.move) return 'No such ship berthed here';
   if (p.berthCall && calledBerth(p) === index) return 'She is on her way to you: call her off first';
   if (b.loadout.legendary) return 'No yard would buy her, and no captain should sell her';
   // Doubloons are never turned into silver (docs/01 P7): no yard buys a hull bought with them.
@@ -343,23 +439,78 @@ export function sellBerth(game: Game, s: PlayerSession, port: Port, index: numbe
   game.db.ledger(s.accountId, 'ship_sold', v, b.loadout.classId);
   p.berths.splice(index, 1);
   game.toastShip(s.ship!, `The yard buys the ${b.loadout.name}: ${v} silver.`, 'gold');
+  // (the men aboard her go ashore here, theirs to sign on again: forum post 72)
+  const n = landMen(game, p, port.id, b.army ?? []);
+  if (n > 0) game.toastShip(s.ship!, `${n} of your men aboard her go ashore here: they wait in the tavern ${ASHORE_DAYS} days.`, 'info');
   return null;
 }
 
 /** Her ship becomes this hull (a launch, a berth swapped, a premium hull bought): sound sails and rudder, the crew she
  *  has hammocks for. */
-export function setShip(game: Game, s: PlayerSession, loadout: ShipLoadout, hullFrac: number): void {
+export function setShip(game: Game, s: PlayerSession, loadout: ShipLoadout, hullFrac: number, carry: readonly ArmyStack[] = []): ArmyStack[] {
   const ship = s.ship!;
   const p = s.profile!;
+  // Her men and those aboard the hull she changes into (`carry`): as many as the new hull has hammocks for come with
+  // her, the rest (the most exposed first, as the yard's count always went) are given back — they stay aboard the ship
+  // she leaves (forum, Эдуард, post 72: nobody paid off).
+  const max = berthFit(s, loadout).crewMax;
+  const all = armyTidy([...ship.army.map((x) => ({ ...x })), ...carry.map((x) => ({ ...x }))]);
+  const left = armyRemove(all, Math.max(0, armyMen(all) - max));
   ship.loadout = loadout;
   p.loadout = loadout;
+  ship.setArmy(all);
   ship.gunsDisabled = { port: 0, starboard: 0 };
   ship.companyKey = '';
+  // (her stats as the ship reckons them: a man or two over them, if they differ, stays with the rest)
+  const over = Math.max(0, ship.crew - computeShipStats(loadout, ship.captain, ship.talents, ship.effects, ship.worn, ship.hero).crewMax);
+  if (over > 0) left.push(...ship.loseMen(over));
   ship.recompute(game.now);
+  if (ship.crew > ship.stats.crewMax) left.push(...ship.loseMen(ship.crew - ship.stats.crewMax));
   ship.hull = Math.max(1, ship.stats.hullMax * hullFrac);
   ship.sails = ship.stats.sailHpMax;
   ship.rudderHp = 1;
-  ship.crew = Math.min(ship.crew, ship.stats.crewMax);
+  reconcile(game, p.company, ship.crew);
+  return armyTidy(left);
+}
+
+/** Men waiting ashore in a port (a hull traded in or sold with them aboard): theirs with ASHORE_MS to come back. */
+export function landMen(game: Game, p: Profile, port: string, army: readonly ArmyStack[]): number {
+  const n = armyMen(army);
+  if (n <= 0) return 0;
+  p.ashore ??= [];
+  const until = game.wallNow() + ASHORE_MS;
+  const rec = p.ashore.find((a) => a.port === port);
+  if (rec) {
+    rec.army = armyTidy([...rec.army, ...army]);
+    rec.until = until;
+  } else p.ashore.push({ port, army: armyTidy(army), until });
+  return n;
+}
+
+/** Her men ashore in this port now (the record dropped once their days are up), or null. */
+export function ashoreHere(game: Game, p: Profile, port: string): Ashore | null {
+  if (!p.ashore?.length) return null;
+  const now = game.wallNow();
+  p.ashore = p.ashore.filter((a) => a.until > now && armyMen(a.army) > 0);
+  return p.ashore.find((a) => a.port === port) ?? null;
+}
+
+/** «Ваши люди на берегу»: as many of her men waiting in this port as she has hammocks for come back aboard, free. */
+export function rehireAshore(game: Game, s: PlayerSession, port: Port): string | null {
+  const p = s.profile!, ship = s.ship!;
+  const rec = ashoreHere(game, p, port.id);
+  if (!rec) return 'None of your men wait ashore here.';
+  const room = Math.max(0, ship.stats.crewMax - ship.crew);
+  if (room <= 0) return 'No hammocks free aboard: they wait ashore until there is room.';
+  const come = armyTidy(rec.army);
+  const stay = armyRemove(come, Math.max(0, armyMen(come) - room));
+  for (const x of come) ship.addMen(x.u, x.n);
+  rec.army = armyTidy(stay);
+  if (!armyMen(rec.army)) p.ashore = (p.ashore ?? []).filter((a) => a !== rec);
+  reconcile(game, p.company, ship.crew);
+  game.toastShip(ship, `${armyMen(come)} of your men come back aboard.`, 'good');
+  game.pushSelf(s, true);
+  return null;
 }
 
 /** A yard whose faction respects you (30+) sells good plans for its hulls. */
@@ -449,6 +600,11 @@ export function sanitizeShipbuilding(p: Profile): void {
   p.builds ??= [];
   p.plans ??= [];
   p.berths ??= [];
+  for (const b of p.berths) {
+    if (b.army !== undefined) b.army = Array.isArray(b.army) ? armyTidy(b.army) : undefined;
+    if (b.move && !(typeof b.move === 'object' && typeof b.move.to === 'string' && typeof b.move.from === 'string' && Number.isFinite(b.move.at))) b.move = null;
+  }
+  p.ashore = Array.isArray(p.ashore) ? p.ashore.filter((a) => a && typeof a.port === 'string' && Array.isArray(a.army) && Number.isFinite(a.until)).map((a) => ({ ...a, army: armyTidy(a.army) })) : [];
   p.figureheads ??= [];
   // (a ship sent for, saved: kept if it still names a berth, else dropped — forum 40)
   const c = p.berthCall;
