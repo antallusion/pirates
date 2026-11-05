@@ -19,6 +19,8 @@ import type { PlayerSession } from './player.ts';
 import { buyOffer, offerShut, shopView } from './shop.ts';
 import { ownIsland } from './estate.ts';
 import { liveGlobals, opsOf, opsPrice, opsShut, promoTune } from './liveops.ts'; // docs/34: the live ops' panel
+import { promoRung } from '../../../shared/src/data/ladder.ts';
+import type { PromoRung } from '../../../shared/src/data/ladder.ts';
 
 const H = 3_600_000;
 const MIN = 60_000;
@@ -202,7 +204,19 @@ export function promoView(game: Game, s: PlayerSession): PromoView {
   }
   const today = dayOf(now);
   const car = promoDials(game).carousel;
-  return { now, cards, carousel: car === 'session' ? !seenNow.get(s)?.has('carousel') : car === 'day' && st.carousel < today };
+  const carousel = car === 'session' ? !seenNow.get(s)?.has('carousel') : car === 'day' && st.carousel < today;
+  // VK 4.2.4 (2026-11-05): on the ladder the offers come one at a time, the rest by level (ladder.ts promoRung)
+  const rung = s.profile?.tutorial?.ladder ? promoRung(s.profile.level) : null;
+  return rung ? { now, cards: pacedCards(cards, rung), carousel: carousel && rung.carousel } : { now, cards, carousel };
+}
+
+/** The cards a captain on the ladder is shown: the kinds and contexts her rung allows, the live ones first (nothing
+ *  bought out or closed everywhere), at most `rung.cards` of them. */
+export function pacedCards(cards: PromoCard[], rung: PromoRung): PromoCard[] {
+  const kindOf = (c: PromoCard) => c.special ?? 'personal';
+  const ok = cards.filter((c) => (rung.kinds as string[]).includes(kindOf(c)) && (c.special || (rung.ctxs as string[]).includes(c.ctx)));
+  const order = (c: PromoCard) => (c.why ? 1 : 0) + (c.closed.length ? 0.5 : 0) + rung.kinds.indexOf(kindOf(c) as never) * 0.01;
+  return ok.sort((a, b) => order(a) - order(b)).slice(0, rung.cards);
 }
 
 /** Her personal offer that ends within `within` ms of `now` (the soonest), for the Telegram notice of its last hour. */
@@ -221,13 +235,18 @@ export function sendPromo(game: Game, s: PlayerSession): void {
 }
 
 const lastStep = new WeakMap<PlayerSession, number>();
+const promoLevel = new WeakMap<PlayerSession, number>();
 
 /** Every second for a captain aboard (from stepShop's call): every ten seconds, her offers rotated, and sent if changed. */
 export function stepPromo(game: Game, s: PlayerSession): void {
   const now = game.wallNow();
   if (now - (lastStep.get(s) ?? 0) < 10_000) return;
   lastStep.set(s, now);
-  if (rotatePromos(game, s)) sendPromo(game, s);
+  // VK 4.2.4: on the ladder a new level may open a card (promoRung): told then, not at the next rotation
+  const lv = s.profile?.tutorial?.ladder ? s.profile.level : -1;
+  const lvChanged = lv !== (promoLevel.get(s) ?? lv);
+  promoLevel.set(s, lv);
+  if (rotatePromos(game, s) || lvChanged) sendPromo(game, s);
 }
 
 // ------------------------------------------------------------------------------------------------ the owner's figures

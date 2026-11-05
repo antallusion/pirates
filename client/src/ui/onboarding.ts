@@ -10,6 +10,24 @@ import type { ClientState } from '../state.ts';
 import { $, esc, icon, glyphSvg } from './dom.ts';
 import { ask } from './confirm.ts';
 import { glossaryHtml } from './terms.ts';
+import { placeName } from './maps.ts';
+import { LADDER, RUNG } from '../../../shared/src/data/ladder.ts';
+import type { Feature } from '../../../shared/src/data/ladder.ts';
+
+/** VK 4.2.4 (2026-11-05): the ladder's rules, made once from its table — `body.lock-<rung>` hides what it names. */
+function ladderStyle(): void {
+  if (document.getElementById('ladder-style')) return;
+  const st = document.createElement('style');
+  st.id = 'ladder-style';
+  st.textContent = LADDER.map((r) => `${r.hide.map((h) => `body.lock-${r.id} ${h}`).join(', ')} { display: none !important; }`).join('\n');
+  document.head.append(st);
+}
+
+/** VK 4.2.4: the blocks only the sea school hides. */
+const SCHOOL_BLOCKS: HudBlock[] = ['dash', 'menu', 'act'];
+
+/** The optional things of the first quarter of an hour (docs/23 item 83), shut by the same classes. */
+const OPTIONAL_LOCKS = ['tattoos', 'dice', 'auction', 'guilds'];
 
 /** Which DOM block shows which part of the HUD. */
 const BLOCKS: Record<string, HudBlock[]> = {
@@ -27,6 +45,12 @@ const BLOCKS: Record<string, HudBlock[]> = {
   'tc-lock': ['target'],
   'tc-special': ['abilities'],
   'tc-abil': ['abilities'], // «Приёмы» (ui/seaabil.ts) in «Особое»'s place on a phone
+  // VK 4.2.4: the sea school's pieces, each brought in by its lesson (server onboarding.ts LESSONS)
+  'tc-dashchip': ['dash'],
+  'tc-menu': ['menu'],
+  'tc-book': ['menu'],
+  'tc-act': ['act'],
+  'tc-actrow': ['act'],
 };
 
 export class OnboardingUi {
@@ -38,6 +62,10 @@ export class OnboardingUi {
   onGoal: (key: string) => void = () => {};
   /** A screen to open (the edge of safe waters). */
   onEdge: () => void = () => {};
+  /** VK 4.2.4: a rung of the ladder opened (her level reached it): the pill «Открыто: …» (main.ts → guidetip.ts). */
+  onUnlock: (f: Feature) => void = () => {};
+  /** The rungs shut at the last view (null before the first: what is open at the login is not told). */
+  private shut: Set<string> | null = null;
 
   constructor(state: ClientState) {
     this.state = state;
@@ -46,15 +74,16 @@ export class OnboardingUi {
 
   apply(view: OnboardingView | null): void {
     this.view = view;
-    this.applyHud(view?.hud ?? null);
+    this.applyHud(view?.hud ?? null, !!view?.school);
     this.applyLocks(view);
     this.renderWatch(view);
     this.renderGoals(view);
   }
 
-  private applyHud(hud: HudBlock[] | null): void {
+  private applyHud(hud: HudBlock[] | null, school = false): void {
     for (const [id, parts] of Object.entries(BLOCKS)) {
-      const on = !hud || parts.some((p) => hud.includes(p));
+      // (the school's own blocks hide only in the school: a watch walked the old way keeps them as they were)
+      const on = !hud || parts.some((p) => hud.includes(p)) || (!school && parts.every((p) => SCHOOL_BLOCKS.includes(p)));
       const el = document.getElementById(id);
       if (!el) continue;
       el.classList.toggle('tut-hidden', !on);
@@ -76,18 +105,21 @@ export class OnboardingUi {
       return;
     }
     // docs/23 item 79: the step's title and one short line; the finger over the button says the rest (pointer.ts).
-    const k = `stage.${v.stage}` as Key;
     const touch = document.body.classList.contains('touch');
     const docked = !!this.state.self?.dockedAt;
-    const line = (v.stage === 'sail' && docked ? 'stage.sail.dock' : `stage.${v.stage}.${touch ? 'touch' : 'body'}`) as Key;
-    const key = `${v.stage}|${line}|${v.index}|${v.of}|${lang()}`; // a language changed mid-watch redraws the row
+    // VK 4.2.4: a lesson of the sea school speaks for itself (its title and two lines of words)
+    const k = (v.lesson ? `lesson.${v.lesson}` : `stage.${v.stage}`) as Key;
+    const line = (v.lesson ? `lesson.${v.lesson}.${touch ? 'touch' : 'body'}` : v.stage === 'sail' && docked ? 'stage.sail.dock' : `stage.${v.stage}.${touch ? 'touch' : 'body'}`) as Key;
+    const isle = v.goal ? placeName(v.goal.name) : '';
+    const key = `${v.stage}|${v.lesson ?? ''}|${line}|${v.index}|${v.of}|${isle}|${lang()}`; // a language changed mid-watch redraws the row
     if (el.dataset.k === key && !el.classList.contains('hidden')) return;
     el.dataset.k = key;
     el.classList.remove('hidden');
+    el.classList.toggle('w-school', !!v.school); // VK 4.2.4: the school's card, its words under the title (feel.css)
     // On a short screen the row keeps to the count, the title, the line and two short skips (feel.css).
     const btn = (a: string, cls: string, full: Key, short: Key) => `<button class="btn btn-small${cls}" data-a="${a}" title="${esc(t(full))}" aria-label="${esc(t(full))}"><span class="w-long">${esc(t(full))}</span><span class="w-short">${esc(t(short))}</span></button>`;
     el.innerHTML = `<div class="w-head"><span><i class="w-t">${esc(t('watch.title'))} · </i>${v.index + 1}/${v.of}</span><b>${esc(has(k) ? t(k) : v.stage)}</b></div>
-      ${has(line) ? `<div class="w-body">${esc(t(line))}</div>` : ''}
+      ${has(line) ? `<div class="w-body">${esc(t(line, { isle }))}</div>` : ''}
       <div class="w-act">${btn('skip_stage', '', 'watch.skip', 'watch.skipShort')}${btn('skip_all', ' btn-ghost', 'watch.skipAll', 'watch.skipAllShort')}</div>`;
     el.setAttribute('aria-label', `${t('watch.step', { n: v.index + 1, of: v.of })}: ${has(k) ? t(k) : v.stage}`);
     el.querySelectorAll<HTMLButtonElement>('button').forEach((b) => (b.onclick = () => {
@@ -102,10 +134,23 @@ export class OnboardingUi {
     return this.view?.stage ?? null;
   }
 
-  /** docs/23 item 83: the optional things still shut (body classes `lock-<thing>` hide their buttons). */
+  /** docs/23 item 83: the optional things still shut (body classes `lock-<thing>` hide their buttons); VK 4.2.4: and
+   *  the ladder's rungs, each told once as it opens. */
   private applyLocks(v: OnboardingView | null): void {
+    ladderStyle();
     const locked = new Set(v?.locked ?? []);
-    for (const x of ['tattoos', 'dice', 'auction', 'guilds']) document.body.classList.toggle(`lock-${x}`, locked.has(x));
+    for (const x of new Set([...OPTIONAL_LOCKS, ...LADDER.map((r) => r.id)])) document.body.classList.toggle(`lock-${x}`, locked.has(x));
+    document.body.classList.toggle('on-ladder', !!v?.ladder);
+    // the sea school: the captain's plate and the chart wait for their lessons too (seahud.css keeps them otherwise)
+    document.body.classList.toggle('school', !!v?.school);
+    if (!v) return;
+    if (v.ladder && this.shut) for (const f of this.shut) if (!locked.has(f) && f in RUNG) this.onUnlock(f as Feature);
+    this.shut = locked;
+  }
+
+  /** Whether a rung is shut now (main.ts: the daily gift's own coming, the keys of the hidden buttons). */
+  isLocked(f: Feature | string): boolean {
+    return document.body.classList.contains(`lock-${f}`);
   }
 
   private renderGoals(v: OnboardingView | null): void {
@@ -129,8 +174,11 @@ export class OnboardingUi {
   }
 
   /** A moment from the server: a step done, a hint, a goal met, the edge of safe waters. */
-  moment(kind: 'stage' | 'skip' | 'hint' | 'goal' | 'edge' | 'unlock', id: string, toast: (msg: string, kind: string) => void): void {
-    if (kind === 'stage') {
+  moment(kind: 'stage' | 'skip' | 'hint' | 'goal' | 'edge' | 'unlock' | 'lesson', id: string, toast: (msg: string, kind: string) => void): void {
+    if (kind === 'lesson') {
+      const k = `lesson.${id}` as Key;
+      toast(t('watch.done', { name: has(k) ? t(k) : id }), 'good');
+    } else if (kind === 'stage') {
       const k = `stage.${id}` as Key;
       // The last step: one line for the end of the watch, not two (docs/23 item 79).
       toast(id === 'port' ? t('watch.over') : t('watch.done', { name: has(k) ? t(k) : id }), id === 'port' ? 'xp' : 'good');

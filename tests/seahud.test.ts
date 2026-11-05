@@ -156,8 +156,16 @@ test('the First Watch on a phone names the new buttons, not the old ones (docs/2
   assert.ok(ru['stage.board.touch'].includes(word(ARU, 'a.board')) && en['stage.board.touch'].includes(word(AEN, 'a.board')));
   assert.ok(ru['stage.port.touch'].includes(word(ARU, 'a.dock')) && en['stage.port.touch'].includes(word(AEN, 'a.dock')));
   assert.match(ru['stage.sail.touch'], /штурвал/i);
-  // One action each, no paragraphs: a step's line is a short sentence.
-  for (const id of ['sail', 'attack', 'fire', 'board', 'port']) for (const d of [ru, en]) for (const k of [`stage.${id}`, `stage.${id}.touch`, `stage.${id}.body`]) assert.ok(d[k].length <= 48, `${k}: ${d[k]}`);
+  // One action each, no paragraphs: a step's title is short; its line (VK 4.2.4, 2026-11-05, owner: «расписывать каждый
+  // шаг») says what to press and why in two lines at most of the school's card
+  for (const id of ['sail', 'attack', 'fire', 'board', 'port']) for (const d of [ru, en]) {
+    assert.ok(d[`stage.${id}`].length <= 48, `stage.${id}: ${d[`stage.${id}`]}`);
+    for (const k of [`stage.${id}.touch`, `stage.${id}.body`]) assert.ok(d[k].length <= 140, `${k}: ${d[k]}`);
+  }
+  for (const id of ['cast', 'sails', 'helm', 'dash', 'course', 'isle']) for (const d of [ru, en]) {
+    assert.ok(d[`lesson.${id}`].length <= 32, `lesson.${id}`);
+    for (const k of [`lesson.${id}.touch`, `lesson.${id}.body`]) assert.ok(d[k].length <= 140, `${k}: ${d[k].length}`);
+  }
   for (const k of ['hint.repair.touch', 'hint.docking.touch']) {
     assert.match(ru[k], /«Действие»/, k);
     assert.match(en[k], /«Action»/, k);

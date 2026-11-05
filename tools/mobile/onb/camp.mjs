@@ -1,0 +1,13 @@
+import { browser, page, login, sleep } from '../m0/lib.mjs';
+const b = await browser();
+const p = await page(b, [1280, 720]);
+const seen = [];
+await p.exposeFunction('note', (x) => seen.push(x));
+await p.addInitScript(() => { const W = window.WebSocket; window.WebSocket = class extends W { constructor(...a) { super(...a); this.addEventListener('message', (e) => { try { const m = JSON.parse(e.data); if (/campaign|quest/.test(m.t)) window.note(m.t + ':' + (m.id ?? m.name ?? '')); } catch {} }); } }; });
+await login(p, { port: 58840 });
+await sleep(3000);
+console.log('before skip', JSON.stringify(seen));
+await p.evaluate(() => globalThis.gravetide.net.send({ t: 'onboarding', action: 'skip_all' }));
+await sleep(4000);
+console.log('after skip', JSON.stringify(seen));
+await b.close();

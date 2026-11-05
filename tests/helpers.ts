@@ -1,5 +1,6 @@
 // Test helpers: an in-memory game with fake connections that speak the real protocol.
 
+import { SCHOOL } from '../server/src/game/onboarding.ts';
 import { SHIP_CLASS_IDS } from '../shared/src/data/ships.ts';
 import type { ShipClassId } from '../shared/src/data/ships.ts';
 import { LEVEL_RANGE } from '../shared/src/data/shiplevel.ts';
@@ -62,6 +63,10 @@ export class FakeConn {
     return this.inbox.filter((m) => m.t === t) as Extract<ServerMsg, { t: T }>[];
   }
 }
+
+// VK 4.2.4: the tests of the First Watch's own steps walk it as before, without the sea school's lessons (its own
+// tests turn it on: tests/ladder.test.ts)
+SCHOOL.on = false;
 
 export function makeGame(): { game: Game; db: Database } {
   const db = new Database(':memory:');

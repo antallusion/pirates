@@ -47,7 +47,7 @@ test('main.ts: the opening is not interrupted — the level card waits for a run
   assert.match(main, /!hostileNear\(\) && !underWay\(\)\) \{\s*heroSeen = waiting;/);
   assert.match(main, /function underWay\(\): boolean \{\s*return !!state\.autosail \|\| !!state\.pursuit \|\| state\.roamRun !== null/);
   // «Награда за вход» over «Плыть» between «Борт о борт» and «Твари на отмели»
-  assert.match(main, /new DailyGift\(\{[^\n]*busy: \(\) => [^\n]*openingFrame\(\) !== null \}\)/);
+  assert.match(main, /new DailyGift\(\{[^\n]*busy: \(\) => [^\n]*openingFrame\(\) !== null[^\n]*\}\)/);
   assert.match(main, /new Promos\(\{[^\n]*openingFrame\(\) !== null, held/);
   // «Твари на отмели»: «Плыть» stopped her 60 m off the stack and nothing lit — the stack on her screen is marked
   assert.match(main, /\(openingFrame\(\) \?\? storyQuest\(\)\?\.does\) === 'neutral' && !state\.autosail && state\.roamRun === null \? openingStack\(own\)/);
@@ -248,7 +248,7 @@ test('the opening’s fights never begin with an empty locker; the guns empty on
   assert.ok(pointerTargets({ stage: 'shot', touch: true, docked: false, battle: false }).includes('#tc-act[data-act="harbour"]'));
   assert.deepEqual(pointerTargets({ stage: 'shot', touch: true, docked: false, battle: true }), []);
   const main = (await import('node:fs')).readFileSync('client/src/main.ts', 'utf8');
-  assert.match(main, /const shot = shotStage\(op \?\? storyQuest\(\)\?\.does, state\.self\?\.ammo\);\s*tutorPointer\.set\(\{ stage: state\.onboarding\?\.stage \?\? shot \?\?/);
+  assert.match(main, /const shot = shotStage\(op \?\? storyQuest\(\)\?\.does, state\.self\?\.ammo\);\s*tutorPointer\.set\(\{ stage: [^\n]*?state\.onboarding\?\.stage \?\? shot \?\?/);
   assert.match((await import('node:fs')).readFileSync('client/src/ui/port.ts', 'utf8'), /data: \{ act: 'supplies' \}/, '«Припасы» is the market’s button the finger names');
 });
 

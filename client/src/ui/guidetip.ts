@@ -14,6 +14,8 @@ import { EN, RU } from '../lang/ui/guide.ts';
 import { settings } from '../settings.ts';
 import { esc, glyphSvg, icon } from './dom.ts';
 import { SECTION_ART } from './guide.ts';
+import { RUNG } from '../../../shared/src/data/ladder.ts';
+import type { Feature } from '../../../shared/src/data/ladder.ts';
 
 const L = dict(EN, RU);
 const T = (x: readonly [string, string]): string => x[lang() === 'ru' ? 1 : 0];
@@ -107,6 +109,14 @@ export class GuideTips {
     return this.d.list().find((a) => a.firstTime === key);
   }
 
+  /** VK 4.2.4 (2026-11-05): a rung of the ladder opened — «Открыто: <что>», its line, «Читать» if the book has it.
+   *  First in the queue (it is what she just earned); told once, as it opens (onboarding.ts applyLocks). */
+  announce(f: Feature): void {
+    const key = `open:${f}`;
+    if (this.queue.includes(key) || this.showing?.key === key) return;
+    this.queue.unshift(key);
+  }
+
   offer(key: string | null): void {
     if (!key || !KNOWN.has(key) || this.done.has(key) || this.queue.includes(key) || this.showing?.key === key) return;
     if (this.d.seen()?.includes(key)) return;
@@ -125,6 +135,13 @@ export class GuideTips {
     if (this.showing && (now > this.showing.until || this.d.blocked())) this.hide(now);
     if (this.showing || !this.queue.length || seen === null || now < this.restAt || this.d.blocked()) return;
     const key = this.queue.shift()!;
+    if (key.startsWith('open:')) {
+      const r = RUNG[key.slice(5) as Feature];
+      if (!r) return;
+      this.showing = { key, id: r.article ?? '', until: now + TIP_MS + 2000 };
+      this.drawOpen(r);
+      return;
+    }
     const a = this.articleFor(key);
     if (!a || seen.includes(key) || this.done.has(key)) return;
     this.done.add(key);
@@ -137,7 +154,23 @@ export class GuideTips {
     return !!this.showing;
   }
 
+  private drawOpen(r: (typeof RUNG)[Feature]): void {
+    this.host();
+    const read = r.article && this.d.list().some((a) => a.id === r.article) ? `<button type="button" class="gt-read" data-gtr>${esc(L('tipRead'))}</button>` : '';
+    this.el!.innerHTML = `${icon('goal', '★', 'gt-ico')}<span class="gt-t"><b>${esc(L('tipOpen', { name: T(r.name) }))}</b> <small class="gt-line">${esc(T(r.line))}</small></span>${read}<button type="button" class="gt-x" data-gtx aria-label="${esc(L('tipClose'))}" title="${esc(L('tipClose'))}">${glyphSvg('close')}</button>`;
+    this.el!.classList.add('gt-open');
+    this.el!.classList.remove('hidden');
+  }
+
   private draw(a: GuideArticle): void {
+    this.host();
+    this.el!.classList.remove('gt-open');
+    this.el!.innerHTML = `${icon(SECTION_ART[a.section][0], SECTION_ART[a.section][1], 'gt-ico')}<span class="gt-t">${esc(L('tipNew', { title: T(a.title) }))}</span><button type="button" class="gt-read" data-gtr>${esc(L('tipRead'))}</button><button type="button" class="gt-x" data-gtx aria-label="${esc(L('tipClose'))}" title="${esc(L('tipClose'))}">${glyphSvg('close')}</button>`;
+    this.el!.classList.remove('hidden');
+  }
+
+  /** The pill's element, set in the HUD's top stack (or at the top edge). */
+  private host(): void {
     if (!this.el) {
       const el = document.createElement('aside');
       el.id = 'guide-tip';
@@ -161,8 +194,6 @@ export class GuideTips {
     const host = inStack ? stack! : document.body;
     if (this.el.parentElement !== host) host.prepend(this.el);
     this.el.classList.toggle('in-stack', inStack);
-    this.el.innerHTML = `${icon(SECTION_ART[a.section][0], SECTION_ART[a.section][1], 'gt-ico')}<span class="gt-t">${esc(L('tipNew', { title: T(a.title) }))}</span><button type="button" class="gt-read" data-gtr>${esc(L('tipRead'))}</button><button type="button" class="gt-x" data-gtx aria-label="${esc(L('tipClose'))}" title="${esc(L('tipClose'))}">${glyphSvg('close')}</button>`;
-    this.el.classList.remove('hidden');
   }
 
   private hide(now: number): void {

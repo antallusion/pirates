@@ -206,6 +206,7 @@ test('NPC pirates hunt, fight at range, board once and spare the plundered victi
   const { game } = makeGame();
   const c = join(game, 'Prey Pete');
   const ship = undockAtSea(game, c);
+  const crew0 = ship.crew;
   // Contested Gravewater: pirates do not attack in the safe Black Coast.
   ship.state.x = 56000;
   ship.state.y = 70000;
@@ -225,7 +226,9 @@ test('NPC pirates hunt, fight at range, board once and spare the plundered victi
   const evs = c.all('ev').flatMap((m) => m.list);
   // (two at least: at the quick sea fight's pace, docs/23 item 36, the grapples reach farther and she is alongside sooner)
   assert.ok(evs.filter((e) => e.k === 'volley' && e.ship === pirate.id).length >= 2, 'pirate fired broadsides');
-  assert.ok(ship.hull < ship.stats.hullMax, 'player hull damaged');
+  // (her hull, her canvas or her men: since the steerage rule, 2026-11-04, the raider may cripple with chain and rake
+  // with the shot before she closes — a fight at range all the same)
+  assert.ok(ship.hull < ship.stats.hullMax || ship.sails < ship.stats.sailHpMax || ship.crew < crew0 || evs.some((e) => e.k === 'hit' && e.ship === ship.id), 'the player harmed at range');
   const boards = evs.filter((e) => e.k === 'board_start').length;
   assert.ok(boards <= 1, `boarded ${boards} times`);
   assert.ok(ship.crew >= 2, 'survivors remain');

@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PROTOCOL_VERSION } from '../shared/src/constants.ts';
+import { ladderLocked } from '../shared/src/data/ladder.ts';
 import { FIRST_FIGHTS, fresh, FRESH_REFUSAL, FRESH_SECS, onboardingReport, onboardingVolley, sanitizeTutorial, STAGES } from '../server/src/game/onboarding.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
@@ -37,7 +38,8 @@ test('the First Watch (docs/23 item 79): five steps, one action each — sail, �
   const p = s.profile!;
   assert.equal(stage(c), 'sail');
   assert.deepEqual(c.last('onboarding')!.view.hud!.sort(), ['nav', 'ship']);
-  assert.deepEqual(c.last('onboarding')!.view.locked, ['tattoos', 'dice', 'auction', 'guilds'], 'the optional things shut in the watch');
+  for (const x of ['tattoos', 'dice', 'auction', 'guilds']) assert.ok(c.last('onboarding')!.view.locked!.includes(x), `the optional things shut in the watch: ${x}`);
+  assert.ok(c.last('onboarding')!.view.ladder, 'VK 4.2.4: a captain made now is on the ladder');
   // 1. Sail: off the quay and under way (the stick).
   c.push({ t: 'undock' });
   ship.state.speed = 4;
@@ -109,14 +111,15 @@ test('the First Watch (docs/23 item 79): five steps, one action each — sail, �
   // docs/23 item 83: the watch over, the first quarter of an hour still keeps the optional things shut…
   assert.ok(fresh(p), 'the watch over, the quarter of an hour still on');
   {
-    assert.equal(done.locked!.length, 4);
+    for (const x of ['tattoos', 'dice', 'auction', 'guilds']) assert.ok(done.locked!.includes(x));
     c.push({ t: 'dice', action: 'open', stake: 10 });
     assert.ok(c.all('toast').some((m) => m.msg === FRESH_REFUSAL), 'a typed order is refused in words');
     // …and when it is over they open, told once.
     p.tutorial.played = FRESH_SECS - 1;
     steps(game, 21);
-    assert.ok(c.all('onb').some((m) => m.kind === 'unlock'));
-    assert.deepEqual(c.last('onboarding')!.view.locked, []);
+    // (VK 4.2.4: on the ladder the quarter's end is not told — each of them opens at its own rung, ladder.ts)
+    assert.ok(!c.all('onb').some((m) => m.kind === 'unlock'));
+    assert.deepEqual(c.last('onboarding')!.view.locked, ladderLocked(p.level));
   }
   // Skippable: every step (a second novice).
   const n2 = recruit(game, 'Skip Step');

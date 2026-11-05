@@ -2206,7 +2206,7 @@ export type ServerMsg =
   | { t: 'away'; view: AwayView }
   | { t: 'onboarding'; view: OnboardingView }
   /** A moment of the First Watch: a step done or skipped, a contextual hint, a goal met, the edge of safe waters. */
-  | { t: 'onb'; kind: 'stage' | 'skip' | 'hint' | 'goal' | 'edge' | 'unlock'; id: string }
+  | { t: 'onb'; kind: 'stage' | 'skip' | 'hint' | 'goal' | 'edge' | 'unlock' | 'lesson'; id: string }
   | { t: 'empire'; view: EmpireView }
   | { t: 'pve_sites'; list: PveSiteView[] }
   | { t: 'dive'; view: DiveView | null }
@@ -3671,7 +3671,7 @@ export function curseStageFromFlags(flags: number): number {
 }
 
 /** HUD blocks the First Watch brings in one at a time (docs/07 §13.1). */
-export type HudBlock = 'ship' | 'nav' | 'cargo' | 'feed' | 'target' | 'guns' | 'abilities' | 'map' | 'talents' | 'wanted' | 'captain' | 'minimap';
+export type HudBlock = 'ship' | 'nav' | 'cargo' | 'feed' | 'target' | 'guns' | 'abilities' | 'map' | 'talents' | 'wanted' | 'captain' | 'minimap' | 'dash' | 'menu' | 'act';
 
 /** Where a captain stands in the First Watch and the Captain's Goals (onboarding.ts). */
 export interface OnboardingView {
@@ -3684,8 +3684,17 @@ export interface OnboardingView {
   goalsDone: number;
   hints: string[]; // hints seen, for the logbook
   /** docs/23 item 83: the optional things still shut in her first quarter of an hour ('tattoos', 'dice', 'auction',
-   *  'guilds'); empty (or absent, from an older server) when all are open. */
+   *  'guilds'); empty (or absent, from an older server) when all are open. Since VK 4.2.4 (2026-11-05) also the rungs of
+   *  the ladder of features still shut at her level (shared/src/data/ladder.ts Feature). */
   locked?: string[];
+  /** She is on the ladder (a captain made since 2026-11-05): the client tells each rung as it opens. */
+  ladder?: boolean;
+  /** VK 4.2.4: she walks the watch with the sea school (its blocks 'dash', 'menu', 'act' hide only then). */
+  school?: boolean;
+  /** VK 4.2.4: the sea school's lesson under way inside the watch's first step (onboarding.ts LESSONS), or absent. */
+  lesson?: string;
+  /** The lesson's place to sail to (the island of «Курс» and «К острову»): the gold beacon on it. */
+  goal?: { x: number; y: number; name: string } | null;
 }
 
 // ------------------------------------------------------------------ batch E of docs/16: islands and the shore

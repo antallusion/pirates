@@ -177,6 +177,18 @@ function targetsOf(f: PointerFacts): string[] {
     case 'go:dock':
       // …and at the step's harbour, its «Причалить»
       return f.docked ? [] : ['#tc-act[data-act="dock"]', '.act-btn.act-dock', ...GOAL_SAIL];
+    // VK 4.2.4: the sea school's lessons (server onboarding.ts LESSONS)
+    case 'l:cast':
+      return TO_SEA;
+    case 'l:sails':
+      return f.touch ? ['#tc-sail [data-sail="1"]', '#tc-stick'] : ['#tc-stick'];
+    case 'l:helm':
+      return ['#tc-stick'];
+    case 'l:dash':
+      return ['#tc-dashchip', '#tc-stick'];
+    case 'l:course':
+    case 'l:isle':
+      return f.helmsman ? [] : ['#hud-map'];
     case 'sail':
       // In port: the harbour's gold «В море» on its rail (docs/23 phase 6; the old «Поднять паруса» is gone — the finger
       // pointed at nothing and the watch's first step stood still, e2e 2026-10-07), else the HUD's big round «В море».

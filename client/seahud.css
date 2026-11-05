@@ -1154,3 +1154,8 @@ body.simple #hud-stack > #hud-spot { align-self: center !important; width: auto 
   border: 1px solid rgba(232, 196, 106, 0.55) !important; border-image: none !important; border-radius: 3px !important; background: rgba(11, 13, 16, 0.8); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55); }
 @media (max-height: 520px) { #hud-spot .sp-stop { min-height: 24px; padding: 2px 7px; } }
 body.simple:has(:is(#advcard, #encounter, #surrender, #lairchest):not(.hidden)) #hud #hud-stack > #hud-spot:not(.hidden) { visibility: visible !important; }
+
+/* ---- VK 4.2.4 (2026-11-05): the sea school — the captain's plate and the chart wait for their lessons (the simple HUD
+   keeps them from the first step otherwise: lines 43–44) */
+body.simple.school #hud-captain.tut-hidden, body.simple.school #hud-map.tut-hidden { display: none !important; }
+body.school #touch > :is(#tc-menu, #tc-book, #tc-act, #tc-actrow).tut-hidden, body.school #tc-dashchip.tut-hidden { display: none !important; }

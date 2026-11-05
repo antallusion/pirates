@@ -7,6 +7,41 @@ const img = (id: string, n: number): string => `${id}-${n}.webp`;
 
 export const ARTICLES: GuideArticle[] = [
   {
+    // VK 4.2.4 (2026-11-05): the ladder of features (shared/src/data/ladder.ts)
+    id: 'faq-ladder',
+    section: 'faq',
+    title: ['Why is not everything open at once?', 'Почему открыто не всё сразу?'],
+    tags: ['ladder', 'unlock', 'opened', 'hidden', 'level', 'shop', 'chat', 'открыто', 'открывается', 'скрыто', 'уровень', 'где лавка', 'где чат', 'нет кнопки'],
+    summary: [
+      'A new captain learns the sea step by step: each place and button opens at its level, with a note «Opened: …».',
+      'Новый капитан осваивает море шаг за шагом: каждое место и кнопка открываются на своём уровне с плашкой «Открыто: …».',
+    ],
+    slides: [
+      {
+        img: img('faq-ladder', 1),
+        text: [
+          'The first watch begins at the quay with one gold button, «To sea». Then the sea school, a control at a time: the sails, the wheel, the dash, a course set by a tap on the water, an island’s shore. Then the first fight: attack, fire, board, and back to port. «Skip the training» is there at every step.',
+          'Первая вахта начинается у причала с одной золотой кнопкой «В море». Дальше морская школа, по одной кнопке: паруса, штурвал, рывок, курс касанием воды, подход к острову. Потом первый бой: атаковать, дать залп, взять на абордаж и вернуться в порт. Кнопка «Пропустить обучение» — на каждом шаге.',
+        ],
+      },
+      {
+        img: img('faq-ladder', 2),
+        text: [
+          'Back in port: the market, the shipyard, the tavern and the quests, and the campaign begins with «The Harbour’s Shops».',
+          'В порту — рынок, верфь, таверна и задания, а кампания начинается с «Портовых лавок».',
+        ],
+      },
+      {
+        img: img('faq-ladder', 3),
+        text: [
+          'Then by level: shot types and the harbour at 2; the captain’s tricks, talents and chat at 3; berths, charts and passage at 4; the shop at 5; the port’s army at 6; flags at 8; holdings and the exchange at 10; the auction, dice, tattoos and guilds at 12. Each comes with a note «Opened: …» and «Read».',
+          'Дальше по уровням: виды снарядов и гавань — на 2-м; приёмы, таланты и чат — на 3-м; причал, карты и переход — на 4-м; лавка — на 5-м; армия порта — на 6-м; флаги — на 8-м; владения и биржа — на 10-м; аукцион, кости, татуировки и гильдии — на 12-м. Каждое приходит с плашкой «Открыто: …» и кнопкой «Читать».',
+        ],
+      },
+    ],
+    related: ['prog-levels', 'prog-shop', 'prog-campaign'],
+  },
+  {
     id: 'faq-big-ships',
     section: 'faq',
     title: ['Where do I buy a bigger ship?', 'Где купить корабль побольше?'],

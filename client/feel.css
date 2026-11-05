@@ -140,3 +140,16 @@ body.lock-tattoos [data-jchip="tattoos"] { display: none !important; }
   body.simple.touch #surrender .sur-choice .choice-ico { display: block; width: 24px; height: 24px; margin: 0 auto; }
   body.simple.touch #surrender .sur-choice > span { display: none; }
 }
+
+/* ---- VK 4.2.4 (2026-11-05): the quay of the First Watch's first step — one gold «В море», no «В гавань» beside it
+   (main.ts watchQuay; the ladder's own rules are made from shared/src/data/ladder.ts by ui/onboarding.ts) */
+body.watch-quay #tc-act, body.watch-quay #tc-actrow, body.watch-quay .act-btn { display: none !important; }
+#guide-tip.gt-open .gt-line { display: block; font-weight: 400; opacity: 0.85; }
+/* VK 4.2.4: the sea school's card — the count, the title and the skips in a row, the lesson's words under them in full
+   (two lines at most): the owner, «расписывать каждый шаг» — a title alone taught nothing on a phone */
+#hud-watch.w-school .w-body { white-space: normal; overflow: visible; text-overflow: clip; }
+@media (max-height: 520px) {
+  #hud #hud-stack > #hud-watch.w-school:not(.hidden) { width: 100% !important; flex-wrap: wrap; row-gap: 2px; padding: 4px 6px 6px 8px; }
+  #hud-watch.w-school .w-head { flex: 1 1 auto; }
+  body.touch #hud-watch.w-school .w-body, #hud-watch.w-school .w-body { display: block; flex: 1 1 100%; order: 3; font-size: 11.5px; line-height: 1.3; color: var(--bone, #e8e0cc); }
+}

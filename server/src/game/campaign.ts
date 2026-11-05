@@ -6,6 +6,7 @@
 // chapter's end a purse and a title, a map or shot. Its fights come to her (spawnCampaignFoe): the Crown's quiet waters
 // have no raiders of their own to board.
 
+import { inWatch } from './onboarding.ts'; // VK 4.2.4: the campaign waits for the First Watch
 import { MAX_LEVEL } from '../../../shared/src/constants.ts';
 import { OPENING_SLOTS, arrival, buildCampaign } from '../../../shared/src/data/campaign/build.ts';
 import { headingVec } from '../../../shared/src/math.ts';
@@ -195,6 +196,9 @@ const asked = new WeakMap<PlayerSession, number>();
 export function campaignNext(game: Game, s: PlayerSession, say = false): void {
   const p = s.profile;
   if (!p?.campaign || campaignActive(p)) return;
+  // VK 4.2.4 (2026-11-05): a captain on the ladder walks the First Watch first; its end brings the campaign in
+  // (onboarding.ts advance) — two voices at once («Плывите» and «Портовые лавки») were the cluttered start
+  if (p.tutorial?.ladder && inWatch(p)) return;
   p.campaign.started = true;
   const slot = campaignSlot(game, p);
   if (!slot) return;

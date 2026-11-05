@@ -890,7 +890,7 @@ hud.onExchange = () => openShop(false, { exchange: true }); // the silver's «+�
 // The daily login gift (owner, 2026-10-16): its calendar comes first on entry, the offers' carousel after it.
 // (both wait out the campaign's opening, its five lessons: «Награда за вход» came up between «Борт о борт» and «Твари на
 // отмели» over the bar's «Плыть» — the newcomer's run of 2026-10-23)
-const dailyGift = new DailyGift({ send: (m) => net.send(m), on: (f) => net.on(f), state, modal: () => modal, busy: () => hostileNear() || !!state.boardTac || !!state.boardFight || openingFrame() !== null });
+const dailyGift = new DailyGift({ send: (m) => net.send(m), on: (f) => net.on(f), state, modal: () => modal, busy: () => hostileNear() || !!state.boardTac || !!state.boardFight || openingFrame() !== null || document.body.classList.contains('lock-daily') }); // (VK 4.2.4: the gift comes at its rung, ladder.ts)
 initTgNotices((m) => net.send(m), (f) => net.on(f));
 initPromoCode((m) => net.send(m), (f) => net.on(f)); // «Настройки → Промокод» (owner, 2026-11-02)
 // «Сезонная карта» (owner, 2026-10-30): its window, its button in the «⋯» tray with the rewards ready
@@ -1230,6 +1230,9 @@ function onRoute(m: Extract<ServerMsg, { t: 'route' }>): void {
 function stepGoal(): void {
   const rt = state.route;
   renderer.goal = rt && !state.self?.dockedAt ? { x: rt.view.x, y: rt.view.y } : null;
+  // VK 4.2.4: the sea school's island («Проложите курс», «К острову»): its gold beacon first
+  const lg = state.onboarding?.goal;
+  if (lg && !state.self?.dockedAt) renderer.goal = { x: lg.x, y: lg.y };
   if (rt && (!goalRun || goalRun.key !== rt.key)) goalRun = new RouteRun(rt.key, performance.now(), PORT_DOCK_RADIUS);
   const run = goalRun;
   if (!run) return;
@@ -1986,6 +1989,7 @@ function readAloud(): void {
 // and one already open when grapples fly is put away and told after the battle (the hex field is no modal of its own).
 let edgeDue = false;
 onboarding.onEdge = () => (edgeDue = true);
+onboarding.onUnlock = (f) => guideTips.announce(f); // VK 4.2.4: «Открыто: <что>» as each rung of the ladder opens
 function edgeFrame(): void {
   if (modal === 'edge' && state.boardTac) {
     closeModal();
@@ -2505,7 +2509,7 @@ function onMessage(m: ServerMsg): void {
           startWarm();
         }));
       }
-      if (state.you === null && m.self.dockedAt) openModal('port');
+      if (state.you === null && m.self.dockedAt && !watchQuay()) openModal('port');
       if (prologuePending) {
         // The First Watch teaches by doing: no handbook up front, the prologue, then the quay.
         prologuePending = false;
@@ -2521,6 +2525,8 @@ function onMessage(m: ServerMsg): void {
       break;
     case 'onboarding':
       onboarding.apply(m.view);
+      if (watchQuay() && modal === 'port') closeModal(); // VK 4.2.4: the quay's first step is the one «В море»
+      document.body.classList.toggle('watch-quay', watchQuay());
       if (modal === 'help') refreshModal();
       break;
     case 'onb':
@@ -2535,7 +2541,7 @@ function onMessage(m: ServerMsg): void {
         if (at) portSplash(at, placeName(at.name), `${FACTIONS[at.faction].name} · ${REGIONS[at.region].name}`);
       }
       // Never steal focus from another open screen (handbook, boarding, shipwreck); they return to port on close.
-      if (m.view && modal === null && !isleScene.isOpen) openModal('port');
+      if (m.view && modal === null && !isleScene.isOpen && !watchQuay()) openModal('port');
       else if (!m.view && modal === 'port') closeModal();
       else if (modal === 'port') refreshModal();
       break;
@@ -3622,6 +3628,7 @@ addEventListener('keydown', (e) => {
   if (!act) return;
   // (batch-pc: with a window open only the windows' own keys act — F, the guns, the helm wait until it is shut)
   if (modal && !keyActsInWindow(act)) return;
+  if (keyLocked(act)) return; // VK 4.2.4: the key of a thing the ladder has not opened yet does nothing
   // Arrows and Space must not scroll the page.
   if (k === ' ' || k.startsWith('arrow') || /^f\d+$/.test(k)) e.preventDefault();
   if (e.repeat && act !== 'rudderLeft' && act !== 'rudderRight') return;
@@ -5644,8 +5651,28 @@ function actionsRadial(): RadialItem[] {
 /** The pad's context action (and the touch bar's gold button): the first of the action bar's — board, dock, land,
  *  cut the mast, cast, her island, a sea mark, a card closed by hand, repair. In port: the harbour's screen on touch,
  *  casting off otherwise (the bar itself shows nothing over the harbour's screen). */
+/** VK 4.2.4: the keys of the rungs still shut (their buttons hidden by the ladder's style): the tricks, the shot types
+ *  beyond round shot, the talents, the chat, the shop. */
+function keyLocked(act: string): boolean {
+  const lk = (f: string) => onboarding.isLocked(f);
+  if (/^ability[ZXCV]$/.test(act)) return lk('abilities');
+  if (/^ammo[2-5]$/.test(act) || act === 'ammoNext' || act === 'ammoCycle') return lk('ammo');
+  if (act === 'talents') return lk('talents');
+  if (act === 'chat') return lk('chat');
+  if (act === 'shop') return lk('shop');
+  return false;
+}
+
+/** VK 4.2.4 (2026-11-05): a captain on the ladder at the First Watch's first step, at the quay — the harbour's window
+ *  does not open by itself (thirteen places and a market of goods were her first sight): the quay, the wheel and the
+ *  one gold «В море». The watch's «В порт» brings her back to it, the campaign's «Портовые лавки» waiting there. */
+function watchQuay(): boolean {
+  const o = state.onboarding;
+  return !!o?.ladder && o.stage === 'sail' && !!state.self?.dockedAt;
+}
+
 function padContext(id?: string): void {
-  if (state.self?.dockedAt && !grabbed()) return void (touch.enabled && modal !== 'port' ? openModal('port') : departOrAsk(state, (m) => net.send(m), () => net.send({ t: 'undock' })));
+  if (state.self?.dockedAt && !grabbed()) return void (touch.enabled && modal !== 'port' && !watchQuay() ? openModal('port') : departOrAsk(state, (m) => net.send(m), () => net.send({ t: 'undock' })));
   const first = liveAct(id) ?? gatherActs().acts[0];
   if (first) runAct(first);
 }
@@ -6171,7 +6198,7 @@ function step(t: number): void {
     const here = op ? null : hereFrame() ?? storyFrame();
     // (the guns empty on a ship's step: the finger to «Припасы» first — a newcomer's run of 2026-10-24)
     const shot = shotStage(op ?? storyQuest()?.does, state.self?.ammo);
-    tutorPointer.set({ stage: state.onboarding?.stage ?? shot ?? isleFirstStage() ?? (op ? `c:${op}` : here), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null, tradeGood: op === 'buy:trade' ? tradeGoodHere() : null, crewFull: !!state.you && state.you.crew >= state.you.crewMax, markBeast: attackMark !== null && state.ships.get(attackMark)?.info?.npcRole === 'beast', crewShort: !!state.you && state.you.crew < 3, noHire: !!state.self?.noHire });
+    tutorPointer.set({ stage: (state.onboarding?.lesson ? `l:${state.onboarding.lesson}` : null) ?? state.onboarding?.stage ?? shot ?? isleFirstStage() ?? (op ? `c:${op}` : here), touch: touch.enabled, docked: !!state.self?.dockedAt, battle: !!state.boardTac || !!state.boardFight, helmsman: !!state.autosail || homeRun !== null || !!pendingDock, pursuit: state.pursuit?.mode ?? null, tradeGood: op === 'buy:trade' ? tradeGoodHere() : null, crewFull: !!state.you && state.you.crew >= state.you.crewMax, markBeast: attackMark !== null && state.ships.get(attackMark)?.info?.npcRole === 'beast', crewShort: !!state.you && state.you.crew < 3, noHire: !!state.self?.noHire });
     tutorPointer.frame();
     encounterCard.frame();
     surrenderCard.frame(state);

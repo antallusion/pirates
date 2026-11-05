@@ -18,6 +18,8 @@ import { relWindDeg } from '../../../shared/src/sim/sailing.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import { islandsNear } from '../../../shared/src/world/worldgen.ts';
 import { midPrice } from './economy.ts';
+import { ladderLocked } from '../../../shared/src/data/ladder.ts';
+import { campaignNext } from './campaign.ts';
 import { armyForLevel, armyMen } from '../../../shared/src/data/army.ts';
 import type { ArmyStack } from '../../../shared/src/data/army.ts';
 import type { Game } from './Game.ts';
@@ -47,6 +49,14 @@ export interface Tutorial {
   played?: number;
   /** Seconds aboard up to ABOARD_SECS, for the funnel's 5/15/30 minutes (a captain made before it: unset, not counted). */
   aboard?: number;
+  /** VK 4.2.4 (2026-11-05): a captain made since meets the game a rung at a time (shared/src/data/ladder.ts); a captain
+   *  made before has everything open (unset). */
+  ladder?: boolean;
+  /** VK 4.2.4: the sea school inside the watch's first step — the lesson under way (an index into LESSONS); unset for a
+   *  captain made before it (her «Плывите» as it was). */
+  lesson?: number;
+  /** The island the lessons «Курс» and «К острову» sail to (its index in the world). */
+  lessonIsle?: number;
 }
 
 /** The funnel counts the first half hour aboard. */
@@ -90,6 +100,12 @@ export const OPTIONAL: Optional[] = ['tattoos', 'dice', 'auction', 'guilds'];
 
 /** Still in the first quarter of an hour: the optional things are shut (the First Watch, then 15 minutes aboard). A
  *  level was no measure of it: the newcomer's run was at level 4 in a minute and forty seconds. */
+/** She is walking the First Watch now. */
+export function inWatch(p: Profile | null | undefined): boolean {
+  const t = p?.tutorial;
+  return !!t && t.on && t.stage < STAGES.length;
+}
+
 export function fresh(p: Profile | null | undefined): boolean {
   if (!p?.tutorial) return false;
   const t = p.tutorial;
@@ -350,6 +366,163 @@ function coastLand(game: Game, x: number, y: number): boolean {
   return false;
 }
 
+// ------------------------------------------------------------------ the sea school (VK 4.2.4, 2026-11-05)
+//
+// Owner: «надо прям полностью провести человека, скрывать часть интерфейса, потихонечку показывать эту часть
+// интерфейса, которая нужна… расписывать каждый шаг: ускорение, как штурвалом руководить, как заезжать на острова…
+// сразу интерфейс в лицо пихать не надо». Inside the watch's first step («Плывите») a captain made since meets the sea a
+// control at a time, each with its own words, its finger and its one piece of the HUD:
+//  cast   — the quay, one gold «В море» (nothing else on the screen);
+//  sails  — the wheel and «+» come: raise the canvas to three quarters (she leaves the quay under a quarter);
+//  helm   — turn the wheel: a quarter of a circle by her own hand;
+//  dash   — the dash: a double tap on the wheel (Shift);
+//  course — the chart comes; a gold beacon on the nearest island: tap the water by it, the helmsman takes her;
+//  isle   — come in to its shore: the action bar comes (a landing, a search, later a town of her own).
+// Then the watch goes on as it was: «Атаковать», «Огонь», «На абордаж», «В порт», each bringing its own piece.
+
+interface Lesson {
+  id: string;
+  /** HUD blocks this lesson brings in. */
+  reveal: HudBlock[];
+  done(game: Game, s: PlayerSession, ship: ShipEntity, p: Profile): boolean;
+  begin?(game: Game, s: PlayerSession, ship: ShipEntity, p: Profile): void;
+}
+
+/** The school for the captains made now (the tests of the watch's own steps walk it the old way: tests/helpers.ts). */
+export const SCHOOL = { on: true };
+
+/** Sails she leaves the quay under in the school (a quarter: the lesson raises them). */
+export const SCHOOL_SAIL = 0.25;
+/** The canvas the «Паруса» lesson asks for. */
+export const SCHOOL_SAIL_DONE = 0.74;
+/** The turn by her own hand the «Штурвал» lesson asks for (radians: ~70°). */
+export const SCHOOL_TURN = 1.2;
+/** How near the island's shore «К острову» is done (metres). */
+export const SCHOOL_SHORE = 320;
+
+export const LESSONS: Lesson[] = [
+  { id: 'cast', reveal: [], done: (_g, _s, ship) => !ship.docked },
+  {
+    id: 'sails',
+    reveal: ['nav'],
+    begin: (_g, _s, ship) => {
+      // she leaves the quay under a quarter of her canvas: the lesson is hers to raise it
+      ship.input.sailTarget = Math.min(ship.input.sailTarget, SCHOOL_SAIL);
+    },
+    done: (_g, _s, ship) => !ship.docked && ship.input.sailTarget >= SCHOOL_SAIL_DONE,
+  },
+  {
+    id: 'helm',
+    reveal: ['nav'],
+    begin: (_g, s, ship) => {
+      const w = watchOf(s);
+      w.turn = 0;
+      w.head = ship.state.heading;
+    },
+    done: (_g, s, ship) => {
+      const w = watchOf(s);
+      const h = ship.state.heading;
+      if (w.head !== undefined && !autosailOf(ship)) {
+        let d = h - w.head;
+        while (d > Math.PI) d -= Math.PI * 2;
+        while (d < -Math.PI) d += Math.PI * 2;
+        w.turn = (w.turn ?? 0) + Math.abs(d);
+      }
+      w.head = h;
+      return (w.turn ?? 0) >= SCHOOL_TURN;
+    },
+  },
+  { id: 'dash', reveal: ['dash'], done: (_g, _s, ship) => ship.effects.some((e) => e.id === 'dash') },
+  {
+    id: 'course',
+    reveal: ['minimap'],
+    begin: (game, s, ship, p) => {
+      p.tutorial.lessonIsle = schoolIsle(game, ship.state.x, ship.state.y) ?? undefined;
+    },
+    // the helmsman took her (a tap on the water, the beacon, the chart): the course is set — or she is there already
+    done: (game, _s, ship, p) => !!autosailOf(ship) || shoreGap(game, p, ship) < SCHOOL_SHORE,
+  },
+  {
+    id: 'isle',
+    reveal: ['act'],
+    done: (game, _s, ship, p) => shoreGap(game, p, ship) < SCHOOL_SHORE,
+  },
+];
+
+/** What the school has revealed once it is over (the watch's later steps keep it). */
+const LESSONS_ALL: HudBlock[] = ['nav', 'dash', 'minimap', 'act'];
+/** The watch's own steps in the school: what each adds to it (the captain's plate with her hull for the fight, the
+ *  cabin's menu at the end). */
+const SCHOOL_REVEAL: Record<string, HudBlock[]> = { attack: ['captain'], port: ['menu', 'map'] };
+
+/** She walks the school (a captain made since, in the First Watch, its lessons not all behind her). */
+export function schooled(t: Tutorial): boolean {
+  return t.lesson !== undefined && t.on && t.stage < STAGES.length;
+}
+function inLessons(t: Tutorial): boolean {
+  return schooled(t) && t.stage === 0 && (t.lesson ?? LESSONS.length) < LESSONS.length;
+}
+
+/** The nearest island off her port fit for the lesson: at least 600 m of open water to its shore, at most 6 km (the
+ *  start's own neighbour lies 2–3 km out: a minute or two under the helmsman). */
+export function schoolIsle(game: Game, x: number, y: number): number | null {
+  let best: number | null = null, bd = Infinity;
+  const here = game.nearestPort(x, y);
+  for (let i = 0; i < game.world.islands.length; i++) {
+    const is = game.world.islands[i];
+    if (Math.abs(is.x - x) > 8000 || Math.abs(is.y - y) > 8000) continue;
+    if (here && here.islandId === i) continue;
+    const d = Math.sqrt(closestOnPolygon(x, y, is.poly).d2);
+    if (d < 600 || d > 6000) continue;
+    if (d < bd) {
+      bd = d;
+      best = i;
+    }
+  }
+  return best;
+}
+
+function shoreGap(game: Game, p: Profile, ship: ShipEntity): number {
+  const i = p.tutorial.lessonIsle;
+  const is = i !== undefined ? game.world.islands[i] : null;
+  return is ? Math.sqrt(closestOnPolygon(ship.state.x, ship.state.y, is.poly).d2) : Infinity;
+}
+
+function stepLesson(game: Game, s: PlayerSession, ship: ShipEntity, p: Profile): boolean {
+  const t = p.tutorial;
+  const l = LESSONS[t.lesson!];
+  // «Курс»/«К острову» without an island in reach (a far quay): nothing to sail to, the lesson passes
+  if ((l.id === 'course' || l.id === 'isle') && t.lessonIsle === undefined) {
+    p.tutorial.lessonIsle = schoolIsle(game, ship.state.x, ship.state.y) ?? undefined;
+    if (t.lessonIsle === undefined) {
+      nextLesson(game, s, 'skip');
+      return true;
+    }
+  }
+  if (!l.done(game, s, ship, p)) return false;
+  nextLesson(game, s, 'done');
+  return true;
+}
+
+/** A lesson done or skipped: the next one begins; the last one done ends the watch's first step. */
+function nextLesson(game: Game, s: PlayerSession, how: 'done' | 'skip'): void {
+  const p = s.profile!, ship = s.ship!, t = p.tutorial;
+  const l = LESSONS[t.lesson!];
+  game.sendTo(s, { t: 'onb', kind: how === 'done' ? 'lesson' : 'skip', id: l.id });
+  trackEvent(game, s.accountId, `fw_l_${l.id}${how === 'skip' ? '_skip' : ''}`); // docs/34: the funnel
+  if (how === 'done') {
+    p.gold += 10; // a coin for each lesson (the watch's own steps pay 50 and their experience)
+    game.db.ledger(s.accountId, 'tutorial', 10, `lesson:${l.id}`);
+  }
+  t.lesson = (t.lesson ?? 0) + 1;
+  t.at = game.wallNow();
+  if (t.lesson >= LESSONS.length) {
+    advance(game, s, how); // «Плывите» is done: «Атаковать» comes
+    return;
+  }
+  LESSONS[t.lesson].begin?.(game, s, ship, p);
+}
+
 // ------------------------------------------------------------------ the Captain's Goals (§13.4)
 
 interface GoalDef {
@@ -424,7 +597,7 @@ function stepGoals(game: Game, s: PlayerSession, p: Profile): boolean {
 // ------------------------------------------------------------------ the step, once a second
 
 /** Seconds in irons, missed volleys in a row, seconds of neglected damage — per session, never saved. */
-const watch = new WeakMap<PlayerSession, { irons: number; misses: number; hurt: number; view: string; raiderAt: number; fought?: boolean; fired?: boolean; firedAt?: number; army?: ArmyStack[] | null }>();
+const watch = new WeakMap<PlayerSession, { irons: number; misses: number; hurt: number; view: string; raiderAt: number; fought?: boolean; fired?: boolean; firedAt?: number; army?: ArmyStack[] | null; turn?: number; head?: number }>();
 
 export function onboardingSecond(game: Game, s: PlayerSession): void {
   const p = s.profile, ship = s.ship;
@@ -447,7 +620,8 @@ export function onboardingSecond(game: Game, s: PlayerSession): void {
     // A battle on the hexes in any step before «На абордаж» is that step's battle (the grapples thrown early).
     if (ship.boarding && STAGES[t.stage]?.id !== 'port') watchOf(s).fought = true;
     const st = STAGES[t.stage];
-    if (st.done(game, s, ship, p)) {
+    if (inLessons(t)) changed = stepLesson(game, s, ship, p) || changed;
+    else if (st.done(game, s, ship, p)) {
       advance(game, s, 'done');
       changed = true;
     } else st.keep?.(game, s, ship);
@@ -459,14 +633,15 @@ export function onboardingSecond(game: Game, s: PlayerSession): void {
   }
   contextHints(game, s, ship, p);
   if (wasFresh && !fresh(p)) {
-    game.sendTo(s, { t: 'onb', kind: 'unlock', id: OPTIONAL.join(',') });
+    // (on the ladder these open at their own rung, each told then: not «открыты татуировки» at level 4)
+    if (!t.ladder) game.sendTo(s, { t: 'onb', kind: 'unlock', id: OPTIONAL.join(',') });
     changed = true;
   }
-  const view = JSON.stringify(onboardingView(p));
+  const view = JSON.stringify(onboardingView(p, game));
   const w = watchOf(s);
   if (changed || view !== w.view) {
     w.view = view;
-    game.sendTo(s, { t: 'onboarding', view: onboardingView(p) });
+    game.sendTo(s, { t: 'onboarding', view: onboardingView(p, game) });
   }
 }
 
@@ -501,6 +676,8 @@ function advance(game: Game, s: PlayerSession, how: 'done' | 'skip'): void {
     trackEvent(game, s.accountId, 'fw_done');
     if (!skippingAll) funnelMark(s.accountId, 'fw_done', game.wallNow());
     fillGoals(p);
+    // VK 4.2.4: the campaign waits for the watch (its «Портовые лавки» on the quay the watch's «В порт» brought her to)
+    campaignNext(game, s);
   } else {
     if (!skippingAll) funnelMark(s.accountId, `fw${t.stage}`, game.wallNow());
     t.base = STAGES[t.stage].mark?.(p) ?? 0;
@@ -517,7 +694,8 @@ export function onboardingAction(game: Game, s: PlayerSession, action: 'skip_sta
   const p = s.profile;
   if (!p || !s.ship) return;
   const t = p.tutorial;
-  if (action === 'skip_stage' && t.on && t.stage < STAGES.length) advance(game, s, 'skip');
+  if (action === 'skip_stage' && t.on && inLessons(t)) nextLesson(game, s, 'skip');
+  else if (action === 'skip_stage' && t.on && t.stage < STAGES.length) advance(game, s, 'skip');
   else if (action === 'skip_all' && t.on) {
     funnelMark(s.accountId, 'fw_skip', game.wallNow());
     skippingAll = true;
@@ -533,24 +711,37 @@ export function onboardingAction(game: Game, s: PlayerSession, action: 'skip_sta
     if (c) c.skipped = true;
     saveMetrics(game, m);
   } else if (action === 'hide_goals') t.goals.hidden = true;
-  game.sendTo(s, { t: 'onboarding', view: onboardingView(p) });
+  game.sendTo(s, { t: 'onboarding', view: onboardingView(p, game) });
 }
 
-export function onboardingView(p: Profile): OnboardingView {
+export function onboardingView(p: Profile, game?: Game): OnboardingView {
   const t = p.tutorial;
   const on = t.on && t.stage < STAGES.length;
-  const blocks = new Set<HudBlock>(START_BLOCKS);
+  const school = schooled(t);
+  const lesson = inLessons(t) ? LESSONS[t.lesson!] : null;
+  const blocks = new Set<HudBlock>(school ? [] : START_BLOCKS);
+  if (school) {
+    for (let i = 0; i <= Math.min(t.lesson ?? LESSONS.length, LESSONS.length - 1); i++) for (const b of LESSONS[i].reveal) blocks.add(b);
+    if (t.stage > 0) for (const b of LESSONS_ALL) blocks.add(b);
+    for (let i = 1; i <= t.stage && i < STAGES.length; i++) for (const b of SCHOOL_REVEAL[STAGES[i].id] ?? []) blocks.add(b);
+  }
   if (on) for (let i = 0; i <= t.stage; i++) for (const b of STAGES[i].reveal) blocks.add(b);
+  const extra = school ? LESSONS.length - 1 : 0;
+  const isle = lesson && t.lessonIsle !== undefined && game ? game.world.islands[t.lessonIsle] : null;
   return {
     stage: on ? STAGES[t.stage].id : null,
-    index: Math.min(t.stage, STAGES.length),
-    of: STAGES.length,
+    index: Math.min(t.stage === 0 && school ? (t.lesson ?? 0) : t.stage + extra, STAGES.length + extra),
+    of: STAGES.length + extra,
+    ...(lesson ? { lesson: lesson.id } : {}),
+    ...(school ? { school: true } : {}),
+    ...(isle && (lesson!.id === 'course' || lesson!.id === 'isle') ? { goal: { x: Math.round(isle.x), y: Math.round(isle.y), name: isle.name } } : {}),
     hud: on ? [...blocks] : null,
     tip: null,
     goals: !on && !t.goals.hidden ? t.goals.active : null,
     goalsDone: t.goals.done.length,
     hints: Object.keys(t.hints),
-    locked: fresh(p) ? [...OPTIONAL] : [],
+    locked: [...new Set<string>([...(fresh(p) ? OPTIONAL : []), ...(t.ladder ? ladderLocked(p.level) : [])])],
+    ...(t.ladder ? { ladder: true } : {}),
   };
 }
 
@@ -687,6 +878,8 @@ function saveMetrics(game: Game, m: OnboardingMetrics): void {
 export function onboardingStart(game: Game, s: PlayerSession, tutorial: boolean): void {
   const p = s.profile!;
   p.tutorial = newTutorial(tutorial, game.wallNow());
+  p.tutorial.ladder = true; // VK 4.2.4: the ladder of features (ladder.ts) for every captain made from now on
+  if (tutorial && SCHOOL.on) p.tutorial.lesson = 0; // …and the sea school before the first fight (LESSONS)
   const m = metrics(game);
   if (tutorial) m.started++;
   else m.knewTheSea++;
