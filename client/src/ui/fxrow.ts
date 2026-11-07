@@ -22,6 +22,7 @@ import type { SpotView } from '../../../shared/src/data/spotwork.ts';
 import { SPOT_ICON, spotClock, spotFrac } from '../../../shared/src/data/spotwork.ts';
 import { spotAnchored, spotPhaseWord, spotTitle } from './spotclock.ts';
 import type { BoatsView } from '../../../shared/src/data/islandboats.ts';
+import type { RescueView } from '../../../shared/src/data/rescue.ts'; // forum post 93
 import { BOATS_ICON, boatsFx } from './boatsclock.ts'; // «Шлюпы с острова» (owner, 2026-11-02)
 
 const L = dict(EN, RU);
@@ -44,6 +45,8 @@ export interface Fx {
   /** Its words' {n}. */
   v?: string | number;
   mods?: StatMods;
+  /** A course its card offers (the detail card's «Плыть»: main.ts hooks.go). */
+  go?: { key: string; label: string };
 }
 
 /** What the row is reckoned from (a part of the client state: the tests give it by hand). */
@@ -65,6 +68,8 @@ export interface FxInput {
     spot?: SpotView | null;
     /** «Шлюпы с острова» under way (owner, 2026-11-02): after the work at a spot. */
     boats?: BoatsView | null;
+    /** Forum post 93: the rescued aboard, for a waystation. */
+    rescue?: RescueView | null;
   };
   you: { flags: number; rudderHp: number; sails: number; sailsMax: number; morale: number; leaks: number } | null;
   /** World time (s) and the wall clock (ms). */
@@ -245,7 +250,33 @@ export function fxList(i: FxInput): Fx[] {
   }] : [];
   const bv = self.boats;
   if (bv) spot.push({ id: 'boats', icon: BOATS_ICON, bad: false, k: 'boats', ...boatsFx(bv, now, lang() === 'ru') });
+  // forum post 93: the rescued aboard — their reward, the swaps, the risks of the next batch, and the course to a waystation
+  const rv = self.rescue;
+  if (rv && rv.aboard > 0 && !self.dockedAt) spot.push({ id: 'rescue', icon: 'stat_crew', bad: false, k: 'rescue', n: String(rv.aboard), text: rescueText(rv), left: null, frac: null, go: { key: 'way', label: L('go.way') } });
   return spot.concat(out.sort((a, b2) => Number(b2.bad) - Number(a.bad) || (a.left === null ? 1 : 0) - (b2.left === null ? 1 : 0) || (b2.left ?? 0) - (a.left ?? 0)));
+}
+
+/** The rescued's card words: what they are worth and the risks a new batch runs (in numbers). */
+export function rescueText(rv: RescueView): string {
+  const pct = (x: number) => Math.round(x * 100);
+  const risks = [rv.fever > 0 ? L('r.fever', { n: pct(rv.fever) }) : '', rv.mutiny > 0 ? L('r.mutiny', { n: pct(rv.mutiny) }) : '', L('r.curse', { n: pct(rv.curse) })].filter(Boolean);
+  const tail = rv.fever > 0 || rv.mutiny > 0 ? L('t.rescueRisk', { list: risks.join(', ') }) : L('t.rescueSafe', { curse: pct(rv.curse) });
+  return `${L('t.rescue', { n: rv.aboard, cap: rv.cap, head: rv.head })} ${tail}`;
+}
+
+/** A castaway's card (forum post 93): where the men go — her free hammocks, then the rescued — and the risks in numbers. */
+export function castawayNotes(rv: RescueView | null | undefined, free: number): string[] {
+  const out: string[] = [];
+  if (free > 0) out.push(L('c.berths', { n: free }));
+  if (!rv) return out;
+  if (rv.aboard >= rv.cap) {
+    if (free <= 0) out.push(L('c.full'));
+    return out;
+  }
+  const pct = (x: number) => Math.round(x * 100);
+  const list = [rv.fever > 0 ? L('r.fever', { n: pct(rv.fever) }) : '', rv.mutiny > 0 ? L('r.mutiny', { n: pct(rv.mutiny) }) : '', L('r.curse', { n: pct(rv.curse) })].filter(Boolean).join(', ');
+  out.push(L('c.rescue', { n: rv.aboard, cap: rv.cap, head: rv.head, list }));
+  return out;
 }
 
 /** The row's name for a screen reader. */
@@ -317,8 +348,9 @@ export function effectCard(id: string, lines: (mods: StatMods) => string = lines
   const left = f.left !== null ? longLeft(f.left) : L('noTime');
   return {
     name: [name, name], sub: [kind, kind], color: f.bad ? '#e0776b' : '#9fd38a', art: `icon.${f.icon}`,
-    rows: [{ k: [L('left'), L('left')], v: [left, left], icon: 'icon.ui_hourglass', tone: f.bad ? 'down' : 'up' }],
+    rows: f.go ? [] : [{ k: [L('left'), L('left')], v: [left, left], icon: 'icon.ui_hourglass', tone: f.bad ? 'down' : 'up' }],
     notes: [{ t: [text, text] }],
     ...(f.mods && lines(f.mods) ? { extra: `<div class="gear-lines fx-lines">${lines(f.mods)}</div>` } : {}),
+    ...(f.go ? { extra: `<div class="dc-src"><button type="button" class="btn btn-small btn-primary" data-dcgo="${esc(f.go.key)}">${icon('menu_ship', '', 'ico-sm')}${esc(f.go.label)}</button></div>` } : {}),
   };
 }

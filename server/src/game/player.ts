@@ -78,6 +78,7 @@ import type { Oath, QuestLog } from './quests.ts';
 import { clampLevel, initialLevel, shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
 import { CLEAN_SLATE_CD, FREE_RESPEC_LEVEL, cleanSlateCost, loadoutSlots } from './progression.ts';
 import type { ServiceRec } from './marque.ts';
+import type { SmuggleWhy } from '../../../shared/src/data/smuggler.ts'; // «Услуга контрабандиста» (forum post 92)
 import { patentDockRefused } from './patent.ts'; // «Каперский патент» (owner, 2026-11-02)
 import { PATENT_SAY, isIssuer } from '../../../shared/src/data/patent.ts';
 import type { Skipper } from './turncoats.ts';
@@ -602,7 +603,7 @@ export function changeRep(p: Profile, faction: FactionId, delta: number): void {
   }
 }
 
-export function canDock(p: Profile, faction: FactionId): { ok: boolean; reason?: string } {
+export function canDock(p: Profile, faction: FactionId): { ok: boolean; reason?: string; smuggle?: SmuggleWhy } {
   const w = wantedLevel(p.infamy);
   const def = FACTIONS[faction];
   if (faction === 'crown' && (p.talents.smg_nobodys_ship ?? 0) > 0) return { ok: false, reason: 'The Crown does not moor a ship with no name and no flag.' };
@@ -611,9 +612,10 @@ export function canDock(p: Profile, faction: FactionId): { ok: boolean; reason?:
   if (w > def.dockMaxWanted && def.lawful) return { ok: false, reason: `${def.short} harbours take no ship with ${w} skulls: a pirate haven will (the Red Tide, the Fog Brokers, the Free Harbors) and sells pardons; or wash them off out of fights (about ${washToMin(p.infamy, def.dockMaxWanted)} min).` };
   if (w > def.dockMaxWanted) return { ok: false, reason: `${def.short} harbour masters refuse ships at Wanted ${w}: buy a pardon in a free harbour, or let the sea forget.` };
   // «Каперский патент» (patent.ts): the harbours of the patent's enemies shut while it runs.
-  if (patentDockRefused(p, faction)) return { ok: false, reason: PATENT_SAY.enemyPort };
+  // («Услуга контрабандиста», forum post 92: these two the smugglers get round — smuggler.ts)
+  if (patentDockRefused(p, faction)) return { ok: false, reason: PATENT_SAY.enemyPort, smuggle: 'patent' };
   // (the name carries its own article: «The The Red Tide Confederacy considers you an enemy», docs/30)
-  if ((p.reputation[faction] ?? 0) <= -50) return { ok: false, reason: `${def.name} considers you an enemy.` };
+  if ((p.reputation[faction] ?? 0) <= -50) return { ok: false, reason: `${def.name} considers you an enemy.`, smuggle: 'standing' };
   return { ok: true };
 }
 

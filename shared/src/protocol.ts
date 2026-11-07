@@ -168,7 +168,7 @@ export type ClientMsg =
   | { t: 'scuttle_home' }
   | { t: 'captive'; index: number; mode: 'ransom' | 'hand_over' | 'officer' | 'skipper' }
   | { t: 'repair'; on: boolean }
-  | { t: 'dock'; bribe?: boolean }
+  | { t: 'dock'; bribe?: boolean; /** «Услуга контрабандиста» (forum post 92): her yes to the smuggler's boat */ smuggle?: boolean }
   | { t: 'jettison'; good: GoodId; qty: number }
   | { t: 'fence_sell'; good: GoodId; qty: number }
   | { t: 'treasure'; action: 'buy' | 'assemble' | 'merge'; tier?: number }
@@ -788,6 +788,8 @@ export interface PrivateState {
   spot?: import('./data/spotwork.ts').SpotView | null;
   /** «Шлюпы с острова» (owner, 2026-11-02): her island's boats under way to her, on the sea's clock. */
   boats?: import('./data/islandboats.ts').BoatsView | null;
+  /** Forum post 93 (rescue.ts): the rescued she carries to a waystation, and the risks a new batch runs. */
+  rescue?: import('./data/rescue.ts').RescueView | null;
   /** The captain as a hero (docs/17 H2). */
   hero?: HeroView;
   /** Her glory past the cap, mastery and trials (docs/19 E1–E3): from five levels short of the cap. */
@@ -2309,6 +2311,8 @@ export type ServerMsg =
   /** owner 2026-10-20: the jury rig's progress, stranded, the scuttle's wait (null: nothing of it). */
   | { t: 'adrift'; v: AdriftView | null }
   | { t: 'castaways'; list: CastawayView[] }
+  /** «Услуга контрабандиста» (forum post 92): a harbour shut to her for her patent or her standing — the boat offered. */
+  | { t: 'smuggler'; offer: import('./data/smuggler.ts').SmuggleOffer }
   /** docs/19 D7: the creatures roaming the sea. */
   | RoamServerMsg
   /** The premium shop (owner, 2026-10-03): its view, and her account's doubloons. */

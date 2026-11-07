@@ -65,7 +65,32 @@
   .way-row .way-price { font-size: 12px; }
 }
 .way-card .way-why { color: var(--bad, #c86a50); }
+/* Forum post 93: the rescued and the waystation's own help, above the fallen. */
+.way-aid-h { margin: 0 0 4px; font-size: 13px; color: var(--gold); font-weight: 600; }
+.way-aids { margin-bottom: 8px; }
+.way-aid .way-face { border-radius: 4px; }
+.way-aid .way-rt .muted { white-space: normal; }
+@media (max-height: 520px) {
+  .way-aid-h { font-size: 12px; margin-bottom: 2px; }
+  .way-aids { margin-bottom: 6px; }
+}
 /* docs/35: the card on a fight ashore's end (the battle's banner): one line, under the losses. */
 .tb-fallen:empty { display: none; }
 .tb-fallen .way-card { margin: 6px 0 0; padding: 4px 8px; background: rgba(15, 17, 20, 0.85); text-align: left; }
 .tb-fallen .way-card .wc-t b { font-size: 13px; }
+/* «Услуга контрабандиста» (forum post 92): the shut harbour's question — the dialogue's serif, left-aligned, the heading on
+   one line with its picture, the ways as a short list; on a phone held sideways it keeps to its words (no scrolling to the
+   buttons). */
+.k-sheet.confirm-panel.smg-panel { width: min(600px, 100%); }
+.smg-panel .confirm-body { text-align: left; }
+.smg-ask h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 19px; color: var(--gold); font-family: var(--serif); }
+.smg-ask h3 .ico-md { width: 30px; height: 30px; flex: none; border-radius: 4px; }
+.confirm-panel.smg-panel p { margin: 3px 0; font-size: 16px; line-height: 1.3; text-align: left; }
+.confirm-panel.smg-panel p.muted { font-size: 14px; color: #b9ae96; }
+.smg-ways { margin: 2px 0 4px; padding-left: 22px; font-family: var(--serif); font-size: 16px; line-height: 1.3; color: var(--bone); }
+@media (max-height: 520px) {
+  .smg-ask h3 { font-size: 16px; margin-bottom: 2px; }
+  .smg-ask h3 .ico-md { width: 24px; height: 24px; }
+  .confirm-panel.smg-panel p, .smg-ways { font-size: 14px; line-height: 1.25; margin: 1px 0; }
+  .confirm-panel.smg-panel p.muted { font-size: 13px; }
+}

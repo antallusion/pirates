@@ -19,6 +19,7 @@ import { noteHearsay, repairState } from './ui/dealings.ts';
 import { renderHall } from './ui/hall.ts';
 import { renderLook, resetLookDraft } from './ui/looks.ts';
 import { ask, askHtml, tell } from './ui/confirm.ts';
+import { askSmuggler } from './ui/smuggler.ts'; // «Услуга контрабандиста» (forum post 92)
 import { BEASTS, beastOfClass } from '../../shared/src/data/beasts.ts';
 import { FishFightPanel } from './ui/fishfight.ts';
 import { NetHaulPanel } from './ui/nethaul.ts';
@@ -129,7 +130,7 @@ import type { DeckSlot, SeaKeys } from './ui/seahud.ts';
 import { HudMore } from './ui/hudmore.ts'; // owner, 2026-10-29: the rest of the round buttons behind one «⋯»
 import { ExitUi } from './ui/exit.ts'; // «Выход» (forum 45)
 import { EN as FX_EN, RU as FX_RU } from './lang/ui/fx.ts';
-import { setFxLines } from './ui/fxrow.ts'; // forum 45: the effects' cards show their numbers as the gear's lines
+import { castawayNotes, setFxLines } from './ui/fxrow.ts'; // forum 45: the effects' cards show their numbers as the gear's lines
 import { modLinesHtml } from './ui/gear.ts';
 import { SKILL_IDS, SeaAbil, abilWhy, skillWord } from './ui/seaabil.ts'; // the captain's abilities on a phone: «Приёмы» and its row (owner, 2026-10-26)
 import type { AbilView } from './ui/seaabil.ts';
@@ -854,6 +855,8 @@ mountDetail({
   },
   go: (key) => {
     leaveIsle(false);
+    // forum post 93: the rescued's card — the helmsman to the nearest floating house, moored on arrival (waystations.ts)
+    if (key === 'way') return void net.send({ t: 'way', action: 'nearest' });
     startGoal(key);
   },
 });
@@ -2755,6 +2758,16 @@ function onMessage(m: ServerMsg): void {
       if (modal === 'company' && companyScreen.tab === 'chronicle') refreshModal();
       else if (modal === 'log') refreshModal();
       break;
+    case 'smuggler': {
+      // «Услуга контрабандиста» (forum post 92): the shut harbour's question; her yes sends the dock with the boat
+      const o = m.offer;
+      askSmuggler(o, placeName(state.ports.find((x) => x.id === o.port)?.name ?? o.port), () => {
+        state.input.sail = 0;
+        dockSentAt = performance.now();
+        net.send({ t: 'dock', smuggle: true });
+      });
+      break;
+    }
     case 'toast':
       // The glass's own «too far» (askGlass asks by itself every few seconds; the server's refusals come as toasts, so
       // the filter on 'err' alone let «Too far for the glass ×5» through at every broadside).
@@ -5156,7 +5169,9 @@ initThingRing({
     if (id === 'info') {
       registerDetail(`thing:${key}`, () => {
         const now = thingOf(state, key) ?? t;
-        return thingCard(now, state.ownDisplay ? { x: state.ownDisplay.x, y: state.ownDisplay.y } : null);
+        // (forum post 93: a castaway's card tells where the men go and the risks of the rescued, in numbers)
+        const more = now.kind === 'castaway' && state.you ? castawayNotes(state.self?.rescue, Math.max(0, state.you.crewMax - state.you.crew)) : [];
+        return thingCard(now, state.ownDisplay ? { x: state.ownDisplay.x, y: state.ownDisplay.y } : null, more);
       });
       return void openDetail(`thing:${key}`);
     }

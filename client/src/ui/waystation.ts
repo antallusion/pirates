@@ -6,6 +6,7 @@
 
 import type { UnitId } from '../../../shared/src/data/army.ts';
 import type { ResRow, ResView, WayView } from '../../../shared/src/wayproto.ts';
+import type { WayAid } from '../../../shared/src/data/rescue.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
 import { dict } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/waystation.ts';
@@ -89,9 +90,10 @@ export class WayWindow {
       v.until > 0 ? L('note.keep', { t: keepLeft(v.until, now) }) : '',
     ].filter(Boolean);
     const offer = v.offer ? `<div class="card way-offer">${icon('ui_phial', '', 'ico-md')}<div><b>${esc(L('offer.h'))}</b><span class="muted">${esc(L('offer.t'))}</span></div><button class="btn btn-small" data-wshop>${esc(L('offer.btn'))}</button></div>` : '';
-    const body = v.rows.length
+    const aid = way ? aidHtml(way) : '';
+    const body = aid + (v.rows.length
       ? `<div class="way-list">${rows}</div>${notes.length ? `<p class="muted way-note">${notes.map((n) => esc(n)).join(' ')}</p>` : ''}${offer}`
-      : `<p class="muted way-empty">${esc(L('none'))}</p>`;
+      : `<p class="muted way-empty">${esc(L('none'))}</p>`);
     const can = v.n > 0 && !v.why && (v.silver <= v.gold || v.rows.some((r) => this.rowOk(v, r)));
     const allPrice = priceHtml(v);
     const foot = [
@@ -126,8 +128,35 @@ export class WayWindow {
     root.querySelector<HTMLElement>('[data-wrepair]')?.addEventListener('click', () => this.h.send({ t: 'way', action: 'repair' }));
     root.querySelector<HTMLElement>('[data-wshop]')?.addEventListener('click', () => this.h.shop());
     root.querySelector<HTMLElement>('[data-wclose]')?.addEventListener('click', () => this.h.close());
+    root.querySelectorAll<HTMLButtonElement>('[data-waid]').forEach((b) => (b.onclick = () => {
+      b.disabled = true;
+      this.h.send({ t: 'way', action: 'aid', aid: b.dataset.waid as WayAid });
+    }));
     void v;
   }
+}
+
+const AID_ICON: Record<WayAid, string> = {
+  land: 'stat_crew', helmsman: 'prof_helmsman', cook: 'prof_cook', surgeon: 'prof_surgeon', carpenter: 'prof_carpenter', rum: 'good_rum', medicine: 'good_medicine', cargo: 'bt_hold',
+};
+
+/** Forum post 93: what this kind of waystation does — one line each, its numbers or why not; only the lines she may do
+ *  now are lit (the rest dimmed, their button off). */
+export function aidHtml(way: WayView): string {
+  const rows = (way.aid ?? []).map((a) => {
+    const swap = a.id === 'helmsman' || a.id === 'cook' || a.id === 'surgeon' || a.id === 'carpenter';
+    const key = swap ? 'swap' : a.id;
+    const line = !a.on && a.why ? serverText(a.why)
+      : a.id === 'land' ? L('aid.landT', { n: a.n, head: a.n > 0 ? Math.round(a.gain / a.n) : 0 })
+      : swap ? L('aid.swapT')
+      : L(`aid.${a.id}T` as 'aid.rumT', { n: a.n, g: a.gain });
+    const price = a.on && (a.id === 'land' || a.id === 'cargo') ? `<span class="way-price">+${money(a.gain)}</span>` : '<span></span>';
+    return `<div class="way-row way-aid${a.on ? '' : ' off'}">${icon(AID_ICON[a.id], '', 'way-face')}
+      <div class="way-rt"><b>${esc(L(`aid.${a.id}` as 'aid.land'))}</b><span class="muted">${esc(line)}</span></div>${price}
+      <span class="way-btns"><button class="btn btn-small${a.on ? ' btn-primary' : ''}" data-waid="${a.id}"${a.on ? '' : ' disabled'}>${esc(L(`aid.${key}Btn` as 'aid.landBtn'))}</button></span></div>`;
+  }).join('');
+  if (!rows) return '';
+  return `<h4 class="way-aid-h">${esc(way.rescued > 0 ? L('aid.h', { n: way.rescued }) : L('aid.hNone'))}</h4><div class="way-list way-aids">${rows}</div>`;
 }
 
 /** The boarding result's card: her fallen and the quick «Воскресить» where she stands (the field surgeon's price), or

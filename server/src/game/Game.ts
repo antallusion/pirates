@@ -270,6 +270,9 @@ import {
   QUOTA, abstractEncounters, newBrain, npcHostileTo, npcName, planMerchantVoyage, spawnFisher, spawnGhost, spawnHunter, spawnMerchant, spawnPatrols, spawnPirate, updateNpc,
 } from './npc.ts';
 import type { NpcBrain } from './npc.ts';
+import { rescueView } from './rescue.ts'; // forum post 93
+import { smuggleGate, smugglePass } from './smuggler.ts'; // «Услуга контрабандиста» (forum post 92)
+import { SMUGGLE_SAY } from '../../../shared/src/data/smuggler.ts';
 import { PlayerSession, addXp, canDock, changeRep, newProfile, sanitizeProfile, toPrivateState } from './player.ts';
 import { readyChildren, research, researchNews } from './research.ts';
 import type { Profile, WorldView } from './player.ts';
@@ -4080,7 +4083,7 @@ export class Game {
         this.pushSelf(s, true);
         return;
       case 'dock':
-        return err(this.tryDock(s, !!msg.bribe));
+        return err(this.tryDock(s, !!msg.bribe, !!msg.smuggle));
       case 'jettison':
         return err(this.jettison(s, msg.good, Math.trunc(Number(msg.qty))));
       case 'treasure':
@@ -5193,7 +5196,7 @@ export class Game {
 
   // ================================================================= docking
 
-  private tryDock(s: PlayerSession, bribing = false): string | null {
+  private tryDock(s: PlayerSession, bribing = false, smuggling = false): string | null {
     const ship = s.ship!;
     const p = s.profile!;
     if (ship.docked) return 'Already in port';
@@ -5211,8 +5214,12 @@ export class Game {
     // (forum 34: a harbour that will not take her skulls says so first — under fire or not, she must go elsewhere)
     if (port && dist(port.x, port.y, ship.state.x, ship.state.y) <= PORT_DOCK_RADIUS) {
       const pre = canDock(p, port.faction);
-      if (!pre.ok && !dockOverride(ship, p, port, bribing)) return pre.reason!;
-    }
+      // «Услуга контрабандиста» (forum post 92): a quay shut for her patent or her standing offers the smuggler's boat
+      if (!pre.ok && !dockOverride(ship, p, port, bribing)) {
+        const why = smuggleGate(this, s, port, pre.smuggle, pre.reason!, smuggling);
+        if (why) return why;
+      }
+    } else if (smuggling) return SMUGGLE_SAY.far;
     if (ship.underFire(this.now)) return 'The harbour chain stays up while you are in a fight';
     // Only from the harbour's approach (owner, 2026-10-22: her hull within REACH_DOCK of its anchorage or its quays —
     // shared/src/world/dock.ts); a cable or a mile off, the helmsman takes her in and she puts in there (approach.ts).
@@ -5224,7 +5231,7 @@ export class Game {
     }
     if (ship.state.speed > DOCK_SLOW) return 'Take in sail before entering harbour';
     const ok = canDock(p, port.faction);
-    const override = ok.ok ? null : dockOverride(ship, p, port, bribing);
+    const override = ok.ok ? null : dockOverride(ship, p, port, bribing) ?? (ok.smuggle && smugglePass(this, p, port.id) ? 'smuggler' : null);
     if (!ok.ok && !override) return ok.reason!;
     const lawful = FACTIONS[port.faction].lawful;
     // A bribe instead of a search (and, with Greased Palms, instead of the harbour master's refusal).
@@ -5234,7 +5241,7 @@ export class Game {
       p.gold -= cost;
       this.db.ledger(s.accountId, 'bribe', -cost, port.id);
       this.toastShip(ship, `${cost} silver changes hands. The customs officer admires the sky.`, 'info');
-    } else if (lawful) {
+    } else if (lawful && override !== 'smuggler') {
       const carried = Object.keys(ship.cargo).some((g) => GOODS[g as GoodId].contraband && (ship.cargo[g as GoodId] ?? 0) > 0);
       const seized = customsSearch(this, s, port);
       if (carried && !seized.length) questEvent(this, s, { k: 'customs' });
@@ -5245,6 +5252,7 @@ export class Game {
         this.toastShip(ship, 'The Crown inspector sees your deep pastor and makes a note of it (−10 Crown standing).', 'bad');
       }
     }
+    if (override === 'smuggler' && !smuggling) this.toastShip(ship, SMUGGLE_SAY.again, 'info');
     if (override === 'broker') {
       p.smuggle.brokerPassUsed = true;
       this.toastShip(ship, "The Brokers' forged licence passes. Once.", 'info');
@@ -5394,6 +5402,7 @@ export class Game {
     state.boosts = boostsView(this, s); // forum 45: the effects' row by her portrait
     state.spot = spotOf(this, s); // owner, 2026-11-02: the work at a spot's countdown (spotwork.ts)
     state.boats = boatsView(this, s); // owner, 2026-11-02: «Шлюпы с острова» under way (isleboats.ts)
+    state.rescue = rescueView(this, s); // forum post 93: the rescued aboard (rescue.ts)
     state.advice = captainAdvice(this, s);
     state.isleFirst = isleFirstView(this, s);
     state.noHire = !!s.ship && noHire(s, state.advice?.best); // owner, 2026-10-29: no hint drives her to hire
