@@ -71,9 +71,9 @@ export function taskCardHtml(c: TaskCard): string {
 export function openTaskCard(c: TaskCard, hooks: TaskCardHooks): SheetHandle {
   open?.close('code');
   const sail = !c.done && c.sail;
-  const foot = (sail ? buttonHtml({ kind: 'primary', label: L('sail'), data: { tksail: '1' }, cls: 'tk-sail' }) : '')
-    + buttonHtml({ kind: 'secondary', label: L('close'), data: { tkclose: '1' }, cls: 'tk-close' });
-  const h = openSheet({ title: L(c.kind), body: taskCardHtml(c), foot, height: 'auto', cls: 'tk-sheet', id: 'task-card', passKeys: true, onClose: () => { if (open === h) open = null; } });
+  // (the owner: «кнопки подсвечивай только нужные» — one gold «Плыть», or none; the head's × closes it)
+  const foot = sail ? buttonHtml({ kind: 'primary', label: L('sail'), data: { tksail: '1' }, cls: 'tk-sail' }) : undefined;
+  const h = openSheet({ title: L(c.kind), body: taskCardHtml(c), ...(foot ? { foot } : {}), height: 'auto', cls: 'tk-sheet', id: 'task-card', passKeys: true, onClose: () => { if (open === h) open = null; } });
   open = h;
   h.root.addEventListener('click', (e) => {
     const t = e.target as HTMLElement;

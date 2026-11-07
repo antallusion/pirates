@@ -383,7 +383,6 @@ export class SeasonPass {
       sub: TK(d.period === 'day' ? 'day' : 'week', { t: countdown(ends - this.now()) }),
       progress: { n: Math.min(c.prog, c.need), need: c.need },
       done: c.done,
-      what: name,
       where: T(info.where),
       reward: TK('xp', { n: c.xp }),
       how: T(info.how),

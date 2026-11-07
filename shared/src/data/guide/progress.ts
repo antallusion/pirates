@@ -276,9 +276,83 @@ export const ARTICLES: GuideArticle[] = [
         ],
       },
     ],
-    related: ['prog-contracts', 'prog-shop'],
+    related: ['prog-contracts', 'prog-shop', 'prog-creatures', 'prog-hunts'],
     window: 'pass',
     firstTime: 'season-pass',
+  },
+  {
+    // forum 2026-11-07, Эдуард: «Победите в 3 боях с существами: логова, стаи или дрейфы — что это и где почитать?»
+    id: 'prog-creatures',
+    section: 'progress',
+    title: ['Creature fights: lairs, stacks, drifts', 'Бои с тварями: логова, отряды, дрейфы'],
+    tags: ['lair', 'stack', 'drift', 'creatures', 'challenge', 'логово', 'отряд', 'дрейф', 'твари', 'испытание'],
+    summary: [
+      'Three kinds of creature fights: a lair on an island, a stack roaming the sea, a creature adrift. Each one won counts for the season challenge.',
+      'Три вида боёв с тварями: логово на острове, отряд в море, тварь в дрейфе. Каждый выигранный засчитывается в испытание сезона.',
+    ],
+    slides: [
+      {
+        img: img('prog-creatures', 1),
+        text: [
+          'A lair is a den of creatures on an island: a mark with its name and a word of its strength («A few», «Many»). Come in to its beach and press «Landing»: the boats take your men ashore and the fight goes on the hexes.',
+          'Логово — гнездо тварей на острове: метка с названием и словом силы («Горстка», «Много»). Подойдите к его берегу и нажмите «Высадка»: шлюпки свезут бойцов на берег, и бой пойдёт на гексах.',
+        ],
+      },
+      {
+        img: img('prog-creatures', 2),
+        text: [
+          'A stack of creatures roams the sea between the islands: seals, sharks, crabs and worse. Tap it and «Attack»: the helmsman takes you in and the boats go over by themselves.',
+          'Отряд тварей бродит по морю между островами: тюлени, акулы, крабы и кто похуже. Нажмите на него и «Атаковать» — рулевой подведёт корабль, а шлюпки пойдут сами.',
+        ],
+      },
+      {
+        img: img('prog-creatures', 3),
+        text: [
+          'A drift is a creature on floating wreckage or an ice floe, sighted by your lookout. It waits for you alone a while: rescue it for a gift, or fight it. Every creature fight won, of any level, counts for the season challenge; «Sail» on its card takes you to the nearest one your landing party can beat.',
+          'Дрейф — тварь на плавучих обломках или льдине, её замечает впередсмотрящий. Какое-то время она ждёт только вас: спасите её ради подарка или бейтесь. Каждый выигранный бой с тварями любого уровня идёт в испытание сезона; «Плыть» в его карточке ведёт к ближайшему, который по силам вашему десанту.',
+        ],
+      },
+    ],
+    related: ['exp-lairs', 'prog-pass', 'prog-hunts'],
+    window: 'pass',
+  },
+  {
+    // forum 2026-11-07, Эдуард: «Поучаствуйте в 5 охотах: боссы или события мира — что это?»; «события мира мелькают
+    // вверху экрана, не прочитать»
+    id: 'prog-hunts',
+    section: 'progress',
+    title: ['Hunts and world events', 'Охоты и события мира'],
+    tags: ['hunt', 'boss', 'world event', 'events', 'invasion', 'охота', 'босс', 'событие мира', 'события', 'вторжение'],
+    summary: [
+      'World events come into the chat\'s «Events» tab; a tap on one sails you there. A hunt is any part in a fight with a boss or an event\'s squadron.',
+      'События мира приходят во вкладку «События» в чате; нажмите на строку — и корабль поплывёт туда. Охота — любое участие в бою с боссом или эскадрой события.',
+    ],
+    slides: [
+      {
+        img: img('prog-hunts', 1),
+        text: [
+          'World events come into the chat\'s «Events» tab, not over the sea: a boss rising, a zone boss on the horizon, the Choir\'s invasion, the Armada, a blockade, the silver galleon, a legend adrift. The small red-flag icon by the chart counts the ones not read: tap it and the tab opens. Tap «sail there» on a line and the helmsman marks it and sails; a boss that moves is followed.',
+          'События мира приходят во вкладку «События» в чате, а не поверх моря: поднимается босс, на горизонте босс зоны, вторжение Хора, Армада, блокада, серебряный галеон, легенда в дрейфе. Иконка с красным флажком у карты считает непрочитанные — нажмите на неё, и вкладка откроется. Нажмите «плыть туда» на строке, и рулевой поставит метку и поведёт корабль; за боссом, который движется, он идёт следом.',
+        ],
+      },
+      {
+        img: img('prog-hunts', 3),
+        text: [
+          'A hunt is any part in a fight with a great foe: a hit on a sea boss or a zone boss, a great one ashore beaten, a ship of an event\'s squadron sunk or taken. The season challenge «Take part in N hunts» counts each of them.',
+          'Охота — любое участие в бою с великим противником: попадание по морскому боссу или боссу зоны, побеждённый великан на берегу, потопленный или захваченный корабль эскадры события. Испытание сезона «Поучаствуйте в N охотах» считает каждый такой бой.',
+        ],
+        show: { open: 'pass' },
+      },
+      {
+        img: img('prog-hunts', 4),
+        text: [
+          'Every challenge opens its card on a tap: what counts, where, how it works, and one gold «Sail» to the nearest place for it — a boss or an event up now, a ship to board, a lair.',
+          'Каждое испытание по нажатию открывает карточку: что засчитывается, где и как это делать, и одна золотая кнопка «Плыть» к ближайшему месту — к боссу или событию, которое идёт сейчас, к кораблю для абордажа, к логову.',
+        ],
+      },
+    ],
+    related: ['prog-pass', 'prog-creatures', 'combat-boarding'],
+    window: 'pass',
   },
   {
     id: 'prog-rating',

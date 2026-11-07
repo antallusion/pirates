@@ -678,7 +678,7 @@ export class ChatPanel {
       const go = eventPlace(e);
       const tag = go ? 'button type="button"' : 'div';
       const end = go ? 'button' : 'div';
-      return `<${tag} class="cl cl-ev${go ? ' cl-ev-go' : ''}${e.kind === 'bad' ? ' cl-ev-bad' : ''}" data-evi="${i}"><span class="cl-sys-ico" aria-hidden="true">${icon('map_event', '', 'emo')}</span><span class="cl-ev-body"><time>${this.time(e.at)}</time><span class="cl-text">${esc(e.text)}</span>${go ? `<span class="cl-ev-sail">${icon('stat_sails', '', 'ico-sm')}${esc(L('evSail'))}</span>` : ''}</span></${end}>`;
+      return `<${tag} class="cl cl-ev${go ? ' cl-ev-go' : ''}${e.kind === 'bad' ? ' cl-ev-bad' : ''}" data-evi="${i}"><span class="cl-sys-ico" aria-hidden="true">${icon('map_event', '', 'emo')}</span><span class="cl-ev-body"><time>${this.time(e.at)}</time><span class="cl-text">${esc(e.text)}</span>${go ? `<span class="cl-ev-sail">➜ ${esc(L('evSail'))}</span>` : ''}</span></${end}>`;
     }).join('');
     this.log.scrollTop = this.log.scrollHeight;
   }

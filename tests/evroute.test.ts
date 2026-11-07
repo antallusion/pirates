@@ -41,7 +41,7 @@ test('«hunt»: nothing up — the words say where to learn of one; a world even
   game.worldEvents.fleets.clear();
   const none = resolveGoal(game, s, 'hunt');
   if (!('cands' in none)) assert.deepEqual(none, { none: ROUTE_WORDS.noHunt });
-  const o = game.spawnNpcShip('crown', 'sloop', 'crown', s.ship!.state.x + 900, s.ship!.state.y, 0);
+  const o = game.spawnNpcShip('patrol', 'sloop', 'crown', s.ship!.state.x + 900, s.ship!.state.y, 0);
   game.worldEvents.fleets.set(4242, [o.id]);
   const r = resolveGoal(game, s, 'hunt');
   assert.ok('cands' in r);

@@ -6091,7 +6091,9 @@ html.app-paused *, html.app-paused *::before, html.app-paused *::after { animati
   .tk-row .tk-ico { width: 18px; height: 18px; }
   .tk-sheet .k-sheet-foot { padding-top: 6px; }
   .tk-sheet .k-sheet-foot > .k-btn { min-height: 40px; }
+  .tk-sheet .k-sheet-head { min-height: 32px; }
 }
 #hud-region .rg-now[data-gkey] { pointer-events: auto; cursor: pointer; }
 #hud-region .rg-now[data-gkey]:hover { color: var(--bone, #e8dcc0); }
 .gs-row.gs-tap { cursor: pointer; }
+.tk-sheet .k-sheet-foot { justify-content: center; }
