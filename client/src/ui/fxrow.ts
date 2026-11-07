@@ -348,7 +348,7 @@ export function effectCard(id: string, lines: (mods: StatMods) => string = lines
   const left = f.left !== null ? longLeft(f.left) : L('noTime');
   return {
     name: [name, name], sub: [kind, kind], color: f.bad ? '#e0776b' : '#9fd38a', art: `icon.${f.icon}`,
-    rows: [{ k: [L('left'), L('left')], v: [left, left], icon: 'icon.ui_hourglass', tone: f.bad ? 'down' : 'up' }],
+    rows: f.go ? [] : [{ k: [L('left'), L('left')], v: [left, left], icon: 'icon.ui_hourglass', tone: f.bad ? 'down' : 'up' }],
     notes: [{ t: [text, text] }],
     ...(f.mods && lines(f.mods) ? { extra: `<div class="gear-lines fx-lines">${lines(f.mods)}</div>` } : {}),
     ...(f.go ? { extra: `<div class="dc-src"><button type="button" class="btn btn-small btn-primary" data-dcgo="${esc(f.go.key)}">${icon('menu_ship', '', 'ico-sm')}${esc(f.go.label)}</button></div>` } : {}),
