@@ -30,6 +30,9 @@ export const EN = {
   // (the campaign's fight's waters and a castaway were left in the server's English: «к цели: campaign», 2026-10-19)
   'place.campaign': 'the fight’s waters',
   'place.castaway': 'castaways',
+  'place.drift': 'a creature adrift',
+  'place.lair': 'a lair',
+  'ships.event': 'the world event’s ships',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -60,4 +63,7 @@ export const RU: Record<keyof typeof EN, string> = {
   'place.stack': 'отряд тварей',
   'place.campaign': 'воды боя',
   'place.castaway': 'потерпевшие крушение',
+  'place.drift': 'тварь в дрейфе',
+  'place.lair': 'логово',
+  'ships.event': 'корабли события',
 };

@@ -261,3 +261,8 @@ body.simple #hud #touch > #tc-pass .k-btn-ico { inset: 19.8% 22% 24.2%; }
   .sp-pic { width: 26px; height: 26px; }
   .sp-ico { width: 24px; height: 24px; }
 }
+
+/* A trial opens its card (taskcard.ts, forum 2026-11-07): the row is the button, no gold of its own. */
+.sp-ch li[data-spch] { cursor: pointer; border-radius: 6px; }
+.sp-ch li[data-spch]:hover, .sp-ch li[data-spch]:focus-visible { background: rgba(212, 175, 95, 0.08); outline: none; }
+.sp-ch li[data-spch] .sp-ch-t::after { content: ' ›'; color: var(--k-brass-dim, #7a6a48); }

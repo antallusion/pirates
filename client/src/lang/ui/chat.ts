@@ -2,6 +2,12 @@
 
 export const EN = {
   ch_world: 'World',
+  ch_events: 'Events',
+  ph_events: 'The sea’s events: tap one to sail there',
+  noEvents: 'No world events yet. They come here as they happen: tap a line and the helmsman sails there.',
+  evSail: 'sail there',
+  evOpen: 'World events',
+  evNew: '{n} new world events',
   ch_local: 'Nearby',
   ch_group: 'Group',
   ch_guild: 'Guild',
@@ -49,6 +55,12 @@ export const EN = {
 
 export const RU: Record<keyof typeof EN, string> = {
   ch_world: 'Мир',
+  ch_events: 'События',
+  ph_events: 'События моря: нажмите — и плывите туда',
+  noEvents: 'Событий мира пока нет. Они появляются здесь, как только случаются: нажмите на строку — и рулевой поведёт корабль туда.',
+  evSail: 'плыть туда',
+  evOpen: 'События мира',
+  evNew: 'Новых событий мира: {n}',
   ch_local: 'Рядом',
   ch_group: 'Группа',
   ch_guild: 'Гильдия',

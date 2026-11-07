@@ -134,7 +134,10 @@ import { castawayNotes, setFxLines } from './ui/fxrow.ts'; // forum 45: the effe
 import { modLinesHtml } from './ui/gear.ts';
 import { SKILL_IDS, SeaAbil, abilWhy, skillWord } from './ui/seaabil.ts'; // the captain's abilities on a phone: «Приёмы» and its row (owner, 2026-10-26)
 import type { AbilView } from './ui/seaabil.ts';
-import { goalCount, goalSheetView } from './ui/goalsheet.ts'; // «Цели и вести»: the campaign, the quests taken, the orders
+import { goalCard, goalCount, goalLineOf, goalSheetView } from './ui/goalsheet.ts';
+import { openTaskCard } from './ui/taskcard.ts'; // forum 2026-11-07: a goal's card, a season trial's
+import { EN as TK_EN, RU as TK_RU } from './lang/ui/taskcard.ts';
+import { EN as CH_EN, RU as CH_RU } from './lang/ui/chat.ts'; // «Цели и вести»: the campaign, the quests taken, the orders
 import { attackKind, buildCursors, cursorUrl } from './ui/cursor.ts'; // the attack cursor (owner, 2026-10-07)
 import type { AttackKind } from './ui/cursor.ts';
 import { TargetMenu } from './ui/targetmenu.ts'; // «Захват цели», «Преследовать», «Бой» beside a target
@@ -172,7 +175,7 @@ import { actionFor, applyToDocument, keyLabel, keyOf, onSettings, settings, upda
 import { BTN, dead, HOLD, padAimPoint, PadInput, radialSector, rumble } from './gamepad.ts';
 import type { PadEvent } from './gamepad.ts';
 import type { Action, Settings } from './settings.ts';
-import { dict, lang, onLang, plural, setLang, t, translateDom } from './i18n.ts';
+import { dict, has, lang, onLang, plural, setLang, t, translateDom } from './i18n.ts';
 import { searchChip, searchChipHtml, searchMemo, searchStep } from './ui/tmsearch.ts';
 import { EN as TMS_EN, RU as TMS_RU } from './lang/ui/maps.ts';
 import { EN as HUD_EN, RU as HUD_RU } from './lang/ui/hud.ts';
@@ -684,17 +687,6 @@ heroWindow.onTalents = () => openModal('talents');
 heroWindow.onWardrobe = () => openWardrobe(); // docs/32 §12
 // docs/23 item 70: the level's «pick one of two» comes up by itself when a level comes — not over a window, a fight
 // or a battle (it waits for them to end); levels that waited before she came aboard stay in the Hero tab.
-/** The far seas' news on a novice's screen: her own sea's always, the rest once in WORLD_FEED_GAP ms (docs/30). */
-const WORLD_FEED_LEVEL = 15, WORLD_FEED_GAP = 180_000;
-let worldFeedAt = -Infinity;
-function worldFeedShown(msg: string, region: string | null | undefined, level: number, now: number): boolean {
-  const name = region ? REGIONS[region as keyof typeof REGIONS]?.name : undefined;
-  if (name && msg.includes(name)) return true;
-  if (level >= WORLD_FEED_LEVEL) return true;
-  if (now - worldFeedAt < WORLD_FEED_GAP) return false;
-  worldFeedAt = now;
-  return true;
-}
 let heroSeen = -1;
 /** The helmsman has her on a run (a goal, «Атаковать», a stack's attack): a card that would cover the bar waits. */
 function underWay(): boolean {
@@ -897,7 +889,7 @@ const dailyGift = new DailyGift({ send: (m) => net.send(m), on: (f) => net.on(f)
 initTgNotices((m) => net.send(m), (f) => net.on(f));
 initPromoCode((m) => net.send(m), (f) => net.on(f)); // «Настройки → Промокод» (owner, 2026-11-02)
 // «Сезонная карта» (owner, 2026-10-30): its window, its button in the «⋯» tray with the rewards ready
-const seasonPass = new SeasonPass({ send: (m) => net.send(m), on: (f) => net.on(f), state, toast: (msg, kind) => hud.toast(msg, kind), modal: () => modal });
+const seasonPass = new SeasonPass({ send: (m) => net.send(m), on: (f) => net.on(f), state, toast: (msg, kind) => hud.toast(msg, kind), modal: () => modal, goal: (key) => startGoal(key), guide: (id) => guide.openArticle(id) });
 const promos = new Promos({ send: (m) => net.send(m), on: (f) => net.on(f), state, modal: () => modal, busy: () => hostileNear() || !!state.boardTac || !!state.boardFight || openingFrame() !== null, held: () => dailyGift.holding() });
 const puzzleWindow = new PuzzleWindow((m) => net.send(m));
 function openPuzzle(): void {
@@ -1200,6 +1192,30 @@ function startGoal(key: string, quiet = false): void {
   if (modal && !ANSWER.includes(modal)) closeModal();
   net.send({ t: 'goto', key });
 }
+const TKW = dict(TK_EN, TK_RU);
+const CHW = dict(CH_EN, CH_RU);
+/** A goal's card (forum 2026-11-07; the owner: «при нажатии на задания надо модалку открывать где все написано и может
+ *  даже автодобраться»): a quest's, a contract's, an order's or a captain's goal — what, where, how far, the pay, how it
+ *  works, its book's article and «Плыть» (startGoal). `close` shuts the sheet it was tapped in when she sails. False:
+ *  no such goal now (the caller runs to it as before). */
+function goalCardOpen(key: string, close?: () => void): boolean {
+  const hooks = { guide: (id: string) => guide.openArticle(id) };
+  const sail = () => {
+    close?.();
+    startGoal(key);
+  };
+  if (key.startsWith('g:')) {
+    const k = `goal.${key.slice(2)}` as Key;
+    if (!has(k)) return false;
+    openTaskCard({ kind: 'goal', name: t(k), what: t(k), how: TKW('how.goal'), guide: 'prog-levels', sail }, hooks);
+    return true;
+  }
+  const v = goalSheetView(state.self ? { ...state.self, nearIsle: isleNear() } : state.self);
+  const line = goalLineOf(v, key);
+  if (!line) return false;
+  openTaskCard(goalCard(line, (id) => placeName(state.ports.find((p) => p.id === id)?.name ?? id), line.here ? undefined : sail), hooks);
+  return true;
+}
 /** A tap on the beacon: the run to the goal it shows (a quest, a contract's port), else a plain course to it. */
 function tapGoal(px?: number, py?: number): void {
   // a treasure's scroll on the water (forum post 34): the run to it, and the boats dig
@@ -1374,6 +1390,7 @@ const seaHud = new SeaHud($('touch'), {
     here: (id) => net.send({ t: 'quest', action: 'here', id }), // owner, 2026-10-23: «Расспросить» and the rest, in port
     tab: (tab) => journal.onPortTab(tab),
     isle: () => openBase(), // mid-game QA 2026-10-23: «Заложите постройки» at her island — «Строить», not «Плыть»
+    card: (key, close) => goalCardOpen(key, close),
   },
   fire: () => seaFire(),
   fireOptions: () => fireWheel(),
@@ -1934,7 +1951,8 @@ onboarding.onLesson = (id) => {
     net.send({ t: 'onboarding', action: 'lesson_do' });
   }
 };
-onboarding.onGoal = (key) => startGoal(key); // route: a captain's goal — its nearest place
+onboarding.onGoal = (key) => { if (!goalCardOpen(key)) startGoal(key); };
+hud.onNowTap = (key) => { if (!goalCardOpen(key)) startGoal(key); }; // «Сейчас:» — its goal's card (forum 2026-11-07) // route: a captain's goal — its card, its «Плыть» the nearest place
 // Options: applied now and on every change (docs/07 §11).
 let lastZoomKey = '';
 function applySettings(o: Settings): void {
@@ -2790,13 +2808,15 @@ function onMessage(m: ServerMsg): void {
       // A refusal is told once (owner, 2026-10-07: «идут ошибки вечные»): the same words again soon after, not asked for by
       // a press of hers just now, are not shown again (the band counted them up ×N for as long as they came).
       if (m.kind === 'bad' && refusalAgain(m.msg)) break;
-      // World news goes to the feed (owner, 2026-09-29: the sea's news in a corner), the rest to the toasts.
-      if (m.msg.startsWith('WORLD: ')) {
-        // docs/30: a captain under 15 sees on the screen only her own sea's news, and the far seas' once in three minutes
-        // (a boss «in Dead Man's Expanse», a legend «in the Ashen Isles» came every half minute to a novice of the Black
-        // Coast); all of it stays in the chat's world tab.
-        if (worldFeedShown(m.msg, state.region, state.self?.level ?? 1, performance.now())) hud.feed(serverText(m.msg));
-        hud.chatPanel.system(serverText(m.msg)); // docs/28: the sea's news in the chat's world tab too
+      // World news (forum 2026-11-07, Эдуард: «события мира, которые мелькают в верхней части экрана, не то что прочитать,
+      // разглядеть не всегда удаётся»; the owner: «события мира можно выводить в окне чата в какой-нибудь вкладке … а в
+      // интерфейсе все события помечать просто иконкой»): into the chat's «События» tab — a tap on a line with a place
+      // sails her there — and the HUD's events icon counts them; nothing flashes over the sea any more. The alarms aimed
+      // at her (a pirate coming, a refusal) stay toasts.
+      if (m.msg.startsWith('WORLD: ') || m.ev) {
+        hud.chatPanel.event(serverText(m.msg).replace(/^(?:Вести|WORLD):\s*/, ''), m.ev, m.kind);
+        cue('notice');
+        break;
       }
       // While her men fight on a deck the sea's news (a fever, a tip) waits for the deck to clear. A refusal and a win
       // are told at once, in the battle's top band (docs/23 item 93: «Не ваш ход», a cut that failed, a ransom she cannot
@@ -3502,7 +3522,36 @@ hud.chatPanel.hooks = {
   befriend: (name) => net.send({ t: 'friend', action: 'add', name }),
   block: (name, on) => net.send({ t: 'friend', action: on ? 'ignore' : 'unignore', name }),
   toast: (text) => hud.toast(text, 'info'),
+  // a world event's line tapped (forum 2026-11-07): the mark there and the helmsman's course — a boss that moves by
+  // its route key (startGoal follows her), a place by its point; in port she casts off
+  sail: (ev) => {
+    if (!inGame) return;
+    if (touch.enabled) hud.chatPanel.close();
+    if (ev.goal) return startGoal(ev.goal);
+    if (ev.x === undefined || ev.y === undefined) return;
+    sailToSpot({ x: ev.x, y: ev.y }, 300);
+    if (state.self?.dockedAt) net.send({ t: 'undock' });
+  },
 };
+// The HUD's events icon (forum 2026-11-07): world events not yet read on it; a tap opens the chat on «События».
+{
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.id = 'ev-toggle';
+  btn.className = 'ev-toggle hidden';
+  const draw = (unread: number, total: number) => {
+    btn.innerHTML = `${icon('map_event', '!', 'ico')}${unread ? `<b class="ev-unread${unread > 9 ? ' wide' : ''}">${unread > 99 ? '99+' : unread}</b>` : ''}`;
+    btn.classList.toggle('hidden', total === 0);
+    btn.classList.toggle('has-unread', unread > 0);
+    const words = unread ? CHW('evNew', { n: unread }) : CHW('evOpen');
+    btn.setAttribute('aria-label', words);
+    btn.title = words;
+  };
+  btn.addEventListener('click', () => hud.chatPanel.openEvents());
+  document.getElementById('hud-chat')?.append(btn);
+  hud.chatPanel.onEvents = draw;
+  onLang(() => draw(hud.chatPanel.eventsUnread, hud.chatPanel.eventsCount));
+}
 // ---- (docs/28 ends)
 // (with a mark on a touch screen the chart came down by her tap on its tab: a tap again puts it back up — seahud.ts)
 $('hud-map').onclick = () => {

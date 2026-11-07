@@ -24,4 +24,13 @@ export const SERVER_RU_ROUTE: Record<string, string> = {
   'Come alongside and board her.': 'Подойдите борт к борту и берите на абордаж.',
   'Board a merchant and let her go: her share of the purse is the tribute.': 'Возьмите купца на абордаж и отпустите — доля его кошелька и есть дань.',
   'Close in and harpoon it.': 'Подойдите ближе и бейте гарпуном.',
+  "The lair's beach: send the boats ashore with the button over the island.": 'Берег у логова: отправьте шлюпки на остров кнопкой над ним.',
+  'A stack of creatures: tap it and «Attack», the boats go over.': 'Отряд тварей: нажмите на него и «Атаковать» — шлюпки пойдут сами.',
+  'A creature adrift: tap the drift, then fight it or rescue it.': 'Тварь в дрейфе: нажмите на неё — бейтесь или спасайте.',
+  'The hunt: any part in the fight counts, a broadside or a boarding.': 'Охота: засчитывается любое участие — залп или абордаж.',
+  'A great one ashore: send the boats to the beach.': 'Великан на берегу: отправьте шлюпки к пляжу.',
+  "The port's board: commissions and contracts.": 'Доска порта: поручения и контракты.',
+  'No creatures to fight near you now: sail on, a lair, a stack or a drift turns up on the way.': 'Рядом сейчас нет тварей для боя: плывите дальше — логово, отряд или дрейф встретятся по пути.',
+  'No boss and no world event on the sea now: the Events tab of the chat tells when one rises.': 'Сейчас в море нет ни босса, ни события мира: о новых скажет вкладка «События» в чате.',
+  'No treasure map in your chest: maps come from wrecks, bottles, lairs and the tavern.': 'В сундуке нет карты клада: карты дают обломки, бутылки, логова и таверна.',
 };

@@ -50,7 +50,7 @@ import type { ShipEntity } from './ship.ts';
 import { worldGoals } from './worldgoals.ts';
 import { campaignFoes } from './campaign.ts'; // docs/36
 import { ownIsland } from './estate.ts';
-import { roamFighter, roamUp, roamWhere, roamersAbout } from './roamers.ts';
+import { roamFighter, roamRatio, roamUp, roamWhere, roamersAbout } from './roamers.ts';
 import { castawaysOf } from './castaways.ts';
 import { liveNamed } from './wanted.ts';
 import { activeTasks } from './worldtasks.ts';
@@ -58,6 +58,11 @@ import { ensureDailyQuarry, ensureQuarry, localHomeOf, nearHome } from './questl
 import type { Home } from './questlocal.ts';
 import { openSea } from './wrecks.ts';
 import { voyaging } from './passage.ts';
+import { lairBeach, lairList, lairRatio, lairUp, lairsOf } from './beastlairs.ts';
+import { driftList } from './drifts.ts';
+import { shoreRisings } from './shorebosses.ts';
+import { passState } from './seasonpass.ts';
+import { challengeOf } from '../../../shared/src/data/seasonpass.ts';
 
 /** The live ships of a goal looked for within this of her (her lookout's reach on a clear day, about). */
 export const ROUTE_VIEW = 6000;
@@ -104,6 +109,9 @@ export const ROUTE_WORDS = {
   castOff: 'She casts off: the helmsman takes her there.',
   here: 'You are there already: it is done in this port.',
   again: 'You are in that port already: cast off and put in again to make the step.',
+  noCreatures: 'No creatures to fight near you now: sail on, a lair, a stack or a drift turns up on the way.',
+  noHunt: 'No boss and no world event on the sea now: the Events tab of the chat tells when one rises.',
+  noMap: 'No treasure map in your chest: maps come from wrecks, bottles, lairs and the tavern.',
 } as const;
 
 /** The trades' lines shown on arrival (English; translated on the client). */
@@ -119,6 +127,12 @@ export const ROUTE_HINTS = {
   board: 'Come alongside and board her.',
   tribute: 'Board a merchant and let her go: her share of the purse is the tribute.',
   beast: 'Close in and harpoon it.',
+  lair: "The lair's beach: send the boats ashore with the button over the island.",
+  stack: 'A stack of creatures: tap it and «Attack», the boats go over.',
+  drift: 'A creature adrift: tap the drift, then fight it or rescue it.',
+  hunt: 'The hunt: any part in the fight counts, a broadside or a boarding.',
+  shore: 'A great one ashore: send the boats to the beach.',
+  board_port: "The port's board: commissions and contracts.",
 } as const;
 
 /** A place the goal can be worked at. `w` weighs its distance (a second choice: above 1). */
@@ -761,8 +775,90 @@ function bossPlaces(game: Game, region?: RegionId): Resolved {
   return { none: ROUTE_WORDS.none };
 }
 
+/** Within this of her the creatures' places are weighed by her party's might against theirs (farther: by the water
+ *  alone — the sea's lairs are hundreds). */
+const CREATURE_LOOK = 15_000;
+
+/** A fight with the sea's creatures (forum 2026-11-07, Эдуард: «логова, стаи или дрейфы — что это?»): a lair ashore
+ *  (its beach: the boats go from there), a roaming stack of creatures at sea, a drift of hers (a creature on the
+ *  wreckage). The ones her landing party can beat first; a lair she has not seen yet a little behind the known. */
+function creatures(game: Game, s: PlayerSession): Cand[] {
+  const here = hereOf(game, s);
+  if (!here) return [];
+  const out: Cand[] = [];
+  const weigh = (ratio: number) => (ratio >= 1 ? 1 : ratio >= 0.6 ? 1.6 : 4);
+  const seen = new Set(lairsOf(s.profile!).seen);
+  for (const l of lairList(game)) {
+    if (!lairUp(game, l)) continue;
+    const b = lairBeach(game, l);
+    const d = Math.hypot(b.x - here.x, b.y - here.y);
+    const w = (d <= CREATURE_LOOK && s.ship ? weigh(lairRatio(game, s, l)) : 1.3) * (seen.has(l.id) ? 1 : 1.2);
+    const isl = game.world.islands[l.island];
+    out.push({ x: b.x, y: b.y, r: 90, kind: 'lair', name: isl?.name ?? 'lair', ...(isl ? { island: isl.id } : {}), hint: ROUTE_HINTS.lair, w });
+  }
+  for (const sp of roamersAbout(game, here.x, here.y, CREATURE_LOOK)) {
+    if (roamFighter(game, sp.id) !== null) continue;
+    const at = roamWhere(game, sp);
+    out.push({ x: at.x, y: at.y, r: 60, kind: 'place', name: 'stack', hint: ROUTE_HINTS.stack, w: s.ship ? weigh(roamRatio(game, s, sp)) : 1 });
+  }
+  for (const d of driftList(game)) {
+    if (d.taken !== undefined || (d.owner !== s.accountId && d.owner !== -1)) continue;
+    out.push({ x: d.x, y: d.y, r: 80, kind: 'place', name: 'drift', hint: ROUTE_HINTS.drift, w: 0.8 });
+  }
+  return out;
+}
+
+/** A hunt (the season's «охоты»): a boss at sea or a zone's, a great one ashore, a world event's squadron (an armada, a
+ *  blockade, the silver galleon, the Brethren, the White Orca …), the Choir's invasion. */
+function hunts(game: Game): Cand[] {
+  const out: Cand[] = [];
+  const bp = bossPlaces(game);
+  if ('cands' in bp) out.push(...bp.cands.map((c) => ({ ...c, hint: ROUTE_HINTS.hunt })));
+  for (const r of shoreRisings(game)) {
+    const is = game.world.islands[r.island];
+    const at = is ? landingPoint(is.poly, r.x, r.y) : r;
+    out.push({ x: at.x, y: at.y, r: 120, kind: 'boss', name: is?.name ?? 'place', ...(is ? { island: is.id } : {}), hint: ROUTE_HINTS.shore });
+  }
+  for (const ids of game.worldEvents.fleets.values()) {
+    for (const id of ids) {
+      const o = game.ships.get(id);
+      if (o?.alive && !o.surrendered && o.ownerId === null) out.push({ x: o.state.x, y: o.state.y, r: 300, kind: 'ships', name: 'event', ship: o.id, hint: ROUTE_HINTS.hunt });
+    }
+  }
+  out.push(...choirEvents(game));
+  return out;
+}
+
+/** A season challenge (client/src/ui/seasonpass.ts, «Плыть» on its card): the places its count is made at; met, done. */
+function challengePlaces(game: Game, s: PlayerSession, id: string): Resolved {
+  const c = challengeOf(id);
+  if (!c) return { none: ROUTE_WORDS.unknown };
+  const st = passState(game, s.accountId);
+  for (const set of [st.dch, st.wch]) {
+    const i = set?.ids.indexOf(id) ?? -1;
+    if (set && i >= 0 && set.done[i]) return { done: true };
+  }
+  const src = c.src;
+  if (src.includes('board')) return { cands: [...hunt(game, s, 'pirates'), ...liveShips(game, s, 'merchants').map((x) => ({ ...x, w: 1.4, hint: ROUTE_HINTS.board }))] };
+  if (src.includes('lair')) {
+    const cands = creatures(game, s);
+    return cands.length ? { cands } : { none: ROUTE_WORDS.noCreatures };
+  }
+  if (src.includes('boss')) {
+    const cands = hunts(game);
+    return cands.length ? { cands } : { none: ROUTE_WORDS.noHunt };
+  }
+  if (src.includes('isle')) return resolveGoal(game, s, 'own');
+  if (src.includes('treasure')) {
+    const m = s.profile!.explore.maps[0];
+    return m ? resolveGoal(game, s, `tm:${m.id}`) : { none: ROUTE_WORDS.noMap };
+  }
+  if (src.includes('contract') || src.includes('quest')) return { cands: game.world.ports.filter((pt) => !pt.raft).map((pt) => ({ ...portCand(pt), hint: ROUTE_HINTS.board_port })) };
+  return { none: ROUTE_WORDS.noPlace };
+}
+
 /** Every key a goal is routed by (the client builds them; anything else is refused). */
-export const GOAL_KEYS = ['q', 'c', 't', 'd', 'w', 'r', 'cm', 'inv', 'g', 'f', 'b', 'zb', 'boss', 'dv', 'sg', 'tm'] as const;
+export const GOAL_KEYS = ['q', 'c', 't', 'd', 'w', 'r', 'cm', 'inv', 'g', 'f', 'b', 'zb', 'boss', 'dv', 'sg', 'tm', 'ch', 'cr', 'hunt'] as const;
 
 /** The places a goal's key names now. */
 export function resolveGoal(game: Game, s: PlayerSession, key: string): Resolved {
@@ -810,6 +906,16 @@ export function resolveGoal(game: Game, s: PlayerSession, key: string): Resolved
       return bossPlaces(game, REGION_IDS.includes(id as RegionId) ? (id as RegionId) : undefined);
     case 'boss':
       return bossPlaces(game);
+    case 'ch':
+      return challengePlaces(game, s, id);
+    case 'cr': {
+      const cands = creatures(game, s);
+      return cands.length ? { cands } : { none: ROUTE_WORDS.noCreatures };
+    }
+    case 'hunt': {
+      const cands = hunts(game);
+      return cands.length ? { cands } : { none: ROUTE_WORDS.noHunt };
+    }
     case 'sg': {
       // «Где взять» (owner, 2026-10-30): the nearest harbour whose market sells a good (the tooltip's «Плыть»)
       const good = id as GoodId;

@@ -58,11 +58,11 @@ function linkify(s: string): string {
 }
 
 /** The tabs: the world, the ships nearby, the group, the guild, private words. */
-export type ChatTab = 'world' | 'local' | 'group' | 'guild' | 'dm';
-export const CHAT_TABS: ChatTab[] = ['world', 'local', 'group', 'guild', 'dm'];
+export type ChatTab = 'world' | 'events' | 'local' | 'group' | 'guild' | 'dm';
+export const CHAT_TABS: ChatTab[] = ['world', 'events', 'local', 'group', 'guild', 'dm'];
 /** (the older name the HUD still exports) */
 export type ChatChannel = ChatTab;
-const TAB_ART: Record<ChatTab, string> = { world: 'menu_chat', local: 'map_ship', group: 'tab_group', guild: 'tab_guild', dm: 'tab_letters' };
+const TAB_ART: Record<ChatTab, string> = { world: 'menu_chat', events: 'map_event', local: 'map_ship', group: 'tab_group', guild: 'tab_guild', dm: 'tab_letters' };
 const GROUP_ART: Record<EmoteGroup, string> = { mood: 'icon.tattoo_heart', sea: 'icon.anchor', battle: 'icon.gun_long_9', loot: 'icon.coin' };
 
 /** What a speaker is to the reader, for the colour of the name. */
@@ -95,8 +95,35 @@ const REL_COLOR: Record<ChatRel, string> = {
   crown: FACTIONS.crown.lantern, free: '#e0776b', other: '#d8cdb4',
 };
 
+/** A world event in the «События» tab (forum 2026-11-07: «события мира … не то что прочитать, разглядеть не всегда
+ *  удаётся»; the owner: «события мира можно выводить в окне чата в какой-нибудь вкладке и нажимая на это событие
+ *  корабль ставит точку и начинает к нему плыть»): its words, when, and where — a point or a goal's route key. */
+export interface EventLine {
+  text: string;
+  at: number;
+  kind?: string;
+  ev?: { x?: number; y?: number; goal?: string };
+}
+
+/** The «События» tab keeps this many and this long (the chat's own window). */
+export const EVENTS_KEEP = 40;
+export const EVENTS_MS = 8 * 3600_000;
+
+/** The events kept: the newest last, at most EVENTS_KEEP, none older than EVENTS_MS, the same words within a minute
+ *  once (pure: the tests). */
+export function keepEvents(list: EventLine[], add: EventLine | null, now: number): EventLine[] {
+  const out = list.filter((x) => now - x.at < EVENTS_MS);
+  if (add && !out.some((x) => x.text === add.text && add.at - x.at < 60_000)) out.push(add);
+  return out.length > EVENTS_KEEP ? out.slice(out.length - EVENTS_KEEP) : out;
+}
+
+/** Whether a line can be sailed to. */
+export const eventPlace = (e: EventLine): boolean => !!e.ev && (!!e.ev.goal || (e.ev.x !== undefined && e.ev.y !== undefined));
+
 /** What the chat asks of the game. */
 export interface ChatHooks {
+  /** A world event's line tapped: the mark and the run there (main.ts sailToSpot / startGoal). */
+  sail?: (ev: NonNullable<EventLine['ev']>) => void;
   send: (m: ClientMsg) => void;
   invite: (name: string) => void;
   befriend: (name: string) => void;
@@ -150,6 +177,11 @@ export class ChatPanel {
   private muted = new Set<string>();
   private toastTimer = 0;
   private lastSys = new Map<string, number>();
+  /** The «События» tab's lines and how many came since she last looked at it. */
+  private events: EventLine[] = [];
+  private evUnread = 0;
+  /** The count of world events not yet seen changed (the HUD's events icon, main.ts). */
+  onEvents: (unread: number, total: number) => void = () => {};
   /** Who the reader is and who is near to her (set by the shell). */
   context: () => ChatContext = () => ({ self: null, group: [], guild: [], friends: [] });
   hooks: ChatHooks = { send: () => {}, invite: () => {}, befriend: () => {}, block: () => {}, toast: () => {} };
@@ -195,7 +227,12 @@ export class ChatPanel {
       const nick = el.closest<HTMLElement>('[data-nick]')?.dataset.nick;
       if (nick) return this.openCard(nick);
       const th = el.closest<HTMLElement>('[data-peer]')?.dataset.peer;
-      if (th) this.openPeer(th);
+      if (th) return this.openPeer(th);
+      const ev = el.closest<HTMLElement>('[data-evi]')?.dataset.evi;
+      if (ev !== undefined) {
+        const e = this.events[Number(ev)];
+        if (e?.ev && eventPlace(e)) this.hooks.sail?.(e.ev);
+      }
     });
     this.peersBar.addEventListener('click', (e) => {
       const el = e.target as HTMLElement;
@@ -375,6 +412,42 @@ export class ChatPanel {
     if (this.visible('world')) this.append(m);
   }
 
+  /** A world event (main.ts: the server's «WORLD: …» and the news with a place): into the «События» tab, counted on the
+   *  HUD's events icon until she looks — never flashed over the sea. */
+  event(text: string, ev?: EventLine['ev'], kind?: string): void {
+    const now = Date.now();
+    const before = this.events.length;
+    const last = this.events.at(-1);
+    this.events = keepEvents(this.events, { text, at: now, ...(kind ? { kind } : {}), ...(ev ? { ev } : {}) }, now);
+    const added = this.events.length > before || (this.events.at(-1) !== last && this.events.at(-1)?.text === text);
+    if (!added) return;
+    if (this.visible('events')) {
+      this.render();
+    } else {
+      this.evUnread++;
+      this.unread.set('events', this.evUnread);
+      this.tabs();
+    }
+    this.onEvents(this.evUnread, this.events.length);
+  }
+
+  /** The chat open on the «События» tab (the HUD's events icon). */
+  openEvents(): void {
+    if (!this.isOpen) this.open(false);
+    this.pick('events');
+    this.seen();
+    this.render();
+  }
+
+  /** World events not yet seen, and all kept. */
+  get eventsUnread(): number {
+    return this.evUnread;
+  }
+
+  get eventsCount(): number {
+    return this.events.length;
+  }
+
   /** Into the store: false for a line already there (by its id) or one hidden. */
   private take(m: ChatLine, live: boolean): boolean {
     if (m.id) {
@@ -485,6 +558,10 @@ export class ChatPanel {
         else this.unread.delete('dm');
       }
     } else this.unread.delete(this.tab);
+    if (this.tab === 'events' && this.evUnread) {
+      this.evUnread = 0;
+      this.onEvents(0, this.events.length);
+    }
     this.tabs();
     this.drawBadge();
   }
@@ -542,6 +619,7 @@ export class ChatPanel {
   private render(): void {
     this.drawPeersBar();
     if (this.tab === 'dm' && !this.peer) return this.drawThreads();
+    if (this.tab === 'events') return this.drawEvents();
     const k = this.tab === 'dm' ? `dm:${this.peer}` : this.tab;
     const list = (this.lines.get(k) ?? []).filter((m) => !this.hidden(m));
     this.log.innerHTML = list.length ? list.map((m) => this.lineHtml(m)).join('') : `<p class="cl-empty">${esc(L('noLines'))}</p>`;
@@ -585,6 +663,24 @@ export class ChatPanel {
     const lv = m.lv ? `<span class="cl-lv">${esc(L('lv', { n: m.lv }))}</span>` : '';
     const to = m.ch === 'whisper' && m.to ? `<span class="cl-to">${esc(L('to', { name: m.to }))}</span>` : '';
     return `<div class="cl${m.ch ? ` chat-${m.ch}` : ''}${own ? ' cl-own' : ''}">${faceEl}<div class="cl-body"><div class="cl-head"><b class="cl-name"${nick} style="color:${REL_COLOR[rel]}">${esc(name)}</b>${tag}${lv}${to}<time>${this.time(m.at)}</time></div><div class="cl-text">${m.card ? sagaCardHtml(m.card) : m.emo ? `<span class="cl-cosemo">${icon(`cos.emote_${m.emo}`, '☺', 'cl-cosemo-i')}<small>${esc(emoteName(m.emo))}</small></span>` : chatBody(m.text)}</div></div></div>`;
+  }
+
+  /** The «События» tab: each event with its time and a «плыть туда» on the ones that have a place (a tap on the line
+   *  sails there); the newest at the bottom, as the chat's own lines. */
+  private drawEvents(): void {
+    const prune = keepEvents(this.events, null, Date.now());
+    if (prune.length !== this.events.length) this.events = prune;
+    if (!this.events.length) {
+      this.log.innerHTML = `<p class="cl-empty">${esc(L('noEvents'))}</p>`;
+      return;
+    }
+    this.log.innerHTML = this.events.map((e, i) => {
+      const go = eventPlace(e);
+      const tag = go ? 'button type="button"' : 'div';
+      const end = go ? 'button' : 'div';
+      return `<${tag} class="cl cl-ev${go ? ' cl-ev-go' : ''}${e.kind === 'bad' ? ' cl-ev-bad' : ''}" data-evi="${i}"><span class="cl-sys-ico" aria-hidden="true">${icon('map_event', '', 'emo')}</span><span class="cl-ev-body"><time>${this.time(e.at)}</time><span class="cl-text">${esc(e.text)}</span>${go ? `<span class="cl-ev-sail">➜ ${esc(L('evSail'))}</span>` : ''}</span></${end}>`;
+    }).join('');
+    this.log.scrollTop = this.log.scrollHeight;
   }
 
   /** The private tab without a conversation open: the conversations, the newest first. */
@@ -796,7 +892,7 @@ export class ChatPanel {
       m = { t: 'chat', text: said, ch: 'dm', to: this.peers.get(this.peer)?.name ?? this.peer };
     } else if (this.tab === 'group' && c.group.length < 2) return;
     else if (this.tab === 'guild' && !c.guild.length) return;
-    else m = { t: 'chat', text: said, ch: this.tab };
+    else m = { t: 'chat', text: said, ch: this.tab === 'events' ? 'world' : this.tab };
     this.hooks.send(m);
     this.input.value = '';
     this.suggest.classList.add('hidden');

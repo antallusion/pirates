@@ -30,6 +30,7 @@ import { closeTac, resendAlly, sendTac, startTactical, stepTactical, wantsTactic
 import { truceBoarded } from './ceasefire.ts';
 import { releaseAllies, sharesByAcc } from './boardgroup.ts'; // docs/25 block Е
 import { guardBeaten } from './advmap.ts';
+import { seasonCount } from './seasonpass.ts';
 import { isTrialShip, trialOver } from './throne.ts'; // docs/19 E3
 import { raidOver } from './abyssraid.ts'; // docs/19 E11
 import { assaultOver } from './citadels.ts'; // docs/19 E5
@@ -752,6 +753,14 @@ function finishBoarding(game: Game, a: ShipEntity, b: ShipEntity, attackerWins: 
   const fight = bs.fight;
   // docs/25 item 67: a group's raid and siege count each captain's share of the cut.
   const cutBy = fight.tac?.allies?.length ? sharesByAcc(game, fight, a, b, 0) : undefined;
+  // «Сезонная карта» (forum 2026-11-07, Эдуард): every boarding won is one for her challenge — her allies on the hexes
+  // too; the victor's own prize of the sea counts in Game.creditKill (with its season experience), the rest here
+  const allyAccs = (fight.tacAllies ?? []).filter((e) => e.side === (attackerWins ? 0 : 1)).map((e) => e.acc);
+  const counted = (winner: ShipEntity): true => {
+    seasonCount(game, game.sessionOf(winner), 'board');
+    for (const acc of allyAccs) seasonCount(game, game.sessionByAccount(acc), 'board');
+    return true;
+  };
   releaseAllies(game, fight);
   a.boarding = null;
   b.boarding = null;
@@ -759,12 +768,14 @@ function finishBoarding(game: Game, a: ShipEntity, b: ShipEntity, attackerWins: 
   closeFight(game, b);
   if (bs.remote) a.crew += Math.max(0, bs.party ?? 0); // survivors row back (or stay as the prize crew)
   game.emit({ k: 'board_end', a: a.id, b: b.id, winner: attackerWins ? a.id : b.id }, a.state.x, a.state.y);
-  if (arenaOver(game, a, b, attackerWins, fight)) return; // a bout of the Colosseum: the ratings, nothing of the sea's (docs/19 E14)
-  if (trialOver(game, a, b, attackerWins)) return; // a trial of mastery: no prize, no repulse (docs/19 E3)
-  if (raidOver(game, a, b, attackerWins, cutBy)) return; // a tier of the Abyss: what was cut stays cut (docs/19 E11)
-  if (assaultOver(game, a, b, attackerWins, fight.tac, cutBy)) return; // a citadel's assault: what was cut stays cut (docs/19 E5)
-  if (contractOver(game, a, b, attackerWins)) return; // an Admiralty's legend: what was cut stays cut (docs/19 E15)
+  const won = attackerWins ? a : b;
+  if (arenaOver(game, a, b, attackerWins, fight)) return void counted(won); // a bout of the Colosseum: the ratings, nothing of the sea's (docs/19 E14)
+  if (trialOver(game, a, b, attackerWins)) return void counted(won); // a trial of mastery: no prize, no repulse (docs/19 E3)
+  if (raidOver(game, a, b, attackerWins, cutBy)) return void counted(won); // a tier of the Abyss: what was cut stays cut (docs/19 E11)
+  if (assaultOver(game, a, b, attackerWins, fight.tac, cutBy)) return void counted(won); // a citadel's assault: what was cut stays cut (docs/19 E5)
+  if (contractOver(game, a, b, attackerWins)) return void counted(won); // an Admiralty's legend: what was cut stays cut (docs/19 E15)
   if (!attackerWins) {
+    counted(b); // boarders thrown back off her deck: a boarding won
     a.morale = Math.max(0, a.morale - 15);
     b.morale = Math.min(100, b.morale + 15);
     game.toastShip(b, 'Boarders repelled!', 'good');
@@ -779,7 +790,15 @@ function finishBoarding(game: Game, a: ShipEntity, b: ShipEntity, attackerWins: 
     a.state.speed = 0;
     return;
   }
-  if (guardBeaten(game, a, b)) return; // a guard of the adventure map: no prize, its chest and it is gone (docs/17 H4)
+  if (guardBeaten(game, a, b)) {
+    // a guard of the adventure map: no prize, its chest and it is gone (docs/17 H4); a boarding won, and a fight with
+    // the sea's creatures for the season's challenges (seasonpass.ts: «a lair, a roaming stack, a drift, a guard»)
+    counted(a);
+    seasonCount(game, game.sessionOf(a), 'lair');
+    return;
+  }
+  // (with allies on the hexes: the victor's own counts in creditKill, theirs here)
+  for (const acc of allyAccs) seasonCount(game, game.sessionByAccount(acc), 'board');
   const agg = AGG[bs.aggression];
   // Cargo destroyed during the fight (10–25% typical at "standard"); grenades set fires below. Careful Hands can
   // take it to nothing.

@@ -197,7 +197,7 @@ export function legendarySunk(game: Game, s: PlayerSession, ship: ShipEntity): v
   const text = `SUNKEN GLORY: the ${LEGENDARY[id].name} has gone down at ${Math.round(ship.state.x / 1000)} km E, ${Math.round(ship.state.y / 1000)} km S. Her captain must raise her.`;
   for (const p of game.world.ports) game.addRumor(p.x, p.y, text);
   for (const o of game.sessions) {
-    game.sendTo(o, { t: 'toast', msg: `WORLD: ${text}`, kind: 'bad' });
+    game.sendTo(o, { t: 'toast', msg: `WORLD: ${text}`, kind: 'bad', ev: { x: rec.wreck.x, y: rec.wreck.y } });
     sendEvents(game, o);
   }
   // She is not lost; she is on the bottom. Her captain goes on in a hired sloop until they raise her.

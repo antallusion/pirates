@@ -26,6 +26,7 @@ import type { PlayerSession } from './player.ts';
 import { relicPartDrop } from './relics.ts';
 import { chronicle } from './renown.ts';
 import type { ShipEntity } from './ship.ts';
+import { seasonXp } from './seasonpass.ts';
 
 /** What a ship of the Choir's invasion carries (ShipEntity.invader): the invasion and its wave, or the tide's region
  *  she patrols. */
@@ -97,7 +98,7 @@ function data(game: Game): Store {
 const save = (game: Game) => game.db.setKv(KEY, data(game));
 
 const news = (game: Game, msg: string, kind: 'info' | 'bad' | 'gold' = 'info') => {
-  for (const s of game.sessions) game.sendTo(s, { t: 'toast', msg: `WORLD: ${msg}`, kind });
+  for (const s of game.sessions) game.sendTo(s, { t: 'toast', msg: `WORLD: ${msg}`, kind, ev: { goal: 'inv' } });
 };
 
 /** A region under the black tide now (the ports' prices read it). */
@@ -237,6 +238,7 @@ export function invasionKill(game: Game, s: PlayerSession, victim: ShipEntity): 
   const c = data(game).cur;
   if (!c || !victim.invader || victim.invader.inv !== c.id) return;
   addHand(c, s, 1);
+  seasonXp(game, s, 'event'); // «Сезонная карта»: a ship of a world event's squadron — the Choir's invasion is one (forum 2026-11-07)
 }
 
 /** The current wave's ships: those fired on noted by hand, those gone (sunk, taken, struck and seized) counted. */

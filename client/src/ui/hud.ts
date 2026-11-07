@@ -411,6 +411,8 @@ export class Hud {
   private miniState: ClientState | null = null;
   /** A long press on the minimap at a point of the sea (docs/23 item 30): main.ts marks it and sails; false = no. */
   onMiniMark: (x: number, y: number) => boolean = () => false;
+  /** A tap on «Сейчас:» (its goal's key): the goal's card (forum 2026-11-07). */
+  onNowTap: (key: string) => void = () => {};
   onAbility: (id: string) => void = () => {};
   onAmmo: (id: string) => void = () => {};
   onTalent: (id: string) => void = () => {};
@@ -493,6 +495,10 @@ export class Hud {
     addEventListener('resize', place);
     // On a wide screen the toasts stand under the chart's lines, however many there are (a quest, world events).
     const region = $('hud-region');
+    region.addEventListener('click', (e) => {
+      const now = (e.target as HTMLElement).closest<HTMLElement>('.rg-now[data-gkey]');
+      if (now) this.onNowTap(now.dataset.gkey!);
+    });
     const under = () => setVar(document.body, '--rg-bottom', `${Math.round(region.getBoundingClientRect().bottom / zoom())}px`);
     new ResizeObserver(under).observe(region);
     addEventListener('resize', under);
@@ -1368,7 +1374,8 @@ export class Hud {
       const def = DAILY_DEFS[o.title as keyof typeof DAILY_DEFS];
       body = `${esc(L('obj.daily'))} — <span class="muted">${esc(def ? def.text[lang() === 'ru' ? 1 : 0].replace('{n}', o.text.split('/')[1]) : o.title)} ${esc(o.text)}</span>`;
     } else body = `<span class="muted">${esc(L('obj.sail'))}</span>`;
-    return `<span class="rg-now"><b style="color:var(--gold)">${esc(L('now'))}</b> ${body}</span><br>`;
+    // (forum 2026-11-07: a tap on «Сейчас:» opens the goal's card — main.ts goalCardOpen)
+    return `<span class="rg-now"${o.key ? ` data-gkey="${esc(o.key)}" role="button" title="${esc(L('now.tap'))}"` : ''}><b style="color:var(--gold)">${esc(L('now'))}</b> ${body}</span><br>`;
   }
 
   /** World events in these waters, with the time they have left. */

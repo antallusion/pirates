@@ -22,8 +22,11 @@ import { classWord, questClass } from './questclass.ts';
 import type { QuestAct } from '../../../shared/src/data/questact.ts';
 import { actButton, hereAct } from './questact.ts'; // owner, 2026-10-23: a step done in this port has its own button
 import type { QuestClass } from './questclass.ts';
+import type { TaskCard } from './taskcard.ts';
+import { EN as TK_EN, RU as TK_RU } from '../lang/ui/taskcard.ts';
 
 const L = dict(EN, RU);
+const TK = dict(TK_EN, TK_RU);
 
 /** What the sheet reads of the captain (PrivateState's part, or a test's). */
 export interface GoalSelf {
@@ -181,6 +184,53 @@ export function goalsListHtml(v: GoalSheetView, portName: (id: string) => string
   const chest = v.chest ? `<p class="gs-foot muted">${v.chest.open ? esc(L('opened')) : esc(L('chest', { silver: '§' })).replace('§', money(v.chest.silver))}</p>` : '';
   return section('gs-active', L('active'), 'tab_contracts', v.active.length ? v.active.map((x) => row(x, portName)).join('') : empty('activeNone'))
     + section('gs-daily', L('daily'), 'tab_letters', v.daily.length ? v.daily.map((x) => row(x, portName)).join('') + chest : empty('dailyNone'));
+}
+
+
+/** A line's card (taskcard.ts; forum 2026-11-07 — the owner: «при нажатии на задания надо модалку открывать где все
+ *  написано»): the same words as its row, and how that kind of task works, its book's article. `sail` is the run to
+ *  it (absent: done, or a step done in port by its own button). */
+export function goalCard(x: GoalLine, portName: (id: string) => string, sail?: () => void): TaskCard {
+  const ru = lang() === 'ru' ? 1 : 0;
+  let name: string, what: string, where: string | undefined, how: string, guide: string;
+  if (x.kind === 'daily') {
+    name = dailyText(x.title as DailyKind, x.need, ru);
+    what = name;
+    how = TK('how.daily');
+    guide = 'prog-contracts';
+  } else if (x.kind === 'contract') {
+    name = serverText(x.title);
+    what = name;
+    where = x.toPort ? L('to', { port: portName(x.toPort) }) : undefined;
+    how = TK(x.bounty ? 'how.bounty' : 'how.contract');
+    guide = 'prog-contracts';
+  } else {
+    const tr = x.kind === 'campaign' ? cmpText : serverText;
+    name = tr(x.title);
+    what = tr(x.text);
+    how = TK(x.kind === 'campaign' ? 'how.campaign' : x.kind === 'side' ? 'how.side' : 'how.job');
+    guide = x.kind === 'campaign' ? 'prog-campaign' : 'prog-quests';
+  }
+  const steps = (x.steps ?? 1) > 1 ? TK('step', { a: x.step ?? 1, b: x.steps ?? 1 }) : undefined;
+  return {
+    kind: 'goal',
+    name,
+    sub: [x.kind === 'daily' ? classWord('daily') : classWord(x.kind), steps].filter(Boolean).join(' · '),
+    what,
+    ...(where ? { where } : {}),
+    ...(x.need > 1 || x.done ? { progress: { n: x.progress, need: Math.max(1, x.need) } } : {}),
+    ...(x.silver ? { reward: TK('silver', { n: x.silver }) } : {}),
+    how,
+    guide,
+    done: x.done,
+    ...(sail && !x.done ? { sail } : {}),
+  };
+}
+
+/** The line of a goal's key in the sheet's view (the campaign's, a quest's, a contract's, an order's), or null. */
+export function goalLineOf(v: GoalSheetView, key: string): GoalLine | null {
+  if (v.campaign?.line?.key === key) return v.campaign.line;
+  return [...v.active, ...v.daily].find((x) => x.key === key) ?? null;
 }
 
 /** The heading over the lent blocks (the sea, the week, the trade, the captain's goals, the news). */

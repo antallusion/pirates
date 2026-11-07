@@ -157,20 +157,98 @@ export const CHALLENGES: ChallengeDef[] = [
   ch('d_jobs', 'day', ['quest', 'story', 'campaign', 'contract'], 6, 150, ['Finish {n} commissions: quests, contracts or the campaign', 'Выполните {n} поручения: задания, контракты или кампанию']),
   ch('d_contract', 'day', ['contract'], 3, 150, ['Deliver {n} port contracts', 'Выполните {n} контракта порта']),
   ch('d_board', 'day', ['board', 'pvp'], 4, 150, ['Win {n} boardings', 'Победите в {n} абордажах']),
-  ch('d_lair', 'day', ['lair'], 3, 150, ['Win {n} fights with creatures: lairs, stacks or drifts', 'Победите в {n} боях с существами: логова, стаи или дрейфы']),
+  ch('d_lair', 'day', ['lair'], 3, 150, ['Win {n} fights with creatures: a lair, a stack at sea or a drift', 'Победите в {n} боях с тварями: логово, отряд в море или дрейф']),
   ch('d_orders', 'day', ['daily_chest'], 1, 150, ['Open the chest of the daily orders', 'Откройте сундук ежедневных поручений']),
   ch('d_treasure', 'day', ['treasure'], 1, 150, ['Dig up a treasure', 'Откопайте клад']),
   ch('d_isle', 'day', ['isle'], 1, 150, ['Finish a building on your island', 'Завершите стройку на своём острове'], true),
   ch('w_jobs', 'week', ['quest', 'story', 'campaign', 'contract'], 35, 900, ['Finish {n} commissions this week', 'Выполните {n} поручений за неделю']),
   ch('w_board', 'week', ['board', 'pvp'], 25, 900, ['Win {n} boardings this week', 'Победите в {n} абордажах за неделю']),
-  ch('w_lair', 'week', ['lair'], 15, 900, ['Win {n} fights with creatures this week', 'Победите в {n} боях с существами за неделю']),
+  ch('w_lair', 'week', ['lair'], 15, 900, ['Win {n} fights with creatures this week', 'Победите в {n} боях с тварями за неделю']),
   ch('w_pvp', 'week', ['pvp'], 3, 900, ['Beat {n} captains this week', 'Победите {n} капитанов за неделю']),
-  ch('w_boss', 'week', ['boss', 'zboss', 'shore', 'event'], 5, 900, ['Fight in {n} hunts: bosses or world events', 'Поучаствуйте в {n} охотах: боссы или события мира']),
+  ch('w_boss', 'week', ['boss', 'zboss', 'shore', 'event'], 5, 900, ['Take part in {n} hunts: bosses and world events', 'Поучаствуйте в {n} охотах: на боссов и в событиях мира']),
   ch('w_orders', 'week', ['daily_chest'], 5, 900, ['Open the chest of the daily orders {n} times', 'Откройте сундук ежедневных поручений {n} раза']),
   ch('w_treasure', 'week', ['treasure'], 6, 900, ['Dig up {n} treasures this week', 'Откопайте {n} клада за неделю']),
   ch('w_isle', 'week', ['isle'], 6, 900, ['Finish {n} buildings on your island this week', 'Завершите {n} стройки на острове за неделю'], true),
 ];
 export const challengeOf = (id: string): ChallengeDef | undefined => CHALLENGES.find((c) => c.id === id);
+
+/** A challenge explained on its card (forum 2026-11-07, Эдуард: «что такое логова, стаи, дрейфы и где об этом
+ *  почитать?»; the owner: «при нажатии на задания надо модалку открывать где все написано и может даже
+ *  автодобраться»): what counts, in plain words; where it is done; the encyclopedia's article; and whether «Плыть»
+ *  can take her to the nearest such place (the route key `ch:<id>`, server/src/game/goalroute.ts). */
+export interface ChallengeInfo {
+  how: Tr;
+  where: Tr;
+  guide?: string;
+  sail: boolean;
+}
+
+const INFO_BY_SRC: Record<string, ChallengeInfo> = {
+  jobs: {
+    how: ['Any commission finished counts: a job of a port’s board, a step of a story or of the main campaign, a port’s contract delivered.', 'Засчитывается любое выполненное поручение: задание с доски порта, шаг истории или основной кампании, доставленный контракт порта.'],
+    where: ['The board of any port (the «Quests» tab) and your quest log.', 'Доска любого порта (вкладка «Задания») и ваш журнал.'],
+    guide: 'prog-quests',
+    sail: true,
+  },
+  contract: {
+    how: ['A port’s contract: a letter, a cargo or a bounty from the board. Take it in a port and deliver it where it says.', 'Контракт порта — письмо, груз или награда за голову с доски. Возьмите его в порту и выполните там, где сказано.'],
+    where: ['The board of any port, the «Quests» tab.', 'Доска любого порта, вкладка «Задания».'],
+    guide: 'prog-contracts',
+    sail: true,
+  },
+  board: {
+    how: ['Every boarding you win counts: a merchantman or a pirate taken, a captain’s ship, a boss’s heart, boarders thrown off your own deck, a trial, a raid of the Abyss, a citadel, the arena — and as an ally on the hexes. A ship sunk by the guns is not a boarding.', 'Засчитывается каждый выигранный абордаж: взятый купец или пират, корабль капитана, сердце босса, отбитые с вашей палубы абордажники, испытание, рейд в Бездну, цитадель, арена — и бой союзником на гексах. Корабль, потопленный пушками, — не абордаж.'],
+    where: ['At sea: pirates and merchantmen near you. Come alongside and press «Board».', 'В море: пираты и торговые суда рядом с вами. Подойдите борт к борту и нажмите «На абордаж».'],
+    guide: 'combat-boarding',
+    sail: true,
+  },
+  lair: {
+    how: ['A fight with the sea’s creatures won, whatever their level. A lair is a den of creatures on an island: come in to its beach and send the boats ashore. A stack is a band of creatures roaming the sea by the islands: tap it and «Attack». A drift is a creature on floating wreckage your lookout spots: tap it and fight it (a rescue does not count).', 'Засчитывается любой выигранный бой с тварями, какого бы уровня они ни были. Логово — гнездо тварей на острове: подойдите к его берегу и отправьте шлюпки. Отряд тварей бродит по морю у островов: нажмите на него и «Атаковать». Дрейф — тварь на плавучих обломках, её замечает впередсмотрящий: нажмите на неё и бейтесь (спасение не считается).'],
+    where: ['Lairs on the islands, stacks at sea between them, drifts on the open water. «Sail» takes you to the nearest one your landing party can beat.', 'Логова — на островах, отряды — в море между ними, дрейфы — на открытой воде. «Плыть» ведёт к ближайшему, который по силам вашему десанту.'],
+    guide: 'prog-creatures',
+    sail: true,
+  },
+  pvp: {
+    how: ['Sink or board another player’s ship: no more than five levels below you, the same captain once in six hours.', 'Потопите или возьмите на абордаж корабль другого игрока: не ниже вас больше чем на пять уровней, одного и того же капитана — раз в шесть часов.'],
+    where: ['Contested and lawless waters, where captains fight one another.', 'Спорные и беззаконные воды, где капитаны воюют друг с другом.'],
+    guide: 'prog-pvp',
+    sail: false,
+  },
+  boss: {
+    how: ['A hunt is a fight with a great foe: a sea boss, a zone boss, a great one come ashore, or a ship of a world event’s squadron (the Armada, a blockade, the silver galleon, the Brethren, the White Orca, the Choir’s invasion). Any part in the fight counts: hit the boss, board it, sink or take a ship of the squadron.', 'Охота — бой с великим противником: морским боссом, боссом зоны, великаном на берегу или кораблём эскадры события мира (Армада, блокада, серебряный галеон, Братство, Белая касатка, вторжение Хора). Засчитывается любое участие: попадите по боссу, возьмите его на абордаж, потопите или захватите корабль эскадры.'],
+    where: ['Where one has risen: the «Events» tab of the chat names it — tap the line and the helmsman sails there.', 'Там, где он поднялся: о нём пишет вкладка «События» в чате — нажмите на строку, и рулевой поведёт корабль туда.'],
+    guide: 'prog-hunts',
+    sail: true,
+  },
+  daily_chest: {
+    how: ['Do all three of the day’s orders and open their chest.', 'Выполните все три поручения дня и откройте их сундук.'],
+    where: ['The day’s orders are in your journal; the chest opens there.', 'Поручения дня — в журнале, там же открывается сундук.'],
+    guide: 'prog-contracts',
+    sail: false,
+  },
+  treasure: {
+    how: ['Dig up a treasure by a map from your chest of maps. Maps come from wrecks, bottles, lairs and the tavern.', 'Откопайте клад по карте из сундука карт. Карты дают обломки, бутылки, логова и таверна.'],
+    where: ['The map’s waters: «Sail» takes you there and the boats dig.', 'Воды с карты: «Плыть» ведёт туда, и шлюпки копают сами.'],
+    guide: 'exp-treasure',
+    sail: true,
+  },
+  isle: {
+    how: ['Finish any building or producer of your island: start one there, the builders finish it even while you are away.', 'Завершите любую постройку или промысел на своём острове: начните её там, строители закончат и без вас.'],
+    where: ['Your own island.', 'Ваш собственный остров.'],
+    guide: 'isle-town',
+    sail: true,
+  },
+};
+
+/** A challenge's card words (null: not one). */
+export function challengeInfo(id: string): ChallengeInfo | null {
+  const c = challengeOf(id);
+  if (!c) return null;
+  const s = c.src;
+  const k = s.includes('board') ? 'board' : s.includes('lair') ? 'lair' : s.includes('boss') ? 'boss' : s.includes('pvp') ? 'pvp' : s.includes('daily_chest') ? 'daily_chest' : s.includes('treasure') ? 'treasure' : s.includes('isle') ? 'isle' : s.length === 1 && s[0] === 'contract' ? 'contract' : 'jobs';
+  return INFO_BY_SRC[k];
+}
+
 
 /** A small hash (FNV-1a) for the picks: the same account, the same day — the same three. */
 function hash(s: string): number {
@@ -529,6 +607,8 @@ export function passPatterns(): [string, string][] {
     ['Season card: tier {0}!', 'Сезонная карта: ступень {0}!'],
     ['Season card: tier {0}! Rewards are waiting.', 'Сезонная карта: ступень {0}! Награды ждут.'],
     ['Season challenge done: {0} (+{1} season XP).', 'Испытание сезона выполнено: {0} (+{1} опыта сезона).'],
+    // (the challenge's own words in it, as the server says them: «{n}» its need)
+    ...CHALLENGES.map((c): [string, string] => [c.text[0].replace('{n}', String(c.need)), c.text[1].replace('{n}', String(c.need))]),
     ['Season card rewards taken: tier {0}.', 'Награды сезонной карты получены: ступень {0}.'],
     ['Season card rewards taken: {0} tiers.', 'Награды сезонной карты получены: ступеней — {0}.'],
     ['Nothing to take yet.', 'Пока нечего забирать.'],

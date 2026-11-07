@@ -279,7 +279,7 @@ export interface SeaHooks {
   folded: readonly string[];
   /** «Цели и вести» (owner, 2026-10-17): the campaign, the quests and contracts taken, the day's orders (goalsheet.ts);
    *  `go` the run to a goal ({t:'goto', key}). */
-  goals?: { view(): GoalSheetView; portName(id: string): string; go(key: string): void; /** docs/36: take the campaign's quest (anywhere) */ take?(id: string): void; /** owner, 2026-10-23: a quest step done in this port — by its button, or on the port's page */ here?(id: string): void; tab?(tab: string): void; /** a step done on her island: its screen */ isle?(): void };
+  goals?: { view(): GoalSheetView; portName(id: string): string; go(key: string): void; /** docs/36: take the campaign's quest (anywhere) */ take?(id: string): void; /** owner, 2026-10-23: a quest step done in this port — by its button, or on the port's page */ here?(id: string): void; tab?(tab: string): void; /** a step done on her island: its screen */ isle?(): void; /** forum 2026-11-07: a row's card (taskcard.ts) — `close` shuts this sheet when its «Плыть» sails */ card?(key: string, close: () => void): boolean };
 }
 
 /** A press held this long is a long press (the card behind «Цель»). */
@@ -792,6 +792,15 @@ export class SeaHud {
         this.newsSheet?.close('button');
         g.tab?.(btn.dataset.tab ?? 'market');
       }));
+      // (forum 2026-11-07, the owner: «при нажатии на задания надо модалку открывать где все написано»): a tap on the
+      // row itself, not on its button — the task's card, its «Плыть» the same run as the row's
+      for (const el of [top, mine]) el.querySelectorAll<HTMLElement>('.gs-row[data-gkey]').forEach((row) => {
+        row.classList.add('gs-tap');
+        row.addEventListener('click', (e) => {
+          if ((e.target as HTMLElement).closest('button')) return;
+          g.card?.(row.dataset.gkey!, () => this.newsSheet?.close('button'));
+        });
+      });
       // docs/36: «Взять» on the campaign's quest — taken where she is; the sheet stays, the row turns to «Плыть»
       top.querySelectorAll<HTMLElement>('[data-gtake]').forEach((btn) => btn.addEventListener('click', (e) => {
         e.stopPropagation();

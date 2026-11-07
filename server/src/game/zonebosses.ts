@@ -140,7 +140,7 @@ export function announce(game: Game, region: RegionId, mins: number): void {
   const def = ZONE_BOSSES[region];
   const name = SHIP_CLASSES[def.classId].name;
   const sea = REGIONS[region].name;
-  for (const s of game.sessions) game.sendTo(s, { t: 'toast', msg: `WORLD: On the horizon of ${sea}: ${name} sets sail in ${mins} min.`, kind: 'info' });
+  for (const s of game.sessions) game.sendTo(s, { t: 'toast', msg: `WORLD: On the horizon of ${sea}: ${name} sets sail in ${mins} min.`, kind: 'info', ev: { goal: `zb:${region}` } });
   game.log(`[zboss] ${region} announced (in ${mins} min)`);
 }
 
@@ -192,7 +192,7 @@ export function rise(game: Game, region: RegionId, slot: number, endsAt: number,
   const sea = REGIONS[region].name;
   game.addRumor(spot.x, spot.y, `${cls.name} sails ${sea}.`);
   for (const s of game.sessions) {
-    game.sendTo(s, { t: 'toast', msg: `WORLD: ${cls.name} has risen in ${sea}. Captains, to her! Guns only — she leaves in an hour.`, kind: 'bad' });
+    game.sendTo(s, { t: 'toast', msg: `WORLD: ${cls.name} has risen in ${sea}. Captains, to her! Guns only — she leaves in an hour.`, kind: 'bad', ev: { x: Math.round(spot.x), y: Math.round(spot.y), goal: `zb:${region}` } });
     // Her film, the first time a captain sees her rise in her own sea (the client plays each film once).
     const sh = s.ship;
     if (sh && !sh.docked && sh.region === region) game.sendTo(s, { t: 'film', id: `cut_zboss_${region}` });

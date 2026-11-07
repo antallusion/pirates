@@ -18,7 +18,7 @@ import { EN as DET_EN, RU as DET_RU } from '../lang/ui/detail.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { passLine } from '../../../shared/src/data/passlines.ts';
 import type { PassLine } from '../../../shared/src/data/passlines.ts';
-import { MILESTONES, PASS_PRICES, PASS_SHIP, PASS_TIERS, SUPER_TIERS, challengeOf, passSeason, xpToTier } from '../../../shared/src/data/seasonpass.ts';
+import { MILESTONES, PASS_PRICES, PASS_SHIP, PASS_TIERS, SUPER_TIERS, challengeInfo, challengeOf, passSeason, xpToTier } from '../../../shared/src/data/seasonpass.ts';
 import type { PassProductId, PassReward, PassTier } from '../../../shared/src/data/seasonpass.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import { votesText } from '../../../shared/src/data/vk.ts';
@@ -35,8 +35,11 @@ import { esc, fmt, glyphSvg, icon } from './dom.ts';
 import { badgeText, buttonHtml } from './kit/button.ts';
 import { payIn } from './price.ts';
 import { countdown } from './promo.ts';
+import { openTaskCard } from './taskcard.ts';
+import { EN as TK_EN, RU as TK_RU } from '../lang/ui/taskcard.ts';
 
 const L = dict(EN, RU);
+const TK = dict(TK_EN, TK_RU);
 const T = (x: readonly [string, string]) => x[lang() === 'ru' ? 1 : 0];
 
 export type PassPane = 'tier' | 'ch' | 'pass';
@@ -48,6 +51,9 @@ export interface PassDeps {
   toast: (msg: string, kind: string) => void;
   /** A window open (its name), or null: the card steps down under one. */
   modal: () => string | null;
+  /** A trial's card (taskcard.ts): the run to its nearest place (main.ts startGoal), the Pilot's Book's article. */
+  goal?: (key: string) => void;
+  guide?: (id: string) => void;
 }
 
 /** A product's price in the money of this place: votes in VK, Stars in Telegram, roubles in the browser. */
@@ -246,7 +252,8 @@ export class SeasonPass {
     const d = challengeOf(c.id);
     if (!d) return '';
     const pct = Math.round((Math.min(c.prog, c.need) / c.need) * 100);
-    return `<li class="${c.done ? 'done' : ''}"><span class="sp-ch-t">${esc(T(d.text).replace('{n}', String(c.need)))}</span>
+    // (forum 2026-11-07, Эдуард: a tap opens the trial's card — what counts, where, how it works and «Плыть»)
+    return `<li class="${c.done ? 'done' : ''}" data-spch="${esc(c.id)}" role="button" tabindex="0" title="${esc(L('chTap'))}"><span class="sp-ch-t">${esc(T(d.text).replace('{n}', String(c.need)))}</span>
       <span class="sp-ch-b"><i style="width:${pct}%"></i></span><b class="sp-ch-n">${c.done ? '✓' : `${c.prog}/${c.need}`}</b><small class="sp-ch-x">${esc(L('chXp', { n: c.xp }))}</small></li>`;
   }
 
@@ -348,6 +355,43 @@ export class SeasonPass {
       this.d.send({ t: 'spass', action: 'claim', tier: Number(b.dataset.spclaim), track: b.dataset.sptrack2 === 'premium' ? 'premium' : 'free' });
     }));
     el.querySelectorAll<HTMLElement>('[data-spbuy]').forEach((b) => b.addEventListener('click', () => this.buy(b.dataset.spbuy as PassProductId)));
+    el.querySelectorAll<HTMLElement>('[data-spch]').forEach((b) => {
+      b.addEventListener('click', () => this.trial(b.dataset.spch!));
+      b.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          this.trial(b.dataset.spch!);
+        }
+      });
+    });
+  }
+
+  /** A trial's card (taskcard.ts): its words, where, how far, its experience, how it works, the book, «Плыть». */
+  trial(id: string): void {
+    const v = this.view;
+    const d = challengeOf(id);
+    const info = challengeInfo(id);
+    if (!v || !d || !info) return;
+    const c = [...v.daily, ...v.weekly].find((x) => x.id === id);
+    if (!c) return;
+    const name = T(d.text).replace('{n}', String(c.need));
+    const ends = d.period === 'day' ? v.dayEnds : v.weekEnds;
+    const goal = this.d.goal;
+    openTaskCard({
+      kind: 'trial',
+      name,
+      sub: TK(d.period === 'day' ? 'day' : 'week', { t: countdown(ends - this.now()) }),
+      progress: { n: Math.min(c.prog, c.need), need: c.need },
+      done: c.done,
+      where: T(info.where),
+      reward: TK('xp', { n: c.xp }),
+      how: T(info.how),
+      guide: info.guide,
+      sail: info.sail && goal ? () => {
+        this.close();
+        goal(`ch:${id}`);
+      } : undefined,
+    }, { guide: (g) => this.d.guide?.(g) });
   }
 
   /** The clocks only (once a second). */
