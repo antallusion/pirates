@@ -202,7 +202,9 @@ export function doAid(game: Game, s: PlayerSession, w: Waystation, id: WayAid): 
     p.company.pools.sailor -= 1;
     p.company.pools[id] += 1;
     ship.companyKey = '';
-    game.toastShip(ship, `${RESCUE_SWAP} rescued stay at the waystation; in the place of one of your sailors ${SWAP_WORD[id]} comes aboard.`, 'good');
+    // (its Russian per trade in rescuePatterns: the sentence whole, so the playthrough's scan reads it as one)
+    const said = `${RESCUE_SWAP} rescued stay at the waystation; in the place of one of your sailors ${SWAP_WORD[id]} comes aboard.`;
+    game.toastShip(ship, said, 'good');
   } else if (id === 'rum') {
     ship.cargo.rum = (ship.cargo.rum ?? 0) - row.n;
     if (!ship.cargo.rum) delete ship.cargo.rum;
