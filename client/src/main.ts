@@ -894,7 +894,7 @@ const dailyGift = new DailyGift({ send: (m) => net.send(m), on: (f) => net.on(f)
 initTgNotices((m) => net.send(m), (f) => net.on(f));
 initPromoCode((m) => net.send(m), (f) => net.on(f)); // «Настройки → Промокод» (owner, 2026-11-02)
 // «Сезонная карта» (owner, 2026-10-30): its window, its button in the «⋯» tray with the rewards ready
-const seasonPass = new SeasonPass({ send: (m) => net.send(m), on: (f) => net.on(f), state, toast: (msg, kind) => hud.toast(msg, kind), modal: () => modal });
+const seasonPass = new SeasonPass({ send: (m) => net.send(m), on: (f) => net.on(f), state, toast: (msg, kind) => hud.toast(msg, kind), modal: () => modal, goal: (key) => startGoal(key), guide: (id) => guide.openArticle(id) });
 const promos = new Promos({ send: (m) => net.send(m), on: (f) => net.on(f), state, modal: () => modal, busy: () => hostileNear() || !!state.boardTac || !!state.boardFight || openingFrame() !== null, held: () => dailyGift.holding() });
 const puzzleWindow = new PuzzleWindow((m) => net.send(m));
 function openPuzzle(): void {

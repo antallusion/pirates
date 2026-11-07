@@ -6067,3 +6067,28 @@ html.app-paused *, html.app-paused *::before, html.app-paused *::after { animati
   .map-find:has(.mf-pick) .mf-list { max-height: 80px; } /* (a place picked: the list steps back, the chart shows) */
   .map-find .mf-hit { min-height: 36px; padding: 3px 5px; }
 }
+
+/* The task card (client/src/ui/taskcard.ts, forum 2026-11-07): a season trial or a goal of the HUD — what, where, how
+   far, the reward, how it works, the Pilot's Book and one gold «Плыть». Over the season card (z 39) and the guide (60). */
+.tk-sheet { width: min(560px, 100vw); max-height: 92dvh; }
+.tk-card { display: flex; flex-direction: column; gap: 6px; }
+.tk-name { margin: 0; font: 600 var(--k-fs-3)/1.2 var(--k-font-serif); color: var(--k-gold); text-wrap: balance; }
+.tk-sub { margin: -2px 0 0; font-size: var(--k-fs-1); }
+.tk-prog { display: flex; align-items: center; gap: 8px; font-size: var(--k-fs-2); }
+.tk-prog > b { color: var(--k-bone); font-weight: 600; white-space: nowrap; }
+.tk-bar { flex: 1; min-width: 60px; height: 8px; border-radius: 4px; background: rgba(0, 0, 0, 0.45); box-shadow: inset 0 0 0 1px var(--k-brass-dim); overflow: hidden; }
+.tk-bar > i { display: block; height: 100%; background: linear-gradient(90deg, #8a6a2e, var(--k-gold)); }
+.tk-n { font-variant-numeric: tabular-nums; color: var(--k-gold); white-space: nowrap; }
+.tk-row { display: flex; gap: 8px; align-items: flex-start; }
+.tk-row .tk-ico { flex: none; width: 22px; height: 22px; margin-top: 1px; object-fit: contain; }
+.tk-row b { display: block; font: 600 var(--k-fs-1)/1.2 var(--k-font-sans); letter-spacing: 0.04em; text-transform: uppercase; color: var(--k-brass); }
+.tk-row p { margin: 1px 0 0; color: var(--k-bone); }
+.tk-book { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; margin-top: 2px; padding: 4px 0; border: 0; background: none; color: var(--k-turq); font: inherit; font-size: var(--k-fs-2); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; text-align: left; }
+.tk-book .ico { width: 20px; height: 20px; }
+.tk-nosea { margin: 0; font-size: var(--k-fs-1); }
+@media (max-height: 430px) {
+  .tk-card { gap: 3px; }
+  .tk-row .tk-ico { width: 18px; height: 18px; }
+  .tk-sheet .k-sheet-foot { padding-top: 6px; }
+  .tk-sheet .k-sheet-foot > .k-btn { min-height: 40px; }
+}
