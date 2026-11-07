@@ -184,7 +184,7 @@ export class BossHub {
         pend.warned = true;
         dirty = true;
         const region = REGIONS[regionAt(game.world, pend.x, pend.y)].name;
-        for (const o of game.sessions) game.sendTo(o, { t: 'toast', msg: `WORLD: ${def.name} rises in ${region} within five minutes!`, kind: 'bad' });
+        for (const o of game.sessions) game.sendTo(o, { t: 'toast', msg: `WORLD: ${def.name} rises in ${region} within five minutes!`, kind: 'bad', ev: { x: Math.round(pend.x), y: Math.round(pend.y) } });
       }
       if (pend && wall >= pend.at) {
         const late = wall - (pend.rises ?? pend.at) > (def.every * 1000) / 2;
@@ -195,7 +195,7 @@ export class BossHub {
         if (late) continue;
         summon(game, id, pend.x, pend.y);
         const region = REGIONS[regionAt(game.world, pend.x, pend.y)].name;
-        for (const o of game.sessions) game.sendTo(o, { t: 'toast', msg: `WORLD: ${def.name} has risen in ${region}. Every captain who dares, to arms!`, kind: 'bad' });
+        for (const o of game.sessions) game.sendTo(o, { t: 'toast', msg: `WORLD: ${def.name} has risen in ${region}. Every captain who dares, to arms!`, kind: 'bad', ev: { x: Math.round(pend.x), y: Math.round(pend.y), goal: 'boss' } });
       }
     }
     if (dirty) this.save(game);
@@ -277,14 +277,14 @@ function announce(game: Game, def: BossDef, x: number, y: number, mins: number):
     const sh = s.ship;
     if (!sh) continue;
     const governor = gov !== null && game.guilds.of(game, s.accountId)?.id === gov;
-    if (governor) game.sendTo(s, { t: 'toast', msg: `Governor's dispatch: ${text}`, kind: 'gold' });
-    else if (def.regions.includes(sh.region) || dist(sh.state.x, sh.state.y, x, y) < 20000) game.sendTo(s, { t: 'toast', msg: `Tavern talk: ${text}`, kind: 'info' });
+    if (governor) game.sendTo(s, { t: 'toast', msg: `Governor's dispatch: ${text}`, kind: 'gold', ev: { x: Math.round(x), y: Math.round(y) } });
+    else if (def.regions.includes(sh.region) || dist(sh.state.x, sh.state.y, x, y) < 20000) game.sendTo(s, { t: 'toast', msg: `Tavern talk: ${text}`, kind: 'info', ev: { x: Math.round(x), y: Math.round(y) } });
   }
   // The rest of the sea hears of it too, as world news with the time left.
   for (const s of game.sessions) {
     const sh = s.ship;
     if (sh && (def.regions.includes(sh.region) || dist(sh.state.x, sh.state.y, x, y) < 20000)) continue;
-    game.sendTo(s, { t: 'toast', msg: `WORLD: ${def.name} will rise in ${region} in about ${Math.max(1, mins)} min.`, kind: 'info' });
+    game.sendTo(s, { t: 'toast', msg: `WORLD: ${def.name} will rise in ${region} in about ${Math.max(1, mins)} min.`, kind: 'info', ev: { x: Math.round(x), y: Math.round(y) } });
   }
   game.log(`[boss] ${def.id} announced at ${Math.round(x)},${Math.round(y)} (in ~${mins} min)`);
 }

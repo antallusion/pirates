@@ -561,7 +561,7 @@ function raiseLegend(game: Game, kind: DriftKind, x: number, y: number): Drift {
   }
   const where = REGIONS[regionAt(game.world, x, y)].name;
   chronicle(game, `${driftName(kind)} has risen in ${where}.`);
-  for (const o of game.sessions) if (o.profile) game.sendTo(o, { t: 'toast', msg: `WORLD: ${driftName(kind)} has risen in ${where}. One captain may save it or take it.`, kind: 'gold' });
+  for (const o of game.sessions) if (o.profile) game.sendTo(o, { t: 'toast', msg: `WORLD: ${driftName(kind)} has risen in ${where}. One captain may save it or take it.`, kind: 'gold', ev: { x: Math.round(x), y: Math.round(y) } });
   return d;
 }
 

@@ -206,7 +206,7 @@ function announce(game: Game, r: Rising): void {
     const sh = s.ship;
     if (!sh) continue;
     const near = (is && sh.region === is.region) || dist(sh.state.x, sh.state.y, r.x, r.y) < 20000;
-    game.sendTo(s, { t: 'toast', msg: near ? `Tavern talk: ${text}` : `WORLD: ${text}`, kind: near ? 'info' : 'bad' });
+    game.sendTo(s, { t: 'toast', msg: near ? `Tavern talk: ${text}` : `WORLD: ${text}`, kind: near ? 'info' : 'bad', ev: { x: Math.round(r.x), y: Math.round(r.y) } });
   }
   game.log(`[shoreboss] ${r.kind} ashore on ${islandName(game, r)} ⚓${r.level} at ${Math.round(r.x)},${Math.round(r.y)}`);
 }

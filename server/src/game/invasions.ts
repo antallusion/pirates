@@ -98,7 +98,7 @@ function data(game: Game): Store {
 const save = (game: Game) => game.db.setKv(KEY, data(game));
 
 const news = (game: Game, msg: string, kind: 'info' | 'bad' | 'gold' = 'info') => {
-  for (const s of game.sessions) game.sendTo(s, { t: 'toast', msg: `WORLD: ${msg}`, kind });
+  for (const s of game.sessions) game.sendTo(s, { t: 'toast', msg: `WORLD: ${msg}`, kind, ev: { goal: 'inv' } });
 };
 
 /** A region under the black tide now (the ports' prices read it). */

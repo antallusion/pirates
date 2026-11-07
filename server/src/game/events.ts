@@ -168,7 +168,7 @@ function start(game: Game, e: Omit<WorldEvent, 'id' | 'started'>, text: string):
   const ev: WorldEvent = { ...e, id: st.seq++, started: game.wallNow() };
   st.list.push(ev);
   game.addRumor(ev.x, ev.y, text);
-  for (const s of game.sessions) game.sendTo(s, { t: 'toast', msg: `WORLD: ${text}`, kind: 'info' });
+  for (const s of game.sessions) game.sendTo(s, { t: 'toast', msg: `WORLD: ${text}`, kind: 'info', ev: { x: Math.round(ev.x), y: Math.round(ev.y) } });
   game.log(`[event] ${ev.kind} ${ev.port ?? ev.region}: ${text}`);
   game.worldEvents.save(game);
   broadcast(game);
@@ -215,7 +215,7 @@ function finish(game: Game, e: WorldEvent): void {
   }
   if (text) {
     game.addRumor(e.x, e.y, text);
-    for (const s of game.sessions) game.sendTo(s, { t: 'toast', msg: `WORLD: ${text}`, kind: 'info' });
+    for (const s of game.sessions) game.sendTo(s, { t: 'toast', msg: `WORLD: ${text}`, kind: 'info', ev: { x: Math.round(e.x), y: Math.round(e.y) } });
   }
   game.log(`[event] ended ${e.kind} ${e.port ?? e.region}`);
 }
@@ -542,7 +542,7 @@ export function riseNow(game: Game, e: WorldEvent): void {
   e.ends = game.wallNow() + 3 * DAY;
   const text = `Where the sea boiled, there is land: a new island in ${REGIONS[region].name}. The first captain ashore names her — then the race for her lease begins.`;
   game.addRumor(e.x, e.y, text);
-  for (const s of game.sessions) game.sendTo(s, { t: 'toast', msg: `WORLD: ${text}`, kind: 'info' });
+  for (const s of game.sessions) game.sendTo(s, { t: 'toast', msg: `WORLD: ${text}`, kind: 'info', ev: { x: Math.round(is.x), y: Math.round(is.y) } });
 }
 
 /** A new island in the world: sites, routes and the charts captains already hold. */
@@ -570,7 +570,7 @@ function nameIsland(game: Game, e: WorldEvent, s: PlayerSession): void {
   game.grantXp(s, pointsXp(s.profile!.level, 800), `First ashore on ${name}`);
   for (const o of game.sessions) {
     for (const k of islandChunkKeys(is)) o.knownChunks.delete(k);
-    game.sendTo(o, { t: 'toast', msg: `WORLD: ${s.name} is first ashore on the new island and names her ${name}.`, kind: 'info' });
+    game.sendTo(o, { t: 'toast', msg: `WORLD: ${s.name} is first ashore on the new island and names her ${name}.`, kind: 'info', ev: { x: Math.round(is.x), y: Math.round(is.y) } });
   }
   game.addRumor(is.x, is.y, `The new island is called ${name}, after the captain who first set foot on her.`);
 }

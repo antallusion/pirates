@@ -1677,7 +1677,8 @@ export class Game {
       if (!gm) return;
       gm.shock = due.shock;
       this.addRumor(this.portById(due.port)!.x, this.portById(due.port)!.y, due.text);
-      for (const s of this.sessions) this.sendTo(s, { t: 'toast', msg: `WORLD: ${due.text}`, kind: 'info' });
+      const at = this.portById(due.port);
+      for (const s of this.sessions) this.sendTo(s, { t: 'toast', msg: `WORLD: ${due.text}`, kind: 'info', ...(at ? { ev: { x: Math.round(at.x), y: Math.round(at.y) } } : {}) });
       this.log(`[event] ${due.text}`);
       return;
     }

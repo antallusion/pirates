@@ -2228,7 +2228,10 @@ export type ServerMsg =
   | { t: 'tac_replay'; base?: TacView; frames?: TacReplayFrame[]; list?: TacReplayList['list']; error?: string }
   | { t: 'mutiny'; ringleader: string; mutineers: number; payCost: number; timeout: number }
   | { t: 'sunk_self'; lost: { cargoValue: number; crew: number; repairFee: number }; respawnPort: string; towed?: boolean; /** her own scuttling (owner 2026-10-20) */ scuttled?: boolean; /** a boarding lost (owner, 2026-10-05): who took her and the silver they had */ boarded?: { by: string; silver: number; repelled?: boolean } }
-  | { t: 'toast'; msg: string; kind: 'info' | 'good' | 'bad' | 'xp' | 'gold' }
+  | { t: 'toast'; msg: string; kind: 'info' | 'good' | 'bad' | 'xp' | 'gold';
+    /** World news with a place (forum 2026-11-07): the chat's «События» tab sails her there on a tap — a point, or a
+     *  goal's route key (`boss`, `zb:<region>`, `inv`) for one that moves. */
+    ev?: { x?: number; y?: number; goal?: string } }
   /** «Хроника» (forum post 40): the whole chronicle (`full`, asked for once) or a line just written (`again`: the last
    *  line counted once more — it replaces the client's last). */
   | { t: 'chron'; entries: LogEntry[]; full?: boolean; again?: boolean }
