@@ -58,6 +58,8 @@ export class OnboardingUi {
   private view: OnboardingView | null = null;
   private state: ClientState;
   send: (action: 'skip_stage' | 'skip_all' | 'hide_goals') => void = () => {};
+  /** The school card's gold «do it» (owner, 2026-11-07): the lesson's own control done for her (main.ts). */
+  onLesson: (id: string) => void = () => {};
   /** route (2026-10-15): a tap on a captain's goal — the run to its nearest place (main.ts). */
   onGoal: (key: string) => void = () => {};
   /** A screen to open (the edge of safe waters). */
@@ -110,7 +112,7 @@ export class OnboardingUi {
     // VK 4.2.4: a lesson of the sea school speaks for itself (its title and two lines of words)
     const k = (v.lesson ? `lesson.${v.lesson}` : `stage.${v.stage}`) as Key;
     const line = (v.lesson ? `lesson.${v.lesson}.${touch ? 'touch' : 'body'}` : v.stage === 'sail' && docked ? 'stage.sail.dock' : `stage.${v.stage}.${touch ? 'touch' : 'body'}`) as Key;
-    const isle = v.goal ? placeName(v.goal.name) : '';
+    const isle = v.goal ? placeName(v.goal.name).replace(/\s+\d+$/, '') : ''; // (a nameless isle's number dropped: «Лантернхейвен 1062»)
     const key = `${v.stage}|${v.lesson ?? ''}|${line}|${v.index}|${v.of}|${isle}|${lang()}`; // a language changed mid-watch redraws the row
     if (el.dataset.k === key && !el.classList.contains('hidden')) return;
     el.dataset.k = key;
@@ -118,12 +120,16 @@ export class OnboardingUi {
     el.classList.toggle('w-school', !!v.school); // VK 4.2.4: the school's card, its words under the title (feel.css)
     // On a short screen the row keeps to the count, the title, the line and two short skips (feel.css).
     const btn = (a: string, cls: string, full: Key, short: Key) => `<button class="btn btn-small${cls}" data-a="${a}" title="${esc(t(full))}" aria-label="${esc(t(full))}"><span class="w-long">${esc(t(full))}</span><span class="w-short">${esc(t(short))}</span></button>`;
+    // the lesson's gold button: what it asks, done by a tap (owner, 2026-11-07: «нету кнопки в окошке плыть к острову»)
+    const doKey = (v.lesson ? `lesson.${v.lesson}.do` : '') as Key;
+    const doBtn = v.lesson && has(doKey) ? `<button class="btn btn-small btn-primary w-do" data-a="do" data-lesson="${esc(v.lesson)}">${esc(t(doKey))}</button>` : '';
     el.innerHTML = `<div class="w-head"><span><i class="w-t">${esc(t('watch.title'))} · </i>${v.index + 1}/${v.of}</span><b>${esc(has(k) ? t(k) : v.stage)}</b></div>
       ${has(line) ? `<div class="w-body">${esc(t(line, { isle }))}</div>` : ''}
-      <div class="w-act">${btn('skip_stage', '', 'watch.skip', 'watch.skipShort')}${btn('skip_all', ' btn-ghost', 'watch.skipAll', 'watch.skipAllShort')}</div>`;
+      <div class="w-act">${doBtn}${btn('skip_stage', '', 'watch.skip', 'watch.skipShort')}${btn('skip_all', ' btn-ghost', 'watch.skipAll', 'watch.skipAllShort')}</div>`;
     el.setAttribute('aria-label', `${t('watch.step', { n: v.index + 1, of: v.of })}: ${has(k) ? t(k) : v.stage}`);
     el.querySelectorAll<HTMLButtonElement>('button').forEach((b) => (b.onclick = () => {
       // «Пропустить обучение» asks once (retention, 2026-10-25: one stray tap on a phone ended the whole lesson)
+      if (b.dataset.a === 'do') return this.onLesson(b.dataset.lesson ?? '');
       if (b.dataset.a === 'skip_all') void ask(t('watch.skipAsk'), t('watch.skipYes'), t('watch.skipNo')).then((yes) => yes && this.send('skip_all'));
       else this.send(b.dataset.a as 'skip_stage');
     }));

@@ -165,21 +165,43 @@ export class SeaAbil {
   }
 
   /** Clear of the row of things to do: when it wraps up into «Приёмы» (many things at once, out of a fight), the button
-   *  steps up just enough (a few times a second; nothing moves while the row is open). */
+   *  steps up just enough (a few times a second; nothing moves while the row is open) — never up into the row under the
+   *  chart («Цели и вести», «К кораблю» and its word: owner, 2026-11-07, «тут иконки наложились» on a phone held
+   *  sideways in Safari, 330 px tall). With no room between the two it steps aside, to their left. */
   private keepClear(): void {
     const t = performance.now();
     if (t - this.clearAt < 250 || this.open) return;
     this.clearAt = t;
     const lift0 = Number(this.btnEl.style.getPropertyValue('--abil-lift')) || 0;
+    const side0 = Number(this.btnEl.style.getPropertyValue('--abil-side')) || 0;
     const r = this.btnEl.getBoundingClientRect();
     if (!r.width) return;
-    const bottom0 = r.bottom + lift0; // where it stands unlifted
-    let lift = 0;
-    for (const e of document.querySelectorAll<HTMLElement>('#tc-actrow:not(.hidden) > .k-btn')) {
+    const top0 = r.top + lift0, bottom0 = r.bottom + lift0, left0 = r.left + side0, right0 = r.right + side0; // unmoved
+    const hits = (top: number, bottom: number, left: number, right: number): number => {
+      let need = 0;
+      for (const e of document.querySelectorAll<HTMLElement>('#tc-actrow:not(.hidden) > .k-btn')) {
+        const q = e.getBoundingClientRect();
+        if (q.width > 2 && q.left < right + 4 && q.right > left - 4 && q.top < bottom + 6 && q.bottom > top) need = Math.max(need, Math.ceil(bottom + 6 - q.top));
+      }
+      return need;
+    };
+    // the floor: the lowest of the chart's row over it (its badge stands 6 px above its ring: 10 px between)
+    let floor = -Infinity;
+    for (const e of document.querySelectorAll<HTMLElement>('#touch > :is(#tc-news, #tc-home, #tc-menu):not(.hidden), #touch > #tc-home:not(.hidden) .tc-home-l')) {
       const q = e.getBoundingClientRect();
-      if (q.width > 2 && q.left < r.right + 4 && q.right > r.left - 4 && q.top < bottom0 + 6 && q.bottom > r.top + lift0) lift = Math.max(lift, Math.ceil(bottom0 + 6 - q.top));
+      if (q.width > 2 && q.left < right0 + 4 && q.right > left0 - 4 && q.top < top0) floor = Math.max(floor, q.bottom + 10);
+    }
+    let lift = hits(top0, bottom0, left0, right0);
+    let side = 0;
+    if (top0 - lift < floor) {
+      lift = Math.floor(top0 - floor); // as high as it may go (or down, when it stood in the row already)
+      if (hits(top0 - lift, bottom0 - lift, left0, right0) > 0 || bottom0 - lift > innerHeight - 4) {
+        lift = hits(top0, bottom0, left0 - r.width - 12, right0 - r.width - 12); // aside, to the left: clear of the row there
+        side = Math.ceil(r.width + 12);
+      }
     }
     if (lift !== lift0) this.btnEl.style.setProperty('--abil-lift', String(lift));
+    if (side !== side0) this.btnEl.style.setProperty('--abil-side', String(side));
   }
 
   /** A refusal about an ability (not ready, no resolve): the button flashes. True when it could. */

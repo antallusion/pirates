@@ -180,15 +180,14 @@ function targetsOf(f: PointerFacts): string[] {
     // VK 4.2.4: the sea school's lessons (server onboarding.ts LESSONS)
     case 'l:cast':
       return TO_SEA;
+    // (owner, 2026-11-07: «кнопки подсвечивай только нужные»): the card's own gold button, one finger on it
     case 'l:sails':
-      return f.touch ? ['#tc-sail [data-sail="1"]', '#tc-stick'] : ['#tc-stick'];
-    case 'l:helm':
-      return ['#tc-stick'];
     case 'l:dash':
-      return ['#tc-dashchip', '#tc-stick'];
+      return ['#hud-watch .w-do'];
+    case 'l:helm':
     case 'l:course':
     case 'l:isle':
-      return f.helmsman ? [] : ['#hud-map'];
+      return f.helmsman ? [] : ['#hud-watch .w-do'];
     case 'sail':
       // In port: the harbour's gold «В море» on its rail (docs/23 phase 6; the old «Поднять паруса» is gone — the finger
       // pointed at nothing and the watch's first step stood still, e2e 2026-10-07), else the HUD's big round «В море».

@@ -103,7 +103,7 @@ export type ClientMsg =
   /** The captains' choice (owner, 2026-10-19: premium captains cost money): `view` asks which she owns; `buy` buys a
    *  premium captain for doubloons before she takes command (the top-up, if short, by the shop's own `premium` stars). */
   | { t: 'captain_shop'; action: 'view' | 'buy'; captain?: CaptainId }
-  | { t: 'onboarding'; action: 'skip_stage' | 'skip_all' | 'hide_goals' }
+  | { t: 'onboarding'; action: 'skip_stage' | 'skip_all' | 'hide_goals' | 'lesson_do' }
   /** `helm`: the captain's own hand on the helm (the stick held, a key down) — under «Атаковать» it takes the wheel. */
   | { t: 'input'; seq: number; rudder: number; sail: number; helm?: boolean }
   /** «Прервать» on the countdown of the work at a spot (server/src/game/spotwork.ts). */

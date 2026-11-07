@@ -3759,7 +3759,7 @@ export class Game {
     if (msg.t === 'army') return armyMessage(this, s, msg); // owner, 2026-10-28: split, merge, dismiss a stack
     switch (msg.t) {
       case 'onboarding':
-        if (msg.action === 'skip_stage' || msg.action === 'skip_all' || msg.action === 'hide_goals') onboardingAction(this, s, msg.action);
+        if (msg.action === 'skip_stage' || msg.action === 'skip_all' || msg.action === 'hide_goals' || msg.action === 'lesson_do') onboardingAction(this, s, msg.action);
         return;
       case 'input': {
         if (!Number.isFinite(msg.rudder) || !Number.isFinite(msg.sail)) return;

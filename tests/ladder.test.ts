@@ -124,10 +124,9 @@ test('sea school: the quay with nothing but «В море», then a control a le
     ship.input.sailTarget = 0.75;
     steps(game, 25);
     assert.equal(view().lesson, 'helm');
-    for (let i = 0; i < 12 && view().lesson === 'helm'; i++) {
-      ship.state.heading += 0.2;
-      steps(game, 25);
-    }
+    // the card's gold «Повернуть» (owner, 2026-11-07): the helmsman puts her about, and the lesson is done
+    c.push({ t: 'onboarding', action: 'lesson_do' });
+    for (let i = 0; i < 40 && view().lesson === 'helm'; i++) steps(game, 25);
     assert.equal(view().lesson, 'dash');
     assert.ok(view().hud!.includes('dash'));
     // (the tests' little world has no island by the start: she is set a kilometre off one before «Курс» picks it)
@@ -141,6 +140,10 @@ test('sea school: the quay with nothing but «В море», then a control a le
     assert.ok(view().hud!.includes('minimap'));
     const g = view().goal!;
     assert.ok(g && g.name, 'the island to sail to, its beacon');
+    // «Плыть к острову» on the card: the helmsman has her, the course is set
+    c.push({ t: 'onboarding', action: 'lesson_do' });
+    steps(game, 25);
+    assert.equal(view().lesson, 'isle', 'the course set by the card’s button');
     // she is brought to its shore (the helmsman's run, done here by hand)
     const is = game.world.islands[p.tutorial.lessonIsle!];
     const near = closestOnPolygon(ship.state.x, ship.state.y, is.poly);

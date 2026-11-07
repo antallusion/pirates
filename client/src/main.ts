@@ -1918,6 +1918,19 @@ function sendLand(): void {
 const fishFight = new FishFightPanel((m) => net.send(m));
 const netHaul = new NetHaulPanel((m) => net.send(m));
 onboarding.send = (action) => net.send({ t: 'onboarding', action });
+// The school card's gold button (owner, 2026-11-07: «сделай начало максимально подробным с автопогружением и
+// автопутями»): the sails raised to three quarters, the dash, or the helmsman's turn / course to the island (server).
+onboarding.onLesson = (id) => {
+  if (id === 'sails') {
+    state.input.sail = 3;
+    helmAt = performance.now();
+  } else if (id === 'dash') net.send({ t: 'dash' });
+  else if (id === 'helm' || id === 'course' || id === 'isle') {
+    touch.course = null; // the stick lets go, or it would take the wheel straight back
+    goalRun = null;
+    net.send({ t: 'onboarding', action: 'lesson_do' });
+  }
+};
 onboarding.onGoal = (key) => startGoal(key); // route: a captain's goal — its nearest place
 // Options: applied now and on every change (docs/07 §11).
 let lastZoomKey = '';

@@ -12,7 +12,7 @@ import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
-import { closestOnPolygon, dist } from '../../../shared/src/math.ts';
+import { DEG, closestOnPolygon, dist, headingVec } from '../../../shared/src/math.ts';
 import type { HudBlock, OnboardingView } from '../../../shared/src/protocol.ts';
 import { relWindDeg } from '../../../shared/src/sim/sailing.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
@@ -27,7 +27,7 @@ import { addXp } from './player.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { pursuitOf, startPursuit } from './pursuit.ts';
-import { autosailOf, dropPaused, pausedCourse } from './autosail.ts';
+import { autosailOf, dropPaused, pausedCourse, startAutosail, stopAutosail } from './autosail.ts';
 
 export interface Tutorial {
   on: boolean; // walking the First Watch
@@ -422,7 +422,7 @@ export const LESSONS: Lesson[] = [
     done: (_g, s, ship) => {
       const w = watchOf(s);
       const h = ship.state.heading;
-      if (w.head !== undefined && !autosailOf(ship)) {
+      if (w.head !== undefined) {
         let d = h - w.head;
         while (d > Math.PI) d -= Math.PI * 2;
         while (d < -Math.PI) d += Math.PI * 2;
@@ -514,6 +514,7 @@ function nextLesson(game: Game, s: PlayerSession, how: 'done' | 'skip'): void {
     p.gold += 10; // a coin for each lesson (the watch's own steps pay 50 and their experience)
     game.db.ledger(s.accountId, 'tutorial', 10, `lesson:${l.id}`);
   }
+  if (l.id === 'helm' && autosailOf(ship)) stopAutosail(game, s, 'manual'); // (his turn made: «Курс» is a course of hers)
   t.lesson = (t.lesson ?? 0) + 1;
   t.at = game.wallNow();
   if (t.lesson >= LESSONS.length) {
@@ -689,11 +690,43 @@ function advance(game: Game, s: PlayerSession, how: 'done' | 'skip'): void {
 /** «Пропустить обучение» under way: its steps passed over are no steps reached (the funnel). */
 let skippingAll = false;
 
+
+
+/** The school card's own gold button (owner, 2026-11-07: «нету кнопки в окошке плыть к острову … сделай начало
+ *  максимально подробным с автопогружением и автопутями»): what the lesson asks, done for her by the helmsman —
+ *  «Штурвал»: he puts her about (a turn of 100° off her heading, 600 m on); «Курс» and «К острову»: he takes her to the
+ *  lesson island's shore nearest her, SCHOOL_OFFSHORE off the beach (within SCHOOL_SHORE of it). The sails and the dash
+ *  are the client's own (its sail step, its «dash»). */
+export const SCHOOL_OFFSHORE = 150;
+function lessonDo(game: Game, s: PlayerSession): void {
+  const p = s.profile!, ship = s.ship!, t = p.tutorial;
+  const l = t.on && inLessons(t) ? LESSONS[t.lesson!] : null;
+  if (!l || ship.docked) return;
+  if (l.id === 'helm') {
+    for (const side of [1, -1]) {
+      const h = ship.state.heading + side * 100 * DEG;
+      const v = headingVec(h);
+      if (!startAutosail(game, s, ship.state.x + v.x * 600, ship.state.y + v.y * 600, undefined, 60)) return;
+    }
+    return;
+  }
+  const is = (l.id === 'course' || l.id === 'isle') && t.lessonIsle !== undefined ? game.world.islands[t.lessonIsle] : null;
+  if (!is) return;
+  const e = closestOnPolygon(ship.state.x, ship.state.y, is.poly);
+  const d = Math.max(1, Math.sqrt(e.d2));
+  const k = Math.min(1, SCHOOL_OFFSHORE / d);
+  startAutosail(game, s, e.x + (ship.state.x - e.x) * k, e.y + (ship.state.y - e.y) * k, undefined, 40);
+}
+
 /** A client's choice: skip a step, skip the whole watch, hide or show the goals. */
-export function onboardingAction(game: Game, s: PlayerSession, action: 'skip_stage' | 'skip_all' | 'hide_goals'): void {
+export function onboardingAction(game: Game, s: PlayerSession, action: 'skip_stage' | 'skip_all' | 'hide_goals' | 'lesson_do'): void {
   const p = s.profile;
   if (!p || !s.ship) return;
   const t = p.tutorial;
+  if (action === 'lesson_do') {
+    lessonDo(game, s);
+    return;
+  }
   if (action === 'skip_stage' && t.on && inLessons(t)) nextLesson(game, s, 'skip');
   else if (action === 'skip_stage' && t.on && t.stage < STAGES.length) advance(game, s, 'skip');
   else if (action === 'skip_all' && t.on) {

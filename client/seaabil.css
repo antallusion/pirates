@@ -14,7 +14,7 @@ body.simple #touch > :is(#tc-abil, #tc-skill) {
 /* (out of a fight «Огонь», «Снаряд» and «Цель» are away: «Приёмы» stands in «Цель»'s place, under the menu, over the
    row of things to do — lifted by seaabil.ts if that row wraps up into it) */
 body.simple:not(.sea-fight) #touch > :is(#tc-abil, #tc-skill) { right: calc(var(--sa-r) + var(--sea-pad) + 4px + (var(--sea-fire) - var(--sea-btn)) / 2); }
-body.simple #touch > :is(#tc-abil, #tc-skill) { translate: 0 calc(-1px * var(--abil-lift, 0)); }
+body.simple #touch > :is(#tc-abil, #tc-skill) { translate: calc(-1px * var(--abil-side, 0)) calc(-1px * var(--abil-lift, 0)); }
 body.simple #touch > :is(#tc-abil, #tc-skill) .tc-abil-pic { position: absolute; inset: 0; }
 body.simple #touch > :is(#tc-abil, #tc-skill) .k-btn-ico, body.simple :is(#tc-abilfan, #tc-skillfan) .tc-abi .k-btn-ico { inset: 19.9% 22% 24.1%; }
 body.simple #touch > :is(#tc-abil, #tc-skill):not(.none) { box-shadow: 0 0 14px rgba(224, 184, 98, 0.5), 0 4px 12px rgba(0, 0, 0, 0.75); }

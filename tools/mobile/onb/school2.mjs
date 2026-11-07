@@ -1,0 +1,30 @@
+// owner, 2026-11-07: the sea school walked by its cards' own gold buttons — «Поднять паруса», «Повернуть», «Рывок»,
+// «Плыть к острову» — one finger on the one button; then the fight's HUD at the right column (the overlap).
+import { browser, page, login, sleep } from '../m0/lib.mjs';
+const OUT = process.env.OUT ?? 'assets/raw/audit/onb';
+const [W, H] = (process.env.SIZE ?? '844x390').split('x').map(Number);
+const tag = `${W}x${H}`;
+const b = await browser();
+const p = await page(b, [W, H]);
+await login(p, { port: Number(process.env.GPORT) });
+await sleep(2500);
+const ob = () => p.evaluate(() => { const o = globalThis.gravetide.state.onboarding; return o ? `${o.stage}/${o.lesson ?? '-'} ${o.index + 1}/${o.of}` : 'none'; });
+const finger = () => p.evaluate(() => { const f = document.querySelector('.tut-pointer, #tut-pointer, .pointer-finger'); const r = f?.getBoundingClientRect(); return r && r.width ? `${Math.round(r.x)},${Math.round(r.y)}` : '-'; });
+const shot = async (n) => { await p.screenshot({ path: `${OUT}/S-${tag}-${n}.png` }); console.log(n, await ob(), 'finger', await finger(), '| watch:', await p.evaluate(() => document.getElementById('hud-watch')?.innerText.replace(/\s+/g, ' ').slice(0, 170))); };
+const waitLesson = async (want, ms = 30000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { const o = await p.evaluate(() => globalThis.gravetide.state.onboarding); if ((o?.lesson ?? o?.stage) === want || o?.stage === want) return true; await sleep(400); } return false; };
+const doBtn = () => p.evaluate(() => { const e = document.querySelector('#hud-watch .w-do'); e?.click(); return !!e; });
+await shot('1-cast');
+await p.evaluate(() => document.getElementById('tc-cast')?.click());
+await waitLesson('sails'); await sleep(1500); await shot('2-sails');
+console.log('do', await doBtn(), 'sails ok', await waitLesson('helm', 8000));
+await sleep(1200); await shot('3-helm');
+console.log('do', await doBtn(), 'helm ok', await waitLesson('dash', 30000));
+await sleep(1200); await shot('4-dash');
+console.log('do', await doBtn(), 'dash ok', await waitLesson('course', 8000));
+await sleep(1500); await shot('5-course');
+console.log('do', await doBtn(), 'course ok', await waitLesson('isle', 10000));
+await sleep(1500); await shot('6-isle');
+console.log('isle ok', await waitLesson('attack', 150000));
+await sleep(2500); await shot('7-attack');
+console.log('errors', p.errors.slice(0, 5));
+await b.close();
