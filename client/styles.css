@@ -6092,3 +6092,6 @@ html.app-paused *, html.app-paused *::before, html.app-paused *::after { animati
   .tk-sheet .k-sheet-foot { padding-top: 6px; }
   .tk-sheet .k-sheet-foot > .k-btn { min-height: 40px; }
 }
+#hud-region .rg-now[data-gkey] { pointer-events: auto; cursor: pointer; }
+#hud-region .rg-now[data-gkey]:hover { color: var(--bone, #e8dcc0); }
+.gs-row.gs-tap { cursor: pointer; }

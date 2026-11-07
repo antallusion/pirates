@@ -20,6 +20,14 @@ export const EN = {
   'week': 'This week’s challenge: new ones in {t}',
   'noSea': 'Not done at sea: see the place named above.',
   'step': 'Step {a} of {b}',
+  'silver': '{n} silver',
+  'how.daily': 'One of the day’s three orders: do it anywhere at sea. All three done open their chest; new orders come each day.',
+  'how.contract': 'A port’s contract: take the cargo or the letter aboard and deliver it to the port named. The pay is handed over there.',
+  'how.bounty': 'A port’s bounty: sink or board the ships named. Then the pay is yours at any port of the issuer.',
+  'how.campaign': 'The main campaign goes on by itself, step after step. Each step is shown on the HUD; «Sail» takes you to its place.',
+  'how.side': 'A side story: its steps lead from port to port. Do them in their order; the pay comes at the end.',
+  'how.job': 'A job of a port’s board: do what it asks and the pay is yours. Some are finished in the port they name.',
+  'how.goal': 'A captain’s goal: a first step in one of the game’s trades. Met, it gives experience and the next one comes.',
 };
 
 export const RU: typeof EN = {
@@ -40,4 +48,12 @@ export const RU: typeof EN = {
   'week': 'Испытание недели: новые через {t}',
   'noSea': 'Это делается не в море: место названо выше.',
   'step': 'Шаг {a} из {b}',
+  'silver': '{n} серебра',
+  'how.daily': 'Одно из трёх поручений дня: выполняется где угодно в море. Сделайте все три — откроется их сундук; новые поручения приходят каждый день.',
+  'how.contract': 'Контракт порта: возьмите груз или письмо на борт и доставьте в названный порт. Плату вручат там.',
+  'how.bounty': 'Награда за голову: потопите или возьмите на абордаж названные корабли. Плату выдадут в любом порту того, кто её назначил.',
+  'how.campaign': 'Основная кампания идёт сама, шаг за шагом. Каждый шаг виден на экране; «Плыть» ведёт к его месту.',
+  'how.side': 'Побочная история: её шаги ведут от порта к порту. Выполняйте их по порядку — награда в конце.',
+  'how.job': 'Поручение с доски порта: сделайте, что просят, и плата ваша. Некоторые завершаются в названном порту.',
+  'how.goal': 'Цель капитана — первый шаг в одном из занятий игры. За неё дают опыт, и приходит следующая.',
 };

@@ -133,7 +133,9 @@ import { setFxLines } from './ui/fxrow.ts'; // forum 45: the effects' cards show
 import { modLinesHtml } from './ui/gear.ts';
 import { SKILL_IDS, SeaAbil, abilWhy, skillWord } from './ui/seaabil.ts'; // the captain's abilities on a phone: «Приёмы» and its row (owner, 2026-10-26)
 import type { AbilView } from './ui/seaabil.ts';
-import { goalCount, goalSheetView } from './ui/goalsheet.ts'; // «Цели и вести»: the campaign, the quests taken, the orders
+import { goalCard, goalCount, goalLineOf, goalSheetView } from './ui/goalsheet.ts';
+import { openTaskCard } from './ui/taskcard.ts'; // forum 2026-11-07: a goal's card, a season trial's
+import { EN as TK_EN, RU as TK_RU } from './lang/ui/taskcard.ts'; // «Цели и вести»: the campaign, the quests taken, the orders
 import { attackKind, buildCursors, cursorUrl } from './ui/cursor.ts'; // the attack cursor (owner, 2026-10-07)
 import type { AttackKind } from './ui/cursor.ts';
 import { TargetMenu } from './ui/targetmenu.ts'; // «Захват цели», «Преследовать», «Бой» beside a target
@@ -171,7 +173,7 @@ import { actionFor, applyToDocument, keyLabel, keyOf, onSettings, settings, upda
 import { BTN, dead, HOLD, padAimPoint, PadInput, radialSector, rumble } from './gamepad.ts';
 import type { PadEvent } from './gamepad.ts';
 import type { Action, Settings } from './settings.ts';
-import { dict, lang, onLang, plural, setLang, t, translateDom } from './i18n.ts';
+import { dict, has, lang, onLang, plural, setLang, t, translateDom } from './i18n.ts';
 import { searchChip, searchChipHtml, searchMemo, searchStep } from './ui/tmsearch.ts';
 import { EN as TMS_EN, RU as TMS_RU } from './lang/ui/maps.ts';
 import { EN as HUD_EN, RU as HUD_RU } from './lang/ui/hud.ts';
@@ -1197,6 +1199,29 @@ function startGoal(key: string, quiet = false): void {
   if (modal && !ANSWER.includes(modal)) closeModal();
   net.send({ t: 'goto', key });
 }
+const TKW = dict(TK_EN, TK_RU);
+/** A goal's card (forum 2026-11-07; the owner: «при нажатии на задания надо модалку открывать где все написано и может
+ *  даже автодобраться»): a quest's, a contract's, an order's or a captain's goal — what, where, how far, the pay, how it
+ *  works, its book's article and «Плыть» (startGoal). `close` shuts the sheet it was tapped in when she sails. False:
+ *  no such goal now (the caller runs to it as before). */
+function goalCardOpen(key: string, close?: () => void): boolean {
+  const hooks = { guide: (id: string) => guide.openArticle(id) };
+  const sail = () => {
+    close?.();
+    startGoal(key);
+  };
+  if (key.startsWith('g:')) {
+    const k = `goal.${key.slice(2)}` as Key;
+    if (!has(k)) return false;
+    openTaskCard({ kind: 'goal', name: t(k), what: t(k), how: TKW('how.goal'), guide: 'prog-levels', sail }, hooks);
+    return true;
+  }
+  const v = goalSheetView(state.self ? { ...state.self, nearIsle: isleNear() } : state.self);
+  const line = goalLineOf(v, key);
+  if (!line) return false;
+  openTaskCard(goalCard(line, (id) => placeName(state.ports.find((p) => p.id === id)?.name ?? id), line.here ? undefined : sail), hooks);
+  return true;
+}
 /** A tap on the beacon: the run to the goal it shows (a quest, a contract's port), else a plain course to it. */
 function tapGoal(px?: number, py?: number): void {
   // a treasure's scroll on the water (forum post 34): the run to it, and the boats dig
@@ -1371,6 +1396,7 @@ const seaHud = new SeaHud($('touch'), {
     here: (id) => net.send({ t: 'quest', action: 'here', id }), // owner, 2026-10-23: «Расспросить» and the rest, in port
     tab: (tab) => journal.onPortTab(tab),
     isle: () => openBase(), // mid-game QA 2026-10-23: «Заложите постройки» at her island — «Строить», not «Плыть»
+    card: (key, close) => goalCardOpen(key, close),
   },
   fire: () => seaFire(),
   fireOptions: () => fireWheel(),
@@ -1931,7 +1957,8 @@ onboarding.onLesson = (id) => {
     net.send({ t: 'onboarding', action: 'lesson_do' });
   }
 };
-onboarding.onGoal = (key) => startGoal(key); // route: a captain's goal — its nearest place
+onboarding.onGoal = (key) => { if (!goalCardOpen(key)) startGoal(key); };
+hud.onNowTap = (key) => { if (!goalCardOpen(key)) startGoal(key); }; // «Сейчас:» — its goal's card (forum 2026-11-07) // route: a captain's goal — its card, its «Плыть» the nearest place
 // Options: applied now and on every change (docs/07 §11).
 let lastZoomKey = '';
 function applySettings(o: Settings): void {
