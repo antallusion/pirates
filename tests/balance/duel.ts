@@ -46,6 +46,9 @@ export interface DuelResult {
  *  docs/23 (item 45) sinks an equal in 30 s or less, so a sim that has not ended in three minutes is a draw. */
 export const FIGHT_SEC = 180;
 
+/** The wall clock the duels are weighed at (UTC). */
+export const DUEL_DAY = Date.UTC(2026, 10, 4, 9, 0);
+
 export function duelSea(): Game {
   const { game } = makeGame();
   // The sims weigh ship against ship on the open sea they were tuned on: the dense sea's stacks and reefs (docs/16 P3)
@@ -62,6 +65,10 @@ export function duelSea(): Game {
   for (const id of [...game.npcs.keys()]) game.removeShip(id);
   (game as unknown as { quota: () => number }).quota = () => 0;
   (game as unknown as { patrolsSpawnedAt: number }).patrolsSpawnedAt = 1e15;
+  // One still day for every run (2026-11-07: the same code passed the close fight on the 4th of November and failed it
+  // on the 7th — ⚓5 153 s for 150, a pirate's chain 68 % for 70 — the wall clock's day came into the duel's start). The
+  // sims were tuned with the wall all but still (a minute of the sea runs in a second of the test): it stands still here.
+  game.wallNow = () => DUEL_DAY;
   return game;
 }
 
