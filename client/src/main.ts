@@ -855,6 +855,8 @@ mountDetail({
   },
   go: (key) => {
     leaveIsle(false);
+    // forum post 93: the rescued's card — the helmsman to the nearest floating house, moored on arrival (waystations.ts)
+    if (key === 'way') return void net.send({ t: 'way', action: 'nearest' });
     startGoal(key);
   },
 });

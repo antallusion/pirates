@@ -788,6 +788,8 @@ export interface PrivateState {
   spot?: import('./data/spotwork.ts').SpotView | null;
   /** «Шлюпы с острова» (owner, 2026-11-02): her island's boats under way to her, on the sea's clock. */
   boats?: import('./data/islandboats.ts').BoatsView | null;
+  /** Forum post 93 (rescue.ts): the rescued she carries to a waystation, and the risks a new batch runs. */
+  rescue?: import('./data/rescue.ts').RescueView | null;
   /** The captain as a hero (docs/17 H2). */
   hero?: HeroView;
   /** Her glory past the cap, mastery and trials (docs/19 E1–E3): from five levels short of the cap. */

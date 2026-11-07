@@ -19,11 +19,15 @@ export const SMUGGLE_TRADE_SHARE = 0.75;
 /** The refusals the smugglers get round: the patent's enemy, a flag that holds her an enemy. */
 export type SmuggleWhy = 'patent' | 'standing';
 
+/** A sea-hour of her ship's waters at her level (the patent's measure: 6 × 320 × 1.3^(⚓−1) silver). */
+export function waterHour(level: number): number {
+  const anchor = Math.max(1, Math.min(10, Math.ceil(Math.max(1, level) / 6)));
+  return 6 * 320 * 1.3 ** (anchor - 1);
+}
+
 /** Her passage's price at her level: for a quest's step there, or for trade. */
 export function smugglePrice(level: number, quest: boolean): number {
-  const anchor = Math.max(1, Math.min(10, Math.ceil(Math.max(1, level) / 6)));
-  const hour = 6 * 320 * 1.3 ** (anchor - 1);
-  return Math.max(100, Math.round((hour * (quest ? SMUGGLE_QUEST_SHARE : SMUGGLE_TRADE_SHARE)) / 50) * 50);
+  return Math.max(100, Math.round((waterHour(level) * (quest ? SMUGGLE_QUEST_SHARE : SMUGGLE_TRADE_SHARE)) / 50) * 50);
 }
 
 /** The offer as the harbour's refusal carries it to her screen. */

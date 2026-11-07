@@ -65,6 +65,15 @@
   .way-row .way-price { font-size: 12px; }
 }
 .way-card .way-why { color: var(--bad, #c86a50); }
+/* Forum post 93: the rescued and the waystation's own help, above the fallen. */
+.way-aid-h { margin: 0 0 4px; font-size: 13px; color: var(--gold); font-weight: 600; }
+.way-aids { margin-bottom: 8px; }
+.way-aid .way-face { border-radius: 4px; }
+.way-aid .way-rt .muted { white-space: normal; }
+@media (max-height: 520px) {
+  .way-aid-h { font-size: 12px; margin-bottom: 2px; }
+  .way-aids { margin-bottom: 6px; }
+}
 /* docs/35: the card on a fight ashore's end (the battle's banner): one line, under the losses. */
 .tb-fallen:empty { display: none; }
 .tb-fallen .way-card { margin: 6px 0 0; padding: 4px 8px; background: rgba(15, 17, 20, 0.85); text-align: left; }

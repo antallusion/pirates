@@ -270,6 +270,7 @@ import {
   QUOTA, abstractEncounters, newBrain, npcHostileTo, npcName, planMerchantVoyage, spawnFisher, spawnGhost, spawnHunter, spawnMerchant, spawnPatrols, spawnPirate, updateNpc,
 } from './npc.ts';
 import type { NpcBrain } from './npc.ts';
+import { rescueView } from './rescue.ts'; // forum post 93
 import { smuggleGate, smugglePass } from './smuggler.ts'; // «Услуга контрабандиста» (forum post 92)
 import { SMUGGLE_SAY } from '../../../shared/src/data/smuggler.ts';
 import { PlayerSession, addXp, canDock, changeRep, newProfile, sanitizeProfile, toPrivateState } from './player.ts';
@@ -5401,6 +5402,7 @@ export class Game {
     state.boosts = boostsView(this, s); // forum 45: the effects' row by her portrait
     state.spot = spotOf(this, s); // owner, 2026-11-02: the work at a spot's countdown (spotwork.ts)
     state.boats = boatsView(this, s); // owner, 2026-11-02: «Шлюпы с острова» under way (isleboats.ts)
+    state.rescue = rescueView(this, s); // forum post 93: the rescued aboard (rescue.ts)
     state.advice = captainAdvice(this, s);
     state.isleFirst = isleFirstView(this, s);
     state.noHire = !!s.ship && noHire(s, state.advice?.best); // owner, 2026-10-29: no hint drives her to hire

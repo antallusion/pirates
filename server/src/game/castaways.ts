@@ -14,6 +14,7 @@ import { reconcile } from './crew.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import { openSea } from './wrecks.ts';
+import { rescueRoom, takeRescued } from './rescue.ts';
 import { questEvent } from './quests.ts';
 import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
 
@@ -96,7 +97,10 @@ export function haulCastaway(game: Game, s: PlayerSession, c: Castaway): number 
   const ship = s.ship!, p = s.profile!;
   drop(S, c);
   const room = Math.max(0, ship.stats.crewMax - ship.crew);
-  const k = Math.min(c.n, room, castRoomHour(game, s));
+  const hour = castRoomHour(game, s);
+  const k = Math.min(c.n, room, hour);
+  // (forum, Эдуард, post 93: the men past her hammocks ride as the rescued, to be set down at a waystation — rescue.ts)
+  const extra = Math.max(0, Math.min(c.n - k, hour - k, rescueRoom(p)));
   if (k > 0) {
     reconcile(game, p.company, ship.crew);
     ship.addMen('deckhand', k);
@@ -108,7 +112,14 @@ export function haulCastaway(game: Game, s: PlayerSession, c: Castaway): number 
     else h.men += k;
     game.toastShip(ship, k === 1 ? 'A castaway hauled aboard off a spar: he signs on as a deckhand.' : `${k} castaways hauled aboard off a spar: they sign on as deckhands.`, 'good');
     game.pushSelf(s, true);
-  } else {
+  }
+  if (extra > 0) {
+    const took = takeRescued(game, s, extra);
+    p.rescued = (p.rescued ?? 0) + took;
+    const h = S.hour.get(s.accountId);
+    if (!h || game.now - h.start >= 3600) S.hour.set(s.accountId, { start: game.now, men: extra });
+    else h.men += extra;
+  } else if (k <= 0) {
     ship.morale = Math.min(100, ship.morale + 1);
     game.toastShip(ship, 'No hammocks for the castaways: you give them water and a course for the nearest port.', 'info');
   }
@@ -161,7 +172,8 @@ export function stepCastaways(game: Game): void {
     // they are given water and a course home and still count (haulCastaway). Before, a full crew meant none ever came,
     // and «Спасите людей из моря: 2» could never be done (mid-game QA 2026-10-23).
     const wanted = rescueWanted(s);
-    if ((!wanted && (room <= 0 || castRoomHour(game, s) <= 0)) || ship.state.speed < 1.5 || ship.inCombat(now) || castawaysOf(game, s).length >= 2) {
+    // (her hammocks full, there is still room for the rescued: post 93, rescue.ts)
+    if ((!wanted && ((room <= 0 && rescueRoom(s.profile) <= 0) || castRoomHour(game, s) <= 0)) || ship.state.speed < 1.5 || ship.inCombat(now) || castawaysOf(game, s).length >= 2) {
       S.next.set(s.accountId, now + 30);
       continue;
     }

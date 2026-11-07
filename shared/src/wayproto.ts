@@ -61,6 +61,9 @@ export interface WayView {
   repair: { cost: number; to: number } | null;
   /** Kinds for hire here today (the recruit window's src 'way'). */
   hire: number;
+  /** Forum post 93 (rescue.ts): the rescued aboard and what this kind of waystation does — one line each. */
+  rescued: number;
+  aid: import('./data/rescue.ts').AidRow[];
 }
 
 export type WayClientMsg =
@@ -68,6 +71,10 @@ export type WayClientMsg =
   | { t: 'way'; action: 'leave' }
   | { t: 'way'; action: 'view' }
   | { t: 'way'; action: 'repair' }
+  /** Forum post 93: one of the window's lines (set the rescued down, a trained man for them, the hold's services). */
+  | { t: 'way'; action: 'aid'; aid: import('./data/rescue.ts').WayAid }
+  /** Forum post 93: the helmsman takes her to the nearest waystation and she moors there. */
+  | { t: 'way'; action: 'nearest' }
   /** Raise one kind (`u`) or all (`u` absent): with silver (the doubloons for the shop's creatures), a scroll (one
    *  kind, the line kinds only), or the infirmary at once anywhere; `rid` — her request's own id: twice, raised once. */
   | { t: 'way'; action: 'res'; u?: UnitId; via: 'silver' | 'scroll' | 'instant'; rid: string };

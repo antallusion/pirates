@@ -46,6 +46,12 @@ import { rscrollsOf, spendRScroll } from './shop.ts';
 import { weekView } from './calendar.ts';
 import { keepsDeep } from './town.ts';
 import { approach } from './approach.ts';
+import { aidRows, doAid, rescueOf } from './rescue.ts'; // forum post 93
+import { WAY_AIDS } from '../../../shared/src/data/rescue.ts';
+import type { WayAid } from '../../../shared/src/data/rescue.ts';
+
+/** How far «Плыть к плавучему дому» looks for one (the grid puts one about every 500 m of open sea). */
+export const WAY_NEAREST_R = 4000;
 
 const H = 3_600_000;
 
@@ -449,7 +455,7 @@ function wayRepair(game: Game, s: PlayerSession): string | null {
 
 export function wayView(game: Game, s: PlayerSession, w: Waystation): WayView {
   const cost = wayRepairCost(s);
-  return { id: w.id, kind: w.kind, res: resView(game, s), repair: cost > 0 ? { cost, to: WAY_REPAIR_TO } : null, hire: hireKinds(game, w).length };
+  return { id: w.id, kind: w.kind, res: resView(game, s), repair: cost > 0 ? { cost, to: WAY_REPAIR_TO } : null, hire: hireKinds(game, w).length, rescued: rescueOf(s.profile!).aboard, aid: aidRows(game, s, w) };
 }
 
 /** Moor at a waystation within reach (her own tap: never by herself). */
@@ -640,6 +646,24 @@ export function wayMessage(game: Game, s: PlayerSession, msg: WayClientMsg): voi
       err(wayRepair(game, s));
       game.pushSelf(s, true);
       return void game.sendTo(s, { t: 'way', view: wayView(game, s, w) });
+    }
+    case 'aid': {
+      const w = mooredAt(game, s);
+      if (!w) return err('Moor at a floating waystation first.');
+      const id = String(msg.aid) as WayAid;
+      if (!Object.values(WAY_AIDS).some((l) => l.includes(id))) return err('Not now');
+      const busy = resBusy(game, s);
+      err(busy ?? doAid(game, s, w, id));
+      return void game.sendTo(s, { t: 'way', view: wayView(game, s, w) });
+    }
+    case 'nearest': {
+      // (forum post 93: «Плыть к плавучему дому» — the nearest within the helmsman's reach; moor() hands the course to
+      // approach.ts, and the order given again on arrival finds the same one alongside and moors)
+      const ship = s.ship;
+      if (!ship || ship.docked) return err('Not now');
+      const w = wayNear(game.world, ship.state.x, ship.state.y, WAY_NEAREST_R);
+      if (!w) return err('No waystation within reach of the helmsman.');
+      return err(moor(game, s, w.id));
     }
     case 'res': {
       const u = msg.u !== undefined && Object.hasOwn(UNITS, String(msg.u)) ? (String(msg.u) as UnitId) : undefined;
