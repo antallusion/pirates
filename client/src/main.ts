@@ -19,6 +19,7 @@ import { noteHearsay, repairState } from './ui/dealings.ts';
 import { renderHall } from './ui/hall.ts';
 import { renderLook, resetLookDraft } from './ui/looks.ts';
 import { ask, askHtml, tell } from './ui/confirm.ts';
+import { askSmuggler } from './ui/smuggler.ts'; // «Услуга контрабандиста» (forum post 92)
 import { BEASTS, beastOfClass } from '../../shared/src/data/beasts.ts';
 import { FishFightPanel } from './ui/fishfight.ts';
 import { NetHaulPanel } from './ui/nethaul.ts';
@@ -2755,6 +2756,16 @@ function onMessage(m: ServerMsg): void {
       if (modal === 'company' && companyScreen.tab === 'chronicle') refreshModal();
       else if (modal === 'log') refreshModal();
       break;
+    case 'smuggler': {
+      // «Услуга контрабандиста» (forum post 92): the shut harbour's question; her yes sends the dock with the boat
+      const o = m.offer;
+      askSmuggler(o, placeName(state.ports.find((x) => x.id === o.port)?.name ?? o.port), () => {
+        state.input.sail = 0;
+        dockSentAt = performance.now();
+        net.send({ t: 'dock', smuggle: true });
+      });
+      break;
+    }
     case 'toast':
       // The glass's own «too far» (askGlass asks by itself every few seconds; the server's refusals come as toasts, so
       // the filter on 'err' alone let «Too far for the glass ×5» through at every broadside).
