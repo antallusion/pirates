@@ -138,7 +138,7 @@ export function thingRingChoices(t: Pick<Thing, 'kind' | 'name' | 'own' | 'done'
 }
 
 /** The thing's card for ⓘ (detail.ts registerDetail). */
-export function thingCard(t: Thing, own: { x: number; y: number } | null): { name: [string, string]; sub: [string, string]; rows: { k: [string, string]; v: [string, string] }[]; notes?: { t: [string, string]; tone: 'flavor' }[] } {
+export function thingCard(t: Thing, own: { x: number; y: number } | null, more: readonly string[] = []): { name: [string, string]; sub: [string, string]; rows: { k: [string, string]; v: [string, string] }[]; notes?: { t: [string, string]; tone: 'flavor' }[] } {
   const both = (s: string): [string, string] => [s, s];
   const kindWord = t.kind === 'isle' ? L(t.own ? 'n.ownIsle' : 'n.isle') : t.kind in { find: 1, mark: 1, way: 1, lair: 1, drift: 1, adv: 1 } ? L(`k.${t.kind}` as 'k.find') : L('sub');
   const rows: { k: [string, string]; v: [string, string] }[] = [];
@@ -148,7 +148,8 @@ export function thingCard(t: Thing, own: { x: number; y: number } | null): { nam
     const m = d >= 1000 ? `${(d / 1000).toFixed(1)} ${lang() === 'ru' ? 'км' : 'km'}` : `${Math.round(d / 10) * 10} ${lang() === 'ru' ? 'м' : 'm'}`;
     rows.push({ k: [EN.dist, RU.dist], v: both(m) });
   }
-  return { name: both(t.name), sub: both(kindWord), rows, ...(t.text ? { notes: [{ t: t.text, tone: 'flavor' as const }] } : {}) };
+  const notes: { t: [string, string]; tone: 'flavor' }[] = [...(t.text ? [{ t: t.text, tone: 'flavor' as const }] : []), ...more.map((m) => ({ t: both(m), tone: 'flavor' as const }))];
+  return { name: both(t.name), sub: both(kindWord), rows, ...(notes.length ? { notes } : {}) };
 }
 
 // ------------------------------------------------------------------------------------------------ the ring

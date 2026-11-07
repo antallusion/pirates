@@ -99,13 +99,12 @@ export function takeRescued(game: Game, s: PlayerSession, n: number): number {
   return stay;
 }
 
-/** Her rescued for the effects' row (null: none aboard). */
+/** Her rescued for the effects' row (shown while any are aboard) and the castaway's card (the risks of the next). */
 export function rescueView(_game: Game, s: PlayerSession): RescueView | null {
   const p = s.profile, ship = s.ship;
   if (!p || !ship) return null;
-  const r = (p as unknown as WithRescue).rescue;
-  if (!r || r.aboard <= 0) return null;
-  return { aboard: r.aboard, cap: RESCUE_CAP, head: rescueHead(p.level), ...rescueRisks(ship, p) };
+  const aboard = (p as unknown as WithRescue).rescue?.aboard ?? 0;
+  return { aboard, cap: RESCUE_CAP, head: rescueHead(p.level), ...rescueRisks(ship, p) };
 }
 
 // ------------------------------------------------------------------------------------------------ the waystation

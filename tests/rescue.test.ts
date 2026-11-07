@@ -26,7 +26,7 @@ import { aidRows, doAid, rescueOf, rescueView, setRescueRng } from '../server/sr
 import { moor, mooredAt, wayView } from '../server/src/game/waystations.ts';
 import { serverText } from '../client/src/lang/server.ts';
 import { setLang } from '../client/src/i18n.ts';
-import { rescueText } from '../client/src/ui/fxrow.ts';
+import { castawayNotes, rescueText } from '../client/src/ui/fxrow.ts';
 import { aidHtml } from '../client/src/ui/waystation.ts';
 import type { FakeConn } from './helpers.ts';
 import { join, makeGame, onHull } from './helpers.ts';
@@ -107,8 +107,7 @@ test('the risks of a batch: a bare crew may take a fever (no surgeon, no medicin
   const { game } = makeGame();
   const { s } = captain(game, 'Bare Bea');
   full(game, s);
-  const v0 = rescueView(game, s);
-  assert.equal(v0, null, 'none aboard: nothing in the row');
+  assert.equal(rescueView(game, s)!.aboard, 0, 'none aboard (the row shows nothing)');
   setRescueRng(game, dice(0)); // every risk comes up
   const crew = s.ship!.crew;
   haul(game, s, 3);
@@ -255,6 +254,11 @@ test('in Russian: the toasts, the card of the rescued and the window’s lines �
     assert.ok(!/[A-Za-z]/.test(text), text);
     assert.match(text, /лихорадка 12\s?%/u);
     assert.match(text, /бунт 8\s?%/u);
+    const notes = castawayNotes({ aboard: 2, cap: 12, head: 63, fever: 0.12, mutiny: 0, curse: 0.1 }, 0).join(' ');
+    assert.ok(!/[A-Za-z]/.test(notes), notes);
+    assert.match(notes, /лихорадка 12\s?%/u);
+    assert.doesNotMatch(notes, /бунт/, 'marines aboard: no mutiny named');
+    assert.match(castawayNotes({ aboard: 12, cap: 12, head: 63, fever: 0, mutiny: 0, curse: 0.1 }, 0).join(' '), /курс\s+к\s+берегу/u);
     const html = aidHtml({ id: 1, kind: 'tavern', res: null as never, repair: null, hire: 0, rescued: 4, aid: [
       { id: 'land', on: true, n: 4, gain: 252, wait: 0 }, { id: 'helmsman', on: true, n: 3, gain: 1, wait: 0 }, { id: 'cook', on: true, n: 3, gain: 1, wait: 0 },
       { id: 'rum', on: false, n: 0, gain: 0, wait: 0, why: 'No rum in the hold.' },

@@ -264,6 +264,21 @@ export function rescueText(rv: RescueView): string {
   return `${L('t.rescue', { n: rv.aboard, cap: rv.cap, head: rv.head })} ${tail}`;
 }
 
+/** A castaway's card (forum post 93): where the men go — her free hammocks, then the rescued — and the risks in numbers. */
+export function castawayNotes(rv: RescueView | null | undefined, free: number): string[] {
+  const out: string[] = [];
+  if (free > 0) out.push(L('c.berths', { n: free }));
+  if (!rv) return out;
+  if (rv.aboard >= rv.cap) {
+    if (free <= 0) out.push(L('c.full'));
+    return out;
+  }
+  const pct = (x: number) => Math.round(x * 100);
+  const list = [rv.fever > 0 ? L('r.fever', { n: pct(rv.fever) }) : '', rv.mutiny > 0 ? L('r.mutiny', { n: pct(rv.mutiny) }) : '', L('r.curse', { n: pct(rv.curse) })].filter(Boolean).join(', ');
+  out.push(L('c.rescue', { n: rv.aboard, cap: rv.cap, head: rv.head, list }));
+  return out;
+}
+
 /** The row's name for a screen reader. */
 export function fxRowLabel(): string {
   return L('allTitle');
