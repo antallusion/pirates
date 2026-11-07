@@ -161,8 +161,18 @@ export function seasonXp(game: Game, s: PlayerSession | null | undefined, source
   addPassXp(game, s.accountId, source, amount, s);
 }
 
-/** The same for an account (her island's builders finish while she is away). The experience added. */
-export function addPassXp(game: Game, acc: number, source: PassSource, amount?: number, s: PlayerSession | null = sessionOf(game, acc)): number {
+/** A thing done that teaches the season nothing (a grey prize, a lair below her, a boarding of a trial or a raid, a
+ *  captain beaten twice) but still is one for her challenges (forum 2026-11-07, Эдуард: «Победите в 4 абордажах» stood
+ *  at 1/4 after a day of a dozen boardings — only the prizes not grey to her ever reached the challenge). No experience,
+ *  no day's cap used up. */
+export function seasonCount(game: Game, s: PlayerSession | null | undefined, source: PassSource): void {
+  if (!s?.authed || !s.accountId) return;
+  addPassXp(game, s.accountId, source, 0, s, false);
+}
+
+/** The same for an account (her island's builders finish while she is away). The experience added. `xp` false: the
+ *  challenges only (seasonCount). */
+export function addPassXp(game: Game, acc: number, source: PassSource, amount?: number, s: PlayerSession | null = sessionOf(game, acc), xp = true): number {
   if (!PASS_SOURCES.includes(source) || !(acc > 0)) return 0;
   try {
     const st = passState(game, acc);
@@ -174,8 +184,8 @@ export function addPassXp(game: Game, acc: number, source: PassSource, amount?: 
     const before = tierOf(st.xp).tier;
     let gained = 0;
     const had = st.count[source] ?? 0;
-    st.count[source] = had + 1;
-    if (had < PASS_CAP[source]) {
+    if (xp) st.count[source] = had + 1;
+    if (xp && had < PASS_CAP[source]) {
       const n = Math.max(0, Math.round(amount ?? PASS_XP[source]));
       st.xp += n;
       gained += n;

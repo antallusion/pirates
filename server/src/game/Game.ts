@@ -325,7 +325,7 @@ import { levelGifts, stepShop, xpBoost } from './shop.ts';
 import { sendPromo, stepPromo } from './promo.ts'; // the shop's goods (owner, 2026-10-15)
 import { opsSilverMul, opsXpMul, stepLiveOps, trackEvent } from './liveops.ts'; // the live ops' panel and funnel (docs/34)
 import { sendGift, stepGift } from './dailygift.ts'; // the daily login gift (owner, 2026-10-16)
-import { passMessage, passOnLogin, passPvp, seasonXp as passXp, stepPass } from './seasonpass.ts'; // «Сезонная карта» (owner, 2026-10-30)
+import { passMessage, passOnLogin, passPvp, seasonCount as passCount, seasonXp as passXp, stepPass } from './seasonpass.ts'; // «Сезонная карта» (owner, 2026-10-30)
 import { guideMessage, sendGuide } from './guide.ts'; // «Лоцманская книга» (2026-11-02)
 import { noticesAboard, noticesAway, stepNotices } from './tgnotify.ts'; // the Telegram notices (owner, 2026-10-16)
 import { adviceOnLogin, stepAdvice } from './advice.ts'; // the advice mailer (owner, 2026-10-28: «подсказки рассылать по почте»)
@@ -2574,8 +2574,14 @@ export class Game {
     warKill(this, victim);
     // «Сезонная карта» (owner, 2026-10-30): a captain beaten; a boarding won against a ship not grey to her; a ship of a
     // world event's squadron (seasonpass.ts — its caps; never a plain sinking of the sea's ships)
-    if (victim.isPlayer) passPvp(this, s, victim.accountId, this.profileOf(victim)?.level ?? victim.level);
-    else if (how === 'boarded' && !paid && xpGap(p.level, vLevel) > 0) passXp(this, s, 'board');
+    // (forum 2026-11-07, Эдуард: a dozen boardings a day and «Победите в 4 абордажах» at 1/4 — a grey prize, a captain
+    // beaten twice taught the season nothing and so never reached the challenge either: every boarding won counts there)
+    if (victim.isPlayer) {
+      if (!passPvp(this, s, victim.accountId, this.profileOf(victim)?.level ?? victim.level) && how === 'boarded') passCount(this, s, 'board');
+    } else if (how === 'boarded') {
+      if (!paid && xpGap(p.level, vLevel) > 0) passXp(this, s, 'board');
+      else passCount(this, s, 'board');
+    }
     if (!victim.isPlayer && [...this.worldEvents.fleets.values()].some((f) => f.includes(victim.id))) passXp(this, s, 'event');
     onGhostSunk(this, s, victim);
     onAbyssKill(this, s, victim);
@@ -2792,7 +2798,10 @@ export class Game {
   }
 
   onBoardingWon(a: ShipEntity, b: ShipEntity, result: BoardingResult): void {
-    if (b.bossOf && bossBoarded(this, a, b)) return;
+    if (b.bossOf && bossBoarded(this, a, b)) {
+      passCount(this, this.sessionOf(a), 'board'); // a boss's heart or ghost line carried: a boarding won (her hunt counts when it dies)
+      return;
+    }
     if (b.caravanOf !== null) caravanLost(this, b);
     surrenderClosed(this, b); // carried by boarding: no terms to offer
     const sa = this.sessionOf(a);
