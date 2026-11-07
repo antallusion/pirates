@@ -57,11 +57,11 @@ export const SMUGGLE_SAY = {
 export function smugglePatterns(): [string, string][] {
   return [
     ['Your patent is at war with this harbour: its quay is shut to you. Ways in: wait out the patent ({0} days), strike its colours (the patent burns), or pay a smuggler to land you by night.',
-      'Ваш патент воюет с этой гаванью: её причал для вас закрыт. Как попасть: дождаться конца патента (дней: {0}), спустить его флаг (патент сгорит) или заплатить контрабандисту, чтобы он тайно высадил вас ночью.'],
+      'Ваш патент воюет с этой гаванью: её причал для вас закрыт. Как попасть: дождаться конца патента — осталось дней: {0}; спустить его флаг — патент сгорит; или заплатить контрабандисту, чтобы он тайно высадил вас ночью.'],
     ['{0} considers you an enemy: its quay is shut to you. Ways in: mend your standing with its flag, or pay a smuggler to land you by night.',
       'Вы — враг фракции «{0}»: её причал для вас закрыт. Как попасть: поправить отношения с этим флагом или заплатить контрабандисту, чтобы он тайно высадил вас ночью.'],
     ['The smuggler’s boat puts you in by night ({0} silver): no customs, no harbour master. For {1} minutes it takes you in and out of this harbour.',
-      'Лодка контрабандиста тайно высадила вас ночью ({0} серебра): ни таможни, ни начальника порта. Ещё {1} мин. она возит вас в эту гавань и обратно.'],
+      'Лодка контрабандиста тайно высадила вас ночью за {0} серебра: ни таможни, ни начальника порта. Ещё {1} мин. она возит вас в эту гавань и обратно.'],
     [SMUGGLE_SAY.again, 'Лодка контрабандиста снова тайно доставила вас в гавань.'],
     [SMUGGLE_SAY.none, 'Контрабандист здесь не нужен: гавань вас пускает или не пускает из-за черепов.'],
     [SMUGGLE_SAY.far, 'Сначала подойдите к гавани: лодка контрабандиста ждёт у её причала.'],

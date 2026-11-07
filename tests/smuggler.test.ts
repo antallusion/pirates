@@ -139,7 +139,7 @@ test('in Russian: the refusal, the question and its ways — no Latin', () => {
       assert.ok(!/[A-Za-z]/.test(ru), `${en} → ${ru}`);
     }
     const ways = serverText(SMUGGLE_SAY.patentWays.replace('{0}', '5'));
-    assert.match(ways, /дождаться конца патента \(дней: 5\)/);
+    assert.match(ways, /дождаться\s+конца\s+патента\s+—\s+осталось\s+дней:\s+5/u);
     const html = smugglerHtml({ port: 'fogmouth', price: 1050, quest: true, why: 'patent', days: 5, mins: 30 }, 'Фогмут');
     const text = html.replace(/<[^>]+>/g, ' ');
     assert.ok(!/[A-Za-z]/.test(text), text);
