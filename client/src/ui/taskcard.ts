@@ -62,7 +62,7 @@ export function taskCardHtml(c: TaskCard): string {
   return `<div class="tk-card">
     <h3 class="tk-name">${esc(c.name)}</h3>${c.sub ? `<p class="tk-sub muted">${esc(c.sub)}</p>` : ''}
     ${prog}
-    ${row('what', c.what, 'map_contract')}${row('where', c.where, 'menu_map')}${row('reward', c.reward, 'ui_chest')}${row('how', c.how, 'menu_help')}
+    ${row('what', c.what !== c.name ? c.what : undefined, 'map_contract')}${row('where', c.where, 'menu_map')}${row('reward', c.reward, 'ui_chest')}${row('how', c.how, 'menu_help')}
     ${book}${sea}
   </div>`;
 }

@@ -253,7 +253,8 @@ body.simple.touch:not(.chat-open):not(.tac) #hud-chat > #chat-toggle .chat-unrea
 
 /* the HUD's icon: a small brass ring under the chat's button, the count of events not read on it */
 #hud-chat > .ev-toggle { position: absolute; display: block; box-sizing: border-box; width: 36px; height: 36px; padding: 5px; border-radius: 50%; border: 2px solid var(--brass-dim); background: rgba(16, 14, 11, 0.9); pointer-events: auto; cursor: pointer; touch-action: manipulation; z-index: 3;
-  right: calc(var(--sa-r) + 8px + (var(--chat-btn) - 36px) / 2); top: calc(var(--sa-t) + 120px + var(--chat-btn) + 8px); }
+  /* a desk: left of the chart, on its top line (under the chart stand its own round buttons) */
+  right: calc(var(--sa-r) + var(--mm, 132px) + 30px); top: calc(var(--sa-t) + 16px); }
 #hud-chat > .ev-toggle .ico { display: block; width: 100%; height: 100%; margin: 0; object-fit: contain; }
 #hud-chat > .ev-toggle.has-unread { border-color: var(--brass); filter: drop-shadow(0 0 5px rgba(232, 196, 106, 0.55)); }
 #hud-chat > .ev-toggle .ev-unread { position: absolute; top: -5px; right: -7px; min-width: 17px; height: 17px; padding: 0 4px; box-sizing: border-box; border-radius: 9px; background: #a8322a; border: 1px solid #f0c9a0; color: #fff; font: 700 10.5px/15px var(--sans); font-style: normal; text-align: center; white-space: nowrap; pointer-events: none; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
