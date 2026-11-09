@@ -2,8 +2,11 @@
 // они бухают и тратят». Settled once, when she comes back aboard, by where her ship lay:
 //   · at sea — the men eat the provisions, on short rations at anchor (SEA_FOOD_SHARE of the sailing mess an hour);
 //   · in port — no provisions, they draw silver ashore instead (PORT_WAGE_SHARE of their sea wages an hour).
+//   · off her own island — the men eat the island's provisions first (its yard, then its store), then the hold's, and
+//     draw no silver: they are home (forum post 98, 2026-11-09: a ship a day off her own island with 1 500 provisions in
+//     its store lost 70 trained hands — the island's bread was never theirs).
 // Gentle by design: at most AWAY_CAP_H hours are counted, the purse and the hold never go below zero, and what is short
-// costs morale and a few deserters (at most DESERT_MAX of the crew, never under her sailing minimum) — never her ship.
+// costs morale only — nobody deserts while she is away (forum post 98: a night away cost 31 hands, two nights 70).
 // A newcomer (level < NEWCOMER_LEVEL) pays half and loses no one. Pure: the server settles by it (crewaway.ts), the
 // tests weigh it.
 
@@ -17,8 +20,9 @@ export const AWAY_SETTLE_MIN_H = 0.25;
 export const SEA_FOOD_SHARE = 0.25;
 /** In port, ashore: this share of the sea wages an hour, drunk and spent. */
 export const PORT_WAGE_SHARE = 0.25;
-/** The most of the crew that deserts when nothing at all was paid or eaten (a part short: a part of it). */
-export const DESERT_MAX = 0.15;
+/** The most of the crew that deserted when nothing at all was paid or eaten — no longer: nobody deserts while she is away
+ *  (forum post 98). Kept at 0 for the tests and the words. */
+export const DESERT_MAX = 0;
 /** Morale lost when nothing at all was paid or eaten (a part short: a part of it), never under MORALE_FLOOR. */
 export const MORALE_LOSS = 30;
 export const MORALE_FLOOR = 25;
@@ -41,6 +45,9 @@ export interface AwayCrewIn {
   /** Her sea wages an hour (crew.ts wagesPerHour × Fair Share). */
   wagesPerHour: number;
   morale: number;
+  /** Off her own island: its provisions (yard and store), eaten before the hold's. */
+  home?: boolean;
+  isleFood?: number;
 }
 
 export interface AwayCrewOut {
@@ -59,6 +66,9 @@ export interface AwayCrewOut {
   deserted: number;
   morale: number;
   newcomer: boolean;
+  /** Off her own island: what was eaten from the island (the rest of `food` from the hold). */
+  home: boolean;
+  isleFood: number;
 }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -69,9 +79,12 @@ export function settleAwayCrew(o: AwayCrewIn): AwayCrewOut {
   const newcomer = o.level < NEWCOMER_LEVEL;
   const ease = newcomer ? 0.5 : 1;
   let food = 0, foodShort = 0, silver = 0, silverShort = 0, want = 0, got = 0;
-  if (o.atSea) {
+  let isleFood = 0;
+  const home = !!o.home;
+  if (o.atSea || home) {
     want = provisionsPerMinute(Math.max(0, o.eaters), o.provisionUse) * 60 * hours * SEA_FOOD_SHARE * ease;
-    food = r2(Math.min(Math.max(0, o.provisions), want));
+    isleFood = home ? r2(Math.min(Math.max(0, o.isleFood ?? 0), want)) : 0;
+    food = r2(isleFood + Math.min(Math.max(0, o.provisions), want - isleFood));
     foodShort = r2(Math.max(0, want - food));
     got = food;
   } else {
@@ -85,6 +98,11 @@ export function settleAwayCrew(o: AwayCrewIn): AwayCrewOut {
   const deserted = newcomer || short <= 0 ? 0 : Math.min(room, Math.floor(o.crew * DESERT_MAX * short));
   let morale = o.morale;
   if (short > 0) morale = Math.min(morale, Math.max(MORALE_FLOOR, morale - MORALE_LOSS * short));
-  else if (hours > 0) morale = Math.max(morale, Math.min(o.atSea ? 70 : 80, morale + 5 * hours)); // fed at anchor, merry ashore
-  return { hours: r2(hours), capped: o.hours > AWAY_CAP_H, atSea: o.atSea, food, foodShort, silver, silverShort, short: r2(short), deserted, morale: Math.round(morale), newcomer };
+  else if (hours > 0) morale = Math.max(morale, Math.min(o.atSea && !home ? 70 : 80, morale + 5 * hours)); // fed at anchor, merry ashore and at home
+  return { hours: r2(hours), capped: o.hours > AWAY_CAP_H, atSea: o.atSea, food, foodShort, silver, silverShort, short: r2(short), deserted, morale: Math.round(morale), newcomer, home, isleFood };
+}
+
+/** The server's words about the time away, and their Russian (client/src/lang/server.ts). */
+export function awayPatterns(): [string, string][] {
+  return [['{0} hands who left while you were away are back aboard.', 'Матросы, ушедшие, пока вас не было, вернулись на борт: {0}.']];
 }

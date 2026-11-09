@@ -65,6 +65,8 @@ export const EN = {
   upSubBrief: 'You were away {h} h.',
   upSea: 'Your ship lay at sea {h} h{cap}: the crew ate {food} provisions on short rations.',
   upPort: 'Your ship lay in port {h} h{cap}: ashore the crew drank and spent {silver} silver.',
+  upIsle: 'Your ship lay off your island {h} h{cap}: the crew ate {food} provisions, {isle} of them from the island’s store.',
+  upStay: 'The crew is low in spirit, but nobody left: while you are away nobody deserts.',
   upCap: ' (counted at most 24)',
   upFoodShort: 'The provisions ran out: {n} short.',
   upSilverShort: 'The purse ran dry: {n} silver short.',
@@ -73,7 +75,7 @@ export const EN = {
   upMorale: 'Morale: {m}.',
   upAllWell: 'All paid and fed, nobody left.',
   upNewcomer: 'A newcomer’s grace: half the bill, nobody deserts.',
-  upRule: 'At sea the crew eats provisions while you are away; in port it draws silver instead. At most 24 h are counted; nothing goes below zero.',
+  upRule: 'While you are away the crew eats provisions at sea, your island’s first off your island, and draws silver in port. At most 24 h are counted; nothing goes below zero, and nobody deserts.',
   titleTip: 'Your title, shown with your ship’s name',
 };
 
@@ -141,6 +143,8 @@ export const RU: typeof EN = {
   upSubBrief: 'Вас не было {h} ч.',
   upSea: 'Корабль стоял в море {h} ч{cap}: команда на урезанном пайке съела провизии — {food}.',
   upPort: 'Корабль стоял в порту {h} ч{cap}: на берегу команда пропила и потратила {silver} серебра.',
+  upIsle: 'Корабль стоял у вашего острова {h} ч{cap}: команда съела провизии — {food}, из них со склада острова — {isle}.',
+  upStay: 'Команда приуныла, но никто не ушёл: пока вас нет, матросы не бегут.',
   upCap: ' (в счёт идут не больше 24)',
   upFoodShort: 'Провизия кончилась: не хватило {n}.',
   upSilverShort: 'Казна опустела: не хватило {n} серебра.',
@@ -149,6 +153,6 @@ export const RU: typeof EN = {
   upMorale: 'Боевой дух: {m}.',
   upAllWell: 'Все сыты и при деньгах, никто не ушёл.',
   upNewcomer: 'Поблажка новичку: счёт вдвое меньше, никто не бежит.',
-  upRule: 'Пока вас нет, в море команда ест провизию, а в порту берёт серебром. В счёт идут не больше 24 ч, в минус ничего не уходит.',
+  upRule: 'Пока вас нет, в море команда ест провизию (у своего острова — сперва с его склада), а в порту берёт серебром. В счёт идут не больше 24 ч, в минус ничего не уходит, и никто не сбегает.',
   titleTip: 'Ваш титул — виден рядом с именем корабля',
 };

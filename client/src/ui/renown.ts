@@ -245,11 +245,12 @@ export function renderAway(root: HTMLElement, v: AwayView, send: (m: ClientMsg) 
 function upkeepCard(u: NonNullable<AwayView['upkeep']>): string {
   const cap = u.capped ? L('upCap') : '';
   const h = Math.round(u.hours * 10) / 10;
-  const lines = [u.atSea ? L('upSea', { h, cap, food: fmt(Math.round(u.food)) }) : L('upPort', { h, cap, silver: fmt(u.silver) })];
+  const lines = [u.home ? L('upIsle', { h, cap, food: fmt(Math.round(u.food)), isle: fmt(Math.round(u.isleFood)) }) : u.atSea ? L('upSea', { h, cap, food: fmt(Math.round(u.food)) }) : L('upPort', { h, cap, silver: fmt(u.silver) })];
   if (u.foodShort > 0) lines.push(L('upFoodShort', { n: fmt(Math.ceil(u.foodShort)) }));
   if (u.silverShort > 0) lines.push(L('upSilverShort', { n: fmt(u.silverShort) }));
   if (u.deserted > 0) lines.push(L(u.atSea ? 'upDeserted' : 'upDesertedPort', { n: u.deserted, crew: u.crew }));
   else if (u.short <= 0) lines.push(L('upAllWell'));
+  else lines.push(L('upStay'));
   lines.push(L('upMorale', { m: u.morale }));
   if (u.newcomer) lines.push(L('upNewcomer'));
   return `<div class="card aw-card aw-upkeep${u.short > 0 ? ' short' : ''}"><h4 class="card-h">${icon('stat_crew', '', 'ico-md')}${esc(L('upTitle'))}</h4>${lines.map((x) => `<p class="aw-line">${esc(x)}</p>`).join('')}<p class="aw-line muted">${esc(L('upRule'))}</p></div>`;

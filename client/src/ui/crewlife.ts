@@ -121,7 +121,8 @@ export function tellLog(e: LogEntry, captain: string): string {
     case 'letter': return LC(e.n ? 'lg.letterSilver' : 'lg.letter', { 0: personName(e.a[0] ?? ''), 1: serverText(e.a[1] ?? ''), n: e.n ?? 0 });
     case 'encounter': return encounterLine(e);
     // forum post 45: «Расчёт за время отсутствия»
-    case 'upkeep': return LC(e.a[0] === 'sea' ? 'lg.upkeepSea' : 'lg.upkeepPort', { h: e.a[1] ?? '0', food: e.a[2] ?? '0', silver: e.a[3] ?? '0' }) + (Number(e.a[5] ?? 0) > 0 ? LC('lg.upkeepShort', { s: e.a[5] ?? '0', n: e.a[4] ?? '0' }) : '');
+    // (an old line kept its deserters; since forum 98 nobody deserts while she is away)
+    case 'upkeep': return LC(e.a[0] === 'sea' ? 'lg.upkeepSea' : e.a[0] === 'isle' ? 'lg.upkeepIsle' : 'lg.upkeepPort', { h: e.a[1] ?? '0', food: e.a[2] ?? '0', silver: e.a[3] ?? '0' }) + (Number(e.a[5] ?? 0) > 0 ? LC(Number(e.a[4] ?? 0) > 0 ? 'lg.upkeepShort' : 'lg.upkeepShortStay', { s: e.a[5] ?? '0', n: e.a[4] ?? '0' }) : '');
     default: return LC(`lg.${e.kind}` as 'lg.sank', { 0: a(0), 1: a(1) });
   }
 }

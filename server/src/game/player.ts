@@ -147,6 +147,8 @@ export interface Profile {
   /** Ships sunk or taken in a row since she last made port (docs/16 #4). */
   streak?: number;
   ashoreAt?: number;
+  /** Forum post 98: the hands that deserted while she was away given back once (crewaway.ts AWAY_REFUND). */
+  refund98?: number;
   ashoreInPort?: boolean;
   paths: CaptainId[]; // Paths this captain may take up at a Captain's House
   pathSwitchAt: number;
