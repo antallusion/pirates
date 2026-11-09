@@ -39,7 +39,7 @@ import { handleVkId } from './http/vkid-routes.ts';
 import { readFileSync } from 'node:fs';
 import { ForumStore } from './forum/store.ts';
 import { ForumService } from './forum/service.ts';
-import { forumSeoHtml, forumSeoPage } from './forum/seo.ts';
+import { forumSeoHtml, forumSeoPage, forumSitemap } from './forum/seo.ts';
 import { gameLink } from './forum/gamelink.ts';
 import { postOfficial } from './forum/posts28.ts';
 import { setPvpNews } from './game/pvprank.ts';
@@ -74,6 +74,7 @@ const serveStatic = createStaticHandler(root, {
     const origin = /<link rel="canonical" href="(https?:\/\/[^/"]+)/.exec(shell)?.[1] ?? 'https://gravetidegame.com';
     return { status: pg.status, html: forumSeoHtml(shell, pg, origin, lang) };
   },
+  forumSitemap: () => forumSitemap(forum, 'https://gravetidegame.com'),
 });
 // Real-device telemetry (docs/33): daily aggregates in their own SQLite file next to the game's database.
 const telemetry = new Telemetry(process.env.TELEMETRY_DB_PATH ?? (DB_PATH === ':memory:' ? ':memory:' : resolve(dirname(DB_PATH), 'telemetry.db')));

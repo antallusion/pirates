@@ -107,7 +107,7 @@ const SITE_HOSTS = new Set((process.env.SITE_HOSTS ?? 'gravetidegame.com,www.gra
  *  canonical and text written in; `rel` is the address after the forum's base, `page` its `?p=`. */
 export type ForumPageHook = (shell: string, rel: string, lang: 'ru' | 'en', page: number) => { status: number; html: string };
 
-export function createStaticHandler(root: string, opts: { dist?: string; forumPage?: ForumPageHook } = {}) {
+export function createStaticHandler(root: string, opts: { dist?: string; forumPage?: ForumPageHook; forumSitemap?: () => string } = {}) {
   const distDir = resolve(opts.dist ?? join(root, 'client', 'dist'));
   const mounts: Mount[] = [
     // the client's bundle (tools/build-client.ts): /dist/<name>-<hash>.js
@@ -299,6 +299,11 @@ export function createStaticHandler(root: string, opts: { dist?: string; forumPa
     const forumAt = fm && !/\.[a-z0-9]{2,5}$/i.test(fm[2] ?? '') ? { rel: (fm[2] ?? '').replace(/^\/+|\/+$/g, ''), lang: fm[1] ? 'en' as const : 'ru' as const } : null;
     if (forumAt) path = `/site/${fm![1] ?? ''}forum/index.html`;
     if (path.startsWith('/site/') && path.endsWith('/')) path += 'index.html';
+    // the forum's sitemap, made from the forum as it is now (server/src/forum/seo.ts)
+    if (path === '/sitemap-forum.xml' && opts.forumSitemap) {
+      const body = Buffer.from(opts.forumSitemap(), 'utf8');
+      return await send(req, res, { mtime: 0, body, etag: `W/"m${hash(body)}"` }, '.xml', 'public, max-age=3600');
+    }
     // the search engines' files, written by tools/site/build.ts
     if (path === '/robots.txt' || path === '/sitemap.xml') path = `/site${path}`;
     if (path === '/assets/manifest.v.json') {

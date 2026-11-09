@@ -91,6 +91,25 @@ export function forumSeoPage(forum: ForumService, rel: string, lang: Lang, pageA
   return { status: 200, title: site, desc: site, path: base, index: false, h1: site, body: '' };
 }
 
+/** The forum's own sitemap (/sitemap-forum.xml, named in robots.txt): its front, its sections and every topic open to
+ *  all, in both languages with their hreflang pair, each with the time of its last post. */
+export function forumSitemap(forum: ForumService, origin: string): string {
+  const st = forum.store.sectionStats(false);
+  const day = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+  const entries: { rel: string; at: number; freq: string; prio: string }[] = [];
+  const newest = forum.store.freshTopics(false, 1)[0]?.last_post_at ?? 0;
+  entries.push({ rel: '', at: newest, freq: 'daily', prio: '0.7' });
+  for (const s of forum.store.sections()) {
+    const x = st.get(s.id);
+    if (!x || x.topics === 0) continue;
+    entries.push({ rel: `s/${encodeURIComponent(s.slug)}`, at: x.last?.last_post_at ?? 0, freq: 'daily', prio: '0.6' });
+  }
+  for (const t of forum.store.freshTopics(false, Math.min(20_000, forum.store.countTopics(false)))) entries.push({ rel: `t/${t.id}`, at: t.last_post_at, freq: 'weekly', prio: '0.5' });
+  const loc = (lang: Lang, rel: string) => `${origin}${lang === 'ru' ? '/site/forum/' : '/site/en/forum/'}${rel}`;
+  const urls = entries.flatMap((e) => (['ru', 'en'] as Lang[]).map((lang) => `<url><loc>${loc(lang, e.rel)}</loc>${e.at ? `<lastmod>${day(e.at)}</lastmod>` : ''}<changefreq>${e.freq}</changefreq><priority>${e.prio}</priority><xhtml:link rel="alternate" hreflang="ru" href="${loc('ru', e.rel)}"/><xhtml:link rel="alternate" hreflang="en" href="${loc('en', e.rel)}"/><xhtml:link rel="alternate" hreflang="x-default" href="${loc('ru', e.rel)}"/></url>`));
+  return ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">', ...urls, '</urlset>', ''].join('\n');
+}
+
 /** The forum's shell with the page written in: its head's title, description, canonical, og/twitter and hreflang pair,
  *  the robots line, the hero's heading and the text in #forum. */
 export function forumSeoHtml(shell: string, pg: ForumSeoPage, origin: string, lang: Lang): string {

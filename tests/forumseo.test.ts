@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { ForumStore } from '../server/src/forum/store.ts';
 import { ForumService, NO_GAME } from '../server/src/forum/service.ts';
-import { excerpt, forumSeoHtml, forumSeoPage } from '../server/src/forum/seo.ts';
+import { excerpt, forumSeoHtml, forumSeoPage, forumSitemap } from '../server/src/forum/seo.ts';
 
 const svc = new ForumService({ store: new ForumStore(':memory:'), link: NO_GAME, now: () => Date.UTC(2026, 10, 9) });
 const shell = readFileSync('site/forum/index.html', 'utf8');
@@ -44,6 +44,18 @@ test('a missing topic or section is a real 404, the lists are not indexed', () =
   const list = page('l/today');
   assert.equal(list.pg.status, 200);
   assert.match(list.html, /noindex, follow/);
+});
+
+test('the forum\'s sitemap: its front, the sections with topics and every open topic, in both languages', () => {
+  const xml = forumSitemap(svc, ORIGIN);
+  assert.match(xml, /^<\?xml version="1\.0" encoding="UTF-8"\?>\n<urlset /);
+  assert.match(xml, /<loc>https:\/\/gravetidegame\.com\/site\/forum\/<\/loc>/);
+  assert.match(xml, /<loc>https:\/\/gravetidegame\.com\/site\/en\/forum\/t\/1<\/loc>/);
+  assert.match(xml, /hreflang="en" href="https:\/\/gravetidegame\.com\/site\/en\/forum\/t\/1"/);
+  const topics = svc.store.countTopics(false);
+  assert.equal((xml.match(/<loc>[^<]*\/forum\/t\/\d+<\/loc>/g) ?? []).length, topics * 2);
+  assert.doesNotMatch(xml, /\/(l|u|p|search)\//);
+  assert.match(readFileSync('site/robots.txt', 'utf8'), /^Sitemap: https:\/\/gravetidegame\.com\/sitemap-forum\.xml$/m);
 });
 
 test('the excerpt: text without the inline tags\' gaps, cut at a word', () => {

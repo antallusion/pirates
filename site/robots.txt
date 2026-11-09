@@ -22,3 +22,4 @@ Disallow: /site/en/forum/search
 Clean-param: n&kit&ref /
 
 Sitemap: https://gravetidegame.com/sitemap.xml
+Sitemap: https://gravetidegame.com/sitemap-forum.xml
