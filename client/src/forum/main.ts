@@ -99,6 +99,9 @@ async function route(): Promise<void> {
   root.className = 'f-page';
   root.innerHTML = `<div class="f-loading" aria-busy="true">${ico('compass', 'f-ico f-spin')}${esc(t('loading'))}</div>`;
   const old = mount.firstElementChild;
+  // the server's text of the page (server/src/forum/seo.ts), kept to come back if the forum's data never comes — a search
+  // engine's robot sees the page's words, not «not found» (Search Console 2026-11-09: soft 404)
+  const ssr = old?.classList.contains('f-ssr') ? old : null;
   if (old) old.replaceWith(root);
   else mount.appendChild(root);
   const c: Ctx = { root, path: rel, q: new URLSearchParams(location.search), go };
@@ -122,6 +125,10 @@ async function route(): Promise<void> {
     else P.notFound(c);
   } catch (e) {
     if (my !== seq) return;
+    if (ssr) {
+      root.replaceWith(ssr);
+      return;
+    }
     P.notFound(c, errText(e));
   }
   if (my !== seq) return;

@@ -869,7 +869,7 @@ for (const lang of ['ru', 'en'] as Lang[]) {
   const alt = (p: string) => `<xhtml:link rel="alternate" hreflang="ru" href="${pageUrl('ru', p)}"/><xhtml:link rel="alternate" hreflang="en" href="${pageUrl('en', p)}"/><xhtml:link rel="alternate" hreflang="x-default" href="${pageUrl('ru', p)}"/>`;
   const urls = pages.flatMap((p) => (['ru', 'en'] as Lang[]).map((lang) => `<url><loc>${pageUrl(lang, p)}</loc><lastmod>${today}</lastmod><changefreq>${p === '' || p === 'forum/' ? 'daily' : 'weekly'}</changefreq><priority>${prio(p)}</priority>${alt(p)}</url>`));
   writeFileSync(join(SITE, 'sitemap.xml'), ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">', ...urls, '</urlset>', ''].join(NL));
-  const shut = ['Disallow: /api/', 'Disallow: /ops/', 'Disallow: /telemetry/', 'Disallow: /auth/', 'Disallow: /tg/', 'Disallow: /site/forum/search', 'Disallow: /site/en/forum/search'];
+  const shut = ['Allow: /api/forum/', 'Disallow: /api/', 'Disallow: /ops/', 'Disallow: /telemetry/', 'Disallow: /auth/', 'Disallow: /tg/', 'Disallow: /site/forum/search', 'Disallow: /site/en/forum/search'];
   writeFileSync(join(SITE, 'robots.txt'), ['User-agent: *', 'Allow: /', ...shut, '', 'User-agent: Yandex', 'Allow: /', ...shut, 'Clean-param: n&kit&ref /', '', `Sitemap: ${ORIGIN}/sitemap.xml`, ''].join(NL));
   console.log(`sitemap: ${urls.length} addresses`);
 }
