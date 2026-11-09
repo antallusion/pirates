@@ -207,7 +207,7 @@ export const empty = (text: string, icon = 'spyglass'): string =>
 
 export function loginCta(): string {
   const back = encodeURIComponent(location.pathname + location.search);
-  return `<div class="f-login panel reveal"><img class="f-login-ico" src="${K('ui/seal')}" alt="" width="72" height="78" loading="lazy" decoding="async"><div><h3>${esc(t('login_title'))}</h3><p>${tx(t('login_text'))}</p></div><a class="btn-gold" href="/?forum=${back}" target="_blank" rel="opener">${esc(t('login_btn'))}</a></div>`;
+  return `<div class="f-login panel reveal"><img class="f-login-ico" src="${K('ui/seal')}" alt="" width="72" height="78" loading="lazy" decoding="async"><div><h3>${esc(t('login_title'))}</h3><p>${tx(t('login_text'))}</p></div><a class="btn-gold" href="/?forum=${back}" target="_blank" rel="opener nofollow">${esc(t('login_btn'))}</a></div>`;
 }
 
 export const crumbs = (items: [string, string | null][]): string =>

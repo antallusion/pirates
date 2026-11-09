@@ -354,7 +354,8 @@ export class ForumService {
     // a view counted once an hour per reader
     const vk = `${viewerKey}:${t.id}`;
     const now = this.now();
-    if ((this.viewed.get(vk) ?? 0) < now - HOUR) {
+    // (an empty key — the page's server render for the search engines, forum/seo.ts — counts no view)
+    if (viewerKey && (this.viewed.get(vk) ?? 0) < now - HOUR) {
       this.viewed.set(vk, now);
       this.store.view(t.id);
       t.views++;

@@ -103,7 +103,11 @@ const ASSET_ORIGIN = (process.env.ASSET_ORIGIN ?? '').trim().replace(/\/+$/, '')
 const SITE_HOSTS = new Set((process.env.SITE_HOSTS ?? 'gravetidegame.com,www.gravetidegame.com').split(',').map((h) => h.trim().toLowerCase()).filter(Boolean));
 
 /** `dist`: where the client's bundle is (client/dist; the tests build one elsewhere). */
-export function createStaticHandler(root: string, opts: { dist?: string } = {}) {
+/** `forumPage`: the forum's page as the search engines see it (server/src/forum/seo.ts) — the shell with its own title,
+ *  canonical and text written in; `rel` is the address after the forum's base, `page` its `?p=`. */
+export type ForumPageHook = (shell: string, rel: string, lang: 'ru' | 'en', page: number) => { status: number; html: string };
+
+export function createStaticHandler(root: string, opts: { dist?: string; forumPage?: ForumPageHook } = {}) {
   const distDir = resolve(opts.dist ?? join(root, 'client', 'dist'));
   const mounts: Mount[] = [
     // the client's bundle (tools/build-client.ts): /dist/<name>-<hash>.js
@@ -292,7 +296,8 @@ export function createStaticHandler(root: string, opts: { dist?: string } = {}) 
     }
     // The forum is one page (docs/32_FORUM.md): its every address without a file's extension is that page.
     const fm = /^\/site\/(en\/)?forum(\/.*)?$/.exec(path);
-    if (fm && !/\.[a-z0-9]{2,5}$/i.test(fm[2] ?? '')) path = `/site/${fm[1] ?? ''}forum/index.html`;
+    const forumAt = fm && !/\.[a-z0-9]{2,5}$/i.test(fm[2] ?? '') ? { rel: (fm[2] ?? '').replace(/^\/+|\/+$/g, ''), lang: fm[1] ? 'en' as const : 'ru' as const } : null;
+    if (forumAt) path = `/site/${fm![1] ?? ''}forum/index.html`;
     if (path.startsWith('/site/') && path.endsWith('/')) path += 'index.html';
     // the search engines' files, written by tools/site/build.ts
     if (path === '/robots.txt' || path === '/sitemap.xml') path = `/site${path}`;
@@ -348,12 +353,22 @@ export function createStaticHandler(root: string, opts: { dist?: string } = {}) 
         const key = `${file}#pre`;
         let pe = cache.get(key);
         if (!pe || pe.etag !== `W/"i${hash(body)}"`) cache.set(key, (pe = { mtime: entry.mtime, body, etag: `W/"i${hash(body)}"` }));
-        return await send(req, res, pe, ext, 'no-cache');
+        // the game at an address with a query (/?forum=…, /?battle, a referral's /?ref=…) is the game's page again: kept out
+        // of the index (Search Console 2026-11-09: «/?forum=/site/forum/s/…» taken for copies)
+        return await send(req, res, pe, ext, 'no-cache', 200, url.search ? 'noindex' : undefined);
       }
       // the forum's page (site/forum, site/en/forum): its script from the bundle too
       if (/^\/site\/(en\/)?forum\/index\.html$/.test(path)) {
         const b = url.searchParams.has('src') ? null : await currentBundle();
         const fe = b?.entries.forum;
+        // each address's own page for the search engines (forum/seo.ts); the script takes over when it starts
+        if (opts.forumPage && forumAt) {
+          let shell = entry.body.toString('utf8');
+          if (b && fe) shell = shell.replace('<script type="module" src="/src/forum/main.ts"></script>', `${fe.boot.slice(1).map((f) => `<link rel="modulepreload" href="/dist/${f}">`).join('')}<script type="module" src="/dist/${fe.file}"></script>`);
+          const pg = opts.forumPage(shell, forumAt.rel, forumAt.lang, Number(url.searchParams.get('p') ?? 1));
+          const body = Buffer.from(pg.html, 'utf8');
+          return await send(req, res, { mtime: entry.mtime, body, etag: `W/"s${hash(body)}"` }, ext, 'no-cache', pg.status);
+        }
         if (b && fe) {
           const links = fe.boot.slice(1).map((f) => `<link rel="modulepreload" href="/dist/${f}">`).join('');
           const html = entry.body.toString('utf8').replace('<script type="module" src="/src/forum/main.ts"></script>', `${links}<script type="module" src="/dist/${fe.file}"></script>`);
@@ -433,25 +448,28 @@ export function withBuild(js: string, b: string): string {
 }
 
 /** Answer with a body: «not modified» to a browser that has it, compressed when it is text. */
-async function send(req: IncomingMessage, res: ServerResponse, entry: Entry, ext: string, cacheControl: string): Promise<true> {
+async function send(req: IncomingMessage, res: ServerResponse, entry: Entry, ext: string, cacheControl: string, status = 200, robots?: string): Promise<true> {
   const head: Record<string, string | number> = {
     'Content-Type': MIME[ext] ?? 'application/octet-stream',
     'Cache-Control': cacheControl,
     ETag: entry.etag,
   };
+  // the game's code is fetched by the pages, never a search result (Search Console 2026-11-09: /src/main.ts?b=… crawled)
+  if (robots) head['X-Robots-Tag'] = robots;
+  else if (ext === '.ts' || ext === '.js' || ext === '.mjs') head['X-Robots-Tag'] = 'noindex';
   if (MEDIA.has(ext)) head['Accept-Ranges'] = 'bytes';
   // the pictures may be drawn on a canvas from a CDN's host (docs/33: ASSET_ORIGIN): any page may read them
   if (ext === '.webp' || ext === '.avif' || ext === '.png' || ext === '.jpg') head['Access-Control-Allow-Origin'] = '*';
   if (TEXT.has(ext)) head['Vary'] = 'Accept-Encoding';
   const inm = req.headers['if-none-match'];
-  if (inm && inm.split(/\s*,\s*/).includes(entry.etag)) {
+  if (status === 200 && inm && inm.split(/\s*,\s*/).includes(entry.etag)) {
     res.writeHead(304, head).end();
     return true;
   }
   const { body, enc } = TEXT.has(ext) ? await encoded(entry, req) : { body: entry.body, enc: null };
   if (enc) head['Content-Encoding'] = enc;
   head['Content-Length'] = body.length;
-  res.writeHead(200, head);
+  res.writeHead(status, head);
   if (req.method === 'HEAD') res.end();
   else res.end(body);
   return true;
