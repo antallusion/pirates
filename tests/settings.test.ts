@@ -32,7 +32,11 @@ test('options survive an old or broken save: clamped scales, filled keys and vol
   assert.equal(s.textScale, 0.9);
   assert.equal(s.colorblind, 'off');
   assert.equal(s.volume.master, 1);
-  assert.equal(s.volume.sea, 1);
+  assert.equal(s.volume.guns, 1);
+  // an old save of the four buses: the sea's into its three, the fighting's into its five (owner, 2026-11-11)
+  const old = sanitize({ volume: { master: 0.5, sea: 0.3, combat: 0.6, ui: 0.2, music: 0.4 } as never });
+  assert.deepEqual([old.volume.ambience, old.volume.weather, old.volume.ship, old.volume.guns, old.volume.creatures, old.volume.ui, old.volume.music], [0.3, 0.3, 0.3, 0.6, 0.6, 0.2, 0.4]);
+  assert.ok(!('sea' in old.volume));
   assert.deepEqual(s.keys.sailUp, ['w', 'arrowup'], 'a malformed binding falls back');
   assert.deepEqual(s.keys.firePort, ['q', '']);
 });

@@ -226,9 +226,10 @@ class Layer {
     return this.loc.get(name)!;
   }
 
-  resize(w: number, h: number, dpr: number): void {
-    // The sea and the fog are soft: they render at up to 1.5× device pixels, and the browser scales them.
-    const k = Math.min(dpr, 1.5);
+  resize(w: number, h: number, dpr: number, most = 1.5): void {
+    // The sea and the fog are soft: they render at up to 1.5× device pixels (2× at «Чёткость: максимум»), and the
+    // browser scales them.
+    const k = Math.min(dpr, most);
     this.canvas.width = Math.round(w * k);
     this.canvas.height = Math.round(h * k);
     this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);

@@ -421,14 +421,17 @@ export class Renderer {
   }
 
   resize(): void {
-    // Phones and tablets draw at 1.5× at most: three full-screen layers at 3× cost more than they show.
-    this.dpr = Math.min(matchMedia('(pointer: coarse)').matches ? 1.5 : 2, devicePixelRatio || 1);
+    // Phones and tablets draw at 1.5× at most: three full-screen layers at 3× cost more than they show. The options
+    // (owner, 2026-11-11): «Чёткость: максимум» draws at the screen's own density (up to 3×), «Разрешение» a share of it.
+    const o = settings();
+    const cap = o.sharpness === 'max' ? 3 : matchMedia('(pointer: coarse)').matches ? 1.5 : 2;
+    this.dpr = Math.max(0.5, Math.min(cap, devicePixelRatio || 1) * o.renderScale);
     this.w = innerWidth;
     this.h = innerHeight;
     this.canvas.width = Math.round(this.w * this.dpr);
     this.canvas.height = Math.round(this.h * this.dpr);
-    this.sea?.resize(this.w, this.h, this.dpr);
-    this.sky?.resize(this.w, this.h, this.dpr);
+    this.sea?.resize(this.w, this.h, this.dpr, o.sharpness === 'max' ? 2 : 1.5);
+    this.sky?.resize(this.w, this.h, this.dpr, o.sharpness === 'max' ? 2 : 1.5);
     this.dark.width = Math.round(this.w / 2);
     this.dark.height = Math.round(this.h / 2);
     // The default view spans about 260 m across the short side of the screen: a phone still sees a broadside's

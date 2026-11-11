@@ -6,6 +6,12 @@ import { forwardOffers, LOAN_INTEREST } from '../server/src/game/finance.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import { join, makeGame, steps } from './helpers.ts';
 
+/** The day's orders put by (2026-11-11: a day whose orders asked for ports paid 88 silver at the second quay, and the
+ *  sums of the forward and the bailiffs were off by it). */
+function noOrders(s: PlayerSession): void {
+  for (const o of s.profile!.daily.orders) o.done = true;
+}
+
 function dockAt(game: Game, s: PlayerSession, port: Port): void {
   const ship = s.ship!;
   ship.state.x = port.x;
@@ -26,6 +32,7 @@ test('exchange forwards: collateral up front, paid per unit on delivery, collate
   const c = join(game, 'Forward Trader');
   const s = [...game.sessions][0];
   const p = s.profile!;
+  noOrders(s);
   const ship = s.ship!;
   const home = exchangePort(game);
   dockAt(game, s, home);
@@ -140,6 +147,7 @@ test('credit: limit from level and League standing, interest, default seizes bal
   const c = join(game, 'Debtor Dan');
   const s = [...game.sessions][0];
   const p = s.profile!;
+  noOrders(s);
   const lp = leaguePort(game);
   dockAt(game, s, lp);
   game.pushPort(s);

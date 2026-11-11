@@ -5,8 +5,9 @@
 
 import { lang, setLang, t } from '../i18n.ts';
 import type { Key, Lang } from '../i18n.ts';
-import { ACTIONS, DENSITIES, conflicts, keyLabel, keyOf, PRESETS, settings, update } from '../settings.ts';
-import type { Action, Colorblind, Settings } from '../settings.ts';
+import { ACTIONS, DENSITIES, FPS_CAPS, QUALITY, VOL_KEYS, conflicts, defaults, keyLabel, keyOf, PRESETS, qualityOf, settings, update } from '../settings.ts';
+import type { Action, Colorblind, Quality, Settings, VolKey } from '../settings.ts';
+import { EN as MIX_EN, RU as MIX_RU } from '../lang/ui/mixer.ts'; // owner, 2026-11-11: the mixer and the graphics
 import { esc, icon } from './dom.ts';
 import { dict } from '../i18n.ts';
 import { EN as WIN_EN, RU as WIN_RU } from '../lang/ui/win.ts';
@@ -22,6 +23,7 @@ import { inVk, vkAskNotifications, vkInviteButton, vkShare } from '../vk.ts'; //
 const W = dict(WIN_EN, WIN_RU);
 const U2 = dict(UX2_EN, UX2_RU);
 const G = dict(GIFT_EN, GIFT_RU);
+const MX = dict(MIX_EN, MIX_RU);
 /** The interface's sizes on the main page (uiScale). */
 export const UI_SIZES = [0.85, 1, 1.15, 1.3] as const;
 
@@ -45,9 +47,9 @@ function soundCredits(): string {
   return `<div class="opt-credits"><p class="opt-l">${esc(t('opt.credits'))}</p><ul class="muted no-tr">${SOUND_CREDITS.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>${inVk() ? '' : `<a href="/assets/audio/CREDITS.md" target="_blank" rel="noopener">${esc(t('opt.creditsAll'))}</a>`}</div>`;
 }
 
-const TAB_ICON: Record<string, string> = { ui: 'menu_options', vision: 'ab_spotters_eye', sound: 'opt_sound', controls: 'opt_controls', notify: 'ui_bell', promo: 'ui_chest' };
+const TAB_ICON: Record<string, string> = { gfx: 'menu_map', ui: 'menu_options', vision: 'ab_spotters_eye', sound: 'opt_sound', controls: 'opt_controls', notify: 'ui_bell', promo: 'ui_chest' };
 
-type Tab = 'ui' | 'vision' | 'sound' | 'controls' | 'notify' | 'promo';
+type Tab = 'ui' | 'gfx' | 'vision' | 'sound' | 'controls' | 'notify' | 'promo';
 
 export class OptionsScreen {
   private tab: Tab = 'ui';
@@ -109,9 +111,9 @@ export class OptionsScreen {
     this.root = root;
     const s = settings();
     // «Уведомления в Телеграме» (owner, 2026-10-16): a tab of its own for a captain with Telegram linked
-    const tabs: Tab[] = tgnView() ? ['promo', 'ui', 'vision', 'sound', 'controls', 'notify'] : ['promo', 'ui', 'vision', 'sound', 'controls'];
+    const tabs: Tab[] = tgnView() ? ['promo', 'ui', 'gfx', 'vision', 'sound', 'controls', 'notify'] : ['promo', 'ui', 'gfx', 'vision', 'sound', 'controls'];
     if (this.tab === 'notify' && !tgnView()) this.tab = 'ui';
-    const chips = this.more ? chipRow([{ id: 'main', icon: 'menu_options', label: W('opt.back') }, ...tabs.map((x) => ({ id: x, icon: TAB_ICON[x], label: x === 'notify' ? G('tgn.tab') : x === 'promo' ? promoTabLabel() : t(`opt.tab.${x}` as Key) }))], this.tab, 'otab') : '';
+    const chips = this.more ? chipRow([{ id: 'main', icon: 'menu_options', label: W('opt.back') }, ...tabs.map((x) => ({ id: x, icon: TAB_ICON[x], label: x === 'notify' ? G('tgn.tab') : x === 'promo' ? promoTabLabel() : x === 'gfx' ? MX('tabGfx') : t(`opt.tab.${x}` as Key) }))], this.tab, 'otab') : '';
     root.innerHTML = `${winHead(W('opt.title'), { crest: 'menu_options', chips })}
       <div class="modal-body w-body options${this.more ? '' : ' opt-main'}">${this.more ? this.body(s) : this.main(s)}</div>`;
     root.querySelectorAll<HTMLButtonElement>('[data-otab]').forEach((b) => (b.onclick = () => {
@@ -189,6 +191,29 @@ export class OptionsScreen {
       update({ mmTarget: b.dataset.omm === 'show' ? 'show' : 'hide' });
       this.render(root);
     }));
+    root.querySelectorAll<HTMLButtonElement>('[data-oquality]').forEach((b) => (b.onclick = () => {
+      update({ ...QUALITY[b.dataset.oquality as Quality] });
+      this.render(root);
+    }));
+    root.querySelector<HTMLButtonElement>('[data-osndreset]')?.addEventListener('click', () => {
+      update({ volume: { ...defaults().volume, master: settings().volume.master } });
+      this.render(root);
+    });
+    root.querySelectorAll<HTMLInputElement>('input[data-gnum]').forEach((el) => {
+      el.oninput = () => {
+        const out = el.parentElement?.querySelector('output');
+        if (out) out.textContent = `${Math.round(Number(el.value) * 100)}%`;
+      };
+      el.onchange = () => {
+        update({ [el.dataset.gnum!]: Number(el.value) } as Partial<Settings>);
+        this.render(root);
+      };
+    });
+    root.querySelectorAll<HTMLSelectElement>('select[data-gsel]').forEach((el) => (el.onchange = () => {
+      const k = el.dataset.gsel!;
+      update({ [k]: k === 'fpsCap' ? Number(el.value) : el.value } as Partial<Settings>);
+      this.render(root);
+    }));
     root.querySelectorAll<HTMLButtonElement>('[data-osize]').forEach((b) => (b.onclick = () => {
       update({ uiScale: Number(b.dataset.osize) });
       this.render(root);
@@ -242,6 +267,7 @@ export class OptionsScreen {
     return `<div class="opt-grid">
       ${row('opt_sound', W('opt.sound'), vol('master', W('opt.sound')))}
       ${row('opt_sound', W('opt.music'), vol('music', W('opt.music')))}
+      ${row('menu_map', MX('quality'), seg((Object.keys(QUALITY) as Quality[]).map((q) => [q, MX(`q.${q}` as 'q.low'), qualityOf(s) === q] as [string, string, boolean]), 'oquality', MX('quality')), MX('qualityHint'), 'opt-row--wide')}
       ${row('opt_lang', W('opt.lang'), seg([['ru', 'Русский', lang() === 'ru'], ['en', 'English', lang() === 'en']], 'olang', W('opt.lang')))}
       ${row('fire', W('opt.autofire'), sw('autoFire', W('opt.autofire')), W('opt.autofireHint'))}
       ${row('bt_auto', W('opt.autobattle'), sw('autoWeak', W('opt.autobattle')), W('opt.autobattleHint'))}
@@ -260,8 +286,10 @@ export class OptionsScreen {
     const check = (k: keyof Settings, label: Key) => `<label class="check"><input type="checkbox" data-bool="${k}" ${s[k] ? 'checked' : ''}/> ${esc(t(label))}</label>`;
     const range = (k: 'uiScale' | 'textScale' | 'hudAlpha', label: Key, min: number, max: number) =>
       `<label class="opt-range"><span class="opt-l">${esc(t(label))}</span><input type="range" data-num="${k}" min="${min}" max="${max}" step="0.05" value="${s[k]}"/><output>${Math.round(s[k] * 100)}%</output></label>`;
-    const vol = (k: keyof Settings['volume'], label: Key) =>
-      `<label class="opt-range"><span class="opt-l">${esc(t(label))}</span><input type="range" data-vol="${k}" min="0" max="1" step="0.05" value="${s.volume[k]}"/><output>${Math.round(s.volume[k] * 100)}%</output></label>`;
+    const mix = (k: VolKey) =>
+      `<label class="opt-range"><span class="opt-l">${esc(MX(`vol.${k}` as 'vol.master'))}</span><input type="range" data-vol="${k}" min="0" max="1" step="0.05" value="${s.volume[k]}"/><output>${Math.round(s.volume[k] * 100)}%</output></label>`;
+    const mxCheck = (k: 'nightMode' | 'playHidden', label: string) => `<label class="check"><input type="checkbox" data-bool="${k}" ${s[k] ? 'checked' : ''}/> ${esc(label)}</label>`;
+    void VOL_KEYS;
     switch (this.tab) {
       case 'ui':
         return `<label class="opt-range sel"><span class="opt-l">${icon('opt_lang', '', 'ico-sm')}${esc(t('opt.lang'))}</span><select data-sel="lang" class="field">${(['en', 'ru'] as Lang[]).map((l) => `<option value="${l}" ${lang() === l ? 'selected' : ''}>${l === 'en' ? 'English' : 'Русский'}</option>`).join('')}</select></label>
@@ -272,14 +300,30 @@ export class OptionsScreen {
       case 'vision':
         return `<label class="opt-range sel"><span class="opt-l">${esc(t('opt.colorblind'))}</span><select data-sel="colorblind" class="field">${(['off', 'protan', 'deutan', 'tritan'] as Colorblind[]).map((c) => `<option value="${c}" ${s.colorblind === c ? 'selected' : ''}>${esc(t(`opt.cb.${c}` as Key))}</option>`).join('')}</select></label>
           ${check('lanternMarks', 'opt.lanternMarks')}${check('reduceFlashes', 'opt.reduceFlashes')}${check('screenShake', 'opt.screenShake')}${check('vibrate', 'opt.vibrate')}${check('lanternFlicker', 'opt.lanternFlicker')}${check('reduceMotion', 'opt.reduceMotion')}
-          <label class="opt-range sel"><span class="opt-l">${esc(t('opt.effects'))}</span><select data-sel="effects" class="field"><option value="auto" ${s.effects === 'auto' ? 'selected' : ''}>${esc(t('opt.effects.auto'))}</option><option value="low" ${s.effects === 'low' ? 'selected' : ''}>${esc(t('opt.effects.low'))}</option></select></label>
-          ${check('webgl', 'opt.webgl')}`;
+`;
+      case 'gfx': {
+        const q = qualityOf(s);
+        const sel = (k: string, label: string, opts: [string, string][], v: string) => `<label class="opt-range sel"><span class="opt-l">${esc(label)}</span><select data-gsel="${k}" class="field">${opts.map(([o, l]) => `<option value="${o}" ${o === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
+        const chk = (k: 'showFps', label: string) => `<label class="check"><input type="checkbox" data-bool="${k}" ${s[k] ? 'checked' : ''}/> ${esc(label)}</label>`;
+        return `<div class="opt-presets">${esc(MX('quality'))}: ${(Object.keys(QUALITY) as Quality[]).map((x) => `<button type="button" class="btn btn-small${q === x ? ' on' : ''}" aria-pressed="${q === x}" data-oquality="${x}">${esc(MX(`q.${x}` as 'q.low'))}</button>`).join(' ')}${q ? '' : ` <span class="muted">· ${esc(MX('q.custom'))}</span>`}</div>
+          <p class="muted">${esc(MX('qualityHint'))}</p>
+          <label class="opt-range"><span class="opt-l">${esc(MX('renderScale'))}</span><input type="range" data-gnum="renderScale" min="0.5" max="1" step="0.05" value="${s.renderScale}"/><output>${Math.round(s.renderScale * 100)}%</output></label>
+          ${sel('sharpness', MX('sharpness'), [['auto', MX('sharp.auto')], ['max', MX('sharp.max')]], s.sharpness)}
+          ${sel('fpsCap', MX('fpsCap'), FPS_CAPS.map((f) => [String(f), MX(`fps.${f}` as 'fps.0')] as [string, string]), String(s.fpsCap))}
+          ${sel('effects', t('opt.effects'), [['low', t('opt.effects.low')], ['auto', t('opt.effects.auto')], ['high', MX('effectsHigh')]], s.effects)}
+          ${check('webgl', 'opt.webgl')}${chk('showFps', MX('showFps'))}`;
+      }
       case 'notify':
         return tgnHtml();
       case 'promo':
         return promoCodeHtml();
       case 'sound':
-        return `${vol('master', 'opt.master')}${vol('sea', 'opt.sea')}${vol('combat', 'opt.combat')}${vol('ui', 'opt.uiVol')}${vol('music', 'opt.music')}${check('shipVoices', 'opt.shipVoices')}${check('mono', 'opt.mono')}${check('captions', 'opt.captions')}${soundCredits()}`;
+        return `${mix('master')}${mix('music')}
+          <h4 class="opt-h">${esc(MX('sndGroupWorld'))}</h4>${mix('ambience')}${mix('weather')}${mix('creatures')}
+          <h4 class="opt-h">${esc(MX('sndGroupFight'))}</h4>${mix('guns')}${mix('impacts')}${mix('boarding')}${mix('abilities')}
+          <h4 class="opt-h">${esc(MX('sndGroupShip'))}</h4>${mix('ship')}${mix('ui')}
+          <p><button type="button" class="btn btn-small" data-osndreset>${esc(MX('sndReset'))}</button></p>
+          ${check('shipVoices', 'opt.shipVoices')}${mxCheck('nightMode', MX('nightMode'))}${inVk() ? '' : mxCheck('playHidden', MX('playHidden'))}${check('mono', 'opt.mono')}${check('captions', 'opt.captions')}${soundCredits()}`;
       case 'controls': {
         const clash = conflicts(s.keys);
         const bad = new Set([...clash.keys()]);

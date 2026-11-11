@@ -2,6 +2,7 @@
 
 import './compat.ts'; // first of all: the calls Safari 15 lacks (iOS 15 is the floor)
 import { helmsmanSails, sailGauge } from './ui/sailgauge.ts';
+import { FpsMeter } from './ui/fpsmeter.ts'; // graphics (owner, 2026-11-11)
 import { LB, menAskText } from './ui/berths.ts'; // forum 2026-10-30: «Причал»
 import { WayWindow, mountFallen, resRid } from './ui/waystation.ts'; // docs/35
 import { setWayFog, wayName } from './render/waystations.ts'; // docs/35
@@ -334,7 +335,7 @@ addEventListener('pageshow', () => resumeApp('pagehide'));
   const hook = (): boolean => {
     const w = (globalThis as { Telegram?: { WebApp?: { onEvent?: (e: string, f: () => void) => void } } }).Telegram?.WebApp;
     if (!w?.onEvent) return false;
-    w.onEvent('deactivated', () => audio.setHidden(true));
+    w.onEvent('deactivated', () => audio.setHidden(true, true)); // (VK: silence whatever the option)
     w.onEvent('activated', () => audio.setHidden(document.hidden));
     return true;
   };
@@ -1955,6 +1956,12 @@ onboarding.onGoal = (key) => { if (!goalCardOpen(key)) startGoal(key); };
 hud.onNowTap = (key) => { if (!goalCardOpen(key)) startGoal(key); }; // «Сейчас:» — its goal's card (forum 2026-11-07) // route: a captain's goal — its card, its «Плыть» the nearest place
 // Options: applied now and on every change (docs/07 §11).
 let lastZoomKey = '';
+let lastGfxKey = '';
+/** Graphics (owner, 2026-11-11): frames a second at most (0: the screen's own rate), and the counter in the corner.
+ *  (Here, before the first applySettings: declared by the loop below they were not yet alive and the page never booted.) */
+let fpsCap = 0;
+let lastDrawn = 0;
+const fpsMeter = new FpsMeter();
 function applySettings(o: Settings): void {
   applyToDocument(o);
   // A new scale or density: what the HUD measures of itself is measured again (docs/16 #40).
@@ -1964,9 +1971,20 @@ function applySettings(o: Settings): void {
     lastZoomKey = zk;
     if (!first) requestAnimationFrame(() => dispatchEvent(new Event('resize')));
   }
-  audio.configure(o.volume.master, { sea: o.volume.sea, combat: o.volume.combat, ui: o.volume.ui, music: o.volume.music }, o.mono);
+  const { master, ...cats } = o.volume;
+  audio.configure(master, cats, o.mono, o.nightMode);
+  audio.playHidden = o.playHidden;
+  // graphics: the sharpness redraws the canvases at their new size; the frame cap and the counter in the loop
+  const gk = `${o.renderScale}|${o.sharpness}`;
+  if (gk !== lastGfxKey) {
+    const firstG = !lastGfxKey;
+    lastGfxKey = gk;
+    if (!firstG) renderer.resize();
+  }
+  fpsCap = o.fpsCap;
+  fpsMeter.show(o.showFps);
   audio.voices = o.shipVoices;
-  renderer.fx.forceLod = o.effects === 'low' ? 2 : null;
+  renderer.fx.forceLod = o.effects === 'low' ? 2 : o.effects === 'high' ? 0 : null;
   audio.onCaption = o.captions
     ? (kind, dir, far) => hud.caption(t(`cap.${kind}` as Key, { dir: t(`dir.${dir}` as Key), far: far ? t('cap.far') : '' }), dir)
     : null;
@@ -6140,6 +6158,9 @@ let frameErrors = 0;
 function frame(t: number): void {
   // The next frame is booked first: one bad frame must never stop the game (it did — the sea froze after casting off).
   requestAnimationFrame(frame);
+  if (fpsCap > 0 && t - lastDrawn < 1000 / fpsCap - 2) return; // (a frame early: the next screen refresh)
+  lastDrawn = t;
+  fpsMeter.tick(t);
   try {
     step(t);
   } catch (e) {

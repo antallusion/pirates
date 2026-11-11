@@ -40,6 +40,31 @@ export function turnCreakLoad(rate: number, speed: number): number {
 }
 
 export type Bus = 'sea' | 'combat' | 'ui' | 'music';
+/** The mixer's own sliders (owner, 2026-11-11: «чтобы отдельно можно было настраивать звуки выстрела, существ… музыка
+ *  отдельно»): every sound goes through its category's gain, the category into its bus. */
+export type Cat = 'music' | 'ambience' | 'weather' | 'guns' | 'impacts' | 'creatures' | 'boarding' | 'abilities' | 'ship' | 'ui';
+export const CATS: readonly Cat[] = ['music', 'ambience', 'weather', 'guns', 'impacts', 'creatures', 'boarding', 'abilities', 'ship', 'ui'];
+export const CAT_BUS: Record<Cat, Bus> = { music: 'music', ambience: 'sea', weather: 'sea', ship: 'sea', guns: 'combat', impacts: 'combat', creatures: 'combat', boarding: 'combat', abilities: 'combat', ui: 'ui' };
+/** Each recording's category by its key (assets/audio/index.json); a key not named here goes by its bus. */
+export const KEY_CAT: Record<string, Cat> = {
+  cannon: 'guns', 'cannon.heavy': 'guns', swivel: 'guns', musket: 'guns', whistle: 'guns', firework: 'guns',
+  hull: 'impacts', 'hull.crit': 'impacts', splash: 'impacts', 'splash.big': 'impacts', 'sail.rip': 'impacts', explosion: 'impacts', sink: 'impacts',
+  roar: 'creatures', 'roar.deep': 'creatures', whale: 'creatures', bite: 'creatures', moan: 'creatures',
+  clash: 'boarding', swing: 'boarding', thud: 'boarding', grapple: 'boarding', rope: 'boarding', step: 'boarding', death: 'boarding', crowd: 'boarding', drum: 'boarding', dig: 'boarding',
+  spell: 'abilities', heal: 'abilities', fear: 'abilities', rally: 'abilities', luck: 'abilities',
+  sail: 'ship', creak: 'ship', 'anchor.up': 'ship', 'anchor.down': 'ship', bell: 'ship', 'bell.double': 'ship',
+  thunder: 'weather', 'amb.wind': 'weather', 'amb.gale': 'weather', 'amb.rain': 'weather',
+  'amb.fire': 'ambience', 'amb.creak': 'ship',
+};
+/** A recording's category: named, else by its bus. Pure. */
+export function catOf(key: string, bus?: string): Cat {
+  const named = KEY_CAT[key];
+  if (named) return named;
+  if (bus === 'music' || key.startsWith('mus.')) return 'music';
+  if (bus === 'ui') return 'ui';
+  if (bus === 'sea' || key.startsWith('amb.')) return 'ambience';
+  return 'impacts';
+}
 export type CaptionKind = 'volley' | 'explosion' | 'deep' | 'thunder' | 'sinking';
 export type CaptionDir = 'ahead' | 'astern' | 'port' | 'starboard' | 'near';
 
@@ -126,9 +151,17 @@ export class AudioEngine {
   private rain: GainNode | null = null;
   /** Buses (docs/07 §11.5): the sea and weather, the fighting, the interface. */
   private buses: Record<Bus, GainNode> | null = null;
+  /** The mixer's categories, each into its bus (CAT_BUS). */
+  private cats: Record<Cat, GainNode> | null = null;
+  catLevels: Record<Cat, number> = { music: 0.8, ambience: 1, weather: 1, guns: 1, impacts: 1, creatures: 1, boarding: 1, abilities: 1, ship: 1, ui: 1 };
+  /** «Ночной режим»: a compressor on the master — the broadsides no louder than the sea. */
+  private night: DynamicsCompressorNode | null = null;
+  nightMode = false;
+  /** «Звук в свёрнутой вкладке»: the page hidden keeps playing (never in VK: its window asks for silence). */
+  playHidden = false;
   muted = localStorage.getItem('gravetide.muted') === '1';
   volume = Number(localStorage.getItem('gravetide.volume') ?? 0.7);
-  levels: Record<Bus, number> = { sea: 1, combat: 1, ui: 1, music: 0.8 };
+  levels: Record<Bus, number> = { sea: 1, combat: 1, ui: 1, music: 1 }; // (the sliders are the categories' now: CATS)
   /** The score and the ship's own voice (music.ts). */
   readonly music = new MusicDirector();
   mono = false;
@@ -175,7 +208,14 @@ export class AudioEngine {
     this.ctx = ctx;
     this.master = ctx.createGain();
     this.master.gain.value = this.muted ? 0 : this.volume;
-    this.master.connect(ctx.destination);
+    this.night = ctx.createDynamicsCompressor();
+    this.night.threshold.value = -30;
+    this.night.knee.value = 12;
+    this.night.ratio.value = 6;
+    this.night.attack.value = 0.003;
+    this.night.release.value = 0.25;
+    this.night.connect(ctx.destination);
+    this.master.connect(this.nightMode ? this.night : ctx.destination);
     const bus = (k: Bus) => {
       const g = ctx.createGain();
       g.gain.value = this.levels[k];
@@ -187,6 +227,14 @@ export class AudioEngine {
     this.duckGain = ctx.createGain();
     this.buses.music.disconnect();
     this.buses.music.connect(this.duckGain).connect(this.master);
+    const cat = {} as Record<Cat, GainNode>;
+    for (const c of CATS) {
+      const g = ctx.createGain();
+      g.gain.value = this.catLevels[c];
+      g.connect(this.buses[CAT_BUS[c]]);
+      cat[c] = g;
+    }
+    this.cats = cat;
     this.bank = new SampleBank(ctx);
     void this.bank.preload();
     this.noise = this.makeNoise(2, false);
@@ -200,7 +248,7 @@ export class AudioEngine {
     this.seaFilter.frequency.value = 500;
     this.sea = ctx.createGain();
     this.sea.gain.value = 0.25;
-    sea.connect(this.seaFilter).connect(this.sea).connect(this.buses.sea);
+    sea.connect(this.seaFilter).connect(this.sea).connect(this.cats.ambience);
     sea.start();
     // Rain.
     const rain = ctx.createBufferSource();
@@ -211,7 +259,7 @@ export class AudioEngine {
     hp.frequency.value = 2500;
     this.rain = ctx.createGain();
     this.rain.gain.value = 0;
-    rain.connect(hp).connect(this.rain).connect(this.buses.sea);
+    rain.connect(hp).connect(this.rain).connect(this.cats.weather);
     rain.start();
     const host: MusicHost = {
       trackUrl: (key) => {
@@ -220,14 +268,14 @@ export class AudioEngine {
       },
       play: (key, o) => this.play(key, { ...o, jitter: 0 }),
     };
-    this.music.attach(ctx, this.buses.music, this.noise, host);
+    this.music.attach(ctx, this.cats.music, this.noise, host);
   }
 
   /** A recording by its key (assets/audio/index.json): true when it played (or was rightly dropped — too many at once,
    *  too far, the page hidden); false when it is not decoded yet, so the caller plays its procedural recipe. */
   play(key: string, o: PlayOpts = {}): boolean {
     const ctx = this.ctx, bank = this.bank;
-    if (!ctx || !this.buses || !bank) return false;
+    if (!ctx || !this.cats || !bank) return false;
     if (this.hidden) return true;
     const buf = bank.has(key) ? bank.pick(key) : null;
     if (!buf) {
@@ -250,12 +298,12 @@ export class AudioEngine {
     const g = ctx.createGain();
     g.gain.value = gain;
     const entry = bank.entry(key);
-    const busName: Bus = o.bus ?? (entry?.bus as Bus | undefined) ?? 'combat';
+    const dest = this.cats[catOf(key, entry?.bus)];
     if (!this.mono && pan && typeof ctx.createStereoPanner === 'function') {
       const p = ctx.createStereoPanner();
       p.pan.value = Math.max(-1, Math.min(1, pan));
-      src.connect(g).connect(p).connect(this.buses[busName]);
-    } else src.connect(g).connect(this.buses[busName]);
+      src.connect(g).connect(p).connect(dest);
+    } else src.connect(g).connect(dest);
     const at = ctx.currentTime + Math.max(0, o.delay ?? 0);
     this.playing.set(key, n + 1);
     this.voicesNow++;
@@ -340,7 +388,7 @@ export class AudioEngine {
       src.loop = true;
       const gain = ctx.createGain();
       gain.gain.value = 0;
-      src.connect(gain).connect(this.buses![(this.bank.entry(key)?.bus as Bus | undefined) ?? 'sea']);
+      src.connect(gain).connect(this.cats![catOf(key, this.bank.entry(key)?.bus)]);
       // (each bed from a different point of its loop, so two beds of a length never pulse together)
       src.start(ctx.currentTime, Math.random() * buf.duration);
       b = { src, gain, idle: 0 };
@@ -362,24 +410,32 @@ export class AudioEngine {
     return out;
   }
 
-  /** Master volume, the three buses and mono, from the options. */
-  configure(master: number, levels: Partial<Record<Bus, number>>, mono: boolean): void {
+  /** Master volume, the mixer's categories, mono and the night mode, from the options. */
+  configure(master: number, cats: Partial<Record<Cat, number>>, mono: boolean, night = this.nightMode): void {
     this.volume = master;
-    this.levels = { ...this.levels, ...levels };
+    this.catLevels = { ...this.catLevels, ...cats };
     this.mono = mono;
     localStorage.setItem('gravetide.volume', String(master));
-    if (!this.ctx || !this.master || !this.buses) return;
+    if (!this.ctx || !this.master || !this.cats) {
+      this.nightMode = night;
+      return;
+    }
     const t = this.ctx.currentTime;
     this.master.gain.setTargetAtTime(this.muted ? 0 : master, t, 0.05);
-    for (const k of Object.keys(this.buses) as Bus[]) this.buses[k].gain.setTargetAtTime(this.levels[k], t, 0.05);
+    for (const c of CATS) this.cats[c].gain.setTargetAtTime(this.catLevels[c], t, 0.05);
+    if (night !== this.nightMode && this.night) {
+      this.master.disconnect();
+      this.master.connect(night ? this.night : this.ctx.destination);
+    }
+    this.nightMode = night;
   }
 
   /** Once a frame: the score, the creak of the rigging, the bells of the watch. */
   frame(dt: number, scene: MusicInput, wind: number, sail: number, heel: number, timeOfDay01: number, atSea: boolean): void {
-    if (!this.ctx || !this.buses) return;
+    if (!this.ctx || !this.cats) return;
     this.music.update(dt, scene);
-    if (atSea) this.music.creak(dt, wind, sail, heel, this.buses.sea);
-    if (this.voices) this.music.shipsBell(timeOfDay01, this.buses.ui);
+    if (atSea) this.music.creak(dt, wind, sail, heel, this.cats.ship);
+    if (this.voices) this.music.shipsBell(timeOfDay01, this.cats.ship);
     // The change of the watch (docs/16 #39): the bosun's pipe calls the new watch after its eight bells.
     const w = watchIndex(timeOfDay01);
     if (w !== this.watch) {
@@ -392,7 +448,7 @@ export class AudioEngine {
   /** The bosun's call: a thin whistle that rises, trills and falls, quiet on the interface bus. */
   bosunPipe(delay = 0): void {
     const ctx = this.ctx;
-    const v = this.voice(0.07, 0, delay, 'ui');
+    const v = this.voice(0.07, 0, delay, 'ship');
     if (!ctx || !v) return;
     const o = ctx.createOscillator();
     o.type = 'sine';
@@ -419,7 +475,7 @@ export class AudioEngine {
     const now = performance.now();
     if (!ctx || !this.voices || now - this.lastCry < 12_000) return;
     this.lastCry = now;
-    const v = this.voice(0.09, this.mono ? 0 : Math.max(-0.6, Math.min(0.6, pan)), 0.05, 'sea');
+    const v = this.voice(0.09, this.mono ? 0 : Math.max(-0.6, Math.min(0.6, pan)), 0.05, 'ship');
     if (!v) return;
     const lp = ctx.createBiquadFilter();
     lp.type = 'lowpass';
@@ -463,7 +519,7 @@ export class AudioEngine {
     if (!ctx || !this.noise || !this.voices || load <= 0 || now - this.lastTurnCreak < 1100 + Math.random() * 900) return;
     this.lastTurnCreak = now;
     if (this.play('creak', { bus: 'sea', gain: 0.5 * Math.min(1, load), rate: 0.75 + Math.random() * 0.2 })) return;
-    const v = this.voice(0.16 * Math.min(1, load), 0, 0, 'sea');
+    const v = this.voice(0.16 * Math.min(1, load), 0, 0, 'ship');
     if (!v) return;
     const dur = 0.45 + load * 0.5;
     const src = ctx.createBufferSource();
@@ -484,14 +540,14 @@ export class AudioEngine {
     this.tone(v.out, v.at + 0.02, 96, dur * 0.8, 0.12, 'triangle', 70);
   }
 
-  private voice(gain: number, pan: number, delay = 0, bus: Bus = 'combat'): { out: GainNode; at: number } | null {
+  private voice(gain: number, pan: number, delay: number, cat: Cat): { out: GainNode; at: number } | null {
     const ctx = this.ctx;
-    if (!ctx || !this.buses || gain <= 0.001) return null;
+    if (!ctx || !this.cats || gain <= 0.001) return null;
     const out = ctx.createGain();
     out.gain.value = gain;
     const p = ctx.createStereoPanner();
     p.pan.value = this.mono ? 0 : pan;
-    out.connect(p).connect(this.buses[bus]);
+    out.connect(p).connect(this.cats[cat]);
     return { out, at: ctx.currentTime + delay };
   }
 
@@ -535,7 +591,7 @@ export class AudioEngine {
   cannon(x: number, y: number, delay: number, weight = 1): void {
     if (this.play(weight >= 1 ? 'cannon.heavy' : 'cannon', { x, y, delay, gain: 0.85 * Math.min(1.2, weight + 0.2), duck: weight >= 1 ? 0.35 : 0.2 })) return;
     const { gain, pan } = spatial(this.listener.x, this.listener.y, x, y);
-    const v = this.voice(gain * 0.55 * weight, pan, delay);
+    const v = this.voice(gain * 0.55 * weight, pan, delay, 'guns');
     if (!v) return;
     const j = 0.9 + Math.random() * 0.2;
     this.noiseBurst(v.out, v.at, 0.035, 'highpass', 1700 * j, 0.7, 0.5); // the charge's crack
@@ -553,7 +609,7 @@ export class AudioEngine {
       return;
     }
     const { gain, pan } = spatial(this.listener.x, this.listener.y, x, y);
-    const v = this.voice(gain * 0.5, pan);
+    const v = this.voice(gain * 0.5, pan, 0, 'impacts');
     if (!v) return;
     const j = 0.9 + Math.random() * 0.2;
     this.noiseBurst(v.out, v.at, 0.014, 'highpass', 2600, 0.7, 0.2); // the strike
@@ -569,7 +625,7 @@ export class AudioEngine {
   splash(x: number, y: number, big: boolean): void {
     if (this.play(big ? 'splash.big' : 'splash', { x, y, range: big ? 2200 : 900, gain: big ? 0.8 : 0.5 })) return;
     const { gain, pan } = spatial(this.listener.x, this.listener.y, x, y, big ? 2200 : 900);
-    const v = this.voice(gain * (big ? 0.5 : 0.18), pan);
+    const v = this.voice(gain * (big ? 0.5 : 0.18), pan, 0, 'impacts');
     if (!v) return;
     this.noiseBurst(v.out, v.at, big ? 1.4 : 0.45, 'highpass', 900, 0.5, 1);
   }
@@ -577,7 +633,7 @@ export class AudioEngine {
   explosion(x: number, y: number): void {
     if (this.play('explosion', { x, y, range: 3000, gain: 1, duck: 0.5 })) return;
     const { gain, pan } = spatial(this.listener.x, this.listener.y, x, y, 3000);
-    const v = this.voice(gain * 0.9, pan);
+    const v = this.voice(gain * 0.9, pan, 0, 'impacts');
     if (!v) return;
     this.tone(v.out, v.at, 55, 1.6, 1, 'sine', 25);
     this.noiseBurst(v.out, v.at, 2.2, 'lowpass', 600, 0.5, 1);
@@ -591,7 +647,7 @@ export class AudioEngine {
     }
     const { gain, pan } = spatial(this.listener.x, this.listener.y, x, y, 1400);
     for (let i = 0; i < n; i++) {
-      const v = this.voice(gain * 0.28, pan + (Math.random() - 0.5) * 0.3, i * 0.045 + Math.random() * 0.05);
+      const v = this.voice(gain * 0.28, pan + (Math.random() - 0.5) * 0.3, i * 0.045 + Math.random() * 0.05, 'guns');
       if (!v) return;
       this.noiseBurst(v.out, v.at, 0.14, 'bandpass', 2200 + Math.random() * 900, 1.1, 0.9);
       this.tone(v.out, v.at, 150, 0.09, 0.25, 'square', 70);
@@ -606,7 +662,7 @@ export class AudioEngine {
     }
     const { gain, pan } = spatial(this.listener.x, this.listener.y, x, y, 1100);
     for (let i = 0; i < n; i++) {
-      const v = this.voice(gain * 0.2, pan + (Math.random() - 0.5) * 0.4, i * 0.12 + Math.random() * 0.08);
+      const v = this.voice(gain * 0.2, pan + (Math.random() - 0.5) * 0.4, i * 0.12 + Math.random() * 0.08, 'boarding');
       if (!v) return;
       const f = 2300 + Math.random() * 1600;
       this.tone(v.out, v.at, f, 0.22, 0.35, 'triangle');
@@ -619,7 +675,7 @@ export class AudioEngine {
   shout(x: number, y: number, big: boolean): void {
     if (this.play('crowd', { x, y, range: 1400, gain: big ? 0.6 : 0.4 })) return;
     const { gain, pan } = spatial(this.listener.x, this.listener.y, x, y, 1400);
-    const v = this.voice(gain * (big ? 0.35 : 0.2), pan);
+    const v = this.voice(gain * (big ? 0.35 : 0.2), pan, 0, 'boarding');
     if (!v) return;
     this.noiseBurst(v.out, v.at, big ? 1.3 : 0.8, 'bandpass', 520, 2.2, 0.9);
     this.noiseBurst(v.out, v.at + 0.05, big ? 1.1 : 0.7, 'bandpass', 1050, 2.8, 0.55);
@@ -635,7 +691,7 @@ export class AudioEngine {
       this.onCaption('thunder', 'near', true);
     }
     if (this.play('thunder', { bus: 'sea', gain: 0.8, pan: (Math.random() - 0.5) * 0.8, delay: 0.4 + Math.random() * 1.2, duck: 0.3 })) return;
-    const v = this.voice(0.5, (Math.random() - 0.5) * 0.8, 0.4 + Math.random() * 1.2);
+    const v = this.voice(0.5, (Math.random() - 0.5) * 0.8, 0.4 + Math.random() * 1.2, 'weather');
     if (!v) return;
     this.noiseBurst(v.out, v.at, 3.5, 'lowpass', 180, 0.4, 1);
     this.noiseBurst(v.out, v.at + 0.1, 0.6, 'lowpass', 900, 0.4, 0.5);
@@ -644,7 +700,7 @@ export class AudioEngine {
   /** Harbour bell: inharmonic partials of a cast bronze bell. */
   bell(): void {
     if (this.play('bell.double', { bus: 'ui', gain: 0.5 })) return;
-    const v = this.voice(0.25, 0, 0, 'ui');
+    const v = this.voice(0.25, 0, 0, 'ship');
     if (!v) return;
     for (const [ratio, amp] of [[1, 1], [2.0, 0.5], [2.4, 0.4], [3.0, 0.25], [4.2, 0.15]] as const) this.tone(v.out, v.at, 220 * ratio, 3.5 / ratio + 0.8, amp * 0.4);
   }
@@ -684,7 +740,7 @@ export class AudioEngine {
   eerie(x: number, y: number): void {
     if (this.play('whale', { x, y, range: 2500, gain: 0.8, rate: 0.85 })) return;
     const { gain, pan } = spatial(this.listener.x, this.listener.y, x, y, 2500);
-    const v = this.voice(gain * 0.4, pan);
+    const v = this.voice(gain * 0.4, pan, 0, 'creatures');
     if (!v) return;
     this.tone(v.out, v.at, 92, 3, 0.6, 'sine', 61);
     this.tone(v.out, v.at + 0.2, 138.6, 2.5, 0.3, 'sine', 90);
@@ -703,7 +759,9 @@ export class AudioEngine {
   }
 
   /** The page hidden (another tab, the Mini App in Telegram's background): the sound stops, and resumes on return. */
-  setHidden(hidden: boolean): void {
+  setHidden(hidden: boolean, force = false): void {
+    // (a hidden page plays on when the captain asked for it — never a hidden VK window: force)
+    if (hidden && !force && this.playHidden) hidden = false;
     this.hidden = hidden;
     const ctx = this.ctx;
     if (!ctx) return;
@@ -718,7 +776,7 @@ export class AudioEngine {
       this.play('thud', { gain: 0.45, delay: delay + 0.02 });
       return;
     }
-    const v = this.voice(0.26, (Math.random() - 0.5) * 0.4, delay, 'combat');
+    const v = this.voice(0.26, (Math.random() - 0.5) * 0.4, delay, 'boarding');
     if (!v) return;
     const f = 2100 + Math.random() * 900;
     this.tone(v.out, v.at, f, 0.16, 0.22, 'triangle');
@@ -731,7 +789,7 @@ export class AudioEngine {
   /** A musket or a pistol on the deck. */
   tacShot(delay = 0): void {
     if (this.play('musket', { gain: 0.6, delay, pan: (Math.random() - 0.5) * 0.4 })) return;
-    const v = this.voice(0.24, (Math.random() - 0.5) * 0.4, delay, 'combat');
+    const v = this.voice(0.24, (Math.random() - 0.5) * 0.4, delay, 'guns');
     if (!v) return;
     this.noiseBurst(v.out, v.at, 0.03, 'highpass', 2400, 0.7, 0.6);
     this.noiseBurst(v.out, v.at + 0.004, 0.22, 'bandpass', 700, 1, 1.4);
@@ -741,7 +799,7 @@ export class AudioEngine {
   /** A lucky blow: a bright two-note glint over it. */
   luck(delay = 0): void {
     if (this.play('luck', { gain: 0.5, delay, jitter: 0 })) return;
-    const v = this.voice(0.16, 0, delay, 'combat');
+    const v = this.voice(0.16, 0, delay, 'abilities');
     if (!v) return;
     this.tone(v.out, v.at, 1568, 0.25, 0.4, 'triangle');
     this.tone(v.out, v.at + 0.07, 2349, 0.35, 0.35, 'triangle');
@@ -751,7 +809,7 @@ export class AudioEngine {
   /** High morale, another turn: a short rising call of three notes. */
   rally(delay = 0): void {
     if (this.play('rally', { gain: 0.55, delay })) return;
-    const v = this.voice(0.15, 0, delay, 'combat');
+    const v = this.voice(0.15, 0, delay, 'abilities');
     if (!v) return;
     [293.66, 369.99, 440].forEach((f, i) => this.tone(v.out, v.at + i * 0.09, f, 0.3 + i * 0.08, 0.4, 'sawtooth'));
   }
@@ -759,7 +817,7 @@ export class AudioEngine {
   /** A heal, a regrowth, a raise: a soft rising shimmer. */
   heal(delay = 0): void {
     if (this.play('heal', { gain: 0.45, delay })) return;
-    const v = this.voice(0.12, 0, delay, 'combat');
+    const v = this.voice(0.12, 0, delay, 'abilities');
     if (!v) return;
     for (let i = 0; i < 4; i++) this.tone(v.out, v.at + i * 0.06, 880 * Math.pow(1.26, i), 0.4, 0.25, 'sine');
   }
@@ -767,7 +825,7 @@ export class AudioEngine {
   /** A turn lost to fear: a low falling moan. */
   fear(delay = 0): void {
     if (this.play('fear', { gain: 0.5, delay })) return;
-    const v = this.voice(0.14, 0, delay, 'combat');
+    const v = this.voice(0.14, 0, delay, 'abilities');
     if (!v) return;
     this.tone(v.out, v.at, 220, 0.7, 0.4, 'sine', 110);
     this.tone(v.out, v.at + 0.05, 233, 0.6, 0.18, 'triangle', 116);
@@ -777,7 +835,7 @@ export class AudioEngine {
   spell(delay = 0): void {
     if (this.play('spell', { gain: 0.55, delay })) return;
     const ctx = this.ctx;
-    const v = this.voice(0.16, 0, delay, 'combat');
+    const v = this.voice(0.16, 0, delay, 'abilities');
     if (!ctx || !v || !this.noise) return;
     const src = ctx.createBufferSource();
     src.buffer = this.noise;

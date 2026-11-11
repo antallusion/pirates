@@ -82,7 +82,18 @@ test('the music by the scene: the island\'s lute, the hex fight\'s drums, and ea
   }
 });
 
-test('the options keep a slider for the music and for the effects', () => {
+test('the options keep a slider for the music and one for each kind of sound (owner, 2026-11-11: shots, creatures, music apart)', async () => {
   const opt = readFileSync('client/src/ui/options.ts', 'utf8');
-  for (const k of ['master', 'music', 'combat', 'ui', 'sea']) assert.match(opt, new RegExp(`vol\\('${k}'`), k);
+  for (const k of ['master', 'music']) assert.match(opt, new RegExp(`vol\\('${k}'`), k);
+  const { VOL_KEYS } = await import('../client/src/settings.ts');
+  for (const k of VOL_KEYS) assert.match(opt, new RegExp(`mix\\('${k}'\\)`), k);
+  const { KEY_CAT, CATS, catOf } = await import('../client/src/audio.ts');
+  assert.equal(CATS.length + 1, VOL_KEYS.length, 'a slider for every category and the master');
+  // every recording of the bank has its category, the shots apart from the creatures
+  const bank = JSON.parse(readFileSync('assets/audio/index.json', 'utf8')).sounds as Record<string, { bus: string }>;
+  for (const [key, e] of Object.entries(bank)) assert.ok(CATS.includes(catOf(key, e.bus)), key);
+  assert.equal(catOf('cannon'), 'guns');
+  assert.equal(catOf('roar.deep'), 'creatures');
+  assert.equal(catOf('mus.battle', 'music'), 'music');
+  assert.equal(KEY_CAT.thunder, 'weather');
 });

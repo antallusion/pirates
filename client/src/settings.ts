@@ -162,8 +162,20 @@ export interface Settings {
   vibrate: boolean;
   lanternFlicker: boolean;
   reduceMotion: boolean; // UI transitions and animations
-  effects: 'auto' | 'low';
+  effects: Effects;
   webgl: boolean;
+  /** Graphics (owner, 2026-11-11): the picture's sharpness — a share of the screen's own pixels (0.5–1); 'max' draws at
+   *  the screen's full density (up to 3×) and the sea at 2×, where 'auto' keeps a phone at 1.5× and a desk at 2×. */
+  renderScale: number;
+  sharpness: Sharpness;
+  /** Frames a second at most (0: the screen's own rate). */
+  fpsCap: number;
+  /** The frames a second in the corner. */
+  showFps: boolean;
+  /** Sound (owner, 2026-11-11): a compressor on the master — the broadsides no louder than the sea; and the sound kept
+   *  playing with the page hidden (not in VK). */
+  nightMode: boolean;
+  playHidden: boolean;
   plainTerms: boolean; // "close to the wind" for "close-hauled"
   classicBoarding: boolean; // the round-by-round deck fight instead of the turn-based battle (docs/16 P4)
   /** docs/23 item 35: the gun crews fire as the mark bears (on by default on a touch screen). */
@@ -194,8 +206,32 @@ export interface Settings {
   tacQueueFold: boolean;
   captions: boolean; // sound captions with direction
   mono: boolean;
-  volume: { master: number; sea: number; combat: number; ui: number; music: number };
+  /** The master and the mixer's categories (audio.ts CATS). */
+  volume: Volume;
   keys: Keymap;
+}
+
+export type Effects = 'auto' | 'low' | 'high';
+export type Sharpness = 'auto' | 'max';
+export const VOL_KEYS = ['master', 'music', 'ambience', 'weather', 'guns', 'impacts', 'creatures', 'boarding', 'abilities', 'ship', 'ui'] as const;
+export type VolKey = (typeof VOL_KEYS)[number];
+export type Volume = Record<VolKey, number>;
+export const FPS_CAPS = [0, 30, 60, 120] as const;
+/** The quality presets (graphics): what each sets. */
+export type Quality = 'low' | 'medium' | 'high' | 'ultra';
+export const QUALITY: Record<Quality, Pick<Settings, 'renderScale' | 'sharpness' | 'effects' | 'webgl' | 'fpsCap'>> = {
+  low: { renderScale: 0.6, sharpness: 'auto', effects: 'low', webgl: true, fpsCap: 30 },
+  medium: { renderScale: 0.8, sharpness: 'auto', effects: 'auto', webgl: true, fpsCap: 60 },
+  high: { renderScale: 1, sharpness: 'auto', effects: 'auto', webgl: true, fpsCap: 0 },
+  ultra: { renderScale: 1, sharpness: 'max', effects: 'high', webgl: true, fpsCap: 0 },
+};
+/** The preset the settings now match, or null (set by hand). */
+export function qualityOf(s: Settings): Quality | null {
+  for (const q of Object.keys(QUALITY) as Quality[]) {
+    const v = QUALITY[q];
+    if (v.renderScale === s.renderScale && v.sharpness === s.sharpness && v.effects === s.effects && v.webgl === s.webgl && v.fpsCap === s.fpsCap) return q;
+  }
+  return null;
 }
 
 export type MinimapOnMark = 'hide' | 'show';
@@ -214,7 +250,9 @@ export function defaults(): Settings {
   return {
     uiScale: 1, density: 'normal', firstHints: true, shipVoices: true, textScale: 1, hudAlpha: 0.65, colorblind: 'off', highContrast: false, plainFont: false, lanternMarks: false,
     reduceFlashes: false, screenShake: true, vibrate: true, lanternFlicker: true, reduceMotion: false, effects: 'auto', webgl: true,
-    plainTerms: false, classicBoarding: false, autoFire: coarse(), autoWeak: true, autoTopUp: false, autoGoal: true, expertGuns: false, expertHud: false, mmTarget: 'hide', tacFast: false, tacDeploy: true, tacDanger: false, tacQueueFold: false, captions: false, mono: false, volume: { master: 0.7, sea: 1, combat: 1, ui: 1, music: 0.8 },
+    plainTerms: false, classicBoarding: false, autoFire: coarse(), autoWeak: true, autoTopUp: false, autoGoal: true, expertGuns: false, expertHud: false, mmTarget: 'hide', tacFast: false, tacDeploy: true, tacDanger: false, tacQueueFold: false, captions: false, mono: false,
+    renderScale: 1, sharpness: 'auto', fpsCap: 0, showFps: false, nightMode: false, playHidden: false,
+    volume: { master: 0.7, music: 0.8, ambience: 1, weather: 1, guns: 1, impacts: 1, creatures: 1, boarding: 1, abilities: 1, ship: 1, ui: 1 },
     keys: structuredClone(CLASSIC),
   };
 }
@@ -223,7 +261,13 @@ export function defaults(): Settings {
 export function sanitize(raw: Partial<Settings> | null): Settings {
   const d = defaults();
   const s = { ...d, ...(raw ?? {}) } as Settings;
-  s.volume = { ...d.volume, ...(raw?.volume ?? {}) };
+  // (a save of the four old buses: the sea's into its three, the fighting's into its five)
+  const rv = (raw?.volume ?? {}) as Partial<Volume> & { sea?: number; combat?: number };
+  const was: Partial<Volume> = {};
+  if (rv.sea !== undefined && rv.ambience === undefined) was.ambience = was.weather = was.ship = rv.sea;
+  if (rv.combat !== undefined && rv.guns === undefined) was.guns = was.impacts = was.creatures = was.boarding = was.abilities = rv.combat;
+  s.volume = { ...d.volume, ...was } as Volume;
+  for (const k of VOL_KEYS) if (rv[k] !== undefined) s.volume[k] = rv[k]!;
   s.keys = { ...d.keys, ...(raw?.keys ?? {}) };
   // A map saved before Space was «Огонь» (2026-10-07): the old defaults move to the new ones (Space fired the chasers,
   // Tab dashed, ` took the next mark); a key the captain bound himself stays his.
@@ -252,7 +296,15 @@ export function sanitize(raw: Partial<Settings> | null): Settings {
   s.tacDeploy = s.tacDeploy !== false;
   s.tacDanger = s.tacDanger === true;
   s.tacQueueFold = s.tacQueueFold === true;
-  for (const k of ['master', 'sea', 'combat', 'ui', 'music'] as const) s.volume[k] = Math.min(1, Math.max(0, Number(s.volume[k]) || 0));
+  for (const k of VOL_KEYS) s.volume[k] = Math.min(1, Math.max(0, Number(s.volume[k]) || 0));
+  for (const k of Object.keys(s.volume)) if (!(VOL_KEYS as readonly string[]).includes(k)) delete (s.volume as Record<string, number>)[k];
+  if (!['auto', 'low', 'high'].includes(s.effects)) s.effects = 'auto';
+  s.renderScale = Math.min(1, Math.max(0.5, Number(s.renderScale) || 1));
+  if (!['auto', 'max'].includes(s.sharpness)) s.sharpness = 'auto';
+  if (!(FPS_CAPS as readonly number[]).includes(Number(s.fpsCap))) s.fpsCap = 0;
+  s.showFps = s.showFps === true;
+  s.nightMode = s.nightMode === true;
+  s.playHidden = s.playHidden === true;
   return s;
 }
 
