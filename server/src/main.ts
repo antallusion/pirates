@@ -50,6 +50,7 @@ import { SiteProfile } from './game/siteprofile.ts';
 import { WebShop } from './game/webshop.ts';
 import { siteRoutes } from './http/site-routes.ts';
 import { yookassaFromEnv } from './pay/yookassa.ts';
+import { mentorsBoot } from './game/mentors.ts'; // «Наставники» (owner, 2026-11-13)
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const PORT = Number(process.env.PORT ?? 8080);
@@ -203,6 +204,7 @@ game.start();
 if (!process.env.ZONE) giftBoot(game);
 if (!process.env.ZONE) tributeBoot(game); // «дань» to the players who help (tribute.ts)
 if (!process.env.ZONE) namesBoot(game); // the names the filter refuses, put right (names.ts)
+if (!process.env.ZONE) mentorsBoot(game); // three mentor captains who sail and talk in the chat (mentors.ts)
 if (!process.env.ZONE) serviceRestoreBoot(game); // the ranks put back once (marque.ts)
 // Dedicated gateways relay their players here over the internal link.
 const link = process.env.LINK_PORT
