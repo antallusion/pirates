@@ -30,7 +30,7 @@ test('mentors: three captains named «Наставник…» come aboard, a shi
   steps(game, 5);
   assert.equal(mt.list.length, 3);
   for (const m of mt.list) {
-    assert.match(m.s.name, /^Наставни(к|ца) /);
+    assert.ok(['Сильвер', 'Мэй', 'Гром'].includes(m.s.name));
     assert.ok(m.s.profile && m.s.ship, `${m.def.name} has a captain and a ship`);
   }
   for (let i = 0; i < 4; i++) {
@@ -59,7 +59,7 @@ test('mentors: a captain\'s line in the world gets one mentor\'s answer, a whisp
   await sleep(50);
   // (the typing pause: 4–10 s)
   await sleep(10_500);
-  const said = c.all('chat').filter((l) => /^Наставни/.test(l.from));
+  const said = c.all('chat').filter((l) => MENTORS.some((m) => m.name === l.from));
   assert.equal(said.length, 1, 'one mentor answered');
   assert.match(said[0].text, /логово/);
   assert.ok(!said[0].text.includes('[ГРУППА]'), 'the mark is never shown');
@@ -101,16 +101,16 @@ test('mentors with no model: aboard all the same, the chat alive with their own 
   c.push({ t: 'create_captain', captain: 'corsair', shipName: 'Чиж', tutorial: false });
   steps(game, 3);
   // seen among the captains aboard
-  c.push({ t: 'who', q: 'Наставни', here: false });
+  c.push({ t: 'who', q: '', here: false });
   steps(game, 1);
-  assert.equal(c.all('who').at(-1)!.list.length, 3, 'the three in the list of who is aboard');
+  assert.equal(c.all('who').at(-1)!.list.filter((w) => MENTORS.some((m) => m.name === w.name)).length, 3, 'the three in the list of who is aboard');
   // their own talk: a tip, then an exchange
-  mt.rnd = () => 0.9;
+  mt.rnd = () => 0.5;
   mt.nextChat = 0;
   mt.tick();
   await sleep(50);
   steps(game, 40);
-  const tips = c.all('chat').filter((l) => /^Наставни/.test(l.from));
+  const tips = c.all('chat').filter((l) => MENTORS.some((m) => m.name === l.from));
   assert.equal(tips.length, 1, 'a tip of the Pilot\'s Book');
   // a line between captains is left alone; a question is answered, and honestly who they are
   c.push({ t: 'chat', text: 'ну и погодка сегодня' });
@@ -118,7 +118,7 @@ test('mentors with no model: aboard all the same, the chat alive with their own 
   c.push({ t: 'chat', text: 'как чинить корабль в порту?' });
   mt.tick();
   await sleep(10_500);
-  const ans = c.all('chat').filter((l) => /^Наставни/.test(l.from)).slice(1);
+  const ans = c.all('chat').filter((l) => MENTORS.some((m) => m.name === l.from)).slice(1);
   assert.equal(ans.length, 1);
   assert.match(ans[0].text, /^Борис, .*Лоцманская книга/);
   steps(game, 40);
@@ -130,4 +130,25 @@ test('mentors with no model: aboard all the same, the chat alive with their own 
   assert.match(dm[0].text, /на основе ИИ, не человек/);
   assert.equal(asks.length, 0, 'the model never asked');
   assert.equal(mt.usage().calls, 0);
+});
+
+test('mentors: an account made as «Наставник …» comes aboard under the plain name, its token kept', () => {
+  const { game } = makeGame();
+  const { http } = stub(() => 'ok');
+  // the old account, as the first release made it
+  const old = new FakeConn();
+  game.attach(old as unknown as WsConnection);
+  old.push({ t: 'hello', v: PROTOCOL_VERSION, name: MENTORS[0].was });
+  old.push({ t: 'create_captain', captain: 'corsair', shipName: 'Старая Чайка', tutorial: false });
+  steps(game, 3);
+  const token = old.last('welcome')!.token;
+  old.close();
+  steps(game, 3);
+  game.db.setKv('mentors:tokens', { [MENTORS[0].was]: token });
+  const mt = new Mentors(game, '', http);
+  mt.start(0);
+  steps(game, 5);
+  assert.equal(mt.list[0].s.name, 'Сильвер');
+  assert.equal(mt.list[0].s.ship!.name, 'Старая Чайка', 'the same captain, not a new one');
+  assert.deepEqual(Object.keys(game.db.getKv<Record<string, string>>('mentors:tokens')!).sort(), ['Гром', 'Мэй', 'Сильвер']);
 });

@@ -1,7 +1,7 @@
 // «Наставники» (owner, 2026-11-13): three captains of the game's own who sail among the players — slowly, fighting the
 // sea's pirates and beasts of their level, putting in to buy stores and mend — and talk in the world chat: they answer
 // every captain who writes there or whispers to them, call people to joint ventures and to their guild. They are not
-// passed off as people: «Наставник» is in their name, and asked, they say they are the game's helpers (an AI).
+// passed off as people: asked, they say they are the game's helpers (an AI), and their guild is «Школа наставников».
 //
 // Each is an ordinary session of the game (a connection in this process, game.attach), so it sails, levels, stands in
 // the tables and is seen as any captain. The words come from Claude Haiku over the Messages API (raw HTTP: the server has
@@ -22,13 +22,17 @@ import type { GameConn } from '../net/conn.ts';
 import { proxiedFetch } from '../net/egress.ts';
 import type { EgressFetch } from '../net/egress.ts';
 import { autosailOf } from './autosail.ts';
+import { applyRename } from './names.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import { DOINGS, TALKS, forMentor, scriptedAnswer, tipLine } from './mentortalk.ts';
 import { pursuitOf } from './pursuit.ts';
 
 export interface MentorDef {
+  /** Owner, 2026-11-13 (later the same day): «давай уберем приставку "Наставник" вообще, пусть будут имена просто». */
   name: string;
+  /** The name the account was made under (renamed on coming aboard). */
+  was: string;
   captain: CaptainId;
   ship: string;
   /** Who he or she is (Russian, to the model). */
@@ -37,22 +41,25 @@ export interface MentorDef {
 
 export const MENTORS: MentorDef[] = [
   {
-    name: 'Наставник Сильвер',
+    name: 'Сильвер',
+    was: 'Наставник Сильвер',
     captain: 'corsair',
     ship: 'Старая Чайка',
-    persona: 'Ты — Наставник Сильвер, старый корсар, ворчливый, но добрый. Говоришь коротко, с морскими словечками, любишь подтрунить над салагами, но всегда помогаешь по делу. Любимое — абордаж и охота на пиратов.',
+    persona: 'Ты — Сильвер, наставник, старый корсар, ворчливый, но добрый. Говоришь коротко, с морскими словечками, любишь подтрунить над салагами, но всегда помогаешь по делу. Любимое — абордаж и охота на пиратов.',
   },
   {
-    name: 'Наставница Мэй',
+    name: 'Мэй',
+    was: 'Наставница Мэй',
     captain: 'navigator',
     ship: 'Лунная Тропа',
-    persona: 'Ты — Наставница Мэй, штурман и картограф, весёлая и тёплая. Объясняешь понятно, по шагам, подбадриваешь новичков, любишь острова, клады и торговлю. Иногда шутишь.',
+    persona: 'Ты — Мэй, наставница, штурман и картограф, весёлая и тёплая. Объясняешь понятно, по шагам, подбадриваешь новичков, любишь острова, клады и торговлю. Иногда шутишь.',
   },
   {
-    name: 'Наставник Гром',
+    name: 'Гром',
+    was: 'Наставник Гром',
     captain: 'reaver',
     ship: 'Бешеный Кит',
-    persona: 'Ты — Наставник Гром, громогласный налётчик, азартный и прямой. Зовёшь всех в бой на боссов, к логовам тварей и в общие походы, хвалишь за смелость. Отвечаешь бодро и коротко.',
+    persona: 'Ты — Гром, наставник, громогласный налётчик, азартный и прямой. Зовёшь всех в бой на боссов, к логовам тварей и в общие походы, хвалишь за смелость. Отвечаешь бодро и коротко.',
   },
 ];
 
@@ -61,7 +68,7 @@ const MODEL = 'claude-haiku-5-5';
 /** Haiku 5.5 per million tokens: input, output; a cache read is a tenth of input, a cache write a quarter more. */
 const PRICE = { in: 0.1, out: 0.5 };
 /** How soon one mentor may speak in the world again (seconds), and how long a reply waits (like typing). */
-const SAY_GAP = 12;
+const SAY_GAP = 3; // (owner: «на вопросы реальных игроков можно без лимита»)
 const TYPE_MIN = 4, TYPE_MAX = 10;
 /** A call to the joint venture now and then, when there are captains online to hear it (minutes). */
 const CALL_EVERY = [45, 90] as const;
@@ -69,11 +76,13 @@ const CALL_EVERY = [45, 90] as const;
 const HEARD = 24;
 /** Talk of their own in the world chat (minutes between): with captains online, and with none (the chat is kept for
  *  two weeks, so who comes aboard finds it alive). */
-const CHAT_BUSY = [4, 9] as const, CHAT_IDLE = [14, 30] as const;
+const CHAT_BUSY = [27, 35] as const, CHAT_IDLE = [40, 60] as const; // (owner: «сократил общение между ними в рамках получаса»)
+/** Of that talk, the share that is an exchange among the three (owner: «пусть пореже пишут между собой»). */
+const TALK_SHARE = 0.4;
 /** A word of her own doings (a port made, the sea again, a ship sunk) no more often than this (minutes). */
-const DOING_GAP = 25;
+const DOING_GAP = 45;
 
-const isMentor = (name: string) => MENTORS.some((m) => m.name === name);
+const isMentor = (name: string) => MENTORS.some((m) => m.name === name || m.was === name);
 
 /** A connection in this process: what the server sends, read for the chat and the world's news; snapshots dropped. */
 class MentorConn implements GameConn {
@@ -161,7 +170,7 @@ export class Mentors {
       const s = this.game.attach(conn);
       const mentor: Mentor = { def, conn, s, queue: [], busy: false, saidAt: 0, leaveAt: 0, seaSince: 0, homeward: false, toldLv: 0, toldSunk: -1, toldDocked: null, toldAt: 0 };
       this.list.push(mentor);
-      conn.push({ t: 'hello', v: PROTOCOL_VERSION, ...(tokens[def.name] ? { token: tokens[def.name] } : { name: def.name }) });
+      conn.push({ t: 'hello', v: PROTOCOL_VERSION, ...((tokens[def.name] ?? tokens[def.was]) ? { token: tokens[def.name] ?? tokens[def.was] } : { name: def.name }) });
     }
     this.nextCall = Date.now() + 10 * 60_000;
     this.nextChat = Date.now() + (1.5 + Math.random() * 2) * 60_000;
@@ -179,7 +188,10 @@ export class Mentors {
     if (msg.t === 'welcome') {
       const tokens = this.game.db.getKv<Record<string, string>>('mentors:tokens') ?? {};
       tokens[m.def.name] = msg.token;
+      delete tokens[m.def.was];
       this.game.db.setKv('mentors:tokens', tokens);
+      // (the account made as «Наставник …»: her plain name)
+      if (m.s.name !== m.def.name && !applyRename(this.game, m.s.accountId, m.def.name)) console.warn(`[mentors] the name ${m.def.name} is taken: ${m.s.name} kept`);
       if (!msg.hasCaptain) m.conn.push({ t: 'create_captain', captain: m.def.captain, shipName: m.def.ship, tutorial: false });
       return;
     }
@@ -204,7 +216,7 @@ export class Mentors {
     if (this.heard.length > HEARD) this.heard.shift();
     // to whom: the mentor named in it, else each in turn
     const low = h.text.toLowerCase();
-    const named = this.list.find((x) => low.includes(x.def.name.split(' ')[1].toLowerCase()));
+    const named = this.list.find((x) => low.includes(x.def.name.toLowerCase()));
     // (with no model to judge whose talk it is, only what is plainly for a mentor: a question, a greeting, their name)
     if (!this.key && !forMentor(h.text)) return;
     const to = named ?? this.list[this.turn++ % this.list.length];
@@ -321,11 +333,11 @@ export class Mentors {
     const ready = this.list.filter((m) => m.s.profile && !m.busy);
     if (ready.length < this.list.length) return; // (not all aboard yet, or one is answering)
     const r = this.rnd();
-    if (this.key && online && r < 0.5) {
+    if (this.key && online && r >= 0.6) {
       void this.muse(ready[Math.floor(this.rnd() * ready.length)]);
       return;
     }
-    if (r < 0.75) {
+    if (r < TALK_SHARE) {
       let i = Math.floor(this.rnd() * TALKS.length) % TALKS.length;
       for (let n = 0; n < TALKS.length && this.saidTalks.includes(i); n++) i = (i + 1) % TALKS.length;
       this.saidTalks.push(i);
@@ -448,7 +460,7 @@ ${lines.join('\n')}`;
   private async model(m: Mentor, ask: string): Promise<string | null> {
     if (!this.key) return null;
     try {
-      return await this.words(m, ask);
+      return await this.words(m, ask, false);
     } catch (e) {
       console.warn(`[mentors] ${m.def.name}: ${(e as Error).message}`);
       return null;
@@ -508,10 +520,11 @@ ${lines.join('\n')}`;
   // ------------------------------------------------------------------------------------------ the model
 
   /** One call to Haiku: the primer (cached), the mentor's own self, the ask. Null when capped, refused or failed. */
-  async words(m: Mentor, ask: string): Promise<string | null> {
+  async words(m: Mentor, ask: string, capped = true): Promise<string | null> {
     const day = new Date().toISOString().slice(0, 10);
     const u = this.usage(day);
-    if (u.calls >= this.dailyCalls) return null;
+    // (the day's cap holds their own talk; a captain's question is always answered)
+    if (capped && u.calls >= this.dailyCalls) return null;
     const p = m.s.profile;
     const self = `${m.def.persona}\nТвой корабль — «${m.def.ship}», ты ${p ? `${p.level}-го уровня` : 'в начале пути'}. Сейчас ${new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', hour: '2-digit', minute: '2-digit' })} по Москве.`;
     const body = {
