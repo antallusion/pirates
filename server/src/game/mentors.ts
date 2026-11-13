@@ -6,8 +6,13 @@
 // Each is an ordinary session of the game (a connection in this process, game.attach), so it sails, levels, stands in
 // the tables and is seen as any captain. The words come from Claude Haiku over the Messages API (raw HTTP: the server has
 // no runtime packages), through the server's egress proxy (Russia is outside the API's regions: ANTHROPIC_PROXY, else
-// TG_PROXY). On only with ANTHROPIC_API_KEY set and MENTORS not 'off'. A day's calls are capped (MENTOR_DAILY_CALLS);
-// the tokens and their cost are logged hourly and kept in kv `mentors:usage:<day>`.
+// TG_PROXY). A day's calls are capped (MENTOR_DAILY_CALLS); the tokens and their cost are logged hourly and kept in kv
+// `mentors:usage:<day>`.
+//
+// They are aboard always (owner, 2026-11-13: «ботов нет в списках онлайн… они должны прям работать… хочу зайти чтобы
+// там все чета писали, общались периодически и я видел чат»): MENTORS=off alone keeps them ashore. With no
+// ANTHROPIC_API_KEY (or the model capped or failing) they speak from mentortalk.ts — tips of the Pilot's Book, talk
+// among the three, their own real doings, and answers found in the Pilot's Book — so the world chat is never silent.
 
 import { PROTOCOL_VERSION } from '../../../shared/src/constants.ts';
 import type { CaptainId } from '../../../shared/src/data/captains.ts';
@@ -19,6 +24,7 @@ import type { EgressFetch } from '../net/egress.ts';
 import { autosailOf } from './autosail.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
+import { DOINGS, TALKS, forMentor, scriptedAnswer, tipLine } from './mentortalk.ts';
 import { pursuitOf } from './pursuit.ts';
 
 export interface MentorDef {
@@ -61,6 +67,11 @@ const TYPE_MIN = 4, TYPE_MAX = 10;
 const CALL_EVERY = [45, 90] as const;
 /** What the model sees of the chat. */
 const HEARD = 24;
+/** Talk of their own in the world chat (minutes between): with captains online, and with none (the chat is kept for
+ *  two weeks, so who comes aboard finds it alive). */
+const CHAT_BUSY = [4, 9] as const, CHAT_IDLE = [14, 30] as const;
+/** A word of her own doings (a port made, the sea again, a ship sunk) no more often than this (minutes). */
+const DOING_GAP = 25;
 
 const isMentor = (name: string) => MENTORS.some((m) => m.name === name);
 
@@ -106,6 +117,11 @@ interface Mentor {
   leaveAt: number;
   seaSince: number;
   homeward: boolean;
+  /** What she last told of herself: her level, the ships sunk, in port or not, and when (wall ms). */
+  toldLv: number;
+  toldSunk: number;
+  toldDocked: boolean | null;
+  toldAt: number;
 }
 
 interface Usage { calls: number; inTok: number; outTok: number; cacheRead: number; cacheWrite: number; usd: number }
@@ -118,6 +134,11 @@ export class Mentors {
   private news: string[] = [];
   private turn = 0;
   private nextCall = 0;
+  /** The next talk of their own (wall ms; 0 in a test asks for it now). */
+  nextChat = 0;
+  private saidTips: string[] = [];
+  private saidTalks: number[] = [];
+  rnd: () => number = Math.random;
   private timer: ReturnType<typeof setInterval> | null = null;
   private usageLogged = 0;
 
@@ -138,11 +159,12 @@ export class Mentors {
     for (const def of MENTORS) {
       const conn = new MentorConn((m) => this.hear(mentor, m));
       const s = this.game.attach(conn);
-      const mentor: Mentor = { def, conn, s, queue: [], busy: false, saidAt: 0, leaveAt: 0, seaSince: 0, homeward: false };
+      const mentor: Mentor = { def, conn, s, queue: [], busy: false, saidAt: 0, leaveAt: 0, seaSince: 0, homeward: false, toldLv: 0, toldSunk: -1, toldDocked: null, toldAt: 0 };
       this.list.push(mentor);
       conn.push({ t: 'hello', v: PROTOCOL_VERSION, ...(tokens[def.name] ? { token: tokens[def.name] } : { name: def.name }) });
     }
     this.nextCall = Date.now() + 10 * 60_000;
+    this.nextChat = Date.now() + (1.5 + Math.random() * 2) * 60_000;
     if (everyMs > 0) this.timer = setInterval(() => this.tick(), everyMs);
   }
 
@@ -183,6 +205,8 @@ export class Mentors {
     // to whom: the mentor named in it, else each in turn
     const low = h.text.toLowerCase();
     const named = this.list.find((x) => low.includes(x.def.name.split(' ')[1].toLowerCase()));
+    // (with no model to judge whose talk it is, only what is plainly for a mentor: a question, a greeting, their name)
+    if (!this.key && !forMentor(h.text)) return;
     const to = named ?? this.list[this.turn++ % this.list.length];
     to.queue.push(h);
   }
@@ -208,8 +232,10 @@ export class Mentors {
     if (now >= this.nextCall) {
       this.nextCall = now + (CALL_EVERY[0] + Math.random() * (CALL_EVERY[1] - CALL_EVERY[0])) * 60_000;
       const free = this.list.filter((x) => !x.busy);
-      if (this.playersOnline() >= 1 && free.length) void this.callToArms(free[Math.floor(Math.random() * free.length)]);
+      if (this.key && this.playersOnline() >= 1 && free.length) void this.callToArms(free[Math.floor(Math.random() * free.length)]);
     }
+    if (now >= this.nextChat) this.chatter(now);
+    for (const m of this.list) this.doings(m, now);
     if (now - this.usageLogged > 3_600_000) {
       this.usageLogged = now;
       const u = this.usage();
@@ -273,6 +299,105 @@ export class Mentors {
     m.conn.push({ t: 'autosail', x: Math.round(home.x + Math.cos(a) * r), y: Math.round(home.y + Math.sin(a) * r), sail: 2 });
   }
 
+  // ------------------------------------------------------------------------------------------ their own talk
+
+  /** A line into the world chat after `ms` (the timer never holds the process up). */
+  private later(m: Mentor, text: string, ms: number): void {
+    const t = setTimeout(() => {
+      if (!m.s.profile || m.conn.closed) return;
+      m.conn.push({ t: 'chat', text: text.slice(0, 240) });
+      m.saidAt = Date.now();
+      this.remember(m.def.name, text);
+    }, ms);
+    (t as { unref?: () => void }).unref?.();
+  }
+
+  /** Talk of their own: a tip of the Pilot's Book, an exchange among the three, or (with the model, and captains
+   *  online to read it) a line of the mentor's own making. */
+  private chatter(now: number): void {
+    const online = this.playersOnline();
+    const [a, b] = online ? CHAT_BUSY : CHAT_IDLE;
+    this.nextChat = now + (a + this.rnd() * (b - a)) * 60_000;
+    const ready = this.list.filter((m) => m.s.profile && !m.busy);
+    if (ready.length < this.list.length) return; // (not all aboard yet, or one is answering)
+    const r = this.rnd();
+    if (this.key && online && r < 0.5) {
+      void this.muse(ready[Math.floor(this.rnd() * ready.length)]);
+      return;
+    }
+    if (r < 0.75) {
+      let i = Math.floor(this.rnd() * TALKS.length) % TALKS.length;
+      for (let n = 0; n < TALKS.length && this.saidTalks.includes(i); n++) i = (i + 1) % TALKS.length;
+      this.saidTalks.push(i);
+      if (this.saidTalks.length > Math.floor(TALKS.length * 0.7)) this.saidTalks.shift();
+      let at = 0;
+      for (const [who, text] of TALKS[i]) {
+        this.later(this.list[who], text, at);
+        at += (14 + this.rnd() * 26) * 1000;
+      }
+      return;
+    }
+    const who = Math.floor(this.rnd() * this.list.length) % this.list.length;
+    const tip = tipLine(who, this.rnd, new Set(this.saidTips));
+    this.saidTips.push(tip.id);
+    if (this.saidTips.length > 60) this.saidTips.shift();
+    this.later(this.list[who], tip.text, 0);
+  }
+
+  /** What she is really doing, told now and then: a level made (always), a port made, the sea again, a ship sunk. */
+  private doings(m: Mentor, now: number): void {
+    const p = m.s.profile, ship = m.s.ship;
+    if (!p || !ship) return;
+    const i = this.list.indexOf(m) % 3;
+    const docked = !!ship.docked, sunk = p.stats.sunk ?? 0;
+    const say = (kind: keyof typeof DOINGS, fill: Record<string, number>) => {
+      const list = DOINGS[kind][i];
+      const text = list[Math.floor(this.rnd() * list.length) % list.length].replace(/\{(\w+)\}/g, (_, k: string) => String(fill[k] ?? ''));
+      m.toldAt = now;
+      this.later(m, text, 1500 + this.rnd() * 4000);
+    };
+    if (m.toldDocked === null) {
+      // (her first sight of herself: nothing to tell yet)
+      m.toldLv = p.level;
+      m.toldSunk = sunk;
+      m.toldDocked = docked;
+      m.toldAt = now - this.rnd() * DOING_GAP * 60_000;
+      return;
+    }
+    if (p.level > m.toldLv) {
+      m.toldLv = p.level;
+      say('level', { lv: p.level });
+      return;
+    }
+    const due = now - m.toldAt > DOING_GAP * 60_000;
+    if (sunk > m.toldSunk) {
+      const n = sunk;
+      m.toldSunk = sunk;
+      if (due) say('sunk', { n });
+      return;
+    }
+    if (docked !== m.toldDocked) {
+      m.toldDocked = docked;
+      if (due) say(docked ? 'dock' : 'sea', {});
+    }
+  }
+
+  /** A line of the mentor's own making (the model): a remark, a tip, a joke, a word to another mentor. */
+  private async muse(m: Mentor): Promise<void> {
+    m.busy = true;
+    try {
+      const chat = this.heard.slice(-10).map((h) => `${h.from}: ${h.text}`).join('\n');
+      const p = m.s.profile;
+      const ask = `Ты сейчас ${m.s.ship?.docked ? 'стоишь в порту' : 'в море'}${p ? `, у тебя ${p.level}-й уровень, потоплено кораблей: ${p.stats.sunk ?? 0}` : ''}.${chat ? `\nПоследние строки общего чата:\n${chat}` : ''}\n\nНапиши в общий чат одну короткую реплику от себя, чтобы в чате было живо: совет новичкам по игре, наблюдение о море, шутку, или обратись к другому наставнику (Сильвер, Мэй, Гром). Не повторяй сказанное выше, не здоровайся каждый раз.`;
+      const reply = await this.words(m, ask);
+      if (reply) await this.say(m, reply, null, []);
+    } catch (e) {
+      console.warn(`[mentors] ${m.def.name} muse: ${(e as Error).message}`);
+    } finally {
+      m.busy = false;
+    }
+  }
+
   // ------------------------------------------------------------------------------------------ the words
 
   /** What the mentor knows of the game: the Pilot's Book, a line an article (the same for all three: cached). */
@@ -304,17 +429,29 @@ ${lines.join('\n')}`;
       if (world.length) {
         const chat = this.heard.slice(-HEARD).map((h) => `${h.from}: ${h.text}`).join('\n');
         const ask = `Последние строки общего чата:\n${chat}\n\nОтветь одним сообщением в общий чат на эти строки (можно обратиться к нескольким игрокам сразу):\n${world.map((h) => `${h.from}: ${h.text}`).join('\n')}`;
-        const reply = await this.words(m, ask);
+        const last = world[world.length - 1];
+        const reply = (await this.model(m, ask)) ?? scriptedAnswer(this.list.indexOf(m), last.from, last.text, this.rnd);
         if (reply) await this.say(m, reply, null, world.map((h) => h.from));
       }
       for (const h of dm) {
-        const reply = await this.words(m, `Игрок ${h.from} написал тебе в личные сообщения:\n${h.text}\n\nОтветь ему лично.`);
+        const reply = (await this.model(m, `Игрок ${h.from} написал тебе в личные сообщения:\n${h.text}\n\nОтветь ему лично.`)) ?? scriptedAnswer(this.list.indexOf(m), h.from, h.text, this.rnd, true);
         if (reply) await this.say(m, reply, h.from, [h.from]);
       }
     } catch (e) {
       console.warn(`[mentors] ${m.def.name}: ${(e as Error).message}`);
     } finally {
       m.busy = false;
+    }
+  }
+
+  /** The model's words, or null with no key, capped, refused or failed (the mentor then speaks from mentortalk.ts). */
+  private async model(m: Mentor, ask: string): Promise<string | null> {
+    if (!this.key) return null;
+    try {
+      return await this.words(m, ask);
+    } catch (e) {
+      console.warn(`[mentors] ${m.def.name}: ${(e as Error).message}`);
+      return null;
     }
   }
 
@@ -422,14 +559,14 @@ ${lines.join('\n')}`;
   }
 }
 
-/** On at boot when the key is set (and MENTORS is not 'off'); one process only. */
+/** Aboard at boot unless MENTORS is 'off' (one process only); the model behind their words when the key is set. */
 export function mentorsBoot(game: Game, env: NodeJS.ProcessEnv = process.env): Mentors | null {
   const key = (env.ANTHROPIC_API_KEY ?? '').trim();
-  if (!key || env.MENTORS === 'off') return null;
+  if (env.MENTORS === 'off') return null;
   const proxy = (env.ANTHROPIC_PROXY ?? env.TG_PROXY ?? env.TELEGRAM_PROXY ?? '').trim();
   const http = proxy && proxy !== 'direct' && proxy !== 'off' ? proxiedFetch(proxy, { timeoutMs: 40_000 }) : (globalThis.fetch as unknown as EgressFetch);
   const mt = new Mentors(game, key, http, Number(env.MENTOR_DAILY_CALLS ?? 1500) || 1500);
   mt.start();
-  console.log(`[mentors] ${MENTORS.map((m) => m.name).join(', ')} at sea${proxy ? ` (API via ${new URL(proxy).host})` : ''}`);
+  console.log(`[mentors] ${MENTORS.map((m) => m.name).join(', ')} at sea, ${key ? `the model on${proxy ? ` (API via ${new URL(proxy).host})` : ''}` : 'no ANTHROPIC_API_KEY: their own words (mentortalk.ts)'}`);
   return mt;
 }

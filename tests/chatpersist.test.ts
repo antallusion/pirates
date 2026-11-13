@@ -54,14 +54,14 @@ test('the write on shutdown alone keeps the last line (no tick in between)', () 
   assert.deepEqual(said(join(g2, 'Bea Quick'), 'Ann Quick'), ['last words']);
 });
 
-test('the window holds after a reload: fifty a channel, nothing older than eight hours', () => {
+test('the window holds after a reload: two hundred a channel, nothing older than two weeks', () => {
   const { game, db } = makeGame();
   let clock = 700 * HOUR;
   game.wallNow = () => clock;
   join(game, 'Host Hal');
   let n = 0;
   const line = (text: string, at: number) => ({ from: 'Far Voice', text, id: `pp${(++n).toString(36)}`, at });
-  for (let i = 0; i < 70; i++) chatFromAfar(game, { kind: 'world', line: line(`hello ${i}`, clock - 70 + i), from: 9999 });
+  for (let i = 0; i < CHAT_HISTORY + 20; i++) chatFromAfar(game, { kind: 'world', line: line(`hello ${i}`, clock - 1000 + i), from: 9999 });
   const g2 = restart(game, db, () => clock);
   const h = said(join(g2, 'Cal After'), 'Far Voice');
   assert.equal(h.length, CHAT_HISTORY);

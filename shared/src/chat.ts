@@ -22,12 +22,14 @@ export const CHAT_BREACH_MUTE = 30;
 export const CHAT_DUP_WINDOW = 30;
 /** Lines kept of each channel (and of each private conversation), on the server and on the screen (owner, 2026-10-29:
  *  «показывай только переписку, которая хранится 8 часов и потом удаляется. (или сделай ограничение в 50 сообщений и
- *  стирай)»: both, the stricter wins). */
-export const CHAT_HISTORY = 50;
-/** How long a line is kept (ms): eight hours. */
-export const CHAT_KEEP_MS = 8 * 3600_000;
-/** Lines kept of each private conversation (in the database): the same fifty. */
-export const CHAT_DM_KEEP = CHAT_HISTORY;
+ *  стирай)»: both, the stricter wins).
+ *  Owner, 2026-11-13: «чаты должны сохраняться оч долго, чтобы люди видели активности» — two hundred lines a channel,
+ *  two weeks. */
+export const CHAT_HISTORY = 200;
+/** How long a line is kept (ms): two weeks. */
+export const CHAT_KEEP_MS = 14 * 86400_000;
+/** Lines kept of each private conversation (in the database): fifty. */
+export const CHAT_DM_KEEP = 50;
 
 /** The chat's window: the lines of the last CHAT_KEEP_MS, at most `max` of them (the newest), in their order. A line
  *  without a time is taken as new. Returns the same array when nothing goes (so callers can tell). */

@@ -14,26 +14,30 @@ import { join, makeGame, steps } from './helpers.ts';
 
 const HOUR = 3600_000;
 
-test('the window: eight hours and fifty lines, the stricter wins', () => {
+test('the window: two weeks and two hundred lines (owner, 2026-11-13: the chat kept long), the stricter wins', () => {
   const now = 100 * HOUR;
   const at = (x: { at: number }) => x.at;
   // by age: of ten lines an hour apart, only those of the last eight hours stay
-  const hourly = Array.from({ length: 10 }, (_, i) => ({ at: now - (9 - i) * HOUR, i }));
+  // (ten lines a step apart, eight steps to the window)
+  const STEP = CHAT_KEEP_MS / 8;
+  const hourly = Array.from({ length: 10 }, (_, i) => ({ at: now - (9 - i) * STEP, i }));
   assert.deepEqual(chatWindow(hourly, now, at).map((x) => x.i), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
-  assert.equal(chatWindow(hourly, now + HOUR + 1, at).length, 7, 'an hour on: two more gone (the one just at the edge too)');
+  assert.equal(chatWindow(hourly, now + STEP + 1, at).length, 7, 'a step on: two more gone (the one just at the edge too)');
   // by count: eighty fresh lines keep the newest fifty
-  const many = Array.from({ length: 80 }, (_, i) => ({ at: now - 80 + i, i }));
+  const many = Array.from({ length: CHAT_HISTORY + 30 }, (_, i) => ({ at: now - 1000 + i, i }));
   const kept = chatWindow(many, now, at);
   assert.equal(kept.length, CHAT_HISTORY);
   assert.equal(kept[0].i, 30);
-  assert.equal(kept.at(-1)!.i, 79);
+  assert.equal(kept.at(-1)!.i, CHAT_HISTORY + 29);
   // both at once: twenty old ones among sixty, the stricter rule decides
   const mixed = [...Array.from({ length: 20 }, (_, i) => ({ at: now - CHAT_KEEP_MS - 1000 + i, i })), ...Array.from({ length: 40 }, (_, i) => ({ at: now - 1000 + i, i: 20 + i }))];
   assert.equal(chatWindow(mixed, now, at).length, 40, 'age is stricter here');
   // nothing to cut: the same array back
   const few = many.slice(-5);
   assert.equal(chatWindow(few, now, at), few);
-  assert.equal(CHAT_DM_KEEP, CHAT_HISTORY, 'private words keep the same fifty');
+  assert.equal(CHAT_DM_KEEP, 50, 'private words keep fifty a conversation');
+  assert.equal(CHAT_HISTORY, 200);
+  assert.equal(CHAT_KEEP_MS, 14 * 24 * HOUR);
 });
 
 let seq = 0;
@@ -44,19 +48,19 @@ test('the server keeps and sends only the window: by count and by age, on a line
   let clock = 1_000 * HOUR;
   game.wallNow = () => clock;
   const b = join(game, 'Bea Reader');
-  for (let i = 0; i < 60; i++) chatFromAfar(game, { kind: 'world', line: afar('Far Voice', `hello ${i}`, clock - 60 + i), from: 9999 });
+  for (let i = 0; i < CHAT_HISTORY + 10; i++) chatFromAfar(game, { kind: 'world', line: afar('Far Voice', `hello ${i}`, clock - 1000 + i), from: 9999 });
   const c = join(game, 'Cal Late');
   const h1 = c.last('chat_hist')!.lines.filter((l) => l.from === 'Far Voice');
   assert.equal(h1.length, CHAT_HISTORY, 'fifty sent on coming aboard');
   assert.equal(h1[0].text, 'hello 10');
-  assert.equal(h1.at(-1)!.text, 'hello 59');
+  assert.equal(h1.at(-1)!.text, `hello ${CHAT_HISTORY + 9}`);
   // eight hours and a minute on: the minute's prune empties the world
   clock += CHAT_KEEP_MS + 60_000;
   steps(game, 20 * 61);
   b.push({ t: 'chat_hist' });
   assert.equal(b.last('chat_hist')!.lines.filter((l) => l.from === 'Far Voice').length, 0, 'nothing older than eight hours');
   // a line of now and one stamped nine hours ago: only the fresh one is kept
-  chatFromAfar(game, { kind: 'world', line: afar('Far Voice', 'stale', clock - 9 * HOUR), from: 9999 });
+  chatFromAfar(game, { kind: 'world', line: afar('Far Voice', 'stale', clock - CHAT_KEEP_MS - HOUR), from: 9999 });
   chatFromAfar(game, { kind: 'world', line: afar('Far Voice', 'fresh', clock), from: 9999 });
   chatPrune(game);
   b.push({ t: 'chat_hist' });
@@ -119,12 +123,12 @@ test('regression (2026-10-29, «в чате показано два сообще
   assert.equal(world.length, 0, 'the window let both go');
   assert.equal(u.recount([world], 'Me'), 0, 'and the badge with them: it shows only what the chat can show');
   // a channel past fifty: the badge counts no more than the fifty held
-  const flood = chatWindow(Array.from({ length: 70 }, (_, i): ChatLineView => ({ from: 'Ann', text: `${i}`, at: now + i })), now + 100, at);
+  const flood = chatWindow(Array.from({ length: CHAT_HISTORY + 20 }, (_, i): ChatLineView => ({ from: 'Ann', text: `${i}`, at: now + i })), now + 1000, at);
   assert.equal(new ChatUnread(0).recount([flood], 'Me'), CHAT_HISTORY);
   // a device clock nine hours fast: by the server's clock (the history's stamp) the fresh lines stay, by the device's
   // they would all go — the chat windows by the server's
   const fresh: ChatLineView[] = [{ from: 'Ann', text: 'hi', at: now - 60_000 }];
-  const device = now + 9 * HOUR;
+  const device = now + CHAT_KEEP_MS + HOUR;
   assert.equal(chatWindow(fresh, device, at).length, 0, '(the device’s clock would empty the chat)');
   const skew = now - device; // chat_hist.now − Date.now()
   assert.equal(chatWindow(fresh, device + skew, at).length, 1, 'the server’s clock keeps it');

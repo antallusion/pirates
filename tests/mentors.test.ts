@@ -89,3 +89,45 @@ test('mentors: the day\'s cap stops the calls; the primer is the Pilot\'s Book',
   assert.equal(asks.length, 1);
   assert.ok(Mentors.primerText().length > 3000 && Mentors.primerText().includes('Лоцманская книга'));
 });
+
+test('mentors with no model: aboard all the same, the chat alive with their own talk, a question answered from the Pilot\'s Book', async () => {
+  const { game } = makeGame();
+  const { http, asks } = stub(() => 'never');
+  const mt = new Mentors(game, '', http);
+  mt.start(0);
+  const c = new FakeConn();
+  game.attach(c as unknown as WsConnection);
+  c.push({ t: 'hello', v: PROTOCOL_VERSION, name: 'Борис' });
+  c.push({ t: 'create_captain', captain: 'corsair', shipName: 'Чиж', tutorial: false });
+  steps(game, 3);
+  // seen among the captains aboard
+  c.push({ t: 'who', q: 'Наставни', here: false });
+  steps(game, 1);
+  assert.equal(c.all('who').at(-1)!.list.length, 3, 'the three in the list of who is aboard');
+  // their own talk: a tip, then an exchange
+  mt.rnd = () => 0.9;
+  mt.nextChat = 0;
+  mt.tick();
+  await sleep(50);
+  steps(game, 40);
+  const tips = c.all('chat').filter((l) => /^Наставни/.test(l.from));
+  assert.equal(tips.length, 1, 'a tip of the Pilot\'s Book');
+  // a line between captains is left alone; a question is answered, and honestly who they are
+  c.push({ t: 'chat', text: 'ну и погодка сегодня' });
+  steps(game, 40);
+  c.push({ t: 'chat', text: 'как чинить корабль в порту?' });
+  mt.tick();
+  await sleep(10_500);
+  const ans = c.all('chat').filter((l) => /^Наставни/.test(l.from)).slice(1);
+  assert.equal(ans.length, 1);
+  assert.match(ans[0].text, /^Борис, .*Лоцманская книга/);
+  steps(game, 40);
+  c.push({ t: 'chat', text: 'ты бот?', ch: 'dm', to: MENTORS[0].name });
+  for (const m of mt.list) m.saidAt = 0;
+  mt.tick();
+  await sleep(10_500);
+  const dm = c.all('chat').filter((l) => l.ch === 'whisper' && l.from === MENTORS[0].name);
+  assert.match(dm[0].text, /на основе ИИ, не человек/);
+  assert.equal(asks.length, 0, 'the model never asked');
+  assert.equal(mt.usage().calls, 0);
+});

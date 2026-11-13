@@ -647,7 +647,11 @@ export class ChatPanel {
 
   private time(at: number | undefined): string {
     const d = new Date(at ?? Date.now());
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    // (the chat is kept two weeks: a line of another day carries its date)
+    const now = new Date();
+    if (d.getDate() === now.getDate() && d.getMonth() === now.getMonth()) return hm;
+    return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')} ${hm}`;
   }
 
   /** A line: the face (a button to her card), the name in its colour, the guild's tag, the level, the time, the words. */
