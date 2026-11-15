@@ -29,6 +29,7 @@ import { DOINGS, TALKS, forMentor, scriptedAnswer, tipLine } from './mentortalk.
 import { pursuitOf } from './pursuit.ts';
 import { campaignActive, campaignFoes, campaignSlot } from './campaign.ts';
 import { routeOf } from './goalroute.ts';
+import { canDock } from './player.ts';
 import { recruit as dwellRecruit } from './dwell.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId } from '../../../shared/src/data/army.ts';
@@ -160,6 +161,8 @@ interface Mentor {
   stepKey: string;
   stepSince: number;
   credited: number;
+  /** The game's last words to her. */
+  said: string[];
   /** What she last told of herself: her level, the ships sunk, in port or not, and when (wall ms). */
   toldLv: number;
   toldSunk: number;
@@ -192,7 +195,7 @@ export class Mentors {
     if (!p || !ship) return `${m.def.name}: not aboard`;
     const qs = campaignActive(p);
     const st = qs ? QUESTS_BY_ID[qs.id]?.steps[qs.step] : undefined;
-    return `${m.def.name}: L${p.level} quest ${p.campaign?.at ?? 0} ${qs ? `${qs.id}#${qs.step} ${st?.type ?? ''}` : 'waits'} (${Math.round(this.game.now - m.stepSince)} s on it), credited ${m.credited}, sunk ${p.stats.sunk}, boarded ${p.stats.boarded}, ${ship.alive ? '' : 'SUNK '}${inBattle(this.game, ship) ? 'IN BATTLE ' : ''}${ship.docked ? `docked ${ship.docked}` : 'at sea'}${pursuitOf(ship) ? ' pursuing' : ''}${routeOf(this.game, s) ? ' route' : ''}${autosailOf(ship) ? ' autosail' : ''}, hull ${Math.round((100 * ship.hull) / ship.stats.hullMax)}%`;
+    return `${m.def.name}: L${p.level} quest ${p.campaign?.at ?? 0} ${qs ? `${qs.id}#${qs.step} ${st?.type ?? ''}` : 'waits'} (${Math.round(this.game.now - m.stepSince)} s on it), credited ${m.credited}, sunk ${p.stats.sunk}, boarded ${p.stats.boarded}, ${ship.alive ? '' : 'SUNK '}${inBattle(this.game, ship) ? 'IN BATTLE ' : ''}${ship.docked ? `docked ${ship.docked}` : 'at sea'}${pursuitOf(ship) ? ' pursuing' : ''}${routeOf(this.game, s) ? ' route' : ''}${autosailOf(ship) ? ' autosail' : ''}, hull ${Math.round((100 * ship.hull) / ship.stats.hullMax)}%, food ${Math.round(ship.cargo.provisions ?? 0)}, crew ${ship.crew}; heard: ${m.said.join(' | ')}`;
   }
 
   private readonly game: Game;
@@ -212,7 +215,7 @@ export class Mentors {
     for (const def of MENTORS) {
       const conn = new MentorConn((m) => this.hear(mentor, m));
       const s = this.game.attach(conn);
-      const mentor: Mentor = { def, conn, s, queue: [], busy: false, saidAt: 0, portAt: -1, seaSince: 0, homeward: false, autoAt: -1e9, acceptAt: -1e9, hereAt: -1e9, landAt: -1e9, gotoAt: -1e9, scrollAt: -1e9, buyAt: -1e9, stepKey: '', stepSince: 0, credited: 0, toldLv: 0, toldSunk: -1, toldDocked: null, toldAt: 0 };
+      const mentor: Mentor = { def, conn, s, queue: [], busy: false, saidAt: 0, portAt: -1, seaSince: 0, homeward: false, autoAt: -1e9, acceptAt: -1e9, hereAt: -1e9, landAt: -1e9, gotoAt: -1e9, scrollAt: -1e9, buyAt: -1e9, stepKey: '', stepSince: 0, credited: 0, said: [], toldLv: 0, toldSunk: -1, toldDocked: null, toldAt: 0 };
       this.list.push(mentor);
       conn.push({ t: 'hello', v: PROTOCOL_VERSION, ...((tokens[def.name] ?? tokens[def.was]) ? { token: tokens[def.name] ?? tokens[def.was] } : { name: def.name }) });
     }
@@ -240,6 +243,11 @@ export class Mentors {
       return;
     }
     if (msg.t === 'toast') {
+      // what the game said to her lately (the journal's state line: why an order was refused)
+      if (!(msg as { ev?: unknown }).ev) {
+        m.said.push(msg.msg.slice(0, 80));
+        if (m.said.length > 4) m.said.shift();
+      }
       // the world's news (forum 2026-11-07: they carry their place): what a call to arms may name
       if ((msg as { ev?: unknown }).ev && this.list[0] === m) {
         this.news.push(msg.msg);
@@ -411,7 +419,7 @@ export class Mentors {
     if (pursuitOf(ship)) return;
     // hurt or out of stores: home to mend
     if (hurt) m.homeward = true;
-    const port = g.nearestPort(ship.state.x, ship.state.y);
+    const port = g.nearestPort(ship.state.x, ship.state.y, (q) => canDock(p, q.faction).ok);
     if (m.homeward && port) {
       const d = Math.hypot(port.x - ship.state.x, port.y - ship.state.y);
       if (d < 260) m.conn.push({ t: 'dock' });
@@ -445,12 +453,13 @@ export class Mentors {
         }
       }
       // the route to its place («Плыть»), given again when it let go; there, the boats for a step ashore
-      if (!routeOf(g, s) && !autosailOf(ship)) {
-        if ((st.type === 'land' || st.type === 'dive' || st.type === 'lair' || st.type === 'chart') && !ship.landing && t - m.landAt > 20) {
+      // (a course of her own left over — an old run, the voyage home — gives way to the quest's)
+      if (!routeOf(g, s)) {
+        if ((st.type === 'land' || st.type === 'dive' || st.type === 'lair' || st.type === 'chart') && !autosailOf(ship) && !ship.landing && t - m.landAt > 20) {
           m.landAt = t;
           m.conn.push({ t: 'land' });
         }
-        if (t - m.gotoAt > 20) {
+        if (t - m.gotoAt > (autosailOf(ship) ? 45 : 20)) {
           m.gotoAt = t;
           m.conn.push({ t: 'goto', key: `q:${qs.id}` });
         }
