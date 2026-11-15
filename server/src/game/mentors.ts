@@ -184,6 +184,16 @@ export class Mentors {
   rnd: () => number = Math.random;
   private timer: ReturnType<typeof setInterval> | null = null;
   private usageLogged = 0;
+  private stateLogged = 0;
+
+  /** One line of how she stands (the journal, every ten minutes). */
+  state(m: Mentor): string {
+    const s = m.s, p = s.profile, ship = s.ship;
+    if (!p || !ship) return `${m.def.name}: not aboard`;
+    const qs = campaignActive(p);
+    const st = qs ? QUESTS_BY_ID[qs.id]?.steps[qs.step] : undefined;
+    return `${m.def.name}: L${p.level} quest ${p.campaign?.at ?? 0} ${qs ? `${qs.id}#${qs.step} ${st?.type ?? ''}` : 'waits'} (${Math.round(this.game.now - m.stepSince)} s on it), credited ${m.credited}, sunk ${p.stats.sunk}, boarded ${p.stats.boarded}, ${ship.alive ? '' : 'SUNK '}${inBattle(this.game, ship) ? 'IN BATTLE ' : ''}${ship.docked ? `docked ${ship.docked}` : 'at sea'}${pursuitOf(ship) ? ' pursuing' : ''}${routeOf(this.game, s) ? ' route' : ''}${autosailOf(ship) ? ' autosail' : ''}, hull ${Math.round((100 * ship.hull) / ship.stats.hullMax)}%`;
+  }
 
   private readonly game: Game;
   private readonly key: string;
@@ -279,6 +289,10 @@ export class Mentors {
       this.nextCall = now + (CALL_EVERY[0] + Math.random() * (CALL_EVERY[1] - CALL_EVERY[0])) * 60_000;
       const free = this.list.filter((x) => !x.busy);
       if (this.key && this.playersOnline() >= 1 && free.length) void this.callToArms(free[Math.floor(Math.random() * free.length)]);
+    }
+    if (now - this.stateLogged > 600_000) {
+      this.stateLogged = now;
+      for (const m of this.list) console.log(`[mentors] ${this.state(m)}`);
     }
     if (now >= this.nextChat) this.chatter(now);
     for (const m of this.list) this.doings(m, now);
