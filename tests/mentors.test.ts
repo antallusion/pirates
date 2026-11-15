@@ -22,7 +22,7 @@ function stub(reply: (ask: string) => string) {
   return { http, asks };
 }
 
-test('mentors: three captains named «Наставник…» come aboard, a ship each, and sail', () => {
+test('mentors: three captains under their plain names come aboard, a ship each, and put to sea on the campaign', () => {
   const { game } = makeGame();
   const { http } = stub(() => 'Привет!');
   const mt = new Mentors(game, 'k', http);
@@ -33,10 +33,9 @@ test('mentors: three captains named «Наставник…» come aboard, a shi
     assert.ok(['Сильвер', 'Мэй', 'Гром'].includes(m.s.name));
     assert.ok(m.s.profile && m.s.ship, `${m.def.name} has a captain and a ship`);
   }
-  for (let i = 0; i < 4; i++) {
-    for (const m of mt.list) m.leaveAt = 1; // (their stay in port over)
+  for (let i = 0; i < 12; i++) {
+    steps(game, 100); // (five seconds of the sea)
     mt.tick();
-    steps(game, 25);
   }
   assert.ok(mt.list.some((m) => !m.s.ship!.docked), 'they put to sea');
   assert.equal(mt.playersOnline(), 0, 'the mentors are not counted as players');
@@ -151,4 +150,24 @@ test('mentors: an account made as «Наставник …» comes aboard under 
   assert.equal(mt.list[0].s.name, 'Сильвер');
   assert.equal(mt.list[0].s.ship!.name, 'Старая Чайка', 'the same captain, not a new one');
   assert.deepEqual(Object.keys(game.db.getKv<Record<string, string>>('mentors:tokens')!).sort(), ['Гром', 'Мэй', 'Сильвер']);
+});
+
+test('mentors play the campaign (owner, 2026-11-15: «они должны качаться… проходить кампанию»): quests done, ships sunk and boarded, levels made', async () => {
+  const { game } = makeGame();
+  game.directorOn = true;
+  game.tacticalBoarding = true;
+  const { http } = stub(() => 'ok');
+  const mt = new Mentors(game, '', http);
+  mt.start(0);
+  mt.nextChat = Infinity;
+  const m = mt.list[0];
+  for (let sec = 0; sec < 40 * 60; sec += 5) {
+    steps(game, 100);
+    mt.tick();
+  }
+  const p = m.s.profile!;
+  assert.ok(p.campaign!.at >= 4, `campaign quests done: ${p.campaign!.at}`);
+  assert.ok(p.level >= 2, `level ${p.level}`);
+  assert.ok(p.stats.sunk + p.stats.boarded >= 2, `ships fought: ${p.stats.sunk} sunk, ${p.stats.boarded} boarded`);
+  assert.ok(m.credited <= p.campaign!.at, `most steps her own: ${m.credited} credited of ${p.campaign!.at} quests`);
 });

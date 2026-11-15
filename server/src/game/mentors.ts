@@ -27,6 +27,24 @@ import type { Game } from './Game.ts';
 import type { PlayerSession } from './player.ts';
 import { DOINGS, TALKS, forMentor, scriptedAnswer, tipLine } from './mentortalk.ts';
 import { pursuitOf } from './pursuit.ts';
+import { campaignActive, campaignFoes, campaignSlot } from './campaign.ts';
+import { routeOf } from './goalroute.ts';
+import { recruit as dwellRecruit } from './dwell.ts';
+import { UNITS } from '../../../shared/src/data/army.ts';
+import type { UnitId } from '../../../shared/src/data/army.ts';
+import { focusPending, pendingChoices } from './hero.ts';
+import { learnContext } from './progression.ts';
+import { TALENTS, canLearn } from '../../../shared/src/data/talents.ts';
+import { moveScrolls, scrollsOf } from './autoscroll.ts';
+import { roamersAbout, roamFighter, roamUp } from './roamers.ts';
+import { inBattle } from './inbattle.ts';
+import { completeQuest, questEvent } from './quests.ts';
+import type { ShipEntity } from './ship.ts';
+import { QUESTS_BY_ID } from '../../../shared/src/data/quests.ts';
+import type { QuestStep } from '../../../shared/src/data/quests.ts';
+import { actHere, questAct } from '../../../shared/src/data/questact.ts';
+import { BEAST_IDS, BEASTS } from '../../../shared/src/data/beasts.ts';
+import { hullsFor } from '../../../shared/src/data/shiplevel.ts';
 
 export interface MentorDef {
   /** Owner, 2026-11-13 (later the same day): «давай уберем приставку "Наставник" вообще, пусть будут имена просто». */
@@ -63,6 +81,9 @@ export const MENTORS: MentorDef[] = [
   },
 ];
 
+/** The talent trees each mentor grows in, the first first (Сильвер boards, Мэй sails and trades, Гром fires). */
+const MENTOR_TREES: readonly string[][] = [['boarding', 'gunnery', 'survival'], ['navigation', 'trade', 'exploration'], ['gunnery', 'command', 'boarding']];
+
 export const MENTOR_GUILD = { name: 'Школа наставников', tag: 'ШН' } as const;
 const MODEL = 'claude-haiku-5-5';
 /** Haiku 5.5 per million tokens: input, output; a cache read is a tenth of input, a cache write a quarter more. */
@@ -81,6 +102,8 @@ const CHAT_BUSY = [27, 35] as const, CHAT_IDLE = [40, 60] as const; // (owner: �
 const TALK_SHARE = 0.4;
 /** A word of her own doings (a port made, the sea again, a ship sunk) no more often than this (minutes). */
 const DOING_GAP = 45;
+/** A campaign step not done in this long (the sea's seconds) is credited (play). */
+export const PLAY_STUCK = 12 * 60;
 
 const isMentor = (name: string) => MENTORS.some((m) => m.name === name || m.was === name);
 
@@ -122,10 +145,21 @@ interface Mentor {
   queue: Heard[];
   busy: boolean;
   saidAt: number;
-  /** In port until (wall ms); at sea since. */
-  leaveAt: number;
+  /** The sea's clock (game.now, seconds): in port since (−1 at sea), at sea since, and her last orders' times. */
+  portAt: number;
   seaSince: number;
   homeward: boolean;
+  autoAt: number;
+  acceptAt: number;
+  hereAt: number;
+  landAt: number;
+  gotoAt: number;
+  scrollAt: number;
+  buyAt: number;
+  /** The campaign step she is on (quest:step:progress), since when (the sea's clock), and the steps credited. */
+  stepKey: string;
+  stepSince: number;
+  credited: number;
   /** What she last told of herself: her level, the ships sunk, in port or not, and when (wall ms). */
   toldLv: number;
   toldSunk: number;
@@ -168,7 +202,7 @@ export class Mentors {
     for (const def of MENTORS) {
       const conn = new MentorConn((m) => this.hear(mentor, m));
       const s = this.game.attach(conn);
-      const mentor: Mentor = { def, conn, s, queue: [], busy: false, saidAt: 0, leaveAt: 0, seaSince: 0, homeward: false, toldLv: 0, toldSunk: -1, toldDocked: null, toldAt: 0 };
+      const mentor: Mentor = { def, conn, s, queue: [], busy: false, saidAt: 0, portAt: -1, seaSince: 0, homeward: false, autoAt: -1e9, acceptAt: -1e9, hereAt: -1e9, landAt: -1e9, gotoAt: -1e9, scrollAt: -1e9, buyAt: -1e9, stepKey: '', stepSince: 0, credited: 0, toldLv: 0, toldSunk: -1, toldDocked: null, toldAt: 0 };
       this.list.push(mentor);
       conn.push({ t: 'hello', v: PROTOCOL_VERSION, ...((tokens[def.name] ?? tokens[def.was]) ? { token: tokens[def.name] ?? tokens[def.was] } : { name: def.name }) });
     }
@@ -235,9 +269,9 @@ export class Mentors {
     const now = Date.now();
     for (const m of this.list) {
       try {
-        this.sail(m, now);
+        this.play(m);
       } catch (e) {
-        console.warn(`[mentors] ${m.def.name} sail: ${(e as Error).message}`);
+        console.warn(`[mentors] ${m.def.name} play: ${(e as Error).message}`);
       }
       if (!m.busy && m.queue.length && now - m.saidAt > SAY_GAP * 1000) void this.answer(m);
     }
@@ -261,54 +295,274 @@ export class Mentors {
     return n;
   }
 
-  /** Slowly about the home waters: the sea's pirates and beasts of her level fought with the guns, home to mend and stock. */
-  private sail(m: Mentor, now: number): void {
-    const s = m.s, ship = s.ship, p = s.profile;
+  /** Her play (owner, 2026-11-15: «они должны качаться… прям проходить кампанию»): as a captain with the «Плыть»
+   *  button plays it — the campaign's quest taken, its place sailed for by the game's own route (goalroute.ts), the deed
+   *  there done (a step of the port by her button, the boats landed, the quest's foes fought with the guns or boarded,
+   *  the hex battle on auto); while the next quest waits for her level, the sea's pirates and beasts of her level about
+   *  her home waters. A step she cannot do in PLAY_STUCK seconds of the sea's clock is credited by the event that does it
+   *  (as tests/campaign.test.ts plays the whole road), so she never lies becalmed on one for days. The sea's clock
+   *  (game.now) throughout: the tests run it. */
+  private play(m: Mentor): void {
+    const g = this.game, s = m.s, ship = s.ship, p = s.profile;
     if (!ship || !p || !ship.alive) return;
-    if (s.pendingBoarding) this.game.settleSpoils(s);
-    if (ship.docked) {
-      if (!m.leaveAt) {
-        m.leaveAt = now + (2 + Math.random() * 5) * 60_000;
-        m.homeward = false;
-        if (ship.hull < ship.stats.hullMax * 0.98) m.conn.push({ t: 'shipyard', action: 'repair' });
-        const want = Math.ceil(ship.crew / 10) * 3;
-        const have = ship.cargo.provisions ?? 0;
-        if (have < want) m.conn.push({ t: 'trade', good: 'provisions', qty: Math.min(40, Math.ceil(want - have)) });
-        if ((ship.ammo?.round ?? 0) < 40) m.conn.push({ t: 'buy_ammo', ammo: 'round', qty: 40 });
-      }
-      if (now >= m.leaveAt) {
-        m.leaveAt = 0;
-        m.seaSince = now;
-        m.conn.push({ t: 'undock' });
+    const t = g.now;
+    // the auto-battle's scrolls (a captain buys them for doubloons): the game's own helpers are kept in them
+    if (t - m.scrollAt > 60) {
+      m.scrollAt = t;
+      if (scrollsOf(g, s.accountId) < 5) moveScrolls(g, s.accountId, 20, 'autoscroll_mentor', m.def.name);
+    }
+    // a hex battle (a boarding, a lair, a stack of the sea): her auto-battle plays it
+    if (inBattle(g, ship)) {
+      if (t - m.autoAt > 5) {
+        m.autoAt = t;
+        m.conn.push({ t: 'tac', act: { a: 'auto', on: true } });
       }
       return;
     }
+    if (s.pendingBoarding) g.settleSpoils(s);
+    // the campaign's quest: under way by itself; at a fork her first way
+    if (!campaignActive(p)) {
+      const slot = campaignSlot(g, p);
+      if (slot && p.level >= slot.gate && t - m.acceptAt > 10) {
+        m.acceptAt = t;
+        m.conn.push({ t: 'quest', action: 'accept', id: slot.a.id });
+      }
+    }
+    const qs = campaignActive(p);
+    const q = qs ? QUESTS_BY_ID[qs.id] : undefined;
+    const st = qs && q ? q.steps[qs.step] : undefined;
+    // the watch on a step: stuck too long, it is credited
+    const key = qs ? `${qs.id}:${qs.step}:${qs.progress}` : '';
+    if (key !== m.stepKey) {
+      m.stepKey = key;
+      m.stepSince = t;
+    } else if (st && t - m.stepSince > PLAY_STUCK) {
+      m.stepSince = t;
+      m.credited++;
+      this.credit(m, st);
+      return;
+    }
+    const hurt = ship.hull < ship.stats.hullMax * 0.4 || (ship.cargo.provisions ?? 0) < 1;
+    if (ship.docked) {
+      if (m.portAt < 0) {
+        m.portAt = t;
+        if (ship.hull < ship.stats.hullMax * 0.98) m.conn.push({ t: 'shipyard', action: 'repair' });
+        const want = Math.ceil(ship.crew / 10) * 4;
+        const have = ship.cargo.provisions ?? 0;
+        if (have < want) m.conn.push({ t: 'trade', good: 'provisions', qty: Math.min(60, Math.ceil(want - have)) });
+        if ((ship.ammo?.round ?? 0) < 60) m.conn.push({ t: 'buy_ammo', ammo: 'round', qty: 60 });
+        this.grow(m);
+        // hands for a boarding party
+        if (ship.crew < ship.stats.crewMax * 0.8) m.conn.push({ t: 'hire_crew', qty: Math.ceil(ship.stats.crewMax * 0.95 - ship.crew) });
+      }
+      // a delivery's goods, bought where she lies (the step's port, or the one the route brought her to)
+      if (st?.type === 'deliver' && (ship.cargo[st.good] ?? 0) < st.qty && t - m.buyAt > 30) {
+        m.buyAt = t;
+        m.conn.push({ t: 'trade', good: st.good, qty: st.qty - (ship.cargo[st.good] ?? 0) });
+      }
+      // a step done in this very port by her own button («Расспросить», «Сдать груз»…)
+      if (qs && st && questAct(st)?.how === 'here' && actHere(questAct(st), ship.docked) && t - m.hereAt > 6) {
+        m.hereAt = t;
+        m.conn.push({ t: 'quest', action: 'here', id: qs.id });
+        return;
+      }
+      // men signed on at the port's dwellings (the army's tab): the first kind it trains that she has room for
+      if (qs && st?.type === 'recruit' && t - m.hereAt > 6) {
+        m.hereAt = t;
+        const need = Math.max(1, st.count - qs.progress);
+        for (const u of Object.keys(UNITS) as UnitId[]) {
+          const d = UNITS[u];
+          if (d.elite || d.up || d.deep || d.tier > 3) continue;
+          if (dwellRecruit(g, s, 'port', u, need) === null) break;
+        }
+        return;
+      }
+      // a shop's lesson of the opening: the purchase, else skipped as a captain's «Пропустить шаг»
+      if (qs && st?.type === 'buy' && t - m.hereAt > 6) {
+        m.hereAt = t;
+        if (st.shop === 'provisions') m.conn.push({ t: 'trade', good: 'provisions', qty: 5 });
+        m.conn.push({ t: 'quest', action: 'skip_step', id: qs.id });
+        return;
+      }
+      // a breath in port (longer after a hard voyage), then on
+      const stay = qs ? 20 : 60 + (m.homeward ? 120 : 0);
+      if (t - m.portAt < stay) return;
+      m.homeward = false;
+      m.seaSince = t;
+      if (qs) m.conn.push({ t: 'goto', key: `q:${qs.id}` });
+      else m.conn.push({ t: 'undock' });
+      return;
+    }
+    m.portAt = -1;
     if (pursuitOf(ship)) return;
-    const hurt = ship.hull < ship.stats.hullMax * 0.45 || (ship.cargo.provisions ?? 0) < 1;
-    if (hurt || now - m.seaSince > 25 * 60_000) m.homeward = true;
-    const port = this.game.nearestPort(ship.state.x, ship.state.y);
+    // hurt or out of stores: home to mend
+    if (hurt) m.homeward = true;
+    const port = g.nearestPort(ship.state.x, ship.state.y);
     if (m.homeward && port) {
       const d = Math.hypot(port.x - ship.state.x, port.y - ship.state.y);
       if (d < 260) m.conn.push({ t: 'dock' });
-      else if (!autosailOf(ship)) m.conn.push({ t: 'autosail', x: Math.round(port.x), y: Math.round(port.y), sail: 2, near: 60 });
+      else if (!autosailOf(ship) || routeOf(g, s)) m.conn.push({ t: 'autosail', x: Math.round(port.x), y: Math.round(port.y), near: 60 });
       return;
     }
-    // a mark of her level near: the guns
+    if (qs && st) {
+      // the quest's own foes (they put out near her on its fighting step): the guns, or the grapples
+      const foes = campaignFoes(g, s).map((id) => g.ships.get(id)).filter((o): o is ShipEntity => !!o?.alive);
+      if (foes.length) {
+        const dist = (o: ShipEntity) => Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y);
+        foes.sort((a, b) => dist(a) - dist(b));
+        const f = foes[0];
+        // (out of her sight: the helmsman takes her toward them first)
+        if (dist(f) > 700) {
+          const run = autosailOf(ship);
+          if (!run || Math.hypot(run.x - f.state.x, run.y - f.state.y) > 300) m.conn.push({ t: 'autosail', x: Math.round(f.state.x), y: Math.round(f.state.y), near: 60 });
+          return;
+        }
+        if (st.type === 'board' && dist(f) < 140) m.conn.push({ t: 'board', target: f.id, aggression: 'standard', risk: true });
+        else m.conn.push({ t: 'attack', target: f.id, mode: st.type === 'board' ? 'board' : 'guns' });
+        return;
+      }
+      // a stack of the sea's creatures to beat: the nearest standing one, her boats sent at it (the hex battle on auto)
+      if (st.type === 'neutral' && t - m.landAt > 20) {
+        const sp = roamersAbout(g, ship.state.x, ship.state.y, 4000).find((x) => roamUp(g, x.id) && roamFighter(g, x.id) === null);
+        if (sp) {
+          m.landAt = t;
+          m.conn.push({ t: 'attack', roam: sp.id });
+          return;
+        }
+      }
+      // the route to its place («Плыть»), given again when it let go; there, the boats for a step ashore
+      if (!routeOf(g, s) && !autosailOf(ship)) {
+        if ((st.type === 'land' || st.type === 'dive' || st.type === 'lair' || st.type === 'chart') && !ship.landing && t - m.landAt > 20) {
+          m.landAt = t;
+          m.conn.push({ t: 'land' });
+        }
+        if (t - m.gotoAt > 20) {
+          m.gotoAt = t;
+          m.conn.push({ t: 'goto', key: `q:${qs.id}` });
+        }
+      }
+      return;
+    }
+    // the next quest waits for her level: the sea's pirates and beasts of her level, about her home waters
     let best: { id: number; d: number } | null = null;
-    for (const o of this.game.ships.values()) {
-      if (!o.alive || o.isPlayer || (o.npcRole !== 'pirate' && o.npcRole !== 'beast') || o.level > p.level) continue;
+    for (const o of g.ships.values()) {
+      if (!o.alive || o.isPlayer || (o.npcRole !== 'pirate' && o.npcRole !== 'beast') || o.level > p.level + 1) continue;
       const d = Math.hypot(o.state.x - ship.state.x, o.state.y - ship.state.y);
-      if (d < 1400 && (!best || d < best.d)) best = { id: o.id, d };
+      if (d < 900 && (!best || d < best.d)) best = { id: o.id, d };
     }
     if (best && ship.hull > ship.stats.hullMax * 0.6) {
       m.conn.push({ t: 'attack', target: best.id, mode: 'guns' });
       return;
     }
     if (autosailOf(ship)) return;
-    // a turn about her home waters, at half sail (never far from a harbour)
+    if (t - m.seaSince > 30 * 60) {
+      m.homeward = true;
+      return;
+    }
     const home = port ?? { x: ship.state.x, y: ship.state.y };
-    const a = Math.random() * Math.PI * 2, r = 900 + Math.random() * 2600;
-    m.conn.push({ t: 'autosail', x: Math.round(home.x + Math.cos(a) * r), y: Math.round(home.y + Math.sin(a) * r), sail: 2 });
+    const a = this.rnd() * Math.PI * 2, rr = 900 + this.rnd() * 2600;
+    m.conn.push({ t: 'autosail', x: Math.round(home.x + Math.cos(a) * rr), y: Math.round(home.y + Math.sin(a) * rr) });
+  }
+
+  /** Her growth, as a captain spends it in port: the talents of her trees, the skill offered, the focus. */
+  private grow(m: Mentor): void {
+    const g = this.game, p = m.s.profile!;
+    const trees = MENTOR_TREES[MENTORS.indexOf(m.def) % 3];
+    let free = g.talentPoints(p);
+    const ctx = learnContext(p);
+    for (let n = 0; free > 0 && n < 40; n++) {
+      const ranks = { ...p.talents };
+      const next = TALENTS.filter((x) => trees.includes(x.tree as string)).sort((a, b) => a.tier - b.tier || trees.indexOf(a.tree as string) - trees.indexOf(b.tree as string)).find((x) => canLearn(ranks, x.id, free, ctx) === null)
+        ?? TALENTS.find((x) => canLearn(ranks, x.id, free, ctx) === null);
+      if (!next) break;
+      m.conn.push({ t: 'learn_talent', id: next.id });
+      if ((p.talents[next.id] ?? 0) === (ranks[next.id] ?? 0)) break; // (refused: another time)
+      free = g.talentPoints(p);
+    }
+    for (let n = 0; n < 10 && pendingChoices(p) > 0; n++) m.conn.push({ t: 'hero', action: 'skill', pick: 0 });
+    for (let n = 0; n < 10 && focusPending(p) > 0; n++) m.conn.push({ t: 'hero', action: 'focus', pick: 0 });
+  }
+
+  /** A step she could not do in PLAY_STUCK: the event that does it, as tests/campaign.test.ts plays the road. */
+  credit(m: Mentor, st: QuestStep): void {
+    const g = this.game, s = m.s, ship = s.ship!;
+    const lv = Math.min(10, ((st as { minShip?: number }).minShip ?? 1) + 1);
+    const foe = (): ShipEntity => {
+      const live = campaignFoes(g, s).map((id) => g.ships.get(id)).find((o): o is ShipEntity => !!o?.alive);
+      if (live) return live;
+      const v = g.spawnNpcShip('pirate', hullsFor('pirate', lv)[0], 'confederacy', ship.state.x + 4000, ship.state.y, 0);
+      g.setNpcLevel(v, lv);
+      return v;
+    };
+    const port = (id: string) => g.portById(id);
+    switch (st.type) {
+      case 'visit':
+      case 'pickup': {
+        const pt = port(st.port);
+        if (pt) questEvent(g, s, { k: 'dock', port: pt });
+        return;
+      }
+      case 'deliver': {
+        const pt = port(st.port);
+        ship.cargo[st.good] = Math.max(ship.cargo[st.good] ?? 0, st.qty);
+        if (pt) questEvent(g, s, { k: 'dock', port: pt });
+        return;
+      }
+      case 'board':
+      case 'sink':
+        for (let i = 0; i < st.count; i++) {
+          const v = foe();
+          questEvent(g, s, { k: st.type, victim: v });
+          g.removeShip(v.id);
+        }
+        return;
+      case 'land':
+        return questEvent(g, s, { k: 'land', island: st.island, feature: st.site ?? 'beach' });
+      case 'lair':
+        for (let i = 0; i < st.count; i++) questEvent(g, s, { k: 'lair', island: -1, kind: 'any' });
+        return;
+      case 'beast': {
+        const b = BEAST_IDS.find((id) => st.group === 'any' || BEASTS[id].group === st.group)!;
+        for (let i = 0; i < st.count; i++) questEvent(g, s, { k: 'beast', beast: b });
+        return;
+      }
+      case 'chart':
+      case 'dive':
+      case 'named':
+      case 'prize':
+      case 'tribute':
+      case 'customs': {
+        const n = 'count' in st ? st.count : 1;
+        for (let i = 0; i < n; i++) questEvent(g, s, { k: st.type } as never);
+        return;
+      }
+      case 'catch':
+        return questEvent(g, s, { k: 'catch', units: st.count, kg: 1, fought: false });
+      case 'rescue':
+        return questEvent(g, s, { k: 'rescue', n: st.count });
+      case 'neutral':
+        for (let i = 0; i < st.count; i++) questEvent(g, s, { k: 'neutral' });
+        return;
+      case 'build':
+        for (let i = 0; i < st.count; i++) questEvent(g, s, { k: 'build' });
+        return;
+      case 'recruit':
+        return questEvent(g, s, { k: 'recruit', n: st.count });
+      case 'sell_contraband':
+        return questEvent(g, s, { k: 'sell_contraband', qty: st.qty, port: st.port ?? 'fogmouth' });
+      case 'buy':
+        return questEvent(g, s, { k: 'buy', shop: st.shop, port: st.port ?? ship.docked ?? 'saltmarrow' });
+      default: {
+        // a place of the sea (an island's waters, a mark, a sea reached, a time kept there, an island claimed): the
+        // step taken as done
+        const qs = s.profile ? campaignActive(s.profile) : undefined;
+        if (!qs) return;
+        const q = QUESTS_BY_ID[qs.id];
+        qs.step++;
+        qs.progress = 0;
+        if (qs.step >= q.steps.length) completeQuest(g, s, q);
+      }
+    }
   }
 
   // ------------------------------------------------------------------------------------------ their own talk
