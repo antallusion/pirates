@@ -30,6 +30,7 @@ import { pursuitOf } from './pursuit.ts';
 import { campaignActive, campaignFoes, campaignSlot } from './campaign.ts';
 import { routeOf } from './goalroute.ts';
 import { canDock } from './player.ts';
+import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { recruit as dwellRecruit } from './dwell.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId } from '../../../shared/src/data/army.ts';
@@ -368,6 +369,11 @@ export class Mentors {
     if (ship.docked) {
       if (m.portAt < 0) {
         m.portAt = t;
+        // the hold emptied of the voyage's take (its silver hers), so the stores have room: all but the stores, the
+        // quest's own goods and what the port will not buy
+        const keep = new Set<string>(['provisions', 'water']);
+        for (const x of q?.steps ?? []) if ('good' in x && typeof x.good === 'string') keep.add(x.good);
+        for (const [good, n] of Object.entries(ship.cargo)) if (!keep.has(good) && (n ?? 0) >= 1) m.conn.push({ t: 'trade', good: good as GoodId, qty: -Math.floor(n ?? 0) });
         if (ship.hull < ship.stats.hullMax * 0.98) m.conn.push({ t: 'shipyard', action: 'repair' });
         const want = Math.ceil(ship.crew / 10) * 4;
         const have = ship.cargo.provisions ?? 0;
