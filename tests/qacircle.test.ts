@@ -126,12 +126,14 @@ test('other ships are drawn smoothly: a ship whose word of her speed is three ti
 test('every master of an NPC ship reads in Russian on the deck battle\'s plate («the Deep» came through in English)', async () => {
   const { setLang } = await import('../client/src/i18n.ts');
   const { personName } = await import('../client/src/lang/names.ts');
+  // (a captain's kind — the mentors' `captain: 'navigator'` — is no name)
+  const { CAPTAIN_IDS } = await import('../shared/src/data/captains.ts');
   await import('../client/src/lang/server.ts');
   const { readFileSync, readdirSync } = await import('node:fs');
   // Every literal captain the server gives a ship of its own.
   const dir = new URL('../server/src/game/', import.meta.url);
   const names = new Set<string>();
-  for (const f of readdirSync(dir)) for (const m of readFileSync(new URL(f, dir), 'utf8').matchAll(/captain: '([^']{3,})'/g)) if (m[1] !== 'corsair' && !m[1].endsWith(' ')) names.add(m[1]);
+  for (const f of readdirSync(dir)) for (const m of readFileSync(new URL(f, dir), 'utf8').matchAll(/captain: '([^']{3,})'/g)) if (!(CAPTAIN_IDS as string[]).includes(m[1]) && !m[1].endsWith(' ')) names.add(m[1]);
   assert.ok(names.size >= 15);
   setLang('ru');
   try {
