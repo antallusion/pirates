@@ -17,6 +17,7 @@ import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/flags.ts';
 import type { ClientState } from '../state.ts';
 import { esc, icon } from './dom.ts';
+import { assetUrl } from '../assets.ts';
 import { serverText as serverWords } from '../lang/server.ts';
 
 const L = dict(EN, RU);
@@ -70,17 +71,30 @@ export function shipCloth(c: ShipColours): { c: string; s: string } {
   return c.pennant ? { c: '#3f7d4a', s: '#c8d6b8' } : flagCloth(c.kind, c.city);
 }
 
+/** The painted cloth of her colours (2026-11-16, assets/flags/c_*): the neutral white, the pirate's black, the Green
+ *  Pennant, her city's flag (a faction's colours with no city: the neutral one). */
+export function colourArt(c: Pick<ShipColours, 'kind' | 'city' | 'pennant'>): string {
+  return c.kind === 'neutral' ? 'flag.c_neutral' : c.kind === 'pirate' ? 'flag.c_pirate' : c.pennant ? 'flag.c_green' : c.city ? `flag.c_${c.city}` : 'flag.c_neutral';
+}
+/** The painted cloth's address for a CSS background (empty while the manifest is not in). */
+function artStyle(c: Pick<ShipColours, 'kind' | 'city' | 'pennant'>): string {
+  const u = assetUrl(colourArt(c));
+  return u ? `;--fl-img:url('${u}')` : '';
+}
+
 /** The little cloth on its pole (flags.css). */
 export function flagMark(kind: Colours, city?: FactionId | null, cls = ''): string {
   const { c, s } = flagCloth(kind, city);
-  return `<i class="fl-mark fl-${kind}${cls ? ` ${cls}` : ''}" style="--fl-c:${c};--fl-s:${s}" aria-hidden="true"></i>`;
+  const img = artStyle({ kind, city: city ?? null, pennant: false });
+  return `<i class="fl-mark fl-${kind}${img ? ' fl-art' : ''}${cls ? ` ${cls}` : ''}" style="--fl-c:${c};--fl-s:${s}${img}" aria-hidden="true"></i>`;
 }
 
 /** Her colours on the target card: the cloth and the words, and «без абордажа». */
 export function flagChip(c: ShipColours | null): string {
   if (!c || !c.label) return '';
   const { c: cc, s: ss } = shipCloth(c);
-  return `<span class="fl-chip fl-chip--${c.kind}${c.privateer ? ' fl-chip--privateer' : ''}"><i class="fl-mark fl-${c.kind}" style="--fl-c:${cc};--fl-s:${ss}" aria-hidden="true"></i><span>${esc(c.label)}</span>${c.noBoard ? `<em class="fl-nb">${esc(L('mark.noBoard'))}</em>` : ''}</span>`;
+  const img = artStyle(c);
+  return `<span class="fl-chip fl-chip--${c.kind}${c.privateer ? ' fl-chip--privateer' : ''}"><i class="fl-mark fl-${c.kind}${img ? ' fl-art' : ''}" style="--fl-c:${cc};--fl-s:${ss}${img}" aria-hidden="true"></i><span>${esc(c.label)}</span>${c.noBoard ? `<em class="fl-nb">${esc(L('mark.noBoard'))}</em>` : ''}</span>`;
 }
 
 /** Her colours for the kit's target line (a cloth, its words for the screen reader). */

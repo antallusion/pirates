@@ -17,6 +17,7 @@ import { serverText } from '../lang/server.ts';
 import type { ClientState } from '../state.ts';
 import { unitIcon, unitName } from './army.ts';
 import { esc, fmt, icon } from './dom.ts';
+import { assetUrl } from '../assets.ts';
 import { placeName } from './maps.ts';
 import type { ThroneTab } from './throne.ts';
 
@@ -56,7 +57,12 @@ function rowOrder(v: CitView, state: ClientState): CitRow[] {
 function citRow(r: CitRow, v: CitView, open: boolean, d: number): string {
   const name = citLabel(r);
   const region = placeName(REGIONS[r.region].name);
-  const flag = r.tag ? `<span class="cit-flag${r.crown ? ' crown' : ''}" style="background:${guildColour(r.tag)}">${r.crown ? '♛' : ''}</span>` : '';
+  // the painted guild flag (2026-11-16: flag.guild / flag.guild_crown) dyed the guild's colour in CSS (multiply, masked
+  // by its own cloth); the drawn chip while the picture is not in
+  const fu = r.tag ? assetUrl(r.crown ? 'flag.guild_crown' : 'flag.guild') : null;
+  const flag = !r.tag ? '' : fu
+    ? `<span class="cit-flag art${r.crown ? ' crown' : ''}" style="--cf-c:${guildColour(r.tag)};--cf-img:url('${fu}')"></span>`
+    : `<span class="cit-flag${r.crown ? ' crown' : ''}" style="background:${guildColour(r.tag)}">${r.crown ? '♛' : ''}</span>`;
   const holder = r.mine ? L('cit.yours') : r.tag ? L('cit.held', { tag: r.tag, name: r.guild ?? '' }) : L('cit.castellan');
   const w = r.windows[0];
   const now = Date.now();

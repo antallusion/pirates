@@ -124,5 +124,44 @@ def main(letter: str, stem: str) -> None:
     write_manifest(m)
 
 
+def main_file(path: str, cols_n: int, rows_n: int, ids: list[str], stem: str) -> None:
+    """A sheet painted elsewhere (ChatGPT, 2026-11-16: docs/ART_TODO_FLAGS.md) given as a local file: its flags cut in
+    reading order and registered under the given ids (`flag.<id>` → assets/flags/<id>.webp, 240×160 as the rest)."""
+    with open(MANIFEST, encoding='utf-8') as f:
+        m = json.load(f)
+    a = key_magenta(np.array(Image.open(path).convert('RGBA')))
+    solid = ndimage.binary_closing(a[:, :, 3] > 128, iterations=3)
+    lab, n = ndimage.label(solid)
+    sizes = ndimage.sum(solid, lab, range(1, n + 1))
+    count = rows_n * cols_n
+    if len(ids) != count:
+        raise SystemExit(f'{len(ids)} ids for {count} cells')
+    order = np.argsort(sizes)[::-1][:count]
+    boxes = []
+    for k in order:
+        sl = ndimage.find_objects((lab == k + 1).astype(int))[0]
+        boxes.append((sl[0].start, sl[0].stop, sl[1].start, sl[1].stop))
+    if len(boxes) < count:
+        raise SystemExit(f'only {len(boxes)} flags found')
+    boxes.sort(key=lambda b: b[0])
+    rows = [sorted(boxes[i * cols_n:(i + 1) * cols_n], key=lambda b: b[2]) for i in range(rows_n)]
+    im = Image.fromarray(a)
+    for name, (y0, y1, x0, x1) in zip(ids, [b for r in rows for b in r]):
+        piece = im.crop((x0, y0, x1, y1))
+        scale = min(W / piece.width, H / piece.height)
+        piece = piece.convert('RGBa').resize((max(1, round(piece.width * scale)), max(1, round(piece.height * scale))), Image.LANCZOS).convert('RGBA')
+        canvas = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+        canvas.alpha_composite(piece, ((W - piece.width) // 2, (H - piece.height) // 2))
+        canvas.save(os.path.join(OUT, name + '.webp'), 'WEBP', quality=92, method=6)
+        m['assets'][f'flag.{name}'] = {'local': f'flags/{name}.webp', 'remote': stem + '.png', 'job': stem, 'fit': f'sheet:{os.path.basename(path)}', 'rev': rev_of(stem)}
+        print('flag', name, (x0, y0, x1, y1))
+    write_manifest(m)
+
+
 if __name__ == '__main__':
-    main(sys.argv[1], sys.argv[2])
+    # python tools/art/slice_flags.py file <sheet.png> <cols>x<rows> <id,id,…> <stem gp_YYYYMMDD_hhmmss_name>
+    if sys.argv[1] == 'file':
+        c, r = (int(x) for x in sys.argv[3].split('x'))
+        main_file(sys.argv[2], c, r, sys.argv[4].split(','), sys.argv[5])
+    else:
+        main(sys.argv[1], sys.argv[2])

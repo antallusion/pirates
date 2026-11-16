@@ -38,6 +38,28 @@ function label(g: G, text: string, x: number, y: number, col: string, size = 11)
 }
 
 /** The holder's flag on its pole, waving (a crown over it for the Masters of the Throne). */
+/** The painted guild flag dyed a colour (multiplied over its pale cloth, so the weave and the wear stay), cached. */
+const dyed = new Map<string, HTMLCanvasElement>();
+export function guildFlag(col: string, crown: boolean): HTMLCanvasElement | null {
+  const key = `${col}|${crown ? 1 : 0}`;
+  let c = dyed.get(key);
+  if (c) return c;
+  const spr = sprite(crown ? 'flag.guild_crown' : 'flag.guild');
+  if (!spr || !spr.img.naturalWidth) return null;
+  c = document.createElement('canvas');
+  c.width = spr.img.naturalWidth;
+  c.height = spr.img.naturalHeight;
+  const x = c.getContext('2d')!;
+  x.drawImage(spr.img, 0, 0);
+  x.globalCompositeOperation = 'multiply';
+  x.fillStyle = col;
+  x.fillRect(0, 0, c.width, c.height);
+  x.globalCompositeOperation = 'destination-in';
+  x.drawImage(spr.img, 0, 0);
+  dyed.set(key, c);
+  return c;
+}
+
 function pennant(g: G, x: number, y: number, len: number, col: string, crown: boolean, t: number): void {
   g.strokeStyle = 'rgba(0,0,0,0.85)';
   g.lineWidth = Math.max(2, len * 0.08);
@@ -50,6 +72,16 @@ function pennant(g: G, x: number, y: number, len: number, col: string, crown: bo
   g.stroke();
   // The cloth: a swallow-tailed flag in the guild's colour, its far edge waving.
   const fw = len * 0.62, fh = len * 0.36, top = y - len, wv = Math.sin(t * 3 + x * 0.01) * fh * 0.12;
+  // the painted guild flag (2026-11-16: flag.guild, its crowned twin for the Throne's holders), dyed the guild's colour
+  const art = guildFlag(col, crown);
+  if (art) {
+    g.save();
+    g.translate(x, top + fh / 2);
+    g.transform(1, Math.sin(t * 3 + x * 0.01) * 0.08, 0, 1, 0, 0);
+    g.drawImage(art, 0, -fh * 0.62, fw * 1.15, fh * 1.24);
+    g.restore();
+    return;
+  }
   g.beginPath();
   g.moveTo(x, top);
   g.quadraticCurveTo(x + fw * 0.5, top - wv, x + fw, top + wv);

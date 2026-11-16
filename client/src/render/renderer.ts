@@ -78,7 +78,7 @@ import { EN as TM_EN, RU as TM_RU } from '../lang/ui/maps.ts';
 import { drawTreasureScrolls } from './treasurescroll.ts';
 import { personName } from '../lang/names.ts';
 import { dec1 } from '../ui/dom.ts';
-import { shipCloth, shipColours } from '../ui/flags.ts'; // docs/24 D1–D2
+import { colourArt, shipCloth, shipColours } from '../ui/flags.ts'; // docs/24 D1–D2
 import type { ShipColours } from '../ui/flags.ts';
 import { EN as FL_EN, RU as FL_RU } from '../lang/ui/flags.ts';
 import { objective } from '../ui/track.ts';
@@ -2493,6 +2493,20 @@ export class Renderer {
     return f && f !== 'player' ? f : 'none';
   }
 
+  /** A painted flag (flag.c_*, flag.guild…) as a canvas, once it is loaded (drawWavingFlag cuts a canvas in strips). */
+  private flagArts = new Map<string, HTMLCanvasElement>();
+  flagArt(id: string): HTMLCanvasElement | null {
+    let c = this.flagArts.get(id);
+    if (c) return c;
+    const spr = sprite(id);
+    if (!spr || !spr.img.naturalWidth) return null;
+    c = document.createElement('canvas');
+    c.width = spr.img.naturalWidth;
+    c.height = spr.img.naturalHeight;
+    c.getContext('2d')!.drawImage(spr.img, 0, 0);
+    this.flagArts.set(id, c);
+    return c;
+  }
   /** Faction pennant at the masthead, streaming downwind. Players fly black. */
   private pennants = new Map<string, HTMLCanvasElement>();
   /** The painted pennant dyed a colour (cached per colour): the cloth takes the hue, the gold stripe and the shading stay. */
@@ -2657,6 +2671,31 @@ export class Renderer {
     }
     const city = s.own ? (state.self?.pvp.flag === 'faction' ? state.self.pvp.city : null) : s.info?.city;
     const color = player ? (s.flags & SF.BLACK_FLAG ? '#0b0b0b' : s.flags & SF.NEUTRAL ? '#e6e0d0' : s.flags & SF.GREEN_PENNANT ? '#3f7d4a' : season ?? (city ? FACTIONS[city].flag : '#3b4652')) : s.info && s.info.faction !== 'player' ? FACTIONS[s.info.faction].flag : '#444';
+    // The painted colours (2026-11-16: flag.c_*): the pirate's black, the neutral white, the Green Pennant, her city's
+    // flag; an NPC flies its faction's. A season's pennant (and a cloth not painted yet) keeps the dyed streamer below.
+    const artId = player
+      ? s.flags & SF.BLACK_FLAG ? 'flag.c_pirate' : s.flags & SF.NEUTRAL ? 'flag.c_neutral' : s.flags & SF.GREEN_PENNANT ? 'flag.c_green' : season ? null : city ? `flag.c_${city}` : null
+      : s.info && s.info.faction !== 'player' ? `flag.c_${s.info.faction}` : null;
+    const painted = artId ? this.flagArt(artId) : null;
+    if (painted) {
+      const flow = state.wind[0] - s.h - Math.PI / 2;
+      const w = beam * 0.62, h = w * 0.66; // small, as every flag at the masthead (owner: ~0.6 of the hull's width)
+      const t = settings().reduceMotion ? 0 : this.time;
+      g.save();
+      g.translate(0, -len * 0.18);
+      g.rotate(flow + Math.sin(t * 3 + s.id) * 0.06);
+      const px = w * this.zoom;
+      if (px >= 28) {
+        g.globalAlpha *= 0.35;
+        g.drawImage(painted, 1, 1 - h / 2, w, h); // its shadow on the deck and the sea
+        g.globalAlpha /= 0.35;
+      }
+      drawWavingFlag(g, painted, w, h, t, s.id, 6, px);
+      g.fillStyle = 'rgba(30,22,14,0.9)';
+      g.fillRect(-0.6, -h * 0.6, 1.2, h * 1.2); // the staff
+      g.restore();
+      return;
+    }
     const trim = s.own || s.info?.isPlayer ? '#d8d2c4' : 'rgba(0,0,0,0.6)';
     const wave = Math.sin(this.time * 6 + s.id) * beam * 0.12;
     const y0 = -len * 0.18;
@@ -4403,6 +4442,10 @@ export class Renderer {
     g.fillRect(x - 1, y - 1, 15, 13);
     g.fillStyle = '#8a7a5c';
     g.fillRect(x, y, 2, 12);
+    // the painted cloth (2026-11-16) when it is loaded, the drawn one before
+    const art = this.flagArt(colourArt(c));
+    if (art) g.drawImage(art, x + 2, y, 12, 8);
+    else {
     g.beginPath();
     g.moveTo(x + 2, y);
     g.lineTo(x + 13, y);
@@ -4418,6 +4461,7 @@ export class Renderer {
     g.fillStyle = stripe;
     if (c.kind === 'pirate') g.fillRect(x + 6, y + 1, 2, 7);
     else if (c.kind === 'faction') g.fillRect(x + 2, y + 5, 10, 2);
+    }
     // «Каперский патент» (owner, 2026-11-02): a privateer's flag in a gold frame, a gold pennant-tail under it
     if (c.privateer) {
       g.strokeStyle = '#e0b862';

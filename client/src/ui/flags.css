@@ -17,6 +17,9 @@
 }
 .fl-mark.fl-pirate::after { background: linear-gradient(135deg, transparent 0 40%, var(--fl-s) 40% 58%, transparent 58%), var(--fl-c); box-shadow: inset 0 0 0 1px #8d8676; }
 .fl-mark.fl-neutral::after { background: var(--fl-c); box-shadow: inset 0 0 0 1px var(--fl-s); }
+/* the painted cloth (assets/flags/c_*, 2026-11-16) when it is in: 3:2, its own frayed edge, no drawn tail */
+.fl-mark.fl-art::after { width: 18px; height: 12px; background: var(--fl-img) center / 100% 100% no-repeat; clip-path: none; box-shadow: none; }
+.fl-chip .fl-mark.fl-art::after { width: 15px; height: 10px; }
 
 /* ---------- The card: three big options one under another (a cloth, the name, the line, what flies), the boarding switch */
 .fl-card .fl-opts { display: grid; grid-template-columns: 1fr; gap: 4px; margin: 0 0 2px; }

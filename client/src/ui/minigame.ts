@@ -12,6 +12,7 @@ import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/minigame.ts';
 import { esc, icon, money } from './dom.ts';
 import { artBgAttr, artBgWire } from './artfall.ts';
+import { assetUrl } from '../assets.ts';
 
 const L = dict(EN, RU);
 const ru = () => (lang() === 'ru' ? 1 : 0);
@@ -20,6 +21,12 @@ const DIE = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
 const ANCHOR = ['♔', '⚓', '♥', '♦', '♠', '♣'];
 const WHISTLE = ['━', '•', '〰', '▁'];
 const FLAGS = ['#b3322b', '#e0b83a', '#2f5d9e', '#ece6d6', '#18181a'];
+/** A signal flag's cloth: its painting (2026-11-16, assets/flags/sig_*) over its colour, the colour alone before. */
+const SIG = ['sig_red', 'sig_yellow', 'sig_blue', 'sig_white', 'sig_black'];
+function sigBg(i: number): string {
+  const u = assetUrl(`flag.${SIG[i]}`);
+  return u ? `url('${u}') center / 100% 100% no-repeat` : FLAGS[i];
+}
 const SWAP_MS = 420;
 
 /** How long a game's outcome stays on the screen before it goes by itself (ms). */
@@ -136,7 +143,7 @@ export class MinigameWindow {
       case 'memory': {
         const sym = d.symbols!;
         const flags = d.id === 'flag_hoist';
-        const pad = sym.map((s, i) => `<button class="btn btn-small mg-pad" data-pad="${i}" disabled>${flags ? `<span class="mg-flag" style="background:${FLAGS[i]}"></span>` : `<span class="mg-sym">${WHISTLE[i]}</span>`}${esc(tr(s))}</button>`).join('');
+        const pad = sym.map((s, i) => `<button class="btn btn-small mg-pad" data-pad="${i}" disabled>${flags ? `<span class="mg-flag" style="background:${sigBg(i)}"></span>` : `<span class="mg-sym">${WHISTLE[i]}</span>`}${esc(tr(s))}</button>`).join('');
         return `<div class="mg-note mg-mem-note">${esc(L('watch'))}</div><div class="mg-seq">${v.seq!.map(() => '<span class="mg-slot"></span>').join('')}</div><div class="mg-pads">${pad}</div><div class="mg-choices">${this.walk()}</div>`;
       }
       case 'timing': {

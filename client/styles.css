@@ -4315,6 +4315,8 @@ body.touch .act-btn { --h: 38px; }
 .cit-lv { position: absolute; left: -2px; bottom: -2px; padding: 0 4px; border-radius: 4px; background: #1a140c; box-shadow: 0 0 0 1px var(--brass-dim); font-size: 11px; font-weight: 600; color: var(--gold); }
 .cit-flag { position: absolute; right: -2px; top: -2px; width: 16px; height: 12px; border-radius: 2px 6px 6px 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.7); font-size: 9px; line-height: 12px; text-align: center; color: #1a120a; }
 .cit-flag.crown { box-shadow: 0 0 0 1px var(--gold), 0 0 6px rgba(224, 184, 98, 0.7); }
+.cit-flag.art { background: var(--cf-img) center / 100% 100% no-repeat, var(--cf-c); background-blend-mode: multiply; -webkit-mask: var(--cf-img) center / 100% 100% no-repeat; mask: var(--cf-img) center / 100% 100% no-repeat; border-radius: 0; box-shadow: none; width: 18px; height: 12px; }
+.cit-flag.art.crown { box-shadow: none; filter: drop-shadow(0 0 3px rgba(224, 184, 98, 0.8)); }
 .cit-flag.sm { position: static; display: inline-block; width: 12px; height: 9px; margin-right: 6px; vertical-align: middle; }
 .cit-main { grid-area: m; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .cit-name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; min-width: 0; }

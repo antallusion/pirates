@@ -4023,6 +4023,24 @@
     "isle.try_works.l7":                       { "local": "isle/try_works_l7.webp", "remote": "future/isle_iso_10/isle10_try_works.png", "fit": "isle:3", "anchor": [129, 375], "foot": 3, "rev": 20261103},
     "isle.try_works.l8":                       { "local": "isle/try_works_l8.webp", "remote": "future/isle_iso_10/isle10_try_works.png", "fit": "isle:3", "anchor": [129, 478], "foot": 3, "rev": 20261103},
     "isle.try_works.l9":                       { "local": "isle/try_works_l9.webp", "remote": "future/isle_iso_10/isle10_try_works.png", "fit": "isle:3", "anchor": [129, 528], "foot": 3, "rev": 20261103},
-    "isle.try_works.l10":                      { "local": "isle/try_works_l10.webp", "remote": "future/isle_iso_10/isle10_try_works.png", "fit": "isle:3", "anchor": [129, 589], "foot": 3, "rev": 20261103}
+    "isle.try_works.l10":                      { "local": "isle/try_works_l10.webp", "remote": "future/isle_iso_10/isle10_try_works.png", "fit": "isle:3", "anchor": [129, 589], "foot": 3, "rev": 20261103},
+    "flag.c_neutral":                          { "local": "flags/c_neutral.webp", "remote": "gp_20261116_200500_flags_a.png", "job": "gp_20261116_200500_flags_a", "fit": "sheet:sheet_a.png", "rev": 20261116200500},
+    "flag.c_pirate":                           { "local": "flags/c_pirate.webp", "remote": "gp_20261116_200500_flags_a.png", "job": "gp_20261116_200500_flags_a", "fit": "sheet:sheet_a.png", "rev": 20261116200500},
+    "flag.c_green":                            { "local": "flags/c_green.webp", "remote": "gp_20261116_200500_flags_a.png", "job": "gp_20261116_200500_flags_a", "fit": "sheet:sheet_a.png", "rev": 20261116200500},
+    "flag.c_crown":                            { "local": "flags/c_crown.webp", "remote": "gp_20261116_200500_flags_a.png", "job": "gp_20261116_200500_flags_a", "fit": "sheet:sheet_a.png", "rev": 20261116200500},
+    "flag.c_league":                           { "local": "flags/c_league.webp", "remote": "gp_20261116_200500_flags_a.png", "job": "gp_20261116_200500_flags_a", "fit": "sheet:sheet_a.png", "rev": 20261116200500},
+    "flag.c_confederacy":                      { "local": "flags/c_confederacy.webp", "remote": "gp_20261116_200500_flags_a.png", "job": "gp_20261116_200500_flags_a", "fit": "sheet:sheet_a.png", "rev": 20261116200500},
+    "flag.c_harpoon":                          { "local": "flags/c_harpoon.webp", "remote": "gp_20261116_200500_flags_a.png", "job": "gp_20261116_200500_flags_a", "fit": "sheet:sheet_a.png", "rev": 20261116200500},
+    "flag.c_brokers":                          { "local": "flags/c_brokers.webp", "remote": "gp_20261116_200500_flags_a.png", "job": "gp_20261116_200500_flags_a", "fit": "sheet:sheet_a.png", "rev": 20261116200500},
+    "flag.c_choir":                            { "local": "flags/c_choir.webp", "remote": "gp_20261116_200500_flags_a.png", "job": "gp_20261116_200500_flags_a", "fit": "sheet:sheet_a.png", "rev": 20261116200500},
+    "flag.c_free":                             { "local": "flags/c_free.webp", "remote": "gp_20261116_200500_flags_a.png", "job": "gp_20261116_200500_flags_a", "fit": "sheet:sheet_a.png", "rev": 20261116200500},
+    "flag.f64":                                { "local": "flags/f64.webp", "remote": "gp_20261116_200500_flags_a.png", "job": "gp_20261116_200500_flags_a", "fit": "sheet:sheet_a.png", "rev": 20261116200500},
+    "flag.guild":                              { "local": "flags/guild.webp", "remote": "gp_20261116_200500_flags_a.png", "job": "gp_20261116_200500_flags_a", "fit": "sheet:sheet_a.png", "rev": 20261116200500},
+    "flag.guild_crown":                        { "local": "flags/guild_crown.webp", "remote": "gp_20261116_201200_flags_b.png", "job": "gp_20261116_201200_flags_b", "fit": "sheet:sheet_b.png", "rev": 20261116201200},
+    "flag.sig_red":                            { "local": "flags/sig_red.webp", "remote": "gp_20261116_201200_flags_b.png", "job": "gp_20261116_201200_flags_b", "fit": "sheet:sheet_b.png", "rev": 20261116201200},
+    "flag.sig_yellow":                         { "local": "flags/sig_yellow.webp", "remote": "gp_20261116_201200_flags_b.png", "job": "gp_20261116_201200_flags_b", "fit": "sheet:sheet_b.png", "rev": 20261116201200},
+    "flag.sig_blue":                           { "local": "flags/sig_blue.webp", "remote": "gp_20261116_201200_flags_b.png", "job": "gp_20261116_201200_flags_b", "fit": "sheet:sheet_b.png", "rev": 20261116201200},
+    "flag.sig_white":                          { "local": "flags/sig_white.webp", "remote": "gp_20261116_201200_flags_b.png", "job": "gp_20261116_201200_flags_b", "fit": "sheet:sheet_b.png", "rev": 20261116201200},
+    "flag.sig_black":                          { "local": "flags/sig_black.webp", "remote": "gp_20261116_201200_flags_b.png", "job": "gp_20261116_201200_flags_b", "fit": "sheet:sheet_b.png", "rev": 20261116201200}
   }
 }

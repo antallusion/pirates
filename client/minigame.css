@@ -58,6 +58,7 @@ body:has(#minigame:not(.hidden)) #hud-goals, body:has(#minigame:not(.hidden)) #h
 #minigame .mg-pad:disabled { opacity: 0.75; }
 #minigame .mg-pad.mg-lit { border-color: #e8c46a; background: rgba(232, 196, 106, 0.28); box-shadow: 0 0 16px rgba(232, 196, 106, 0.55); opacity: 1; color: #fff; }
 #minigame .mg-flag { display: inline-block; width: 22px; height: 15px; border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 2px; }
+#minigame .mg-flag[style*="url("] { border: 0; border-radius: 0; width: 24px; height: 16px; }
 
 /* Timing: the dial with its swinging needle, the lagoon with its fish. */
 #minigame .mg-tries { display: flex; gap: 6px; justify-content: center; margin: 2px 0 2px; }
