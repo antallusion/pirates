@@ -79,6 +79,7 @@ import { drawTreasureScrolls } from './treasurescroll.ts';
 import { personName } from '../lang/names.ts';
 import { dec1 } from '../ui/dom.ts';
 import { colourArt, shipCloth, shipColours } from '../ui/flags.ts'; // docs/24 D1–D2
+import { MAST_PIVOT, MAST_STEPS } from '../../../shared/src/data/maststeps.ts'; // 2026-11-16: mastless hulls, masts apart
 import type { ShipColours } from '../ui/flags.ts';
 import { EN as FL_EN, RU as FL_RU } from '../lang/ui/flags.ts';
 import { objective } from '../ui/track.ts';
@@ -2344,7 +2345,12 @@ export class Renderer {
     }
     g.globalAlpha = (hidden ? 0.45 : ghost ? 0.5 : battleDim ? 0.6 : 1) * (1 - sinkF * 0.85);
     const stage = curseStageFromFlags(s.flags);
-    const art = bossArt(s.id, state) ?? cls.sprite;
+    const art0 = bossArt(s.id, state) ?? cls.sprite;
+    // A hull painted without its masts (2026-11-16, tools/art/ships_nomast.py): the masts are set on its steps below,
+    // their yards braced to the wind, their canvas set, reefed or furled with her sail (drawMasts).
+    const steps = stage === 0 ? MAST_STEPS[art0.slice(5)] : undefined;
+    const bare = !!steps?.length && !!sprite(`${art0}_hull`) && !!sprite('mast.square_full');
+    const art = bare ? `${art0}_hull` : art0;
     const hullImg = this.shipImage(cls.id, stage, art);
     // Scale so the drawn subject matches hull length.
     const imgH = len / hullImg.extentY;
@@ -2353,9 +2359,10 @@ export class Renderer {
     const a = this.atlas.get(`${art}|${stage}|${hullImg.canvas.width}x${hullImg.canvas.height}`, () => hullImg.canvas, this.sailKey(s), this.lookPaint(s, state));
     if (Math.max(imgW, imgH) * this.dpr > CELL) g.drawImage(a.full, -imgW * hullImg.cx, -imgH * hullImg.cy, imgW, imgH);
     else g.drawImage(a.page, a.sx, a.sy, a.sw, a.sh, -imgW * hullImg.cx, -imgH * hullImg.cy, imgW, imgH);
+    if (bare) this.drawMasts(s, cls.rig, steps!, imgW, imgH, hullImg.cx, hullImg.cy, state, sinking);
     // Torn sails (2026-10-16): the cloth of her own picture scorched and holed, by the damage (shipfx.ts).
     const dmg = damageLook(s.hull, s.sails);
-    if (dmg.torn > 0 && !sinking) {
+    if (dmg.torn > 0 && !sinking && !bare) {
       const t = tornSails(hullImg.canvas);
       if (t) {
         g.globalAlpha *= 0.35 + 0.6 * dmg.torn;
@@ -2491,6 +2498,52 @@ export class Renderer {
     if (s.own || s.info?.isPlayer) return s.flags & SF.BLACK_FLAG ? 'black' : 'none';
     const f = s.info?.faction;
     return f && f !== 'player' ? f : 'none';
+  }
+
+  /** Each ship's masts as they move (2026-11-16): her canvas eased toward her sail setting, her yards toward the wind. */
+  private mastAnim = new Map<number, { sail: number; brace: number; t: number }>();
+  /** The masts on a mastless hull's steps, in the ship's own frame (bow up): one yard and its sail each, seen from above,
+   *  turned about its round top — braced across the wind, swung a little more in a turn — the canvas set, reefed, furled
+   *  or bare by her sail (two neighbouring states crossfaded), torn sails dimmed. */
+  private drawMasts(s: DrawShip, rig: string, steps: number[], imgW: number, imgH: number, cx: number, cy: number, state: ClientState, sinking: boolean): void {
+    const g = this.g;
+    const now = this.time;
+    let a = this.mastAnim.get(s.id);
+    const want = sinking ? 0 : clamp(s.sail, 0, 1);
+    const rel = Math.atan2(Math.sin(state.wind[0] - s.h), Math.cos(state.wind[0] - s.h));
+    const braceWant = clamp(Math.sin(rel) * 0.55, -0.62, 0.62);
+    if (!a) this.mastAnim.set(s.id, (a = { sail: want, brace: braceWant, t: now }));
+    const dt = clamp(now - a.t, 0, 0.25);
+    a.t = now;
+    a.sail += (want - a.sail) * Math.min(1, dt * 1.6);
+    a.brace += (braceWant - a.brace) * Math.min(1, dt * 0.9);
+    if (this.mastAnim.size > 400) this.mastAnim.clear();
+    const order = ['bare', 'furl', 'reef', 'full'] as const;
+    const pos = a.sail * 3;
+    const i = Math.min(2, Math.floor(pos));
+    const f = pos - i;
+    const yard = imgW * 0.92;
+    const breathe = settings().reduceMotion ? 0 : Math.sin(now * 1.7 + s.id) * 0.015 * a.sail;
+    steps.forEach((fy, k) => {
+      const kind = rig === 'square' || (rig === 'mixed' && k === 0) || !sprite(`mast.fore_aft_full`) ? 'square' : 'fore_aft';
+      const y = -imgH * cy + fy * imgH;
+      g.save();
+      g.translate(0, y);
+      g.rotate(a!.brace * (1 - k * 0.06) + breathe);
+      for (const [st, al] of [[order[i], 1 - f], [order[i + 1], f]] as const) {
+        if (al < 0.02) continue;
+        const spr = sprite(`mast.${kind}_${st}`);
+        if (!spr) continue;
+        const w = yard, h = (spr.img.naturalHeight / spr.img.naturalWidth) * w;
+        const py = (MAST_PIVOT[`${kind}_${st}`] ?? 0.3) * h;
+        const ga = g.globalAlpha;
+        g.globalAlpha = ga * al;
+        g.drawImage(spr.img, -w / 2, -py, w, h);
+        g.globalAlpha = ga;
+      }
+      g.restore();
+    });
+    void cx;
   }
 
   /** A painted flag (flag.c_*, flag.guild…) as a canvas, once it is loaded (drawWavingFlag cuts a canvas in strips). */

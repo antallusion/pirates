@@ -1,0 +1,21 @@
+{
+"_pivot": {
+"square_full": 0.2397,
+"square_reef": 0.3503,
+"square_furl": 0.4419,
+"square_bare": 0.4348
+},
+"brig": [
+0.3815,
+0.5404
+],
+"brigantine": [
+0.3737,
+0.8333
+],
+"cursed_frigate": [
+0.2852,
+0.5286,
+0.7318
+]
+}

@@ -4041,6 +4041,13 @@
     "flag.sig_yellow":                         { "local": "flags/sig_yellow.webp", "remote": "gp_20261116_201200_flags_b.png", "job": "gp_20261116_201200_flags_b", "fit": "sheet:sheet_b.png", "rev": 20261116201200},
     "flag.sig_blue":                           { "local": "flags/sig_blue.webp", "remote": "gp_20261116_201200_flags_b.png", "job": "gp_20261116_201200_flags_b", "fit": "sheet:sheet_b.png", "rev": 20261116201200},
     "flag.sig_white":                          { "local": "flags/sig_white.webp", "remote": "gp_20261116_201200_flags_b.png", "job": "gp_20261116_201200_flags_b", "fit": "sheet:sheet_b.png", "rev": 20261116201200},
-    "flag.sig_black":                          { "local": "flags/sig_black.webp", "remote": "gp_20261116_201200_flags_b.png", "job": "gp_20261116_201200_flags_b", "fit": "sheet:sheet_b.png", "rev": 20261116201200}
+    "flag.sig_black":                          { "local": "flags/sig_black.webp", "remote": "gp_20261116_201200_flags_b.png", "job": "gp_20261116_201200_flags_b", "fit": "sheet:sheet_b.png", "rev": 20261116201200},
+    "ship.brig_hull":                          { "local": "ships/brig_hull.webp", "remote": "hf_20261116_194022_eb0f3561-cd51-4271-93cb-478b5233c696.png", "job": "eb0f3561-cd51-4271-93cb-478b5233c696", "rev": 20261116194022},
+    "ship.brigantine_hull":                    { "local": "ships/brigantine_hull.webp", "remote": "hf_20261116_201151_5841d1ad-8227-4af6-b20a-da3588aaeff1.png", "job": "5841d1ad-8227-4af6-b20a-da3588aaeff1", "rev": 20261116201151},
+    "mast.square_full":                        { "local": "masts/square_full.webp", "remote": "hf_20261116_194449_2e8555ec-d960-45d1-9f36-829a2a7cb6b3.png", "job": "2e8555ec-d960-45d1-9f36-829a2a7cb6b3", "fit": "sheet:square00", "rev": 20261116194449},
+    "mast.square_reef":                        { "local": "masts/square_reef.webp", "remote": "hf_20261116_194449_2e8555ec-d960-45d1-9f36-829a2a7cb6b3.png", "job": "2e8555ec-d960-45d1-9f36-829a2a7cb6b3", "fit": "sheet:square01", "rev": 20261116194449},
+    "mast.square_furl":                        { "local": "masts/square_furl.webp", "remote": "hf_20261116_194449_2e8555ec-d960-45d1-9f36-829a2a7cb6b3.png", "job": "2e8555ec-d960-45d1-9f36-829a2a7cb6b3", "fit": "sheet:square20", "rev": 20261116194449},
+    "mast.square_bare":                        { "local": "masts/square_bare.webp", "remote": "hf_20261116_194449_2e8555ec-d960-45d1-9f36-829a2a7cb6b3.png", "job": "2e8555ec-d960-45d1-9f36-829a2a7cb6b3", "fit": "sheet:square21", "rev": 20261116194449},
+    "ship.cursed_frigate_hull":                { "local": "ships/cursed_frigate_hull.webp", "remote": "hf_20261116_202713_64bcaabb-129d-4791-9078-69790baa837a.png", "job": "64bcaabb-129d-4791-9078-69790baa837a", "rev": 20261116202713}
   }
 }
