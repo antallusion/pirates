@@ -157,6 +157,20 @@ export function chatSave(game: Game, every = 0): void {
   game.db.setKv(chanKey(game), rec);
 }
 
+/** World lines taken out of the history (the mentors' own chatter, owner 2026-11-16): `drop` says which; the count. */
+export function chatForgetWorld(game: Game, drop: (l: ChatLineView, i: number, all: ChatLineView[]) => boolean): number {
+  const h = hub(game);
+  const all = h.world;
+  const kept = all.filter((l, i) => !drop(l, i, all));
+  const n = all.length - kept.length;
+  if (n) {
+    h.world = kept;
+    h.dirty = true;
+    chatSave(game);
+  }
+  return n;
+}
+
 /** Seen this id before? (and remember it: the last thousand) */
 function seenBefore(h: Hub, id: string): boolean {
   if (h.seen.has(id)) return true;

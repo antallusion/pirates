@@ -29,6 +29,7 @@ import { DOINGS, TALKS, forMentor, scriptedAnswer, tipLine } from './mentortalk.
 import { pursuitOf } from './pursuit.ts';
 import { campaignActive, campaignFoes, campaignSlot } from './campaign.ts';
 import { routeOf } from './goalroute.ts';
+import { chatForgetWorld } from './chat.ts';
 import { canDock } from './player.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { recruit as dwellRecruit } from './dwell.ts';
@@ -99,9 +100,12 @@ const CALL_EVERY = [45, 90] as const;
 const HEARD = 24;
 /** Talk of their own in the world chat (minutes between): with captains online, and with none (the chat is kept for
  *  two weeks, so who comes aboard finds it alive). */
-const CHAT_BUSY = [27, 35] as const, CHAT_IDLE = [40, 60] as const; // (owner: «сократил общение между ними в рамках получаса»)
+const CHAT_BUSY = [60, 90] as const, CHAT_IDLE = [120, 180] as const;
+/** Owner, 2026-11-16 («наши чуваки спамят и прям бесят игроков»): a line of their own (not an answer) at most once in
+ *  this long for all three together (minutes), and never two in a row — a captain's line must come between. */
+const OWN_GAP = 60;
 /** Of that talk, the share that is an exchange among the three (owner: «пусть пореже пишут между собой»). */
-const TALK_SHARE = 0.4;
+const TALK_SHARE = 0.25;
 /** A word of her own doings (a port made, the sea again, a ship sunk) no more often than this (minutes). */
 const DOING_GAP = 45;
 /** A campaign step not done in this long (the sea's seconds) is credited (play). */
@@ -189,6 +193,14 @@ export class Mentors {
   private timer: ReturnType<typeof setInterval> | null = null;
   private usageLogged = 0;
   private stateLogged = 0;
+  /** The world chat's last line was one of theirs (nothing of their own then till a captain speaks); their own last. */
+  lastWasMentor = false;
+  private ownAt = 0;
+
+  /** May they say something of their own now (never an answer: those always go)? */
+  mayTalk(now: number): boolean {
+    return !this.lastWasMentor && now - this.ownAt > OWN_GAP * 60_000;
+  }
 
   /** One line of how she stands (the journal, every ten minutes). */
   state(m: Mentor): string {
@@ -219,6 +231,20 @@ export class Mentors {
       const mentor: Mentor = { def, conn, s, queue: [], busy: false, saidAt: 0, portAt: -1, seaSince: 0, homeward: false, autoAt: -1e9, acceptAt: -1e9, hereAt: -1e9, landAt: -1e9, gotoAt: -1e9, scrollAt: -1e9, buyAt: -1e9, stepKey: '', stepSince: 0, credited: 0, said: [], toldLv: 0, toldSunk: -1, toldDocked: null, toldAt: 0 };
       this.list.push(mentor);
       conn.push({ t: 'hello', v: PROTOCOL_VERSION, ...((tokens[def.name] ?? tokens[def.was]) ? { token: tokens[def.name] ?? tokens[def.was] } : { name: def.name }) });
+    }
+    // once (owner, 2026-11-16: «спамят и прям бесят игроков»): their chatter of before out of the world's history —
+    // what they said of their own, not their answers (a line of theirs within three minutes of a captain's)
+    if (!this.game.db.getKv<boolean>('mentors:purged1116')) {
+      const n = chatForgetWorld(this.game, (l, i, all) => {
+        if (!isMentor(l.from)) return false;
+        for (let j = i - 1; j >= 0; j--) {
+          if (isMentor(all[j].from)) continue;
+          return !((l.at ?? 0) - (all[j].at ?? 0) < 3 * 60_000);
+        }
+        return true;
+      });
+      this.game.db.setKv('mentors:purged1116', true);
+      console.log(`[mentors] ${n} lines of their chatter taken out of the world chat`);
     }
     this.nextCall = Date.now() + 10 * 60_000;
     this.nextChat = Date.now() + (1.5 + Math.random() * 2) * 60_000;
@@ -266,6 +292,7 @@ export class Mentors {
     // the world: heard once (every mentor's connection gets the line — the first one keeps it)
     if (this.list[0] !== m) return;
     this.heard.push(h);
+    this.lastWasMentor = false;
     if (this.heard.length > HEARD) this.heard.shift();
     // to whom: the mentor named in it, else each in turn
     const low = h.text.toLowerCase();
@@ -278,6 +305,7 @@ export class Mentors {
 
   /** Mentor words into the context too (theirs are not echoed back to them as heard). */
   private remember(from: string, text: string): void {
+    this.lastWasMentor = true;
     this.heard.push({ from, text, at: Date.now(), dm: false });
     if (this.heard.length > HEARD) this.heard.shift();
   }
@@ -615,6 +643,8 @@ export class Mentors {
     this.nextChat = now + (a + this.rnd() * (b - a)) * 60_000;
     const ready = this.list.filter((m) => m.s.profile && !m.busy);
     if (ready.length < this.list.length) return; // (not all aboard yet, or one is answering)
+    if (!this.mayTalk(now)) return;
+    this.ownAt = now;
     const r = this.rnd();
     if (this.key && online && r >= 0.6) {
       void this.muse(ready[Math.floor(this.rnd() * ready.length)]);
@@ -626,7 +656,7 @@ export class Mentors {
       this.saidTalks.push(i);
       if (this.saidTalks.length > Math.floor(TALKS.length * 0.7)) this.saidTalks.shift();
       let at = 0;
-      for (const [who, text] of TALKS[i]) {
+      for (const [who, text] of TALKS[i].slice(0, 2)) {
         this.later(this.list[who], text, at);
         at += (14 + this.rnd() * 26) * 1000;
       }
@@ -659,22 +689,25 @@ export class Mentors {
       m.toldAt = now - this.rnd() * DOING_GAP * 60_000;
       return;
     }
+    // (owner, 2026-11-16: no word of every port and every level — a round level, a round tally, and only when they
+    // may speak at all)
     if (p.level > m.toldLv) {
       m.toldLv = p.level;
-      say('level', { lv: p.level });
+      if (p.level % 5 === 0 && this.mayTalk(now)) {
+        this.ownAt = now;
+        say('level', { lv: p.level });
+      }
       return;
     }
-    const due = now - m.toldAt > DOING_GAP * 60_000;
     if (sunk > m.toldSunk) {
-      const n = sunk;
+      const milestone = Math.floor(sunk / 50) > Math.floor(m.toldSunk / 50);
       m.toldSunk = sunk;
-      if (due) say('sunk', { n });
-      return;
+      if (milestone && this.mayTalk(now)) {
+        this.ownAt = now;
+        say('sunk', { n: Math.floor(sunk / 50) * 50 });
+      }
     }
-    if (docked !== m.toldDocked) {
-      m.toldDocked = docked;
-      if (due) say(docked ? 'dock' : 'sea', {});
-    }
+    m.toldDocked = docked;
   }
 
   /** A line of the mentor's own making (the model): a remark, a tip, a joke, a word to another mentor. */

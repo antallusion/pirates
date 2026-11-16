@@ -171,3 +171,56 @@ test('mentors play the campaign (owner, 2026-11-15: «они должны кач
   assert.ok(p.stats.sunk + p.stats.boarded >= 2, `ships fought: ${p.stats.sunk} sunk, ${p.stats.boarded} boarded`);
   assert.ok(m.credited <= p.campaign!.at, `most steps her own: ${m.credited} credited of ${p.campaign!.at} quests`);
 });
+
+test('mentors never flood the chat (owner, 2026-11-16: «спамят и прям бесят игроков»): a line of their own at most once an hour and never two running; an answer always', async () => {
+  const { game } = makeGame();
+  const { http } = stub(() => 'never');
+  const mt = new Mentors(game, '', http);
+  mt.start(0);
+  const c = new FakeConn();
+  game.attach(c as unknown as WsConnection);
+  c.push({ t: 'hello', v: PROTOCOL_VERSION, name: 'Борис' });
+  c.push({ t: 'create_captain', captain: 'corsair', shipName: 'Чиж', tutorial: false });
+  steps(game, 3);
+  mt.rnd = () => 0.9; // (a tip each time)
+  const own = () => c.all('chat').filter((l) => MENTORS.some((m) => m.name === l.from)).length;
+  mt.nextChat = 0;
+  mt.tick();
+  await sleep(50);
+  steps(game, 5);
+  assert.equal(own(), 1);
+  // again at once, and again after the hour: the last line is theirs — silence
+  mt.nextChat = 0;
+  mt.tick();
+  (mt as unknown as { ownAt: number }).ownAt = 0;
+  mt.nextChat = 0;
+  mt.tick();
+  await sleep(50);
+  steps(game, 5);
+  assert.equal(own(), 1, 'never two of their own running');
+  // a captain speaks (not to them): after the hour they may say one more
+  (mt as unknown as { ownAt: number }).ownAt = Date.now(); // (their last line of their own: just now)
+  c.push({ t: 'chat', text: 'ну и погодка сегодня' });
+  steps(game, 40);
+  mt.nextChat = 0;
+  mt.tick();
+  await sleep(50);
+  steps(game, 5);
+  assert.equal(own(), 1, 'not within the hour');
+  (mt as unknown as { ownAt: number }).ownAt = 0;
+  steps(game, 40); // (the chat's own gap between one captain's lines)
+  mt.nextChat = 0;
+  mt.tick();
+  await sleep(50);
+  steps(game, 5);
+  assert.equal(own(), 2);
+  // a question is answered though their line was the last
+  steps(game, 40);
+  c.push({ t: 'chat', text: 'как чинить корабль в порту?' });
+  steps(game, 2);
+  (mt as unknown as { lastWasMentor: boolean }).lastWasMentor = true;
+  mt.tick();
+  await sleep(10_500);
+  steps(game, 5);
+  assert.equal(own(), 3, 'the answer goes');
+});
