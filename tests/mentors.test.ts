@@ -114,12 +114,12 @@ test('mentors with no model: aboard all the same, the chat alive with their own 
   // a line between captains is left alone; a question is answered, and honestly who they are
   c.push({ t: 'chat', text: 'ну и погодка сегодня' });
   steps(game, 40);
-  c.push({ t: 'chat', text: 'как чинить корабль в порту?' });
+  c.push({ t: 'chat', text: 'Сильвер, как чинить корабль в порту?' });
   mt.tick();
   await sleep(10_500);
   const ans = c.all('chat').filter((l) => MENTORS.some((m) => m.name === l.from)).slice(1);
   assert.equal(ans.length, 1);
-  assert.match(ans[0].text, /^Борис, .*Лоцманская книга/);
+  assert.match(ans[0].text, /^Борис, .*Лоцманск/); // (the book's article when sure, else the way to it)
   steps(game, 40);
   c.push({ t: 'chat', text: 'ты бот?', ch: 'dm', to: MENTORS[0].name });
   for (const m of mt.list) m.saidAt = 0;
@@ -216,7 +216,7 @@ test('mentors never flood the chat (owner, 2026-11-16: «спамят и пря�
   assert.equal(own(), 2);
   // a question is answered though their line was the last
   steps(game, 40);
-  c.push({ t: 'chat', text: 'как чинить корабль в порту?' });
+  c.push({ t: 'chat', text: 'Сильвер, как чинить корабль в порту?' });
   steps(game, 2);
   (mt as unknown as { lastWasMentor: boolean }).lastWasMentor = true;
   mt.tick();

@@ -246,6 +246,17 @@ export class Mentors {
       this.game.db.setKv('mentors:purged1116', true);
       console.log(`[mentors] ${n} lines of their chatter taken out of the world chat`);
     }
+    // and again (the same day): what is left of theirs that answers nobody — a line of theirs keeps its place only when
+    // it names the captain who spoke last before it
+    if (!this.game.db.getKv<boolean>('mentors:purged1116b')) {
+      const n = chatForgetWorld(this.game, (l, i, all) => {
+        if (!isMentor(l.from)) return false;
+        for (let j = i - 1; j >= 0; j--) if (!isMentor(all[j].from)) return !l.text.includes(all[j].from);
+        return true;
+      });
+      this.game.db.setKv('mentors:purged1116b', true);
+      console.log(`[mentors] ${n} more lines that answered nobody taken out`);
+    }
     this.nextCall = Date.now() + 10 * 60_000;
     this.nextChat = Date.now() + (1.5 + Math.random() * 2) * 60_000;
     if (everyMs > 0) this.timer = setInterval(() => this.tick(), everyMs);

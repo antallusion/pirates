@@ -7,6 +7,7 @@
 // answered by the article of the Pilot's Book whose words it names.
 
 import { GUIDE } from '../../../shared/src/data/guide/index.ts';
+import { maskBadWords } from '../../../shared/src/chat.ts';
 
 /** A line of an exchange: who (the mentor's index) and what. */
 export type TalkLine = readonly [who: 0 | 1 | 2, text: string];
@@ -83,7 +84,7 @@ const words = (s: string): string[] => s.toLowerCase().replace(/ё/g, 'е').spli
 const stem = (w: string): string => (w.length > 5 ? w.slice(0, 5) : w.length > 4 ? w.slice(0, 4) : w);
 
 /** The article of the Pilot's Book a question is about: the most of its words among the article's tags and title. */
-export function guideFor(question: string): { title: string; summary: string } | null {
+export function guideFor(question: string, min = 2): { title: string; summary: string } | null {
   const q = new Set(words(question).map(stem));
   if (!q.size) return null;
   let best: (typeof GUIDE)[number] | null = null, top = 0;
@@ -97,7 +98,7 @@ export function guideFor(question: string): { title: string; summary: string } |
       best = a;
     }
   }
-  return best && top >= 2 ? { title: best.title[1], summary: best.summary[1] } : null;
+  return best && top >= min ? { title: best.title[1], summary: best.summary[1] } : null;
 }
 
 const HELLO = /(^|[^а-яa-z])(привет|здравств|здаров|здоров|хай|ку|добрый|доброе|доброй|hello|hi|hey)([^а-яa-z]|$)/i;
@@ -110,8 +111,20 @@ const BYE = /(^|[^а-я])(пока|до свидан|удачи всем|спо�
 /** Is a line of the world chat one a mentor should answer with no model to judge it? A question, a greeting, a word of
  *  thanks, or one that names the mentors. */
 export function forMentor(text: string): boolean {
-  return text.includes('?') || HELLO.test(text) || THANKS.test(text) || WHO.test(text) || /наставни|сильвер|мэй|гром/i.test(text);
+  // (owner, 2026-11-16: the answers by a word's likeness went wide of the question and angered the players — with no
+  // model only what is plainly theirs: their name, who they are, or a question of the game the Pilot's Book answers)
+  if (WHO.test(text)) return true;
+  return NAMED.test(text) && !cross(text);
 }
+
+/** Their names (and the old title) in a line. */
+const NAMED = /наставни|сильвер|силвер|мэй|гром/i;
+/** A line of the game asked: a question mark or a question's word. */
+const asks = (t: string) => t.includes('?') || /(^|[^а-яё])(как|где|зачем|почему|сколько|что такое|что делать|откуда|можно ли)([^а-яё]|$)/i.test(t);
+/** A cross word for them (bots, flood, «снести», the admin called) or a coarse one: no answer, nothing to stir. */
+const cross = (t: string) => /(бот|флуд|спам|заткн|достал|надоел|снест|удали|админ)/i.test(t) || maskBadWords(t) !== t;
+/** The Pilot's Book's match a question must have to be answered with no model: two of its tags. */
+const SURE = 6;
 
 /** The answer with no model: who they are, a greeting, the guild and the group (the marks mentors.ts acts on), else
  *  the Pilot's Book's article. `dm`: a private line is always answered. Null: nothing to say. */
@@ -120,11 +133,12 @@ export function scriptedAnswer(who: number, name: string, text: string, rnd: () 
   if (WHO.test(text)) return `${name}, я Наставник — помощник игры на основе ИИ, не человек. Хожу по морю, как все, и подсказываю. Живые капитаны тут рядом, в чате.`;
   if (GUILD.test(text) && /(прими|возьми|вступ|хочу|можно|позови|пригласи|join|invite)/i.test(text)) return `${name}, зову в «Школу наставников» — лови приглашение, как только гильдия будет открыта. [ГИЛЬДИЯ]`;
   if (GROUP.test(text) && /(прими|возьми|хочу|можно|позови|пригласи|пойд|го|join|invite)/i.test(text)) return `${name}, идём вместе — приглашение в группу отправил${i === 1 ? 'а' : ''}. [ГРУППА]`;
-  const hit = text.replace(/[^а-яёa-z ]/gi, ' ').trim().split(/\s+/).length >= 2 ? guideFor(text) : null;
+  if (cross(text)) return null;
+  const hit = asks(text) ? guideFor(text, SURE) : null;
   if (hit) return `${name}, ${hit.summary.length <= 170 ? hit.summary : `${hit.summary.slice(0, 167)}…`} Подробнее — Лоцманская книга, «${hit.title}».`;
   if (THANKS.test(text)) return pick([[`${name}, не за что. Семь футов под килем.`], [`${name}, всегда рада помочь :)`], [`${name}, обращайся! Для того и ходим!`]][i], rnd);
   if (HELLO.test(text)) return pick([[`Здорово, ${name}. Спрашивай, если что неясно.`, `${name}, приветствую на борту.`], [`Привет, ${name}! Рада видеть в море :)`, `${name}, привет! Если нужна подсказка — пиши.`], [`${name}, здорово! Пошли пиратов бить!`, `Привет, ${name}! Гром на связи!`]][i], rnd);
   if (BYE.test(text)) return pick([[`${name}, попутного ветра.`], [`${name}, до встречи в море!`], [`${name}, бывай! Возвращайся с добычей!`]][i], rnd);
-  if (text.includes('?') || dm) return `${name}, тут я точно не скажу. Загляни в Лоцманскую книгу (кнопка «?» в меню) или спроси на форуме игры — там отвечают разработчики.`;
+  if (dm || (NAMED.test(text) && asks(text))) return `${name}, тут я точно не скажу. Загляни в Лоцманскую книгу (кнопка «?» в меню) или спроси на форуме игры — там отвечают разработчики.`;
   return null;
 }
