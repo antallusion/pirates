@@ -202,7 +202,7 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
   const favor = eventFavor(game, port); // the port's news puts its jobs first on the board
   const view: PortView = {
     portId: port.id,
-    market: marketRows(market, mods),
+    market: marketRows(market, mods).map((r) => (r.good === 'provisions' && famineAt(game, port) ? { ...r, relief: GOODS.provisions.basePrice } : r)),
     ammoPrices,
     crewAvailable: Math.floor(game.tavernCrew.get(port.id) ?? 0),
     crewHireCost: recruitCost(game, port, p, 'sailor', ship), // the price the hire takes (Press Gang and all; docs/30)
@@ -347,7 +347,9 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
     renownTrade(game, s, port, price); // the flag's deeds, the week's trade (docs/16 #26–27)
     return null;
   }
-  // the ship's stores are never sold (owner, 2026-11-02): no buy-here-sell-there in them
+  // the ship's stores are never sold (owner, 2026-11-02): no buy-here-sell-there in them — save provisions to a town in
+  // famine, at their base price (forum 101, 2026-11-17: «голод выкашивает население, а мы ничем не можем помочь»)
+  if (good === 'provisions' && famineAt(game, port)) return famineRelief(game, s, port, -qty);
   if (isStore(good)) return STORE_NO_SALE;
   let n = -qty;
   const have = ship.cargo[good] ?? 0;
@@ -406,6 +408,30 @@ export function trade(game: Game, s: PlayerSession, port: Port, good: GoodId, qt
   onSaleDeeds(game, s, port.id, good, n, price);
   game.checkDeliveries(s, port);
   pickupAfterSale(game, s, port); // a quest's goods on the quay come aboard once the room is made (owner, 2026-10-21)
+  return null;
+}
+
+/** A famine in this port now (the sea's news «Blight in the fields…»: its provisions' price shocked up). */
+export function famineAt(game: Game, port: Port): boolean {
+  return (game.markets.get(port.id)?.goods.provisions?.shock ?? 1) > 1.05;
+}
+
+/** Provisions handed to a starving town: the base price each (never more than they cost anywhere), the port's faction's
+ *  thanks, its shortage eased. */
+export function famineRelief(game: Game, s: PlayerSession, port: Port, n: number): string | null {
+  const ship = s.ship!, p = s.profile!;
+  if (n <= 0) return 'Bad quantity';
+  const have = Math.floor(ship.cargo.provisions ?? 0);
+  if (have < n) return 'You do not carry that much';
+  const price = n * GOODS.provisions.basePrice;
+  ship.cargo.provisions = (ship.cargo.provisions ?? 0) - n;
+  if (ship.cargo.provisions <= 1e-9) delete ship.cargo.provisions;
+  p.gold += price;
+  const gm = game.markets.get(port.id)?.goods.provisions;
+  if (gm) gm.stock += n;
+  game.adjustRepProfile(s, port.faction, Math.min(5, n / 20));
+  game.db.ledger(s.accountId, 'sell', price, `${n} provisions (famine) @ ${port.id}`);
+  game.sendTo(s, { t: 'toast', msg: `${port.name} thanks you: ${n} provisions for the hungry, ${price} silver.`, kind: 'good' });
   return null;
 }
 

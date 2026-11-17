@@ -161,3 +161,18 @@ test('an old save heavier than her hold loads whole: nothing thrown away, only f
   assert.equal(v.over, 2, 'over the brim');
   assert.equal(v.slow, 35);
 });
+
+test('a famine: the provisions go to the hungry town at their base price — and nowhere else (forum 101, 2026-11-17)', async () => {
+  const { trade, buildPortView } = await import('../server/src/game/ports.ts');
+  const { game } = makeGame();
+  const { s, ship, p, port } = captain(game, 'Relief');
+  ship.cargo.provisions = 40;
+  assert.equal(trade(game, s, port, 'provisions', -10), STORE_NO_SALE, 'no famine: not sold');
+  assert.ok(!buildPortView(game, s, port).market.find((r) => r.good === 'provisions')?.relief);
+  game.markets.get(port.id)!.goods.provisions!.shock = 2;
+  assert.equal(buildPortView(game, s, port).market.find((r) => r.good === 'provisions')?.relief, GOODS.provisions.basePrice);
+  const gold = p.gold;
+  assert.equal(trade(game, s, port, 'provisions', -10), null);
+  assert.equal(ship.cargo.provisions, 30);
+  assert.equal(p.gold - gold, 10 * GOODS.provisions.basePrice, 'the base price, not the famine\'s');
+});

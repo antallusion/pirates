@@ -188,6 +188,8 @@ test('docs/29: moving house pulls the old island down — the first move free, t
   y.res.timber = 300;
   h.treasury = 1234;
   y.ships = [{ id: 'o1', role: 'war', classId: 'cutter', level: 2, xp: 0, name: 0, hull: 1, state: 'home' } as OwnShip, { id: 'o2', role: 'merchant', classId: 'sloop', level: 1, xp: 0, name: 1, hull: 1, state: 'building' } as OwnShip];
+  // a ship of hers berthed at the island's pier (forum 100: it used to shut the move)
+  s.profile!.berths.push({ port: `isle:${isl.id}`, loadout: { classId: 'cutter', name: 'Pier', guns: { port: 'light_6', starboard: 'light_6' }, modules: {} }, hull: 1 } as never);
   // Not during a raid.
   assert.equal(startIsleRaid(game, h), null);
   const next = wild(game, (i) => i.id !== isl.id && inWaters('lawless')(i));
@@ -207,6 +209,7 @@ test('docs/29: moving house pulls the old island down — the first move free, t
   assert.equal(h2.treasury, 1234);
   assert.equal(h2.yard!.res.timber, 300);
   assert.deepEqual(h2.yard!.ships!.map((x) => x.id), ['o1']);
+  assert.ok(s.profile!.berths.some((x) => x.port === `isle:${next.id}`) && !s.profile!.berths.some((x) => x.port === `isle:${isl.id}`), 'the ship at the pier sails over');
   assert.equal(game.holdings.onIsland(game, isl.id).length, 0, 'nothing of hers left on the old island');
   assert.ok(c.all('toast').some((t) => t.msg.startsWith(`Your island moves to ${next.name}`)));
   // The second move: a fortune — silver or doubloons — and never free.

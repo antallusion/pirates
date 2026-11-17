@@ -14,8 +14,8 @@ export const ARTICLES: GuideArticle[] = [
     title: ['Claiming an island', 'Как занять остров'],
     tags: ['island', 'claim', 'base', 'move', 'остров', 'занять', 'база', 'переезд', 'свой город'],
     summary: [
-      'Any island without a port can be yours: the first one is free and immediate.',
-      'Любой остров без порта может стать вашим: первый — бесплатно и сразу.',
+      'Any island that is not a harbour island can be yours (a small coastal town on it is no hindrance): the first one is free and immediate.',
+      'Любой остров, кроме островов-гаваней, может стать вашим (маленький прибрежный городок не мешает): первый — бесплатно и сразу.',
     ],
     slides: [
       {
@@ -42,15 +42,15 @@ export const ARTICLES: GuideArticle[] = [
       {
         img: img('isle-claim', 4),
         text: [
-          'The Town Hall stands from the first day. Many captains may hold a base on the same island; port islands and pirate fortresses cannot be claimed.',
-          'Ратуша стоит с первого дня. На одном острове могут жить базы многих капитанов; острова с портом и пиратские крепости занять нельзя.',
+          'The Town Hall stands from the first day. Many captains may hold a base on the same island. Harbour islands (a big port of the map) and pirate fortresses cannot be claimed; an island with a small coastal town can — like Lanternreach, where the game begins.',
+          'Ратуша стоит с первого дня. На одном острове могут жить базы многих капитанов. Острова-гавани (большие порты карты) и пиратские крепости занять нельзя; остров с маленьким прибрежным городком — можно, как Лантернрич, с которого начинается игра.',
         ],
       },
       {
         img: img('isle-claim', 5),
         text: [
-          'Moving to another island: the first move is free, then 1 000 000 silver or 2 600 doubloons. The old buildings are pulled down; the treasury, the goods, the residents and your ships go with you.',
-          'Переезд на другой остров: первый бесплатно, дальше 1 000 000 серебра или 2 600 дублонов. Старые здания сносятся, а казна, товары, жители и ваши корабли переезжают с вами.',
+          'Moving to another island: sail up to it, then Menu → Journal → Company → the «Islands» tab → «Move my island here». The first move is free, then 1 000 000 silver or 2 600 doubloons. The old buildings are pulled down; the treasury, the goods, the residents and all your ships — those of the yard and those at the pier — go with you.',
+          'Переезд на другой остров: подплывите к нему, затем Меню → Журнал → Компания → вкладка «Острова» → «Перенести мой остров сюда». Первый переезд бесплатный, дальше 1 000 000 серебра или 2 600 дублонов. Старые здания сносятся, а казна, товары, жители и все ваши корабли — с верфи и у причала — переезжают с вами.',
         ],
       },
     ],

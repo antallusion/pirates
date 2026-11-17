@@ -1216,7 +1216,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "Raiders landed on {0}: {1}% of its yard and store is gone.": "Налётчики высадились на {0}: пропало {1}% двора и склада.",
   "Raiders make for your island: {0} ships.": "К вашему острову идут налётчики: кораблей — {0}.",
   "Safe water: the Crown’s patrols keep raiders off the island.": "Безопасные воды: патрули Короны не подпускают налётчиков к острову.",
-  "Take the ships berthed at the island away first.": "Сначала уведите корабли, стоящие у причала острова.",
+  "{0} thanks you: {1} provisions for the hungry, {2} silver.": "{0} благодарит вас: {1} провизии голодающим, {2} серебра.",
   "Tax reckoned; weeks unpaid: {0}.": "Налог посчитан; неоплаченных недель: {0}.",
   "That island is your own.": "Это ваш собственный остров.",
   "The island is calm.": "На острове спокойно.",

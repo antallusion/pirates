@@ -1038,6 +1038,8 @@ export interface MarketRow {
   stock: number;
   trend: number; // -1..1 recent price movement
   legal: boolean;
+  /** A famine here: the ship's provisions handed over to the town at this price each (owner, 2026-11-17, forum 101). */
+  relief?: number;
 }
 
 export interface OfficerView {

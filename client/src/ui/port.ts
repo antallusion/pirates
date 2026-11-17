@@ -389,6 +389,8 @@ export class PortScreen {
         return;
       case 'buy':
         return this.send({ t: 'trade', good: d.good as never, qty: this.qty });
+      case 'relief':
+        return this.send({ t: 'trade', good: 'provisions', qty: -Math.min(this.qty, Math.floor(state.self?.cargo.provisions ?? 0)) || -1 });
       case 'sell':
         if (isStore(d.good ?? '')) return; // (the ship's stores are not sold)
         return this.send({ t: 'trade', good: d.good as never, qty: -Math.min(this.qty, Math.floor(state.self?.cargo[d.good as never] ?? 0)) || -1 });
@@ -665,7 +667,7 @@ export class PortScreen {
       return `<div class="w-row mk-row${have ? ' have' : ''}${store ? ' mk-store' : ''}" data-good="${r.good}"${detailAttr(`good:${r.good}`, { buy: r.buy, sell: r.sell })} data-hint="${esc(store ? `${g.name}. ${W('mk.storeHint')}` : `${g.name}. ${g.description}`)}">${icon(`good_${r.good}`, '', 'w-row-ico')}
         <span class="w-row-t"><b class="${r.legal ? '' : 'contra'}">${esc(g.name)}</b><small>${esc(have ? (isInfStock(r.stock) ? `${W('mk.have', { n: have })} · ${W('mk.stock', { n: stockText(r.stock) })}` : W('mk.have', { n: have })) : W('mk.stock', { n: stockText(r.stock) }))}${tags ? ` · ${esc(tags)}` : ''}</small></span>
         <span class="w-row-n" title="${esc(store ? W('mk.storeHint') : W('mk.priceHint', { buy: r.buy, sell: r.sell }))}">${money(r.buy)}<small>${store ? '—' : `${money(r.sell)}${trend}`}</small></span>
-        <span class="w-row-b"><button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="buy" data-good="${r.good}" ${r.stock > 0 ? '' : 'disabled'}>${esc(L('btn.buy'))}</button>${store ? `<button type="button" class="k-btn k-btn--secondary k-btn--md mk-nosell" disabled title="${esc(W('mk.storeHint'))}" aria-label="${esc(W('mk.storeHint'))}">${esc(W('mk.storeBtn'))}</button>` : `<button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="sell" data-good="${r.good}" ${have ? '' : 'disabled'}>${esc(L('btn.sell'))}</button>`}</span></div>`;
+        <span class="w-row-b"><button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="buy" data-good="${r.good}" ${r.stock > 0 ? '' : 'disabled'}>${esc(L('btn.buy'))}</button>${store && r.relief ? `<button type="button" class="k-btn k-btn--primary k-btn--md" data-act="relief" data-good="${r.good}" title="${esc(W('mk.reliefHint', { n: r.relief }))}" ${have ? '' : 'disabled'}>${esc(W('mk.relief'))}</button>` : store ? `<button type="button" class="k-btn k-btn--secondary k-btn--md mk-nosell" disabled title="${esc(W('mk.storeHint'))}" aria-label="${esc(W('mk.storeHint'))}">${esc(W('mk.storeBtn'))}</button>` : `<button type="button" class="k-btn k-btn--secondary k-btn--md" data-act="sell" data-good="${r.good}" ${have ? '' : 'disabled'}>${esc(L('btn.sell'))}</button>`}</span></div>`;
     }).join('');
     // How many a «Купить» moves: one chip that steps 1 → 5 → 10 → 25 (one target, not four).
     const next = qtys[(qtys.indexOf(this.qty) + 1) % qtys.length] ?? 1;

@@ -159,7 +159,6 @@ export function claimWhy(game: Game, s: PlayerSession, isl: Island): string | nu
 export function moveWhy(game: Game, s: PlayerSession, h: Holding): string | null {
   if (h.claim?.raid) return 'Not while raiders lie off your island.';
   if (Object.values(caravans(game)).some((k) => k.owner === s.accountId)) return 'Bring your caravans home and pay them off first.';
-  if (s.profile!.berths.some((b) => b.port === `isle:${h.island}`)) return 'Take the ships berthed at the island away first.';
   return null;
 }
 
@@ -249,6 +248,9 @@ export function claimIsland(game: Game, s: PlayerSession, islandId: number, pay?
     const y = h.yard!;
     y.res = { ...(old.yard?.res ?? {}) };
     y.ships = (old.yard?.ships ?? []).filter((x) => x.state !== 'building').map((x) => ({ ...x, state: x.state === 'refit' ? 'home' : x.state }));
+    // and the ships berthed at the old island's pier sail over to the new one (forum 100, 2026-11-17: they could be
+    // neither taken away nor scrapped, and the move was shut to her)
+    for (const b of p.berths) if (b.port === `isle:${old.island}`) b.port = `isle:${isl.id}`;
     delete game.holdings.map(game)[game.holdings.keyOf(game, old)];
     const was = island(game, old.island);
     game.sendTo(s, { t: 'toast', msg: `Your island moves to ${isl.name}: everything on ${was?.name ?? ''} is pulled down.`, kind: 'info' });
