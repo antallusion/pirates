@@ -553,6 +553,27 @@ export class Mentors {
 
   /** A step she could not do in PLAY_STUCK: the event that does it, as tests/campaign.test.ts plays the road. */
   credit(m: Mentor, st: QuestStep): void {
+    const s = m.s, p = s.profile;
+    const at = (): string => {
+      const qs = p ? campaignActive(p) : undefined;
+      return qs ? `${qs.id}:${qs.step}:${qs.progress}` : '';
+    };
+    const before = at();
+    this.creditEvent(m, st);
+    if (at() !== before) return;
+    // the event did not take (owner, 2026-11-17: «Гром и Сильвер ваще не качаются» — a full hold on a pickup, a foe out of
+    // the step's waters): the step taken as done, its goods aboard
+    const qs = p ? campaignActive(p) : undefined;
+    if (!qs) return;
+    const q = QUESTS_BY_ID[qs.id];
+    if (st.type === 'pickup' && s.ship) s.ship.cargo[st.good] = (s.ship.cargo[st.good] ?? 0) + st.qty;
+    qs.step++;
+    qs.progress = 0;
+    if (qs.step >= q.steps.length) completeQuest(this.game, s, q);
+  }
+
+  /** The event that does a step, as tests/campaign.test.ts plays the road. */
+  private creditEvent(m: Mentor, st: QuestStep): void {
     const g = this.game, s = m.s, ship = s.ship!;
     const lv = Math.min(10, ((st as { minShip?: number }).minShip ?? 1) + 1);
     const foe = (): ShipEntity => {
