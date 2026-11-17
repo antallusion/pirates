@@ -367,6 +367,13 @@ export class Mentors {
   private play(m: Mentor): void {
     const g = this.game, s = m.s, ship = s.ship, p = s.profile;
     if (!ship || !p || !ship.alive) return;
+    // once (owner, 2026-11-17: «дай им там серебра тыщ по 100»): 100 000 silver each
+    const purse = g.db.getKv<string[]>('mentors:purse1117') ?? [];
+    if (!purse.includes(m.def.name)) {
+      p.gold += 100_000;
+      g.db.setKv('mentors:purse1117', [...purse, m.def.name]);
+      console.log(`[mentors] ${m.def.name}: +100000 silver (${p.gold})`);
+    }
     const t = g.now;
     // the auto-battle's scrolls (a captain buys them for doubloons): the game's own helpers are kept in them
     if (t - m.scrollAt > 60) {
