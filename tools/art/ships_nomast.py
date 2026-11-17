@@ -76,7 +76,7 @@ def steps_of(a: np.ndarray) -> list[float]:
     sc[y1 - int((y1 - y0) * 0.1):] = 0
     out: list[int] = []
     for y in np.argsort(sc)[::-1]:
-        if sc[y] < sc.max() * 0.55:
+        if sc[y] < sc.max() * 0.7:
             break
         if all(abs(int(y) - o) > (y1 - y0) * 0.07 for o in out):
             out.append(int(y))

@@ -1,4 +1,4 @@
 // Written by tools/art/ships_nomast.py and tools/art/masts.py (2026-11-16): where each mastless hull's mast steps are
 // (fractions of its picture's height from the top, on its centreline), and each mast picture's pivot (its round top).
-export const MAST_STEPS: Record<string, number[]> = {"brig":[0.3815,0.5404],"brigantine":[0.3737,0.8333],"cursed_frigate":[0.2852,0.5286,0.7318]};
+export const MAST_STEPS: Record<string, number[]> = {"black_corsair":[0.3776,0.5208,0.668],"brig":[0.3815,0.5404],"brigantine":[0.3737,0.8333],"corvette":[0.263,0.3594,0.5547],"cursed_frigate":[0.2852,0.5286,0.7318],"cutter":[0.582],"dragon_junk":[0.3438,0.474,0.5885],"fireship":[0.3503,0.5247],"fishing_ketch":[0.3255,0.7057],"fluyt":[0.2826,0.4961],"frigate":[0.289,0.48,0.69],"galleon":[0.2982,0.5143,0.7396],"ghost_ship":[0.32,0.5,0.647],"gunboat":[0.5833],"harpoon_whaler":[0.3346,0.5234,0.7318],"iron_ram":[0.388,0.5195],"schooner":[0.2253,0.444],"war_galley":[0.3451,0.5964],"xebec":[0.3099,0.5169,0.7383]};
 export const MAST_PIVOT: Record<string, number> = {"square_full":0.2397,"square_reef":0.3503,"square_furl":0.4419,"square_bare":0.4348};
