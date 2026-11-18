@@ -49,8 +49,8 @@ export const ARTICLES: GuideArticle[] = [
       {
         img: img('isle-claim', 5),
         text: [
-          'Moving to another island: sail up to it, then Menu → Journal → Company → the «Islands» tab → «Move my island here». The first move is free, then 1 000 000 silver or 2 600 doubloons. The old buildings are pulled down; the treasury, the goods, the residents and all your ships — those of the yard and those at the pier — go with you.',
-          'Переезд на другой остров: подплывите к нему, затем Меню → Журнал → Компания → вкладка «Острова» → «Перенести мой остров сюда». Первый переезд бесплатный, дальше 1 000 000 серебра или 2 600 дублонов. Старые здания сносятся, а казна, товары, жители и все ваши корабли — с верфи и у причала — переезжают с вами.',
+          'Moving to another island: sail up to it, then Menu → Journal → Company → the «Islands» tab → «Move my island here». The first move is free, then 1 000 000 silver or 2 600 doubloons. The whole island goes with you: the town and its levels, the buildings, the producers, the work under way, the treasury, the goods, the residents and all your ships. What a smaller island or another land cannot hold comes back at its full cost.',
+          'Переезд на другой остров: подплывите к нему, затем Меню → Журнал → Компания → вкладка «Острова» → «Перенести мой остров сюда». Первый переезд бесплатный, дальше 1 000 000 серебра или 2 600 дублонов. Остров переезжает целиком: город и его уровни, постройки, промыслы, текущая стройка, казна, товары, жители и все корабли. То, что не поместится на меньшем острове или не растёт на новой земле, возвращается полной стоимостью.',
         ],
       },
     ],

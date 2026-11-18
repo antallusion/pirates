@@ -179,7 +179,7 @@ test('docs/29: no weekly tax and no claim price; the island keeps its treasury',
   assert.equal(v.claim.refund, 0);
 });
 
-test('docs/29: moving house pulls the old island down — the first move free, then a million silver or 2 600 doubloons', () => {
+test('docs/29: moving house carries the whole island over (owner, 2026-11-18) — the first move free, then a million silver or 2 600 doubloons', () => {
   const game = world();
   const { c, s, ship, isl, h } = owner(game, 'contested');
   const y = yardOf(game, h);
@@ -200,18 +200,18 @@ test('docs/29: moving house pulls the old island down — the first move free, t
   // Without her leave: the confirm comes with what is lost, nothing moves.
   assert.equal(buyIsland(game, s, next.id), null);
   const ask = c.all('isleMove').pop()!.view;
-  assert.ok(ask.free && ask.from === isl.id && ask.island === next.id && ask.lose.buildings === 1 && ask.lose.levels >= 2 + 1 + 2 && ask.keep.ships === 1 && ask.keep.treasury === 1234);
+  assert.ok(ask.free && ask.from === isl.id && ask.island === next.id && ask.lose.buildings === 0 && ask.lose.producers === 0 && ask.keep.ships === 3 && ask.keep.treasury === 1234, JSON.stringify(ask));
   assert.equal(ownIsland(game, s.accountId), h, 'not moved yet');
-  // With it: free, the old island pulled down; the treasury, the goods and her ships afloat go with her.
+  // With it: free, and everything goes with her — the buildings and their levels, the town, the yard, the ships.
   assert.equal(buyIsland(game, s, next.id, 'free'), null);
   const h2 = ownIsland(game, s.accountId)!;
-  assert.ok(h2 !== h && h2.island === next.id && h2.buildings.length === 0 && (h2.yard!.town!.b.keep ?? 0) === 0 && h2.yard!.town!.b.hall === 1);
+  assert.ok(h2 !== h && h2.island === next.id && h2.buildings.length === 1 && h2.buildings[0].level === 2 && h2.yard!.town!.b.keep === 2);
   assert.equal(h2.treasury, 1234);
   assert.equal(h2.yard!.res.timber, 300);
-  assert.deepEqual(h2.yard!.ships!.map((x) => x.id), ['o1']);
+  assert.deepEqual(h2.yard!.ships!.map((x) => x.id), ['o1', 'o2']);
   assert.ok(s.profile!.berths.some((x) => x.port === `isle:${next.id}`) && !s.profile!.berths.some((x) => x.port === `isle:${isl.id}`), 'the ship at the pier sails over');
   assert.equal(game.holdings.onIsland(game, isl.id).length, 0, 'nothing of hers left on the old island');
-  assert.ok(c.all('toast').some((t) => t.msg.startsWith(`Your island moves to ${next.name}`)));
+  assert.ok(c.all('toast').some((t) => t.msg.startsWith(`Your island moves from ${isl.name} to ${next.name}`)));
   // The second move: a fortune — silver or doubloons — and never free.
   const third = wild(game, (i) => i.id !== isl.id && i.id !== next.id && inWaters('contested')(i));
   offShore(game, ship, third);
@@ -408,4 +408,35 @@ test('both languages: every word of the claim, the tax and the raids in English 
   for (const k of Object.keys(CO_EN).filter((k) => /^(ct_|est_claim|est_rob)/.test(k))) assert.ok((CO_RU as Record<string, string>)[k], k);
   for (const w of Object.keys(WATERS) as Waters[]) assert.ok(WATERS[w].name[1] && WATERS[w].name[1] !== WATERS[w].name[0]);
   void (null as unknown as RegionId);
+});
+
+test('an island pulled down by a move before 2026-11-18 is carried back once, with 300 doubloons and a letter', async () => {
+  const { restoreMovesBoot } = await import('../server/src/game/baseclaim.ts');
+  const game = world();
+  const { s, ship, isl, h } = owner(game, 'safe', 'Moved Captain');
+  h.buildings.push({ id: 'warehouse', condition: 1, unpaid: false, level: 3, plot: 0 });
+  h.level = 4;
+  yardOf(game, h).town!.b.keep = 3;
+  const saved = structuredClone(h);
+  // the old move: a fresh island elsewhere, the old one gone
+  const next = wild(game, (i) => i.id !== isl.id && inWaters('safe')(i));
+  offShore(game, ship, next);
+  assert.equal(buyIsland(game, s, next.id, 'free'), null);
+  const now = ownIsland(game, s.accountId)!;
+  now.buildings = [];
+  now.yard!.town!.b = { hall: 1 };
+  now.treasury = 777_777;
+  game.db.setKv('restore:moves', { [s.accountId]: saved });
+  const before = game.db.doubloons(s.accountId);
+  restoreMovesBoot(game);
+  const back = ownIsland(game, s.accountId)!;
+  assert.equal(back.island, next.id, 'on the island she holds now');
+  assert.equal(back.level, 4);
+  assert.equal(back.buildings.find((b) => b.id === 'warehouse')?.level, 3);
+  assert.equal(back.yard!.town!.b.keep, 3);
+  assert.equal(back.treasury, 777_777, 'the more of the two treasuries');
+  assert.equal(game.db.doubloons(s.accountId) - before, 300);
+  // once: the key is spent, a second boot pays nothing
+  restoreMovesBoot(game);
+  assert.equal(game.db.doubloons(s.accountId) - before, 300);
 });

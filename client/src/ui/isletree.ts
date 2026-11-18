@@ -126,7 +126,7 @@ export { islandSize };
 
 // ------------------------------------------------------------------------------------------------ the move
 
-/** The move's confirm (docs/29): what it pulls down, what goes along, and — after the free one — silver or doubloons. */
+/** The move's confirm (docs/29): everything goes along (what the new island cannot hold, refunded), and — after the free one — silver or doubloons. */
 export function askMove(v: IsleMoveView, send: (m: ClientMsg) => void): void {
   const fresh = v.from < 0;
   const name = placeName(v.name);
@@ -137,8 +137,8 @@ export function askMove(v: IsleMoveView, send: (m: ClientMsg) => void): void {
   const body = fresh
     ? `<p id="confirm-text">${esc(T29('claimPaid', { name, silver: fmt(v.silver), d: fmt(v.doubloons) }))}</p>${choice}`
     : `<p id="confirm-text"><b>${esc(T29('moveTitle', { name }))}</b></p>
-      <p class="mv-lose">${esc(T29('moveLose', { from: placeName(v.fromName), b: v.lose.buildings, l: v.lose.levels, h: v.lose.hall, p: v.lose.producers }))}</p>
-      <p class="muted">${esc(T29('moveKeep', { t: fmt(v.keep.treasury), g: fmt(v.keep.goods), r: v.keep.residents, s: v.keep.ships }))}</p>
+      <p class="good">${esc(T29('moveKeep', { from: placeName(v.fromName), t: fmt(v.keep.treasury), g: fmt(v.keep.goods), r: v.keep.residents, s: v.keep.ships }))}</p>
+      ${v.lose.buildings + v.lose.producers + v.lose.jobs > 0 ? `<p class="mv-lose">${esc(T29('moveLose', { b: v.lose.buildings, p: v.lose.producers, j: v.lose.jobs }))}</p>` : ''}
       <p class="${v.free ? 'good' : 'bad'}">${esc(v.free ? T29('moveFree', { silver: fmt(v.silver), d: fmt(v.doubloons) }) : T29('movePaid', { n: v.moves, silver: fmt(v.silver), d: fmt(v.doubloons) }))}</p>${choice}`;
   const yes = fresh ? T29('claimGo') : v.free ? T29('moveFreeGo') : T29('moveGo');
   const can = v.free || v.gold >= v.silver || v.balance >= v.doubloons;

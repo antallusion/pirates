@@ -71,8 +71,8 @@ export const EN = {
   claimFree: 'Claim free',
   claimHere: 'Your first island is free and claimed at once. Others may hold this island too — each captain her own base.',
   moveTitle: 'Move your island to {name}?',
-  moveLose: 'Everything on {from} is pulled down: {b} buildings, {l} levels in all (town hall {h}), {p} producers, the work under way.',
-  moveKeep: 'Goes with you: the treasury ({t} silver), {g} goods of the yard and store, {r} residents, {s} of your own ships.',
+  moveLose: 'The new island cannot hold everything: {b} buildings, {p} producers and {j} works under way come back at their full cost (silver to the treasury, goods to the yard).',
+  moveKeep: 'Everything goes with you from {from}: the town and its levels, the buildings, the producers, the work under way, the treasury ({t} silver), {g} goods of the yard and store, {r} residents, {s} of your own ships.',
   moveFree: 'This move is free (your first). Every move after it costs {silver} silver or {d} doubloons.',
   movePaid: 'Moves made: {n}. This one costs {silver} silver or {d} doubloons.',
   payWith: 'Pay with:',
@@ -84,7 +84,7 @@ export const EN = {
   claimGo: 'Claim',
   back: '← The island',
   moveCard: 'Move your island to {name}',
-  moveCardText: 'You hold an island already: claiming this one moves your base here and pulls everything on the old one down. Others may hold this island too, each captain her own base.',
+  moveCardText: 'You hold an island already: claiming this one moves your base here with everything on it. Others may hold this island too, each captain her own base.',
 };
 
 export const RU: Record<keyof typeof EN, string> = {
@@ -153,8 +153,8 @@ export const RU: Record<keyof typeof EN, string> = {
   claimFree: 'Занять бесплатно',
   claimHere: 'Первый остров бесплатный и занимается сразу. Этот остров могут занимать и другие — у каждого капитана своя база.',
   moveTitle: 'Перенести остров на {name}?',
-  moveLose: 'Всё на острове {from} будет снесено: построек {b}, уровней всего {l} (ратуша {h}), промыслов {p}, текущая стройка.',
-  moveKeep: 'С вами переедут: казна ({t} серебра), товаров двора и склада {g}, жителей {r}, своих кораблей {s}.',
+  moveLose: 'На новом острове поместится не всё: построек {b}, промыслов {p} и строек {j} вернутся полной стоимостью (серебро в казну, товары на склад).',
+  moveKeep: 'С острова {from} переедет всё: город и его уровни, постройки, промыслы, текущая стройка, казна ({t} серебра), товаров двора и склада {g}, жителей {r}, своих кораблей {s}.',
   moveFree: 'Этот перенос бесплатный (первый). Каждый следующий — {silver} серебра или {d} дублонов.',
   movePaid: 'Переносов уже было: {n}. Этот стоит {silver} серебра или {d} дублонов.',
   payWith: 'Чем платить:',
@@ -166,5 +166,5 @@ export const RU: Record<keyof typeof EN, string> = {
   claimGo: 'Занять',
   back: '← К острову',
   moveCard: 'Перенести остров на {name}',
-  moveCardText: 'У вас уже есть остров: занять этот — значит перенести базу сюда и снести всё на старом. Этот остров могут занимать и другие, у каждого капитана своя база.',
+  moveCardText: 'У вас уже есть остров: занять этот — значит перенести сюда базу со всем, что на ней построено. Этот остров могут занимать и другие, у каждого капитана своя база.',
 };

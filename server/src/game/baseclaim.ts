@@ -28,6 +28,7 @@ import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { Island } from '../../../shared/src/world/worldgen.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import { capOf } from './base.ts';
+import { baseCost, plotsOf, producerFits } from '../../../shared/src/data/base.ts';
 import { caravans } from './caravans.ts';
 import { ownIsland } from './estate.ts';
 import type { Game } from './Game.ts';
@@ -39,7 +40,7 @@ import { changeRep } from './player.ts';
 import type { PlayerSession } from './player.ts';
 import { deliver } from './post.ts';
 import { flying, hasPennant, neutral } from './pvp.ts';
-import { sendBalance } from './premium.ts';
+import { creditPremium, sendBalance } from './premium.ts';
 import { sagaNote } from './saga.ts';
 import { lairOnIsland } from './wanted.ts';
 
@@ -179,12 +180,9 @@ export function moveTerms(game: Game, s: PlayerSession, isl: Island): IsleMoveVi
   return {
     island: isl.id, name: isl.name, from: h.island, fromName: from?.name ?? '', free: !fee, silver: MOVE_SILVER, doubloons: MOVE_DOUBLOONS,
     gold: Math.floor(s.profile!.gold), balance: game.db.doubloons(s.accountId), moves: Math.max(0, claimsMade(game, s) - 1), freeMoves: FREE_MOVES,
-    lose: {
-      buildings: h.buildings.length, levels: h.buildings.reduce((a, b) => a + (b.level ?? 1), 0) + Object.values(town).reduce((a, n) => a + (n ?? 0), 0),
-      town: Object.values(town).filter((n) => (n ?? 0) > 0).length, producers: h.yard?.producers.length ?? 0, jobs: h.yard?.jobs.length ?? 0,
-      hall: town.hall ?? 1,
-    },
-    keep: { treasury: Math.floor(h.treasury), goods: Math.floor(Object.values(h.yard?.res ?? {}).reduce((a, n) => a + (n ?? 0), 0) + Object.values(h.store).reduce((a, n) => a + (n ?? 0), 0)), residents: h.residents?.length ?? 0, ships: (h.yard?.ships ?? []).filter((x) => x.state !== 'building').length },
+    // (owner, 2026-11-18: everything moves; only what the new island cannot hold is counted here, and it is refunded)
+    lose: { ...movedHolding(game, h, isl).dropped, levels: 0, town: 0, hall: 0 },
+    keep: { treasury: Math.floor(h.treasury), goods: Math.floor(Object.values(h.yard?.res ?? {}).reduce((a, n) => a + (n ?? 0), 0) + Object.values(h.store).reduce((a, n) => a + (n ?? 0), 0)), residents: h.residents?.length ?? 0, ships: (h.yard?.ships ?? []).length + s.profile!.berths.filter((b) => b.port === `isle:${h.island}`).length },
     why: claimWhy(game, s, isl),
   };
 }
@@ -237,23 +235,18 @@ export function claimIsland(game: Game, s: PlayerSession, islandId: number, pay?
     sendBalance(game, s);
   }
   const wall = game.wallNow();
-  const h = newOwnHolding(isl, { id: s.accountId, name: s.name }, wall);
+  let h = newOwnHolding(isl, { id: s.accountId, name: s.name }, wall);
   h.claim = newClaim(game, 0);
   if (old) {
-    // What goes with her: the treasury, the goods, the residents (idle on the new island), her own ships afloat.
-    h.treasury = old.treasury;
-    h.store = { ...old.store };
-    h.residents = (old.residents ?? []).map((r) => ({ ...r, at: null }));
-    h.visitors = old.visitors;
-    const y = h.yard!;
-    y.res = { ...(old.yard?.res ?? {}) };
-    y.ships = (old.yard?.ships ?? []).filter((x) => x.state !== 'building').map((x) => ({ ...x, state: x.state === 'refit' ? 'home' : x.state }));
-    // and the ships berthed at the old island's pier sail over to the new one (forum 100, 2026-11-17: they could be
-    // neither taken away nor scrapped, and the move was shut to her)
+    // Everything goes with her (owner, 2026-11-18: «при переезде все должно сохраняться, за что мы тогда платим»): the
+    // town and its levels, the buildings, the producers, the works under way, the residents at their posts, the yard,
+    // the treasury, her ships — the yard's and those at the pier. What the new island cannot bear (a plot past a smaller
+    // island's last, a producer its land does not grow) comes back whole, its silver to the treasury, its goods to the yard.
+    h = movedHolding(game, old, isl).h;
     for (const b of p.berths) if (b.port === `isle:${old.island}`) b.port = `isle:${isl.id}`;
     delete game.holdings.map(game)[game.holdings.keyOf(game, old)];
     const was = island(game, old.island);
-    game.sendTo(s, { t: 'toast', msg: `Your island moves to ${isl.name}: everything on ${was?.name ?? ''} is pulled down.`, kind: 'info' });
+    game.sendTo(s, { t: 'toast', msg: `Your island moves from ${was?.name ?? ''} to ${isl.name}: the town, the buildings and the ships go with you.`, kind: 'info' });
   }
   game.holdings.map(game)[ownKey(s.accountId)] = h;
   game.holdings.touch();
@@ -265,6 +258,49 @@ export function claimIsland(game: Game, s: PlayerSession, islandId: number, pay?
   if (others > 0) game.sendTo(s, { t: 'toast', msg: `${others + 1} captains hold their own island here.`, kind: 'info' });
   if (!old) sagaNote(game, s, 'island', [isl.name]); // the saga (docs/12 P10 #20)
   return null;
+}
+
+/** Her island carried to another (a copy: `old` is left as it was) — and what did not fit, refunded whole. */
+export function movedHolding(game: Game, old: Holding, isl: Island): { h: Holding; dropped: { buildings: number; producers: number; jobs: number } } {
+  const h: Holding = structuredClone(old);
+  h.island = isl.id;
+  h.claim = newClaim(game, 0);
+  h.siege = undefined;
+  const y = (h.yard ??= { res: {}, carry: {}, fresh: {}, producers: [], jobs: [], lastYield: game.wallNow(), seq: 1, ships: [] });
+  y.res ??= {};
+  const n = plotsOf(h.level ?? 1, islandSize(isl.radius));
+  const back = (what: string, from: number, to: number) => {
+    for (let l = from; l <= to; l++) {
+      const c = baseCost(what, l);
+      h.treasury += c.silver;
+      for (const [g, q] of Object.entries(c.goods) as [GoodId, number][]) y.res[g] = (y.res[g] ?? 0) + q;
+    }
+  };
+  const dropped = { buildings: 0, producers: 0, jobs: 0 };
+  const gone = new Set<string>();
+  h.buildings = h.buildings.filter((b) => {
+    if (b.plot === undefined || b.plot < n) return true;
+    back(b.id, 1, b.level ?? 1);
+    gone.add(b.id);
+    dropped.buildings++;
+    return false;
+  });
+  y.producers = (y.producers ?? []).filter((pr) => {
+    if (pr.plot < n && producerFits(pr.kind, isl.biome)) return true;
+    back(`p:${pr.kind}`, 1, pr.level);
+    dropped.producers++;
+    return false;
+  });
+  y.jobs = (y.jobs ?? []).filter((j) => {
+    const kind = j.what.startsWith('p:') ? j.what.slice(2) : null;
+    if (j.plot < n && (!kind || producerFits(kind as never, isl.biome))) return true;
+    back(j.what, j.level, j.level);
+    dropped.jobs++;
+    return false;
+  });
+  y.ships = (y.ships ?? []).map((x) => ({ ...x, state: x.state === 'refit' ? 'home' : x.state }));
+  h.residents = (h.residents ?? []).map((r) => (r.at && 'b' in r.at && gone.has(r.at.b) ? { ...r, at: null } : r));
+  return { h, dropped };
 }
 
 /** The terms of a paid claim with no island to leave (she gave hers up and has used her free move). */
@@ -675,4 +711,47 @@ export function raidNow(game: Game, h: Holding): void {
 
 export function clearClaims(game: Game): void {
   cs(game).robbing.clear();
+}
+
+/** Islands pulled down by a move before 2026-11-18 (owner: «почини ему все и дай компенсацию в 300 дублонов»): the old
+ *  island, saved under kv `restore:moves` from a backup (account → its holding), carried onto the island she holds now
+ *  by the move's own rule (movedHolding); her goods and treasury the more of the two; once, on boot, with 300 doubloons
+ *  and a letter. */
+export function restoreMovesBoot(game: Game): void {
+  const saved = game.db.getKv<Record<string, Holding>>('restore:moves');
+  if (!saved) return;
+  for (const [acc, old] of Object.entries(saved)) {
+    try {
+      const id = Number(acc);
+      const cur = ownIsland(game, id);
+      const isl = cur && island(game, cur.island);
+      if (!cur || !isl) continue;
+      const { h } = movedHolding(game, old, isl);
+      h.claim = cur.claim;
+      h.since = cur.since;
+      h.owner = cur.owner;
+      h.treasury = Math.max(h.treasury, cur.treasury);
+      const more = (a: Partial<Record<GoodId, number>>, b: Partial<Record<GoodId, number>>) => {
+        for (const [g, n] of Object.entries(b) as [GoodId, number][]) a[g] = Math.max(a[g] ?? 0, n ?? 0);
+      };
+      more(h.store, cur.store);
+      more(h.yard!.res, cur.yard?.res ?? {});
+      h.yard!.ships = cur.yard?.ships ?? h.yard!.ships;
+      game.holdings.map(game)[ownKey(id)] = h;
+      game.holdings.touch();
+      const ref = `comp:2026-11-18:move:${old.island}`;
+      if (!game.db.doubloonRef(id, 'doubloons_gift', ref)) {
+        creditPremium(game, id, 300, 'gift', ref, true);
+        deliver(game, id, {
+          from: 'Команда GRAVETIDE', subject: 'Ваш остров восстановлен',
+          body: `Простите: переезд не должен был сносить постройки. Мы исправили переезд — теперь остров переезжает целиком — и вернули всё, что было на прежнем острове, на ваш остров ${isl.name}: город и его уровни, постройки, промыслы. В качестве извинения на ваш счёт зачислено 300 дублонов.`,
+          gold: 0, goods: null,
+        });
+      }
+      console.log(`[restore] account ${id}: island ${old.island} carried onto ${isl.id} (level ${h.level}, ${h.buildings.length} buildings)`);
+    } catch (e) {
+      console.log(`[restore] ${acc}: ${(e as Error).message}`);
+    }
+  }
+  game.db.setKv('restore:moves', null);
 }
