@@ -11,6 +11,8 @@ export const RU: Record<keyof typeof EN, string> = {
   'watch.step': 'Шаг {n} из {of}',
   'watch.skipShort': 'Пропустить',
   'watch.skipAllShort': 'Без обучения',
+  'step.head': 'Глава {ch} · {k}/{size}',
+  'step.pay': '+{n} серебра',
   'watch.skipAsk': 'Пропустить обучение? Первую вахту не вернуть.',
   'watch.skipYes': 'Пропустить',
   'watch.skipNo': 'Учиться',

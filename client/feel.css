@@ -153,3 +153,15 @@ body.watch-quay #tc-act, body.watch-quay #tc-actrow, body.watch-quay .act-btn { 
   #hud-watch.w-school .w-head { flex: 1 1 auto; }
   body.touch #hud-watch.w-school .w-body, #hud-watch.w-school .w-body { display: block; flex: 1 1 100%; order: 3; font-size: 11.5px; line-height: 1.3; color: var(--bone, #e8e0cc); }
 }
+
+/* VK 4.1.6.4 (2026-11-18): the first chapter's step, one line in the top band (client/src/ui/firststep.ts) */
+/* (never cut — owner's rule, CLAUDE.md §3: a narrow screen wraps the words to a second line, not an ellipsis) */
+#hud-step:not(.hidden) { display: block; max-width: min(760px, 62vw); box-sizing: border-box; padding: 3px 10px; font-family: var(--sans); font-size: 12px; line-height: 1.3; color: var(--bone); text-align: center; pointer-events: none; }
+#hud-step > span, #hud-step > b { margin: 0 4px; }
+#hud-step .st-h { text-transform: uppercase; letter-spacing: 0.1em; font-size: 10px; color: var(--brass); white-space: nowrap; }
+#hud-step .st-n { font-family: var(--serif); font-weight: 600; font-size: 13px; white-space: nowrap; }
+#hud-step .st-p { color: var(--gold, #e8c46a); white-space: nowrap; }
+@media (max-height: 520px) {
+  #hud-step:not(.hidden) { font-size: 11px; padding: 2px 8px; max-width: min(520px, 58vw); }
+  #hud-step .st-h, #hud-step .st-n { display: none; } /* (the phone: the step's own words first, the quest's name in the title) */
+}

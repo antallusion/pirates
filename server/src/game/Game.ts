@@ -2037,7 +2037,9 @@ export class Game {
           best = memo;
           bd = -1;
         }
-        if (bd !== -1) for (const l of lairList(this)) {
+        // (nearest first, so the campaign's dearer reckoning — the newcomer's odds — is made for the few still in the running)
+        const lairsBy = st.near && from ? [...lairList(this)].sort((u, v) => Math.hypot(u.x - from.x, u.y - from.y) - Math.hypot(v.x - from.x, v.y - from.y)) : lairList(this);
+        if (bd !== -1) for (const l of lairsBy) {
           if (st.island !== undefined && l.island !== st.island) continue;
           if (st.kind && l.kind !== st.kind) continue;
           if (!lairUp(this, l)) continue;
@@ -2059,12 +2061,14 @@ export class Game {
           const band = shipBandOf(QUESTS_BY_ID[qs.id]?.requires.level ?? p.level);
           const above = st.near ? Math.max(0, l.level - band) * 3000 : 0;
           // (a campaign's: clear of a pirate fortress's battery, of a newcomer's size — campaign.ts campaignLairCost)
-          const camp = st.near ? campaignLairCost(this, l, band) : 0;
-          if (!Number.isFinite(camp)) continue;
           // (and one within the location's waters, where a lair beaten counts — quests.ts stepGain: the nearest lair of an
           // island in the mist passed over, the mark went to one 4 km off, beyond them)
           const outside = st.near && Math.hypot(lp.x - st.near.x, lp.y - st.near.y) > st.near.r + NEAR_FIGHT - 300 ? 50_000 : 0;
-          const d = (from ? Math.hypot(lp.x - from.x, lp.y - from.y) : 0) + byQuay + above + outside + camp;
+          const d0 = (from ? Math.hypot(lp.x - from.x, lp.y - from.y) : 0) + byQuay + above + outside;
+          if (d0 >= bd) continue; // (the campaign's cost only adds: reckoned for the lairs still in the running)
+          const camp = st.near ? campaignLairCost(this, l, band) : 0;
+          if (!Number.isFinite(camp)) continue;
+          const d = d0 + camp;
           // (its island named on the route: «Плыть» to a campaign's lair said «место», mid-game QA 2026-10-22)
           // (the mark on its beach, where the boats put off: an inland camp's point left the run 100 m off with no «Штурм»)
           if (d < bd) { const b = lairBeach(this, l); [best, bd] = [{ x: b.x, y: b.y, ...(l.island >= 0 && l.turtle === undefined ? { island: l.island } : {}) }, d]; }

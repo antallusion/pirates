@@ -17,6 +17,7 @@ import { allStop } from './allstop.ts'; // owner, 2026-10-22: a battle's start a
 import { lackBerth, lackHammocks, lackMore, lackSlot } from '../../../shared/src/data/buyfail.ts';
 import { UNITS, armyMen, armyPower, armyWeight, isPremiumUnit } from '../../../shared/src/data/army.ts';
 import { onboardingProtected } from './onboarding.ts';
+import { tutored } from './firstfights.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
 import { BEASTS, BEAST_IDS, BEAST_PLURAL, CREATURE_IDS, LAND_RES, isBeast, isCreature } from '../../../shared/src/data/bestiary.ts';
 import type { BeastId, CreatureId, LandRes } from '../../../shared/src/data/bestiary.ts';
@@ -650,7 +651,7 @@ export function startFight(game: Game, s: PlayerSession, id: string, force = fal
   const seed = S.rng.int(1, 1e9);
   const rng = new Rng((seed ^ 0x1a7d) >>> 0);
   const bt = newBattle(a, b, seed, game.tacNow(), rng, { land: l.type });
-  freeQuickAshore(bt);
+  freeQuickAshore(bt, s);
   S.fights.set(s.accountId, { lair: l.id, bt, rng, seq: -1, done: false, closeAt: Infinity, retreat: false, xp: 0 });
   allStop(game, s, 'battle', 'lair');
   meetCreatures(game, s, men.map((x) => x.u)); // docs/18 #46: the bestiary's first pages
@@ -667,8 +668,13 @@ export function startFight(game: Game, s: PlayerSession, id: string, force = fal
 /** docs/25 item 49 ashore, as at sea (owner, 2026-10-11): her quick fight is free when her party is clearly the stronger
  *  (TAC_LEN.quick times the creatures' strength as it lands) — the honest end of a fight won; any other quick fight, and
  *  «Авто», spend an auto-battle scroll. */
-function freeQuickAshore(bt: TacBattle): void {
+function freeQuickAshore(bt: TacBattle, s?: PlayerSession): void {
   bt.quick = [sideStrength(bt, 0) >= TAC_LEN.quick * sideStrength(bt, 1), false];
+  // VK 4.1.6.4: a newcomer's first battles are tutored — the quick battle free, a turn let run out played by her men
+  if (tutored(s)) {
+    bt.tutor = 0;
+    bt.quick[0] = true;
+  }
 }
 
 /** Owner, 2026-10-22: never a second battle — her party does not land while her ship is grappled or her mates' boarding
@@ -723,7 +729,7 @@ export function startCreatureFight(game: Game, s: PlayerSession, ext: ExtFight, 
   const seed = S.rng.int(1, 1e9);
   const rng = new Rng((seed ^ 0xd71f) >>> 0);
   const bt = newBattle(a, b, seed, game.tacNow(), rng, { land: ext.type });
-  freeQuickAshore(bt);
+  freeQuickAshore(bt, s);
   S.fights.set(s.accountId, { lair: '', bt, rng, seq: -1, done: false, closeAt: Infinity, retreat: false, xp: 0, ext });
   allStop(game, s, 'battle', 'ashore');
   ext.onStep?.(game, s, bt, rng);

@@ -19,6 +19,7 @@ import { XP_UNITS, battleXp, targetXp } from '../../../shared/src/data/xpcurve.t
 import { tx } from '../../../shared/src/sim/shipstats.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import { fresh, onboardingProtected } from './onboarding.ts';
+import { tutored } from './firstfights.ts';
 import type { Game } from './Game.ts';
 import type { ShipEntity } from './ship.ts';
 import type { NpcRole } from './ship.ts';
@@ -250,6 +251,9 @@ export function startTactical(game: Game, a: ShipEntity, b: ShipEntity): void {
     // QA 2026-10-22: the First Watch's practice fight cannot be lost (tacbattle.ts TacBattle.lesson).
     const pupil = lessonSide(game, a, b);
     if (pupil !== null) bt.lesson = pupil;
+    // VK 4.1.6.4: a newcomer's first battles after it are tutored (firstfights.ts tutored)
+    const tutor = pupil === null ? tutorSide(game, a, b) : null;
+    if (tutor !== null) bt.tutor = tutor;
     // docs/25 item 49: a captain against a clearly weaker ship of the sea is offered the quick fight at once.
     if (len === 'board') {
       const st = [sideStrength(bt, 0), sideStrength(bt, 1)];
@@ -257,11 +261,22 @@ export function startTactical(game: Game, a: ShipEntity, b: ShipEntity): void {
       // …and the First Watch's pupil always, free (retention, 2026-10-25): its finger stands on «Быстрый бой» — the lesson's
       // fight in one tap, never a scroll to buy
       if (pupil !== null) bt.quick[pupil] = true;
+      // …and a newcomer's, free, while her battles are tutored (VK 4.1.6.4)
+      if (tutor !== null) bt.quick[tutor] = true;
     }
   }
   fight.tacSync = [0, 0];
   fight.tacSeen = new Map(fight.tac.stacks.map((s) => [s.id, s.count]));
   sendTac(game, a, b);
+}
+
+/** VK 4.1.6.4: the side of a captain whose battles are tutored, against a ship of the sea (null: none). */
+export function tutorSide(game: Game, a: ShipEntity, b: ShipEntity): 0 | 1 | null {
+  for (const [x, other, side] of [[a, b, 0], [b, a, 1]] as const) {
+    if (other.isPlayer || game.sessionOf(other)) continue;
+    if (tutored(game.sessionOf(x))) return side;
+  }
+  return null;
 }
 
 /** The pupil's side of a practice fight: a captain still in the First Watch against a ship of the sea (null: none). */

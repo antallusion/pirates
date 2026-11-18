@@ -32,7 +32,13 @@ import { openWater as beastWater, spawnBeast } from './beasts.ts';
 import { lairList } from './beastlairs.ts';
 import { beforePorts, depthAt, isLand } from '../../../shared/src/world/worldgen.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
-import { hashString } from '../../../shared/src/rng.ts';
+import { Rng, hashString } from '../../../shared/src/rng.ts';
+import { lairArmy } from '../../../shared/src/data/lairs.ts';
+import type { LairKind, LairSize } from '../../../shared/src/data/lairs.ts';
+import type { ArmyStack } from '../../../shared/src/data/army.ts';
+import { ladder } from '../../../shared/src/data/shiplevel.ts';
+import { newBattle, quickFinish } from './tacbattle.ts';
+import type { TacSideInput } from './tacbattle.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { QuestState } from './quests.ts';
 import { questEvent, startQuest } from './quests.ts';
@@ -84,9 +90,15 @@ export function campaignPlaces(game: Game): void {
       // (its waters reach the lair «Плыть» takes her to — the one of her band, clear of the pirates' guns: Game.questTargets)
       const band = shipBandOf(q.requires.level ?? 1);
       let d = Infinity, bc = Infinity;
-      for (const l of lairs) {
+      const near = st.near;
+      for (const l of [...lairs].sort((u, v) => Math.hypot(u.x - near.x, u.y - near.y) - Math.hypot(v.x - near.x, v.y - near.y))) {
         const ld = Math.hypot(l.x - st.near.x, l.y - st.near.y);
-        const c = ld + campaignLairCost(game, l, band) + Math.max(0, l.level - band) * 3000;
+        if (ld >= bc) continue; // (its cost is never below its distance: the newcomer's odds reckoned only for the near)
+        // (a lair under a harbour's quays last, as Game.questTargets weighs it — LAIR_QUAY_R, 1200 m: since the newcomer's odds
+        // weigh in, the two came apart, and «Плыть» went to a lair beyond the waters this stretched to)
+        const quay = game.nearestPort(l.x, l.y);
+        const byQuay = quay && Math.hypot(quay.x - l.x, quay.y - l.y) < 1200 ? 20_000 : 0;
+        const c = ld + byQuay + campaignLairCost(game, l, band) + Math.max(0, l.level - band) * 3000;
         if (c < bc) [bc, d] = [c, ld];
       }
       if (d > st.near.r && Number.isFinite(d)) st.near = { ...st.near, r: Math.ceil(d + 300) };
@@ -105,8 +117,13 @@ export const FORT_CLEAR = 1200;
  * Not on a fortress's island nor within FORT_CLEAR of its camp; within its garrison's reach, dear when the fortress is
  * above her; a newcomer's (⚓1–2) lair of the middle size first, a weak one next, a strong one last.
  */
-export function campaignLairCost(game: Game, l: { island: number; x: number; y: number; size: string }, band: number): number {
+export function campaignLairCost(game: Game, l: { island: number; x: number; y: number; size: string; kind?: LairKind; level?: number; type?: string }, band: number): number {
   let cost = 0;
+  // VK 4.1.6.4 (2026-11-18): the first chapters' lair is one a newcomer's party beats at the first try — Ravencliff's
+  // seal rookery (⚓1, the nearest to Saltmarrow) was beaten 2–12 times in a hundred by her 22 deckhands
+  // (at most NOVICE_LAIR_DEAR: a lair of the location's waters, by a quay or not, is still before one beyond them —
+  // Game.questTargets weighs one outside at 50 000)
+  if (band <= 2 && l.kind && l.level !== undefined) cost += Math.min(NOVICE_LAIR_DEAR, Math.max(0, NOVICE_LAIR_ODDS - noviceLairOdds({ kind: l.kind, level: l.level, size: l.size as LairSize, type: l.type ?? 'beach' })) * 200_000);
   for (const f of lairsAll(game)) {
     if (l.island >= 0 && f.island === l.island) return Infinity;
     const d = Math.hypot(f.x - l.x, f.y - l.y);
@@ -115,6 +132,41 @@ export function campaignLairCost(game: Game, l: { island: number; x: number; y: 
   }
   if (band <= 2) cost += l.size === 'strong' ? 6000 : l.size === 'weak' ? 1000 : 0;
   return cost;
+}
+
+/** The newcomer's landing party at the first chapters' lairs: the start's deckhands (all but the watch aboard) and Jory
+ *  Penn's six signed on in «Джори Пенн» (c01_11) — no captain's book, her side played at no skill (a human's). */
+export const NOVICE_PARTY: ArmyStack[] = [{ u: 'deckhand', n: 22 }, { u: 'sailor', n: 5 }];
+/** The first chapters' lair is one she beats this often at least (the rest are weighed down by the shortfall). */
+export const NOVICE_LAIR_ODDS = 0.9;
+/** …the most a shortfall weighs (m of the way). */
+export const NOVICE_LAIR_DEAR = 25_000;
+const noviceOddsMemo = new Map<string, number>();
+
+/** How often the newcomer's party (NOVICE_PARTY, on a ⚓1 sloop) beats a lair of this kind, level and size: 24 quick
+ *  battles on dice of their own (never the sea's), reckoned once. */
+export function noviceLairOdds(l: { kind: LairKind; level: number; size: LairSize; type: string }): number {
+  const key = `${l.kind}|${l.level}|${l.size}|${l.type}`;
+  const memo = noviceOddsMemo.get(key);
+  if (memo !== undefined) return memo;
+  const men = lairArmy(l.kind, l.level, l.size);
+  const side = (army: ArmyStack[], beasts: boolean, dealt: number): TacSideInput => ({
+    name: '', ship: '', captain: beasts ? null : 'corsair', hands: 0, marines: 0, gunners: 0,
+    army: army.map((x) => ({ u: x.u, n: x.n, src: x.u })), officers: [], skill: 3, morale: beasts ? 50 : 70, dealt, power: 1, melee: 1, extraShots: 0, firstRush: 1,
+    nets: 0, blooded: 0, castle: false, struck: false, human: !beasts, ...(beasts ? { noBook: true } : {}),
+  });
+  let won = 0;
+  const N = 24;
+  for (let k = 0; k < N; k++) {
+    const seed = 0x51ea + k * 977;
+    const rng = new Rng(seed);
+    const bt = newBattle(side(NOVICE_PARTY, false, ladder(1, l.level, false).dealt || 0.1), side(men, true, ladder(l.level, 1, false).dealt || 0.1), seed, 0, rng, { land: l.type });
+    quickFinish(bt, 0, rng);
+    if (bt.over?.winner === 0) won++;
+  }
+  const odds = won / N;
+  noviceOddsMemo.set(key, odds);
+  return odds;
 }
 
 const WRECK_NAMES = ['Saint Brendan', 'Gloria Regis', 'Merciful Anne', 'Black Tithe', 'Silver Hind', 'Grey Widow', 'Constance', 'Lamentation', 'Ninth Hour', 'Iron Psalm', 'Tidecaller', 'Wandering Jew'];

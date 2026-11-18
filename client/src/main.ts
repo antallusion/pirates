@@ -73,6 +73,7 @@ import { LP, PassagePill } from './ui/passage.ts';
 import { LF } from './ui/ferry.ts'; // owner, 2026-10-30: «Переход» between hub ports
 import { VOYAGE_MUL } from '../../shared/src/data/passage.ts';
 import { AutosailPill, FirstTips, autosailRequest, autosailStopText, routeLabel, tipForMsg, tipForState } from './ui/ease.ts';
+import { drawStep } from './ui/firststep.ts';
 import { claimNear, claimSpot, tapTarget } from './ui/sailto.ts'; // seaux: sail-to on tap
 import { captainMenuOpen, toggleCaptainMenu } from './ui/capmenu.ts';
 import { NAME_BAD } from '../../shared/src/namefilter.ts'; // forum post 66 // seaux: the captain's menu on her portrait
@@ -4263,7 +4264,9 @@ function roamFocus(): { v: RoamView; marked: boolean; far: boolean } | null {
 function openingStack(own: { x: number; y: number }): number | null {
   let best: number | null = null, bd = 1500;
   for (const v of state.roams) {
-    if (v.fight) continue;
+    // (VK 4.1.6.4: never a stack she would lose to — the server's «Плыть» takes her to one her party clearly beats,
+    // goalroute.ts NEUTRAL_EASY)
+    if (v.fight || (v.ratio !== undefined && v.ratio < 1.3)) continue;
     const p = roamNow(state, v);
     const d = dist(p.x, p.y, own.x, own.y);
     if (d < bd && seenOnScreen(p.x, p.y, 20)) [best, bd] = [v.id, d];
@@ -6258,6 +6261,7 @@ function step(t: number): void {
     }
     tmChipFrame(own ? state.self?.maps ?? [] : []);
     autosailPill.draw(state);
+    drawStep(state, !!modal || isleScene.isOpen); // VK 4.1.6.4: the first chapter's step, one line in the top band
     passagePill.draw(state);
     drawSeaOrders($('hud-orders'), state, (m) => net.send(m), () => openHero('book'));
     easeSecond(t, own);

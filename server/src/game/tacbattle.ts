@@ -323,6 +323,10 @@ export interface TacBattle {
    *  out is played for her (with a word), her last man never falls, the raider strikes once she is badly cut, the rounds'
    *  end is hers; and she does not strike her own colours. */
   lesson?: 0 | 1;
+  /** VK 4.1.6.4 (2026-11-18): a newcomer's first battles after the First Watch (firstfights.ts tutored) — her side. Not the
+   *  lesson's sure win: a turn she lets run out is played for her by her crew (as in the lesson, with its word in the
+   *  feed), on the lesson's short clock, instead of a defence that lost her the fight while she looked for what to press. */
+  tutor?: 0 | 1;
   /** Men fallen on each side so far. */
   dead: [number, number];
   /** Officers whose party was broken (dead) or badly cut (hurt). */
@@ -2514,7 +2518,7 @@ function giveTurn(bt: TacBattle, now: number): void {
   const h = s ? capOf(bt, s) : undefined;
   const from = now + play;
   const turn = tacTurnSecs(bt.level);
-  if (s && h && bt.lesson === s.side && !s.own && !h.auto) bt.turnEnds = from + LESSON_TURN; // (no chess clock in the lesson)
+  if (s && h && (bt.lesson === s.side || bt.tutor === s.side) && !s.own && !h.auto) bt.turnEnds = from + LESSON_TURN; // (no chess clock in the lesson, nor in a newcomer's first battles)
   else if (s && h && h.bank >= 0 && !h.auto) {
     bt.turnEnds = from + Math.max(0, Math.min(turn, h.bank));
     bt.clock = { side: s.side, from, ...(s.own ? { slot: s.own } : {}) };
@@ -3478,7 +3482,7 @@ export function stepBattle(bt: TacBattle, now: number, rng: Rng): void {
     if (now < bt.turnEnds) return;
     // QA 2026-10-22: the practice fight — a turn she let run out is played for her by her crew (not a defence that lost
     // the lesson while she looked on), with a word in the feed.
-    if (bt.lesson === s.side && !s.own) {
+    if ((bt.lesson === s.side || bt.tutor === s.side) && !s.own) {
       push(bt, { k: 'timeout', side: s.side, s: s.id, id: 'crew' });
       aiAct(bt, now, rng);
     } else timeOut(bt, now, rng);

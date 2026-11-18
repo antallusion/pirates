@@ -309,6 +309,10 @@ export function npcHostileTo(game: Game, npc: ShipEntity, other: ShipEntity): bo
   // docs/19 E16: the Choir's invaders go for every captain and the sea's ships; the law's patrols go for them.
   const inv = npc.invader || other.invader ? invaderHostile(npc, other) : null;
   if (inv !== null) return inv;
+  // VK 4.1.6.4 (2026-11-18): no ambush in a newcomer's first quarter of an hour — a predator of the sea, or a pirate of
+  // the sea above her own level, leaves her be until she fires on it (the fights sent to her — the lesson's raider, the
+  // campaign's, the idle novice's pirate of her level, firstfights.ts — come all the same).
+  if (other.isPlayer && (role === 'beast' || role === 'pirate') && noviceSpared(game, npc, other)) return false;
   // The beasts of the sea (docs/12 P4): the predators hunt captains; the sea's ships and the beasts leave each other be.
   if (role === 'beast') return other.isPlayer && (beastPredator(npc, other) || (npc.attackers.get(other.id) ?? -999) > game.now - 120);
   // The Harpoon's whalers and the hunters go for the beasts they see (docs/16 P1).
@@ -1976,6 +1980,17 @@ export function abstractEncounters(game: Game): void {
 }
 
 /** A predator of the sea shows hostile to a captain (the orcas spare the White Orca's figure). */
+/** A newcomer in her first quarter of an hour is spared by this ship of the sea (npcHostileTo): a beast, or a pirate above
+ *  her level, of the sea's own (not sent after her), that she has not fired on in the last two minutes. */
+export function noviceSpared(game: Game, npc: ShipEntity, other: ShipEntity): boolean {
+  if (!fresh(game.profileOf(other))) return false;
+  const brain = game.npcs.get(npc.id);
+  if (brain && (brain.practice !== undefined || brain.huntFor !== undefined || brain.huntAccount !== null)) return false;
+  if (npc.softFor === other.id || npc.ownerId !== null) return false;
+  if ((npc.attackers.get(other.id) ?? -999) > game.now - 120) return false;
+  return npc.npcRole === 'beast' || npc.combatLevel > other.combatLevel;
+}
+
 function beastPredator(npc: ShipEntity, other: ShipEntity): boolean {
   const id = beastOfClass(npc.loadout.classId);
   if (!id || !BEASTS[id].predator) return false;

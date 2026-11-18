@@ -473,6 +473,9 @@ function questPlaces(game: Game, s: PlayerSession, id: string): Resolved {
   return { cands: localize(game, home, res.cands, () => (st.type === 'catch' ? localFishing(game, s, home) : ensureQuarry(game, s, qs, true).map((o) => shipCand(o, hint)))) };
 }
 
+/** The opening's stack of creatures (VK 4.1.6.4): one her landing party outweighs this many times (roamRatio). */
+export const NEUTRAL_EASY = 1.3;
+
 /** The steps fought by her men (a boarding, a stack's battle, a lair's beach). */
 export const NEEDS_MEN: ReadonlySet<string> = new Set(['board', 'prize', 'neutral', 'lair']);
 
@@ -538,12 +541,18 @@ function questPlacesAnywhere(game: Game, s: PlayerSession, id: string): Resolved
       return { cands: [portCand(game.portById(QUESTS_BY_ID[id].port) ?? game.world.ports[0])] };
     case 'neutral': {
       // the opening: a standing stack of the sea's creatures on the lane (its `near`), else the nearest standing one
-      const up = (x: number, y: number, r: number): Cand[] => roamersAbout(game, x, y, r).filter((sp) => roamUp(game, sp.id) && roamFighter(game, sp.id) === null).map((sp) => {
+      // (VK 4.1.6.4, 2026-11-18: only a stack her party clearly beats — the lane off Saltmarrow has ⚓2 barracudas a
+      // newcomer's 22 deckhands never beat, and the nearest stack was the mark)
+      const up = (x: number, y: number, r: number, easy: boolean): Cand[] => roamersAbout(game, x, y, r).filter((sp) => roamUp(game, sp.id) && roamFighter(game, sp.id) === null && (!easy || roamRatio(game, s, sp) >= NEUTRAL_EASY)).map((sp) => {
         const w = roamWhere(game, sp);
         return { x: w.x, y: w.y, r: 60, kind: 'place' as const, name: 'stack' };
       });
-      const lane = st.near ? up(st.near.x, st.near.y, st.near.r) : [];
-      return { cands: lane.length ? lane : up(ship.state.x, ship.state.y, 6000) };
+      for (const easy of [true, false]) {
+        const lane = st.near ? up(st.near.x, st.near.y, st.near.r, easy) : [];
+        const cands = lane.length ? lane : up(ship.state.x, ship.state.y, 6000, easy);
+        if (cands.length) return { cands };
+      }
+      return { cands: [] };
     }
     case 'recruit':
       return { cands: ports(game) };

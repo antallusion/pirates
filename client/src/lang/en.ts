@@ -10,6 +10,8 @@ export const EN = {
   'watch.step': 'Step {n} of {of}',
   'watch.skipShort': 'Skip',
   'watch.skipAllShort': 'No lessons',
+  'step.head': 'Chapter {ch} · {k}/{size}',
+  'step.pay': '+{n} silver',
   'watch.skipAsk': 'Skip the lessons? The First Watch will not come back.',
   'watch.skipYes': 'Skip',
   'watch.skipNo': 'Keep learning',

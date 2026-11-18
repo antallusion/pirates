@@ -10,7 +10,7 @@ import { closestOnPolygon } from '../../../shared/src/math.ts';
 import { islandsNear } from '../../../shared/src/world/worldgen.ts';
 import { autosailOf } from './autosail.ts';
 import type { Game } from './Game.ts';
-import { FIRST_FIGHTS, fresh, onboardingProtected } from './onboarding.ts';
+import { FIRST_FIGHTS, fresh, inWatch, onboardingProtected } from './onboarding.ts';
 import { pursuitOf } from './pursuit.ts';
 import type { PlayerSession } from './player.ts';
 import type { ShipEntity } from './ship.ts';
@@ -42,6 +42,19 @@ function softenable(ship: ShipEntity, foe: ShipEntity): boolean {
 export function easyLeft(s: PlayerSession | null | undefined): number {
   const t = s?.profile?.tutorial;
   return t ? Math.max(0, FIRST_FIGHTS - (t.easy ?? FIRST_FIGHTS)) : 0;
+}
+
+/** VK 4.1.6.4 (2026-11-18: «после обучения первый уровень довольно сложный, его не получается пройти с первого раза»):
+ *  a captain made on the ladder (VK 4.2.4) has her battles tutored up to this level — the first chapter of the campaign. */
+export const TUTOR_LEVEL = 4;
+
+/** Her battles are tutored (tacbattle.ts TacBattle.tutor): the quick battle free, and a turn she lets run out played by
+ *  her crew — while her easy fights last, in her first quarter of an hour, and on the ladder up to TUTOR_LEVEL. Not in
+ *  the First Watch (its fight is the lesson's own), never an old hand's. */
+export function tutored(s: PlayerSession | null | undefined): boolean {
+  const p = s?.profile;
+  if (!p?.tutorial || inWatch(p)) return false;
+  return easyLeft(s) > 0 || fresh(p) || (!!p.tutorial.ladder && p.level <= TUTOR_LEVEL);
 }
 
 /** A fight begins between a captain's ship and one of the sea's (either order): within her first three, the foe is

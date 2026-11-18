@@ -193,7 +193,9 @@ export function buildActs(f: ActFacts): Act[] {
   if (f.goalSail && !f.docked) {
     const a: Act = { id: 'goal_sail', icon: 'stat_sails', label: L('a.goalSail'), ...(f.goalSail.name ? { sub: f.goalSail.name } : {}), title: L('a.goalSailTitle') };
     // the run broken off by a prize: her «Плыть» is the gold one, unless a fight's own button is up
-    if (f.goalSail.resume && !FIGHT_FIRST.has(out[0]?.id as ActId)) out.unshift(a);
+    // (VK 4.1.6.4, 2026-11-18: and before «Ремонт» — after the opening's fights the gold button was the carpenters' for
+    // half a minute, «Плыть» to the next step last, and the newcomer's robot stood there wondering what to do)
+    if ((f.goalSail.resume || out[0]?.id === 'repair') && !FIGHT_FIRST.has(out[0]?.id as ActId)) out.unshift(a);
     else out.push(a);
   }
   return out;

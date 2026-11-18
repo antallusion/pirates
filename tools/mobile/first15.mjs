@@ -162,7 +162,7 @@ while (Date.now() - t0 < MIN * 60_000) {
     } else did = 'battle-wait';
   } else if (v.tac && v.tac.over) {
     // The end: its one button.
-    if (await tapSel('.tb-pad.over button, .tb-banner:not(.hidden) button, .tb-end button, [data-done]', 'battle')) did = 'battle-end';
+    if (await tapSel('[data-endbtn], .tb-pad.over button, .tb-banner:not(.hidden) button, .tb-end button, [data-done]', 'battle')) did = 'battle-end';
     else did = 'battle-end-wait';
   } else if (v.finger) {
     if (/stick/.test(v.finger.id)) {
@@ -186,7 +186,7 @@ while (Date.now() - t0 < MIN * 60_000) {
     else if (await tapSel('#modal-panel .btn-primary, #modal-panel .k-btn--primary', 'other')) did = `modal:${v.modal}`;
     else if (await tapSel('#modal-panel [data-close], #modal-panel .modal-x, #modal-close', 'other')) did = `close:${v.modal}`;
     else { obvious = false; did = `modal-stuck:${v.modal}`; }
-  } else if (v.act && ['attack', 'board', 'dock', 'homeport', 'harbour', 'look', 'roam'].includes(v.act)) {
+  } else if (v.act && ['attack', 'board', 'dock', 'homeport', 'harbour', 'look', 'roam', 'goal_sail'].includes(v.act)) {
     await tapSel('#tc-act', 'act');
     did = `act:${v.act}`;
   } else if (v.target && v.fire && !v.pursuit) {

@@ -136,8 +136,14 @@ export const TAB_INSIDE: Record<string, string[]> = {
  *  newcomer's run waited 20 s on a deck with nothing lit); then the end's own button. */
 export const WATCH_BATTLE = ['#board-tac [data-quicknow]', '#board-tac .tb-quicknow', '#board-tac .tb-banner [data-endbtn]'];
 
+/** The watch's battle over, «В порт» its next step: the end's own button first. */
+export const WATCH_END = ['#board-tac .tb-banner [data-endbtn]', '#board-tac [data-endbtn]'];
+
 function targetsOf(f: PointerFacts): string[] {
   if (f.battle && (f.stage === 'board' || f.stage === 'attack' || f.stage === 'fire')) return WATCH_BATTLE;
+  // (VK 4.1.6.4, 2026-11-18: the watch's battle won, its step is «В порт» at once while «Победа!» and its «Дальше» are still
+  // on the screen — no finger anywhere, the newcomer's robot stood 115 s on it, twice in three runs: the end's button)
+  if (f.battle && f.stage === 'port') return WATCH_END;
   if (!f.stage || f.battle) return [];
   if (f.stage.startsWith('c:')) return openingTargets(f, f.stage.slice(2));
   // owner, 2026-10-28 (islefirst.ts): the island's first steps — the building's «Построить» on its card (the island
@@ -213,7 +219,8 @@ function targetsOf(f: PointerFacts): string[] {
       if (f.docked) return [];
       // Her prize's reckoning first (the gold «выкуп»: silver, and she sails on), then «В порт».
       if (f.helmsman) return ['[data-fate="ransom"]', '[data-fate="sink"]'];
-      return ['[data-fate="ransom"]', '[data-fate="sink"]', '#tc-act[data-act="dock"]', '#tc-act[data-act="homeport"]', '.act-btn.act-dock', '.act-btn.act-homeport'];
+      // (the battle's «Победа!» still up — its «Дальше» before «В порт» under it: VK 4.1.6.4, WATCH_END)
+      return ['[data-fate="ransom"]', '[data-fate="sink"]', ...WATCH_END, '#tc-act[data-act="dock"]', '#tc-act[data-act="homeport"]', '.act-btn.act-dock', '.act-btn.act-homeport'];
   }
   return [];
 }

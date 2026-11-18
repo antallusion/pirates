@@ -252,7 +252,7 @@ test('the opening’s fights never begin with an empty locker; the guns empty on
   assert.match((await import('node:fs')).readFileSync('client/src/ui/port.ts', 'utf8'), /data: \{ act: 'supplies' \}/, '«Припасы» is the market’s button the finger names');
 });
 
-test('«Твари дюн»: a lair of her band, clear of the pirate fortresses; Jory Penn’s six signed on win it, a bare crew may lose', async () => {
+test('«Твари дюн»: a lair of her band, clear of the pirate fortresses; Jory Penn’s six signed on win it, a bare crew too (VK 4.1.6.4)', async () => {
   // the first-hour run of 2026-10-24: at the fourth level the step's lair was Widowwick Isle's iguanas, on the island of a
   // ⚓4 pirate fortress — «Высадка» rowed to its camp and the battery drove the boats off, twice. docs/31: a bare captain
   // may fail, a sensibly built one should win about 75–90 % — measured on the real battle (tactical.ts sideOf, tacbattle.ts)
@@ -310,7 +310,8 @@ test('«Твари дюн»: a lair of her band, clear of the pirate fortresses;
   const bare = odds([{ u: 'deckhand', n: 20 }]);
   assert.ok(built >= 0.75, `six marines signed on: wins ${built}`);
   assert.ok(hands >= 0.75, `six deckhands signed on: wins ${hands}`);
-  assert.ok(bare < 0.75, `none signed on: may lose (${bare})`);
+  // (VK 4.1.6.4, 2026-11-18: the first chapter is won at the first try — a bare crew too: campaign.ts noviceLairOdds)
+  assert.ok(bare >= 0.75, `none signed on: wins too (${bare})`);
 });
 
 test('«Потопите N»: the step’s foes put out within a minute’s sail of her, the next one six seconds after one goes down', async () => {
