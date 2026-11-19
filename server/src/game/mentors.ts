@@ -396,6 +396,7 @@ export class Mentors {
       const i = Math.max(0, MENTORS.indexOf(m.def));
       const o = outfitCaptain(g, s, mentorAnchor(p.level), MENTOR_LADDERS[i]);
       p.gold = Math.max(p.gold, 20_000 * Math.max(1, rung)); // her purse for the yard and the stores of a bigger hull
+      ship.cargo.provisions = Math.max(ship.cargo.provisions ?? 0, Math.ceil(ship.crew / 10) * 4); // the stores for her new men
       g.db.setKv('mentors:outfit', { ...outfit, [m.def.name]: rung });
       g.pushSelf(s, true);
       console.log(`[mentors] ${m.def.name} L${p.level}: ${o.cls} ⚓${ship.shipLevel}, ${o.gun}, crew ${ship.crew}, kit of ⚓${o.anchor}`);

@@ -255,6 +255,7 @@ test('mentors grow in might with their level (owner, 2026-11-19: «каждые 
     assert.ok(Object.keys(p.captainGear).length >= 3, `${m.def.name}: the captain is kitted (${Object.keys(p.captainGear).join(',')})`);
     assert.ok(Object.keys(ship.loadout.gear ?? {}).length >= 3, `${m.def.name}: the ship is kitted`);
     assert.ok(p.gold >= 20_000, `${m.def.name}: a purse for the yard`);
+    assert.ok((ship.cargo.provisions ?? 0) >= Math.ceil(ship.crew / 10) * 4, `${m.def.name}: stores for the crew`);
   }
   // once per step: the kit is not handed again within the same ten levels
   const hull = silver.s.ship!.loadout;
