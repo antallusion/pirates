@@ -75,7 +75,7 @@ import type { BerthCall } from './shipbuilding.ts';
 import type { Ashore, Berth, BuildOrder } from './shipbuilding.ts';
 import type { FigureheadId, Plan } from '../../../shared/src/data/shipbuild.ts';
 import type { Oath, QuestLog } from './quests.ts';
-import { clampLevel, initialLevel, shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
+import { clampLevel, levelRange, shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
 import { CLEAN_SLATE_CD, FREE_RESPEC_LEVEL, cleanSlateCost, loadoutSlots } from './progression.ts';
 import type { ServiceRec } from './marque.ts';
 import type { SmuggleWhy } from '../../../shared/src/data/smuggler.ts'; // «Услуга контрабандиста» (forum post 92)
@@ -878,8 +878,11 @@ export function sanitizeProfile(raw: Profile): Profile {
   p.friends = (p.friends ?? []).filter((f) => f && typeof f.id === 'number' && typeof f.name === 'string').slice(0, 50);
   p.ignored = (p.ignored ?? []).filter((f) => f && typeof f.id === 'number' && typeof f.name === 'string').slice(0, 50);
   sanitizeShipbuilding(p);
-  // Ship levels (canon D12): a ship from before them comes at her class's first level, one more if nearly all fitted.
-  for (const l of [p.loadout, ...(p.berths ?? []).map((b) => b.loadout)]) if (l) l.level = l.level ? clampLevel(l.classId, l.level) : initialLevel(l.classId, l.modules ?? {});
+  // Ship levels (canon D12): a hull with no level written is at her class's first. (Was: «one more if nearly all fitted»,
+  // for the saves from before the levels, 2026-09-28 — but a hull bought at a yard comes with no level written, so one
+  // fitted out at once took ⚓+1 free on the next load, past the refit's silver, goods and heart of the storm: forum,
+  // Эдуард's Great Xebec ⚓10, 2026-11-18.)
+  for (const l of [p.loadout, ...(p.berths ?? []).map((b) => b.loadout)]) if (l) l.level = clampLevel(l.classId, l.level ?? levelRange(l.classId)[0]);
   p.refit ??= null;
   // The army (docs/17 H1): a save from before the stacks takes the ladder's spread of her level.
   p.army = armyFromSave(p.army, p.crew, shipLevelOf(p.loadout), armySlots(SHIP_CLASSES[p.loadout.classId]?.tier ?? 1));

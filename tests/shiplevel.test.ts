@@ -166,7 +166,7 @@ test('the sea’s ships: in the band of their waters, sized to the captain they 
   for (const r of Object.values(REGIONS)) assert.ok(watersBand(r.safety)[0] >= 1);
 });
 
-test('ships from before the levels come aboard at their class’s first, one more when nearly all fitted', () => {
+test('a hull with no level written comes aboard at her class’s first — fitted out or not, no free refit (forum, Эдуард’s Great Xebec ⚓10, 2026-11-18)', () => {
   assert.equal(initialLevel('brig', {}), 5);
   assert.equal(initialLevel('brig', { hull_plating: 3, sail_plan: 3, rudder: 2 }), 6);
   const { game } = makeGame();
@@ -174,7 +174,12 @@ test('ships from before the levels come aboard at their class’s first, one mor
   const p = game.sessionByName('Old Salt')!.profile!;
   p.loadout = { classId: 'frigate', name: 'Old', guns: { port: 'heavy_18', starboard: 'heavy_18' }, modules: { hull_plating: 3, sail_plan: 3, hold_expansion: 2 } };
   sanitizeProfile(p);
-  assert.equal(p.loadout.level, 7);
+  assert.equal(p.loadout.level, 6);
+  p.loadout = { classId: 'great_xebec', name: 'New', guns: { port: 'heavy_18', starboard: 'heavy_18' }, modules: { hull_plating: 3, sail_plan: 3, rudder: 2, hold_expansion: 2, crew_quarters: 2 } };
+  sanitizeProfile(p);
+  assert.equal(p.loadout.level, 9, 'a Great Xebec bought and fitted out at once is still ⚓9 after a restart');
+  sanitizeProfile(p);
+  assert.equal(p.loadout.level, 9);
 });
 
 test('the ladder’s refusal reads in Russian', () => {
