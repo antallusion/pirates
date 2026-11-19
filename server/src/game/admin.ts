@@ -103,6 +103,7 @@ import { startEncounter } from './director.ts';
 import { CAPTAIN_SLOTS, ITEM_BASES, makeItem } from '../../../shared/src/data/items.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
 import { referenceKit } from '../../../shared/src/data/seabalance.ts';
+import { outfitCaptain } from './outfit.ts';
 import { shipBandOf } from '../../../shared/src/data/xpcurve.ts';
 import { canLearn } from '../../../shared/src/data/talents.ts';
 import { clampLevel } from '../../../shared/src/data/shiplevel.ts';
@@ -1652,24 +1653,7 @@ export function runAdmin(game: Game, s: PlayerSession, line: string): string | n
       if (sub === 'build') {
         // A proper captain of her level to try the abilities on (docs/25 QA): the warship of her ⚓, the heaviest long gun
         // her tier carries, the reference full kit of her ⚓, a gunnery-first talent build with her abilities' talents.
-        const a = Math.max(1, Math.min(10, shipBandOf(p.level)));
-        const cls = (['sloop', 'sloop', 'sloop', 'schooner', 'brigantine', 'brig', 'brig', 'frigate', 'frigate', 'man_o_war', 'man_o_war'] as ShipClassId[])[a];
-        ship.loadout.classId = cls;
-        ship.loadout.level = clampLevel(cls, a);
-        const tier = SHIP_CLASSES[cls].tier;
-        const gun = tier >= 4 ? 'demi_cannon_32' : tier >= 3 ? 'heavy_18' : tier >= 2 ? 'medium_12' : 'light_6';
-        ship.loadout.guns = { port: gun, starboard: gun };
-        const shipGear: Record<string, Item> = {};
-        const captainGear: Record<string, Item> = {};
-        for (const it of referenceKit(a)) {
-          const sl = ITEM_BASES[it.base].slot;
-          (CAPTAIN_SLOTS as readonly string[]).includes(sl) ? (captainGear[sl] = { ...it, uid: p.itemSeq++ }) : (shipGear[sl] = { ...it, uid: p.itemSeq++ });
-        }
-        // What she wore goes to her locker, not overboard (playthrough C: her artifacts and relic parts were lost).
-        for (const it of [...Object.values(p.captainGear ?? {}), ...Object.entries(ship.loadout.gear ?? {}).filter(([sl]) => sl !== 'tackle').map(([, it]) => it)]) if (it) p.stash.push(it as Item);
-        ship.loadout.gear = { ...(ship.loadout.gear?.tackle ? { tackle: ship.loadout.gear.tackle } : {}), ...shipGear };
-        p.captainGear = captainGear as never;
-        ship.worn = Object.values(captainGear);
+        const { cls, gun } = outfitCaptain(game, s, shipBandOf(p.level));
         const order = [...captainSkills(p.captain).flatMap((k) => (k.node ? [k.node.talent, k.node.talent, k.node.talent] : [])), ...KIT_BUILD];
         for (const k of Object.keys(p.talents)) delete p.talents[k];
         let pts = Math.max(0, p.level - 1);

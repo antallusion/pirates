@@ -48,6 +48,9 @@ import type { QuestStep } from '../../../shared/src/data/quests.ts';
 import { actHere, questAct } from '../../../shared/src/data/questact.ts';
 import { BEAST_IDS, BEASTS } from '../../../shared/src/data/beasts.ts';
 import { hullsFor } from '../../../shared/src/data/shiplevel.ts';
+import type { ShipClassId } from '../../../shared/src/data/ships.ts';
+import { shipBandOf } from '../../../shared/src/data/xpcurve.ts';
+import { WAR_LADDER, outfitCaptain } from './outfit.ts';
 
 export interface MentorDef {
   /** Owner, 2026-11-13 (later the same day): «давай уберем приставку "Наставник" вообще, пусть будут имена просто». */
@@ -86,6 +89,18 @@ export const MENTORS: MentorDef[] = [
 
 /** The talent trees each mentor grows in, the first first (Сильвер boards, Мэй sails and trades, Гром fires). */
 const MENTOR_TREES: readonly string[][] = [['boarding', 'gunnery', 'survival'], ['navigation', 'trade', 'exploration'], ['gunnery', 'command', 'boarding']];
+
+/** Their ships by ⚓ (index = ⚓; owner, 2026-11-19: «каждые 10 уровней новый корабль, новая команда… экипированы их
+ *  командиры»): Сильвер the boarder's warships, Мэй the quick hulls of a navigator, Гром the heavy guns. */
+const MENTOR_LADDERS: readonly (readonly ShipClassId[])[] = [
+  WAR_LADDER,
+  ['cutter', 'cutter', 'cutter', 'xebec', 'brigantine', 'corvette', 'corvette', 'frigate', 'frigate', 'man_o_war', 'man_o_war'],
+  ['sloop', 'sloop', 'sloop', 'xebec', 'brigantine', 'bomb_ketch', 'bomb_ketch', 'frigate', 'frigate', 'man_o_war', 'man_o_war'],
+];
+/** A new ship, crew and kit every so many captain levels. */
+export const OUTFIT_EVERY = 10;
+/** The ⚓ a mentor sails at her level: that of the last round step of OUTFIT_EVERY levels. */
+export const mentorAnchor = (level: number): number => shipBandOf(Math.max(1, Math.floor(level / OUTFIT_EVERY) * OUTFIT_EVERY));
 
 export const MENTOR_GUILD = { name: 'Школа наставников', tag: 'ШН' } as const;
 const MODEL = 'claude-haiku-5-5';
@@ -373,6 +388,17 @@ export class Mentors {
       p.gold += 100_000;
       g.db.setKv('mentors:purse1117', [...purse, m.def.name]);
       console.log(`[mentors] ${m.def.name}: +100000 silver (${p.gold})`);
+    }
+    // every OUTFIT_EVERY levels a new ship of her ⚓, her full crew and the kit of her ⚓ (out of battle; the step kept)
+    const rung = Math.floor(p.level / OUTFIT_EVERY);
+    const outfit = g.db.getKv<Record<string, number>>('mentors:outfit') ?? {};
+    if ((outfit[m.def.name] ?? -1) < rung && !inBattle(g, ship)) {
+      const i = Math.max(0, MENTORS.indexOf(m.def));
+      const o = outfitCaptain(g, s, mentorAnchor(p.level), MENTOR_LADDERS[i]);
+      p.gold = Math.max(p.gold, 20_000 * Math.max(1, rung)); // her purse for the yard and the stores of a bigger hull
+      g.db.setKv('mentors:outfit', { ...outfit, [m.def.name]: rung });
+      g.pushSelf(s, true);
+      console.log(`[mentors] ${m.def.name} L${p.level}: ${o.cls} ⚓${ship.shipLevel}, ${o.gun}, crew ${ship.crew}, kit of ⚓${o.anchor}`);
     }
     const t = g.now;
     // the auto-battle's scrolls (a captain buys them for doubloons): the game's own helpers are kept in them

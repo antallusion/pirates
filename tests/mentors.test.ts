@@ -224,3 +224,44 @@ test('mentors never flood the chat (owner, 2026-11-16: «спамят и пря�
   steps(game, 5);
   assert.equal(own(), 3, 'the answer goes');
 });
+
+test('mentors grow in might with their level (owner, 2026-11-19: «каждые 10 уровней новый корабль, новая команда… экипированы их командиры»)', () => {
+  const { game } = makeGame();
+  const { http } = stub(() => 'ok');
+  const mt = new Mentors(game, '', http);
+  mt.start(0);
+  mt.nextChat = Infinity;
+  steps(game, 5);
+  mt.tick();
+  const [silver, may, grom] = mt.list;
+  for (const m of mt.list) assert.equal(m.s.ship!.shipLevel, 1, `${m.def.name} starts at ⚓1`);
+  // a few levels more change nothing; ten levels a new ship, her crew full, her captain in the kit of her ⚓
+  silver.s.profile!.level = 9;
+  mt.tick();
+  assert.equal(silver.s.ship!.shipLevel, 1);
+  silver.s.profile!.level = 31;
+  may.s.profile!.level = 31;
+  grom.s.profile!.level = 24;
+  for (const m of mt.list) m.s.profile!.gold = 0;
+  mt.tick();
+  assert.equal(silver.s.ship!.loadout.classId, 'brig');
+  assert.equal(silver.s.ship!.shipLevel, 6);
+  assert.equal(may.s.ship!.loadout.classId, 'corvette');
+  assert.equal(grom.s.ship!.loadout.classId, 'bomb_ketch');
+  assert.equal(grom.s.ship!.shipLevel, 5);
+  for (const m of mt.list) {
+    const ship = m.s.ship!, p = m.s.profile!;
+    assert.equal(ship.crew, ship.stats.crewMax, `${m.def.name}: a full crew`);
+    assert.ok(Object.keys(p.captainGear).length >= 3, `${m.def.name}: the captain is kitted (${Object.keys(p.captainGear).join(',')})`);
+    assert.ok(Object.keys(ship.loadout.gear ?? {}).length >= 3, `${m.def.name}: the ship is kitted`);
+    assert.ok(p.gold >= 20_000, `${m.def.name}: a purse for the yard`);
+  }
+  // once per step: the kit is not handed again within the same ten levels
+  const hull = silver.s.ship!.loadout;
+  silver.s.profile!.level = 39;
+  mt.tick();
+  assert.equal(silver.s.ship!.loadout, hull);
+  silver.s.profile!.level = 40;
+  mt.tick();
+  assert.equal(silver.s.ship!.loadout.classId, 'frigate');
+});
