@@ -12,6 +12,7 @@ import { lettersSince } from '../server/src/game/post.ts';
 import { REPRIMAND_MERIT, buyWare, enlist, flyLivery, resign, serviceKill, serviceOnDock, servicePortView, stepService, sunsetAfter, takeOrder } from '../server/src/game/marque.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import { isLand } from '../shared/src/world/worldgen.ts';
+import { campaignNavy } from '../server/src/game/npc.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { serverText } from '../client/src/lang/server.ts';
 import { join, makeGame } from './helpers.ts';
@@ -231,4 +232,22 @@ test('a ship of her own flag that fired first: self-defence, no reprimand; a pri
   serviceKill(game, s, foe, 'sunk', true);
   assert.equal(p.gold, g1, 'no second bounty');
   assert.equal(p.service!.merit, m1, 'no second merit');
+});
+
+test('a chapter’s patrols fly the League’s flag against a captain of the Crown, and a foe sent after her is never her own flag (forum 118)', () => {
+  const { game } = makeGame();
+  const s = officer(game, 'Loyal Lou');
+  const p = s.profile!;
+  p.reputation.crown = 40;
+  const port = game.portById('gravesend')!;
+  assert.equal(campaignNavy(game, s.accountId), 'crown');
+  assert.equal(enlist(game, s, port), null);
+  assert.equal(campaignNavy(game, s.accountId), 'league');
+  p.service!.merit = 100;
+  const sent = game.spawnNpcShip('patrol', 'brig', 'crown', port.x + 3000, port.y, 0);
+  game.npcs.get(sent.id)!.huntAccount = s.accountId;
+  serviceKill(game, s, sent, 'sunk');
+  assert.ok(p.service);
+  assert.equal(p.service!.merit, 100);
+  assert.equal(p.service!.reprimandAt, undefined);
 });

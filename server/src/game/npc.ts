@@ -1823,6 +1823,12 @@ export function spawnCargoAmbush(game: Game, prey: ShipEntity, accountId: number
  *  put out a couple of kilometres off and set on her, for a quarter of an hour. The Crown's quiet waters have no pirates
  *  of their own (traffic.ts MIX), so the campaign's boardings of the Black Coast would have nothing to board. Null when
  *  no open water was found. */
+/** The flag a chapter's patrols and hunters fly against her: the Crown's, or the League's for a captain in the Crown's
+ *  own service (forum 118, Эдуард: a Commodore of the Crown sent to sink the Crown's patrols lost his letter for it). */
+export function campaignNavy(game: Game, accountId: number): 'crown' | 'league' {
+  return game.sessionByAccount(accountId)?.profile?.service?.id === 'crown' ? 'league' : 'crown';
+}
+
 export function spawnCampaignFoe(game: Game, prey: ShipEntity, accountId: number, level: number, kind: 'pirate' | 'ghost' | 'hunter' | 'patrol', at?: { x: number; y: number; r: number }, within?: { x: number; y: number; r: number }): ShipEntity | null {
   // in the location's waters (docs/36: its fights are fought there), else a couple of kilometres off her — and out of every
   // captain's sight (forum post 55, questspot.ts): it sails in over the horizon, never pops up on her screen
@@ -1835,7 +1841,7 @@ export function spawnCampaignFoe(game: Game, prey: ShipEntity, accountId: number
     // (the hunters on her trail and the Crown's patrols of a chapter's story are sent after her as its pirates are: the sea's
     // own were of their waters' level, under the step's ⚓, and the step could not be done — QA 2026-10-23)
     const ship = kind === 'ghost' ? game.spawnNpcShip('ghost', game.rng.pick(hullsFor('pirate', lv)), 'choir', x, y, h)
-      : kind === 'hunter' || kind === 'patrol' ? game.spawnNpcShip(kind, game.rng.pick(hullsFor(kind, lv)), 'crown', x, y, h)
+      : kind === 'hunter' || kind === 'patrol' ? game.spawnNpcShip(kind, game.rng.pick(hullsFor(kind, lv)), campaignNavy(game, accountId), x, y, h)
       : game.spawnNpcShip('pirate', game.rng.pick(hullsFor('pirate', lv)), 'confederacy', x, y, h);
     game.setNpcLevel(ship, lv);
     const brain = game.npcs.get(ship.id);

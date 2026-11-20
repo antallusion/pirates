@@ -189,6 +189,8 @@ export const REPRIMAND_MERIT = 60;
 function selfDefence(game: Game, s: PlayerSession, victim: ShipEntity): boolean {
   const ship = s.ship;
   if (!ship) return false;
+  // (a ship the campaign or a band sent after her is her foe whatever its flag: forum 118)
+  if (game.npcs.get(victim.id)?.huntAccount === s.accountId) return true;
   const since = game.now - 300;
   if ((ship.attackers.get(victim.id) ?? -Infinity) > since) return true;
   for (const o of game.ships.values()) if (o.ownerId === ship.id && (o.attackers.get(victim.id) ?? -Infinity) > since) return true;
