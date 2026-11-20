@@ -1964,6 +1964,7 @@ let lastGfxKey = '';
  *  (Here, before the first applySettings: declared by the loop below they were not yet alive and the page never booted.) */
 let fpsCap = 0;
 let lastDrawn = 0;
+let capMark = 0;
 /** The sea's safety net (forum 118, render/seaguard.ts): the costly extras eased while the frames at sea run long. */
 const seaGuard = new SeaGuard();
 const GUARD_L = dict(GUARD_EN, GUARD_RU);
@@ -6174,7 +6175,9 @@ let frameErrors = 0;
 function frame(t: number): void {
   // The next frame is booked first: one bad frame must never stop the game (it did — the sea froze after casting off).
   requestAnimationFrame(frame);
-  if (fpsCap > 0 && t - lastDrawn < 1000 / fpsCap - 2) return; // (a frame early: the next screen refresh)
+  if (fpsCap > 0 && t - capMark < 1000 / fpsCap - 2) return; // (a frame early: the next screen refresh)
+  // (the cap's mark steps by its own interval, not to the refresh it fell on: on a 144 Hz screen a cap of 60 gave 48)
+  capMark = fpsCap > 0 && t - capMark < 2000 / fpsCap ? capMark + 1000 / fpsCap : t;
   const drawnGap = t - lastDrawn;
   lastDrawn = t;
   guardFrame(drawnGap, t);
