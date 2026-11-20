@@ -657,6 +657,8 @@ export function visit(game: Game, s: PlayerSession, id: string, choice?: string)
       const extra = advHooks.chestReward?.(game, s, o) ?? null;
       if (extra && choice === extra.id) line = extra.take();
       else if (choice === 'xp') {
+        // (the week's chest is never spent on nothing: waters below her level teach none, forum 121)
+        if (pay.xp <= 0) return 'These waters teach you nothing: take the silver.';
         game.grantXp(s, pay.xp, null);
         line = `The chest’s logbook teaches you ${pay.xp} experience.`;
       } else if (choice === 'silver') {

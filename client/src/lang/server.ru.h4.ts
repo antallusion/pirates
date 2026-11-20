@@ -49,6 +49,7 @@ export const SERVER_RU_H4: Record<string, string> = {
   'Nothing new here yet.': 'Пока здесь ничего нового.',
   'No berth aboard for another officer.': 'На борту нет каюты для ещё одного офицера.',
   'Silver or experience?': 'Серебро или опыт?',
+  'These waters teach you nothing: take the silver.': 'Эти воды ничему вас не научат: возьмите серебро.',
   'The chest’s logbook teaches you {0} experience.': 'Судовой журнал из сундука даёт вам {0} опыта.',
   'From the chest: {0} silver.': 'Из сундука: {0} серебра.',
   'The bell’s note stays with you.': 'Звук колокола остаётся с вами.',

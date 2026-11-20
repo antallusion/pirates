@@ -184,12 +184,14 @@ function statusLine(o: ObjCard): string {
 
 function objBody(o: ObjCard): string {
   const ok = o.ready && !o.why;
-  const btn = (label: string, choice = '', primary = true) => `<button class="btn btn-small${primary ? ' btn-primary' : ''}" data-av="${o.id}"${choice ? ` data-choice="${choice}"` : ''}${ok ? '' : ' disabled'}>${label}</button>`;
+  const btn = (label: string, choice = '', primary = true, can = true) => `<button class="btn btn-small${primary ? ' btn-primary' : ''}" data-av="${o.id}"${choice ? ` data-choice="${choice}"` : ''}${ok && can ? '' : ' disabled'}>${label}</button>`;
   switch (o.kind) {
     case 'chest': {
       const c = o.chest!;
       const extra = c.extra ? btn(esc(c.extra.label[ru()]), c.extra.id, false) : '';
-      return `<div class="ac-line muted">${esc(L('chest.pick'))}</div><div class="ac-acts">${btn(`${esc(L('chest.silver'))} ${money(c.silver)}`, 'silver')}${btn(`${esc(L('chest.xp'))} ${xpBadge(c.xp)}`, 'xp', false)}${extra}</div>`;
+      // (forum 121: «Опыт 0» read as a bug: waters below her level teach nothing, and the card says so)
+      const noXp = c.xp <= 0 ? `<div class="ac-line muted">${esc(L('chest.noXp'))}</div>` : '';
+      return `<div class="ac-line muted">${esc(L('chest.pick'))}</div><div class="ac-acts">${btn(`${esc(L('chest.silver'))} ${money(c.silver)}`, 'silver')}${btn(`${esc(L('chest.xp'))} ${xpBadge(c.xp)}`, 'xp', false, c.xp > 0)}${extra}</div>${noXp}`;
     }
     case 'altar':
       return `<div class="ac-line">${icon('xp', '✦', 'ico-sm')}${esc(o.altar!.prim ? L('altar.prim', { p: PRIM_NAMES[o.altar!.prim][ru()] }) : o.altar!.point ? L('altar.point') : L('altar.xp', { n: fmt(o.altar!.xp) }))}</div><div class="ac-acts">${btn(esc(L('altar.btn')))}</div>`;

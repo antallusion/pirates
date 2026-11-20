@@ -187,6 +187,8 @@ body.simple #hud #touch > #tc-home .tc-home-l { position: absolute; left: 50%; t
   color: var(--bone, #e6dccb); text-shadow: 0 1px 2px #000, 0 0 4px #000; pointer-events: none; }
 body.simple #hud #touch > :is(#tc-menu, #tc-news) .k-badge { top: -3px; right: auto; left: -8px; }
 body.simple:not(.touch) #hud #touch > #tc-menu > .kc-b { left: -6px; top: -6px; bottom: auto; transform: none; }
+/* (forum 120: on the desk the «Esc» chip sits on the menu's top-left and hid the letters' count: the count goes right) */
+body.simple:not(.touch) #hud #touch > #tc-menu .k-badge { left: auto; right: -8px; z-index: 3; }
 /* the left row */
 body.simple #hud #touch > :is(#tc-isle, #tc-offer, #tc-daily) { right: auto; top: var(--lr-top); left: calc(var(--sa-l) + 8px + var(--lr-x, 0) * (var(--tr-b) + var(--tr-g))); }
 body.simple #hud #touch > #tc-isle { --lr-x: var(--tr-c); }

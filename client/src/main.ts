@@ -502,8 +502,15 @@ function shipAtScreen(px: number, py: number): number | null {
     const cls = SHIP_CLASSES[s.info.classId];
     const d = dist(m.x, m.y, s.cur.x, s.cur.y);
     const reach = Math.max(cls.length * 0.6, 26 / Math.max(0.2, renderer.zoom));
-    if (d < reach && d < bd) {
-      bd = d;
+    if (d >= reach) continue;
+    // (forum 119: in a crowd the click took the ship whose middle was nearest, often a small one beside the hull clicked:
+    // the hull under the point comes first, then the nearest by her own size)
+    const dx = m.x - s.cur.x, dy = m.y - s.cur.y;
+    const along = dx * Math.sin(s.cur.h) - dy * Math.cos(s.cur.h), across = dx * Math.cos(s.cur.h) + dy * Math.sin(s.cur.h);
+    const onHull = (along / (cls.length * 0.5)) ** 2 + (across / (cls.beam * 0.6)) ** 2 <= 1;
+    const score = d / reach - (onHull ? 1 : 0);
+    if (score < bd) {
+      bd = score;
       best = s.id;
     }
   }
