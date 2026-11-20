@@ -115,7 +115,7 @@ test('the button: «Причалить к плавучему дому» within r
   assert.ok(fight.some((a) => a.id === 'moor_way'));
 });
 
-function seaCaptain(game: Game, name: string, gold = 1_000_000): { s: PlayerSession; w: Waystation } {
+function seaCaptain(game: Game, name: string, gold = 1_000_000, kind: Waystation['kind'] = 'chapel'): { s: PlayerSession; w: Waystation } {
   join(game, name, 'admiral');
   const s = game.sessionByName(name)!;
   onHull(game, s.ship!, 'brig', 5);
@@ -123,7 +123,8 @@ function seaCaptain(game: Game, name: string, gold = 1_000_000): { s: PlayerSess
   s.profile!.level = 30;
   s.ship!.docked = null;
   // A waystation of the contested seas, far from the first roads.
-  const w = waystations(game.world).list.find((x) => x.region === 'gravewater' && x.kind === 'market')!;
+  const all = waystations(game.world).list;
+  const w = (all.find((x) => x.region === 'gravewater' && x.kind === kind) ?? all.find((x) => x.kind === kind))!;
   at(game, s, w.x + 60, w.y);
   return { s, w };
 }
@@ -436,4 +437,18 @@ test('a fight ashore\'s end: her fallen on the record, the quick «Воскре�
     assert.ok(s.ship!.crew > before, 'raised on the result');
   }
   closeFight(game, s);
+});
+
+test('the fallen are raised in a hulk chapel, not at a raft tavern or a floating market (forum post 111)', () => {
+  for (const kind of ['tavern', 'market'] as const) {
+    const { game } = makeGame();
+    const { s, w } = seaCaptain(game, `Inn ${kind}`, 1_000_000, kind);
+    at(game, s, w.x + WAY_MOOR_RANGE - 20, w.y);
+    assert.equal(moor(game, s, w.id), null);
+    assert.equal(mooredAt(game, s)?.kind, kind);
+    const near = waystations(game.world).list.some((x) => x.kind === 'chapel' && Math.hypot(x.x - w.x, x.y - w.y) <= 2000);
+    const port = game.nearestPort(s.ship!.state.x, s.ship!.state.y);
+    const portNear = !!port && Math.hypot(port.x - s.ship!.state.x, port.y - s.ship!.state.y) <= 2000;
+    assert.equal(resPlace(game, s), near ? 'field' : portNear ? 'field' : 'none', `no raising at a ${kind}`);
+  }
 });

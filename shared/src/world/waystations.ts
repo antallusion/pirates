@@ -156,8 +156,8 @@ export function waystations(world: World): WayIndex {
   return out;
 }
 
-/** The waystation nearest (x, y) within `range` metres, or null. */
-export function wayNear(world: World, x: number, y: number, range: number): Waystation | null {
+/** The waystation nearest (x, y) within `range` metres (of one kind, if given), or null. */
+export function wayNear(world: World, x: number, y: number, range: number, kind?: Waystation['kind']): Waystation | null {
   const idx = waystations(world);
   let best: Waystation | null = null, bd = range;
   const [c0x, c0y] = chunkOf(x - range, y - range), [c1x, c1y] = chunkOf(x + range, y + range);
@@ -165,6 +165,7 @@ export function wayNear(world: World, x: number, y: number, range: number): Ways
     for (let cx = c0x; cx <= c1x; cx++) {
       for (const id of idx.chunks.get(chunkKey(cx, cy)) ?? []) {
         const w = idx.list[id];
+        if (kind && w.kind !== kind) continue;
         const dd = Math.hypot(w.x - x, w.y - y);
         if (dd <= bd) {
           bd = dd;

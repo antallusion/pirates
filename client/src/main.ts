@@ -2628,6 +2628,10 @@ function onMessage(m: ServerMsg): void {
         // (a stack picked, a split's slider or a drag under way: the redraw waits — owner, 2026-10-28)
       } else if (modal === 'port' || modal === 'talents' || modal === 'ship' || modal === 'crew' || modal === 'mutiny' || modal === 'barter') refreshModal();
       break;
+    case 'service_word':
+      audio.bell();
+      hud.banner(serverText(m.title), serverText(m.sub));
+      break;
     case 'mutiny':
       if (m.mutineers > 0) {
         audio.bell();

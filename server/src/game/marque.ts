@@ -24,12 +24,14 @@ import type { RegionId } from '../../../shared/src/world/regions.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
-import { planWander } from './npc.ts';
+import { npcHostileTo, planWander } from './npc.ts';
 import { unlockDeed } from './looks.ts';
 import { changeRep } from './player.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 import { sagaNote } from './saga.ts';
+import { deliver } from './post.ts';
+import { logNote } from './captainlog.ts';
 
 export interface ServiceOrder {
   kind: OrderKind;
@@ -54,6 +56,8 @@ export interface ServiceRec {
   order: ServiceOrder | null;
   /** The quartermaster's pieces bought ("day:port:index"). */
   bought: string[];
+  /** Wall ms of her last reprimand (a ship of her own flag sunk unprovoked): a second within REPRIMAND_MS costs the letter. */
+  reprimandAt?: number;
 }
 
 const DAY_MS = 86_400_000;
@@ -151,16 +155,70 @@ export function resign(game: Game, s: PlayerSession): string | null {
   return null;
 }
 
+/** The service's word to her, so she never has to guess (forum post 112, Eduard, 2026-11-20: dismissed from the
+ *  service and nothing in any log to say why): a letter, a line in her log and the herald's banner. */
+function serviceWord(game: Game, s: PlayerSession, id: ServiceId, subject: string, body: string, banner: string): void {
+  deliver(game, s.accountId, { from: SERVICES[id].name[0], subject, body, gold: 0, goods: null });
+  logNote(game, s, 'note', [subject]);
+  game.sendTo(s, { t: 'service_word', title: banner, sub: subject });
+}
+
 /** The letter taken away: the service's standing lost, a day before any flag takes her again. */
-export function revoke(game: Game, s: PlayerSession, reason: string): void {
+export function revoke(game: Game, s: PlayerSession, reason: string, ship?: string): void {
   const p = s.profile!;
   const sv = p.service;
   if (!sv) return;
+  const was = serviceTitle(sv.id, sv.rank), id = sv.id;
   changeRep(p, sv.id, -30);
   leave(game, s);
   p.serviceBan = game.wallNow() + BAN_MS;
+  game.db.ledger(s.accountId, 'service_lost', 0, `${id}:${was}:${reason}${ship ? `:${ship}` : ''}`);
   game.sendTo(s, { t: 'toast', msg: `Your letter of marque is revoked: ${reason}.`, kind: 'bad' });
+  serviceWord(game, s, id, `Your letter of marque is revoked: ${reason}.`,
+    ship ? `The ${ship} you sank flew our own colours. You are no longer ${was}. Any flag takes you again in a day.` : `You are no longer ${was}. Any flag takes you again in a day.`,
+    'Dismissed from the service');
   refresh(game, s);
+}
+
+/** A second unprovoked sinking of her own flag's ship within this costs the letter; the first is a reprimand. */
+export const REPRIMAND_MS = 7 * DAY_MS;
+/** The merit a reprimand costs (her rank is kept). */
+export const REPRIMAND_MERIT = 60;
+
+/** Was she answering the ship of her own flag she sank: it fired on her or on one of her ships lately, or came for her. */
+function selfDefence(game: Game, s: PlayerSession, victim: ShipEntity): boolean {
+  const ship = s.ship;
+  if (!ship) return false;
+  const since = game.now - 300;
+  if ((ship.attackers.get(victim.id) ?? -Infinity) > since) return true;
+  for (const o of game.ships.values()) if (o.ownerId === ship.id && (o.attackers.get(victim.id) ?? -Infinity) > since) return true;
+  return npcHostileTo(game, victim, ship);
+}
+
+/** A ship of her own flag sunk or taken by her. In self-defence: nothing. Unprovoked: a reprimand, and a second within
+ *  REPRIMAND_MS the letter (forum 112: a Commodore of the Crown made a midshipman again with no word why). */
+function ownFlagKill(game: Game, s: PlayerSession, victim: ShipEntity): void {
+  const p = s.profile!;
+  const sv = p.service!;
+  if (selfDefence(game, s, victim)) {
+    game.sendTo(s, { t: 'toast', msg: `The ${victim.name} fired first: the Admiralty calls it self-defence.`, kind: 'info' });
+    return;
+  }
+  const now = game.wallNow();
+  if (sv.reprimandAt !== undefined && now - sv.reprimandAt < REPRIMAND_MS) {
+    revoke(game, s, 'you fired on your own flag', victim.name);
+    return;
+  }
+  sv.reprimandAt = now;
+  sv.merit = Math.max(0, sv.merit - REPRIMAND_MERIT);
+  changeRep(p, sv.id, -10);
+  game.db.ledger(s.accountId, 'service_reprimand', 0, `${sv.id}:${victim.name}`);
+  const subject = `A reprimand: the ${victim.name} flew your own colours.`;
+  game.sendTo(s, { t: 'toast', msg: subject, kind: 'bad' });
+  serviceWord(game, s, sv.id, subject,
+    `You sank a ship of your own flag without cause. You keep your rank, but lose ${REPRIMAND_MERIT} merit. Another such ship within a week, and your letter of marque is revoked.`,
+    'A reprimand from the service');
+  game.pushSelf(s, true);
 }
 
 function payDay(game: Game, s: PlayerSession, port: Port): void {
@@ -408,10 +466,12 @@ export function stepService(game: Game): void {
 }
 
 /** A ship sunk or taken by her: the flag's enemies pay and count; her own flag's ships cost her the letter. */
-export function serviceKill(game: Game, s: PlayerSession, victim: ShipEntity, how: 'sunk' | 'boarded'): void {
+export function serviceKill(game: Game, s: PlayerSession, victim: ShipEntity, how: 'sunk' | 'boarded', paid = false): void {
   const p = s.profile!;
   const sv = sanitizeService(p);
   if (!sv || victim.isPlayer || victim.cls.monster) return;
+  // A prize taken and then scuttled was paid for as taken: her sinking pays the service no second bounty and merit.
+  if (paid) return;
   const def = SERVICES[sv.id];
   const o = sv.order;
   if (o?.kind === 'intercept' && victim.id === o.target) {
@@ -420,7 +480,7 @@ export function serviceKill(game: Game, s: PlayerSession, victim: ShipEntity, ho
     return;
   }
   if (victim.faction === sv.id) {
-    revoke(game, s, 'you fired on your own flag');
+    ownFlagKill(game, s, victim);
     return;
   }
   const enemy = def.enemies.includes(victim.faction as never) || (sv.id !== 'confederacy' && victim.npcRole === 'pirate');

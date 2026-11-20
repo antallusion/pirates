@@ -138,14 +138,16 @@ export function resBusy(game: Game, s: PlayerSession): string | null {
   return null;
 }
 
-/** Where she may raise her fallen now (the price's place): moored, in port, near either, or nowhere. */
+/** Where she may raise her fallen now (the price's place): moored at a chapel, in port, near either, or nowhere. The
+ *  raft tavern and the floating market raise no one (forum post 111, Эдуард, 2026-11-20: «таверны и рынки не те места,
+ *  где можно проводить таинства воскрешения»; post 96 had told him the chapel). */
 export function resPlace(game: Game, s: PlayerSession): ResPlace {
   const ship = s.ship;
   if (!ship) return 'none';
   if (ship.docked) return 'port';
-  if (mooredAt(game, s)) return 'way';
+  if (mooredAt(game, s)?.kind === 'chapel') return 'way';
   const { x, y } = ship.state;
-  if (wayNear(game.world, x, y, FIELD_RANGE)) return 'field';
+  if (wayNear(game.world, x, y, FIELD_RANGE, 'chapel')) return 'field';
   const port = game.nearestPort(x, y);
   return port && Math.hypot(port.x - x, port.y - y) <= FIELD_RANGE ? 'field' : 'none';
 }

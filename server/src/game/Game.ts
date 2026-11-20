@@ -2575,7 +2575,7 @@ export class Game {
     renownKill(this, s, victim, how); // careers, feats, the week's pirates and prizes (docs/16 #26–29)
     worldGoalKill(this, s, victim, how); // the sea's goals of the week (docs/16 #32)
     invasionKill(this, s, victim); // docs/19 E16: a ship of the Choir's invasion, her part
-    serviceKill(this, s, victim, how); // a letter of marque: bounty, merit, orders; her own flag costs her the letter (docs/12 P10 #15)
+    serviceKill(this, s, victim, how, paid); // a letter of marque: bounty, merit, orders; her own flag costs her the letter (docs/12 P10 #15)
     patentKill(this, s, victim, how); // «Каперский патент»: standing with the issuer for its enemy's ship (patent.ts)
     if (how === 'boarded') grantDeed(this, s, 'deed_first_prize');
     if (victim.loadout.classId === 'man_o_war') grantDeed(this, s, 'deed_ship_of_the_line');

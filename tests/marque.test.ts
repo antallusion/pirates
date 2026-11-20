@@ -8,7 +8,8 @@ import { timeOfDay } from '../shared/src/constants.ts';
 import { encodeLook } from '../shared/src/data/looks.ts';
 import { ORDER_FAIL_MERIT, ORDER_PAY, RANK_MERIT, RANK_PAY, liveryOf, servicePatterns } from '../shared/src/data/marque.ts';
 import type { Game } from '../server/src/game/Game.ts';
-import { buyWare, enlist, flyLivery, resign, serviceKill, serviceOnDock, servicePortView, stepService, sunsetAfter, takeOrder } from '../server/src/game/marque.ts';
+import { lettersSince } from '../server/src/game/post.ts';
+import { REPRIMAND_MERIT, buyWare, enlist, flyLivery, resign, serviceKill, serviceOnDock, servicePortView, stepService, sunsetAfter, takeOrder } from '../server/src/game/marque.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
 import { isLand } from '../shared/src/world/worldgen.ts';
 import { setLang } from '../client/src/i18n.ts';
@@ -147,8 +148,18 @@ test('the letter revoked: fire on your own flag, or be wanted under a lawful one
   const port = game.portById('gravesend')!;
   assert.equal(enlist(game, s, port), null);
   const crownShip = game.spawnNpcShip('patrol', 'brig', 'crown', port.x + 3000, port.y, 0);
+  // the first unprovoked: a reprimand, the rank kept, a letter and a log line (forum post 112)
+  p.service!.merit = 200;
   serviceKill(game, s, crownShip, 'sunk');
+  assert.ok(p.service, 'a reprimand, not the letter');
+  assert.equal(p.service!.merit, 200 - REPRIMAND_MERIT);
+  assert.ok(lettersSince(game, s.accountId, 0).some((l) => /reprimand/.test(l.subject)));
+  assert.ok((p.log ?? []).some((e) => /reprimand/.test(e.a[0] ?? '')));
+  // the second within the week: the letter revoked, with the why written
+  const crown2 = game.spawnNpcShip('patrol', 'brig', 'crown', port.x + 3200, port.y, 0);
+  serviceKill(game, s, crown2, 'sunk');
   assert.equal(p.service, null);
+  assert.ok(lettersSince(game, s.accountId, 0).some((l) => /revoked/.test(l.subject)));
   assert.ok((p.reputation.crown ?? 0) < 40 - 20);
   assert.equal(p.title, null);
   p.reputation.crown = 40;
@@ -196,4 +207,28 @@ test('letters of marque read in Russian', () => {
     assert.equal(holes(en), holes(ru), en);
   }
   setLang('en');
+});
+
+test('a ship of her own flag that fired first: self-defence, no reprimand; a prize taken then scuttled pays the service once (forum 112)', () => {
+  const { game } = makeGame();
+  const s = officer(game, 'Steady Sam');
+  const p = s.profile!;
+  p.reputation.crown = 40;
+  const port = game.portById('gravesend')!;
+  assert.equal(enlist(game, s, port), null);
+  p.service!.merit = 100;
+  const crownShip = game.spawnNpcShip('patrol', 'brig', 'crown', port.x + 3000, port.y, 0);
+  s.ship!.attackers.set(crownShip.id, game.now);
+  serviceKill(game, s, crownShip, 'sunk');
+  assert.ok(p.service);
+  assert.equal(p.service!.merit, 100);
+  assert.equal(p.service!.reprimandAt, undefined);
+  const foe = game.spawnNpcShip('pirate', 'sloop', 'confederacy', port.x + 3000, port.y, 0);
+  const g0 = p.gold;
+  serviceKill(game, s, foe, 'boarded');
+  const g1 = p.gold, m1 = p.service!.merit;
+  assert.ok(g1 > g0);
+  serviceKill(game, s, foe, 'sunk', true);
+  assert.equal(p.gold, g1, 'no second bounty');
+  assert.equal(p.service!.merit, m1, 'no second merit');
 });

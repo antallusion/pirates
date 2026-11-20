@@ -2231,6 +2231,8 @@ export type ServerMsg =
   /** Owner, 2026-10-16 («Повтор»): a fight played again — its opening view and its steps; or her last twenty. */
   | { t: 'tac_replay'; base?: TacView; frames?: TacReplayFrame[]; list?: TacReplayList['list']; error?: string }
   | { t: 'mutiny'; ringleader: string; mutineers: number; payCost: number; timeout: number }
+  /** The service's word: a reprimand or the letter revoked (forum post 112) — the herald's banner; the letter and the log line come by their own ways. */
+  | { t: 'service_word'; title: string; sub: string }
   | { t: 'sunk_self'; lost: { cargoValue: number; crew: number; repairFee: number }; respawnPort: string; towed?: boolean; /** her own scuttling (owner 2026-10-20) */ scuttled?: boolean; /** a boarding lost (owner, 2026-10-05): who took her and the silver they had */ boarded?: { by: string; silver: number; repelled?: boolean } }
   | { t: 'toast'; msg: string; kind: 'info' | 'good' | 'bad' | 'xp' | 'gold';
     /** World news with a place (forum 2026-11-07): the chat's «События» tab sails her there on a tap — a point, or a
