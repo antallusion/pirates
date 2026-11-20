@@ -4090,6 +4090,11 @@
     "ship.treasure_fluyt_hull":                { "local": "ships/treasure_fluyt_hull.webp", "remote": "hf_20261120_224938_d66a8c29-29e2-4c82-bfda-d1f73a4325bc.png", "job": "d66a8c29-29e2-4c82-bfda-d1f73a4325bc", "rev": 20261120224938},
     "ship.east_indiaman_hull":                 { "local": "ships/east_indiaman_hull.webp", "remote": "hf_20261120_225114_a48bc35a-0895-46e1-b758-a2e5eb01c22d.png", "job": "a48bc35a-0895-46e1-b758-a2e5eb01c22d", "rev": 20261120225114},
     "ship.golden_carrack_hull":                { "local": "ships/golden_carrack_hull.webp", "remote": "hf_20261120_225259_46c40861-0980-4be2-ab86-d4c7ccff7014.png", "job": "46c40861-0980-4be2-ab86-d4c7ccff7014", "rev": 20261120225259},
-    "ship.floating_bazaar_hull":               { "local": "ships/floating_bazaar_hull.webp", "remote": "hf_20261120_225435_de855ace-fdb3-4af9-ba2d-45ce8d2f3c4f.png", "job": "de855ace-fdb3-4af9-ba2d-45ce8d2f3c4f", "rev": 20261120225435}
+    "ship.floating_bazaar_hull":               { "local": "ships/floating_bazaar_hull.webp", "remote": "hf_20261120_225435_de855ace-fdb3-4af9-ba2d-45ce8d2f3c4f.png", "job": "de855ace-fdb3-4af9-ba2d-45ce8d2f3c4f", "rev": 20261120225435},
+    "ship.ledger_galleon_hull":                { "local": "ships/ledger_galleon_hull.webp", "remote": "hf_20261120_225655_01b72ab3-5d65-4193-91c4-c4f5636bb447.png", "job": "01b72ab3-5d65-4193-91c4-c4f5636bb447", "rev": 20261120225655},
+    "ship.felucca_hull":                       { "local": "ships/felucca_hull.webp", "remote": "hf_20261120_225837_161c9398-26cf-4e2e-a918-8ad0e7045faf.png", "job": "161c9398-26cf-4e2e-a918-8ad0e7045faf", "rev": 20261120225837},
+    "ship.lugger_hull":                        { "local": "ships/lugger_hull.webp", "remote": "hf_20261120_230036_b1cb989f-682d-4d34-a94d-3dc99f9c5494.png", "job": "b1cb989f-682d-4d34-a94d-3dc99f9c5494", "rev": 20261120230036},
+    "ship.flying_fish_hull":                   { "local": "ships/flying_fish_hull.webp", "remote": "hf_20261120_230653_3990517c-a6a6-4f9d-ba3e-11ef511ee6a5.png", "job": "3990517c-a6a6-4f9d-ba3e-11ef511ee6a5", "rev": 20261120230653},
+    "ship.galiot_hull":                        { "local": "ships/galiot_hull.webp", "remote": "hf_20261120_230442_f015a3fa-53e9-4a11-a18e-7c76cee03dea.png", "job": "f015a3fa-53e9-4a11-a18e-7c76cee03dea", "rev": 20261120230442}
   }
 }
