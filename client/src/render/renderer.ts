@@ -67,7 +67,8 @@ import type { SurfCtx } from './surf.ts';
 import type { IsleTypeCtx } from './isletype.ts';
 import { EN as I18_EN, RU as I18_RU } from '../lang/ui/isles18.ts';
 import { TURTLE_NAMES } from '../../../shared/src/world/drift.ts';
-import { GlSea, GlSky, glWanted } from './gl.ts';
+import { GlSea, GlSky, glWanted, MAX_WAKES } from './gl.ts';
+import { pruneWakes, shaderWakes, type ShaderWake, type WakePt } from './wakes.ts'; // forum 118: the wakes of ships gone from sight
 import { CELL, SpriteAtlas } from './atlas.ts';
 import type { SailKey } from './atlas.ts';
 import { FACTION_SIGN } from './relation.ts';
@@ -376,7 +377,9 @@ export class Renderer {
   /** The camera's look ahead of her bow, eased on its own so a turn does not swing her across the screen. */
   private lead = { x: 0, y: 0 };
   private shipCache = new Map<string, { canvas: HTMLCanvasElement; extentY: number; cx: number; cy: number }>();
-  private wakes = new Map<number, { x: number; y: number; t: number; w: number; life: number }[]>();
+  private wakes = new Map<number, WakePt[]>();
+  private wakeList: ShaderWake[] = [];
+  private drawnIds = new Set<number>();
   /** docs/32 §12: the trails' one pool, the emotes up over ships, each card's cosmetics read once. */
   readonly trails = new TrailPool();
   private emotes: ShipEmote[] = [];
@@ -644,6 +647,12 @@ export class Renderer {
     const stalls = this.stallShadows(state);
     ships.push(...stalls.map((x) => x.ship));
     for (const s of ships) this.updateWake(s, dt);
+    // a ship gone from sight under way: her wake ages out too, and her sinking clock goes (forum 118, wakes.ts)
+    const drawn = this.drawnIds;
+    drawn.clear();
+    for (const s of ships) drawn.add(s.id);
+    pruneWakes(this.wakes, drawn, this.time);
+    for (const id of this.sinkStarts.keys()) if (!drawn.has(id)) this.sinkStarts.delete(id);
     this.drawWakes();
     this.stepTrails(ships, state, dt); // docs/32 §12: the cosmetic trails, under the hulls
     this.drawLoot(state);
@@ -760,10 +769,10 @@ export class Renderer {
         const f = sprite('tex.fog');
         if (f) this.sky.setTexture(f.img);
       }
-      const wakes: { x: number; y: number; age: number; w: number }[] = [];
-      // (each point's age on the shader's 7 s scale: a fast ship's wake lives longer, a slow one's fades sooner)
-      for (const w of this.wakes.values()) for (let i = Math.max(0, w.length - 12); i < w.length; i++) wakes.push({ x: w[i].x, y: w[i].y, age: ((this.time - w[i].t) * 7) / w[i].life, w: w[i].w * (1 + (this.time - w[i].t) * 0.35) });
-      wakes.sort((a, b) => b.age - a.age);
+      // (each point's age on the shader's 7 s scale: a fast ship's wake lives longer, a slow one's fades sooner; only the
+      // live points that can reach the screen — forum 118, wakes.ts)
+      const mx = this.w / 2 / this.zoom, my = this.h / 2 / this.zoom;
+      const wakes = shaderWakes(this.wakes, this.time, { x0: this.camX - mx, y0: this.camY - my, x1: this.camX + mx, y1: this.camY + my }, MAX_WAKES, this.wakeList);
       const wv = headingVec(state.wind[0]);
       this.sea.draw({
         camX: this.camX, camY: this.camY, zoom: this.zoom, time: this.time, tint: hexRgb(tint), wind: [wv.x, wv.y, clamp(state.wind[1], 0, 1.4)],
@@ -3230,7 +3239,7 @@ export class Renderer {
       g.strokeStyle = state.weather === 'black_storm' ? 'rgba(120,200,190,0.25)' : 'rgba(180,195,210,0.28)';
       g.lineWidth = 1;
       g.beginPath();
-      const n = heavy ? this.rain.length : this.rain.length / 2;
+      const n = (heavy ? this.rain.length : this.rain.length / 2);
       for (let i = 0; i < n; i++) {
         const r = this.rain[i];
         r.y += dt * r.s * 1.6;
