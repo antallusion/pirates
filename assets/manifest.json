@@ -4095,6 +4095,14 @@
     "ship.felucca_hull":                       { "local": "ships/felucca_hull.webp", "remote": "hf_20261120_225837_161c9398-26cf-4e2e-a918-8ad0e7045faf.png", "job": "161c9398-26cf-4e2e-a918-8ad0e7045faf", "rev": 20261120225837},
     "ship.lugger_hull":                        { "local": "ships/lugger_hull.webp", "remote": "hf_20261120_230036_b1cb989f-682d-4d34-a94d-3dc99f9c5494.png", "job": "b1cb989f-682d-4d34-a94d-3dc99f9c5494", "rev": 20261120230036},
     "ship.flying_fish_hull":                   { "local": "ships/flying_fish_hull.webp", "remote": "hf_20261120_230653_3990517c-a6a6-4f9d-ba3e-11ef511ee6a5.png", "job": "3990517c-a6a6-4f9d-ba3e-11ef511ee6a5", "rev": 20261120230653},
-    "ship.galiot_hull":                        { "local": "ships/galiot_hull.webp", "remote": "hf_20261120_230442_f015a3fa-53e9-4a11-a18e-7c76cee03dea.png", "job": "f015a3fa-53e9-4a11-a18e-7c76cee03dea", "rev": 20261120230442}
+    "ship.galiot_hull":                        { "local": "ships/galiot_hull.webp", "remote": "hf_20261120_230442_f015a3fa-53e9-4a11-a18e-7c76cee03dea.png", "job": "f015a3fa-53e9-4a11-a18e-7c76cee03dea", "rev": 20261120230442},
+    "ship.topsail_schooner_hull":              { "local": "ships/topsail_schooner_hull.webp", "remote": "hf_20261120_230908_3e5d5cac-58e5-4f09-b8c8-b09e6c97f70e.png", "job": "3e5d5cac-58e5-4f09-b8c8-b09e6c97f70e", "rev": 20261120230908},
+    "ship.wind_dancer_hull":                   { "local": "ships/wind_dancer_hull.webp", "remote": "hf_20261120_231110_1264ea3a-77db-48ae-b8e4-c176748a69e6.png", "job": "1264ea3a-77db-48ae-b8e4-c176748a69e6", "rev": 20261120231110},
+    "ship.shark_cutter_hull":                  { "local": "ships/shark_cutter_hull.webp", "remote": "hf_20261120_231248_f6e22e02-f64d-4207-a33a-f7b68c5f1149.png", "job": "f6e22e02-f64d-4207-a33a-f7b68c5f1149", "rev": 20261120231248},
+    "ship.mermaid_grace_hull":                 { "local": "ships/mermaid_grace_hull.webp", "remote": "hf_20261120_231434_a34cc9c9-432c-4dc1-bab3-a6104c28b1fb.png", "job": "a34cc9c9-432c-4dc1-bab3-a6104c28b1fb", "rev": 20261120231434},
+    "ship.baltimore_clipper_hull":             { "local": "ships/baltimore_clipper_hull.webp", "remote": "hf_20261120_231619_1150941a-ad13-4296-b006-1ba0c99be821.png", "job": "1150941a-ad13-4296-b006-1ba0c99be821", "rev": 20261120231619},
+    "ship.sea_hawk_hull":                      { "local": "ships/sea_hawk_hull.webp", "remote": "hf_20261120_232215_5965cd35-96f3-40dd-8eb4-1ea93442a652.png", "job": "5965cd35-96f3-40dd-8eb4-1ea93442a652", "rev": 20261120232215},
+    "ship.albatross_xebec_hull":               { "local": "ships/albatross_xebec_hull.webp", "remote": "hf_20261120_232034_145c4ecf-447a-4a78-9735-3ec5f7c25f29.png", "job": "145c4ecf-447a-4a78-9735-3ec5f7c25f29", "rev": 20261120232034},
+    "ship.storm_petrel_hull":                  { "local": "ships/storm_petrel_hull.webp", "remote": "hf_20261120_232400_e1af3c8d-df58-4fed-a234-4d31163dd8b7.png", "job": "e1af3c8d-df58-4fed-a234-4d31163dd8b7", "rev": 20261120232400}
   }
 }
