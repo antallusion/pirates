@@ -132,6 +132,8 @@ import type { DeckSlot, SeaKeys } from './ui/seahud.ts';
 import { HudMore } from './ui/hudmore.ts'; // owner, 2026-10-29: the rest of the round buttons behind one «⋯»
 import { ExitUi } from './ui/exit.ts'; // «Выход» (forum 45)
 import { EN as FX_EN, RU as FX_RU } from './lang/ui/fx.ts';
+import { EN as GUARD_EN, RU as GUARD_RU } from './lang/ui/seaguard.ts';
+import { SeaGuard } from './render/seaguard.ts';
 import { castawayNotes, setFxLines } from './ui/fxrow.ts'; // forum 45: the effects' cards show their numbers as the gear's lines
 import { modLinesHtml } from './ui/gear.ts';
 import { SKILL_IDS, SeaAbil, abilWhy, skillWord } from './ui/seaabil.ts'; // the captain's abilities on a phone: «Приёмы» and its row (owner, 2026-10-26)
@@ -1962,6 +1964,10 @@ let lastGfxKey = '';
  *  (Here, before the first applySettings: declared by the loop below they were not yet alive and the page never booted.) */
 let fpsCap = 0;
 let lastDrawn = 0;
+/** The sea's safety net (forum 118, render/seaguard.ts): the costly extras eased while the frames at sea run long. */
+const seaGuard = new SeaGuard();
+const GUARD_L = dict(GUARD_EN, GUARD_RU);
+let guardTold = false;
 const fpsMeter = new FpsMeter();
 function applySettings(o: Settings): void {
   applyToDocument(o);
@@ -1980,8 +1986,11 @@ function applySettings(o: Settings): void {
   if (gk !== lastGfxKey) {
     const firstG = !lastGfxKey;
     lastGfxKey = gk;
+    // (her own graphics choice: the sea's safety net lets go and starts counting afresh — forum 118)
+    if (seaGuard.reset()) renderer.ease = 0;
     if (!firstG) renderer.resize();
   }
+  if (o.effects !== 'auto' && seaGuard.reset()) renderer.setEase(0);
   fpsCap = o.fpsCap;
   fpsMeter.show(o.showFps);
   audio.voices = o.shipVoices;
@@ -6166,12 +6175,26 @@ function frame(t: number): void {
   // The next frame is booked first: one bad frame must never stop the game (it did — the sea froze after casting off).
   requestAnimationFrame(frame);
   if (fpsCap > 0 && t - lastDrawn < 1000 / fpsCap - 2) return; // (a frame early: the next screen refresh)
+  const drawnGap = t - lastDrawn;
   lastDrawn = t;
+  guardFrame(drawnGap, t);
   fpsMeter.tick(t);
   try {
     step(t);
   } catch (e) {
     if (frameErrors++ < 5) console.error('[frame]', e);
+  }
+}
+
+/** The sea's safety net: fed each drawn frame at sea under «Эффекты: авто»; a step eased or given back on the renderer,
+ *  the first easing told once in the session (forum 118). */
+function guardFrame(gap: number, t: number): void {
+  const atSea = inGame && !!state.ownDisplay && !state.self?.dockedAt && !isleScene.isOpen && !state.boardTac && !state.boardFight && !document.hidden;
+  if (!seaGuard.frame(gap, t, atSea && settings().effects === 'auto')) return;
+  renderer.setEase(seaGuard.level);
+  if (seaGuard.level > 0 && !guardTold) {
+    guardTold = true;
+    hud.toast(GUARD_L('eased'), 'info');
   }
 }
 
