@@ -4064,6 +4064,8 @@
     "ship.corvette_hull":                      { "local": "ships/corvette_hull.webp", "remote": "hf_20261117_133209_f8015a60-8bbb-4b0b-a6fc-8c4db8411f04.png", "job": "f8015a60-8bbb-4b0b-a6fc-8c4db8411f04", "rev": 20261117133209},
     "ship.dragon_junk_hull":                   { "local": "ships/dragon_junk_hull.webp", "remote": "hf_20261117_142115_66930fda-82d1-4d02-ad0c-682387b19cd6.png", "job": "66930fda-82d1-4d02-ad0c-682387b19cd6", "rev": 20261117142115},
     "ship.iron_ram_hull":                      { "local": "ships/iron_ram_hull.webp", "remote": "hf_20261117_142655_7b25e95a-6936-492b-ac2d-b6ddf91f3f9c.png", "job": "7b25e95a-6936-492b-ac2d-b6ddf91f3f9c", "rev": 20261117142655},
-    "ship.black_corsair_hull":                 { "local": "ships/black_corsair_hull.webp", "remote": "hf_20261117_142728_d53ab559-6388-411d-9483-a709ab24693f.png", "job": "d53ab559-6388-411d-9483-a709ab24693f", "rev": 20261117142728}
+    "ship.black_corsair_hull":                 { "local": "ships/black_corsair_hull.webp", "remote": "hf_20261117_142728_d53ab559-6388-411d-9483-a709ab24693f.png", "job": "d53ab559-6388-411d-9483-a709ab24693f", "rev": 20261117142728},
+    "ship.man_o_war_hull":                     { "local": "ships/man_o_war_hull.webp", "remote": "hf_20261120_220841_d989f260-319d-470d-a5c4-344006b67421.png", "job": "d989f260-319d-470d-a5c4-344006b67421", "rev": 20261120220841},
+    "ship.sloop_hull":                         { "local": "ships/sloop_hull.webp", "remote": "hf_20261120_221037_80c8e965-20e6-443e-b71c-d243e7ad2538.png", "job": "80c8e965-20e6-443e-b71c-d243e7ad2538", "rev": 20261120221037}
   }
 }

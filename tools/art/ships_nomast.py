@@ -48,6 +48,23 @@ def fetch(name: str, stem: str, cdn: str) -> str:
     return p
 
 
+def central_only(a: np.ndarray) -> np.ndarray:
+    """Only the vessel in the picture's middle: the model sometimes paints stray neighbouring hulls at the sides."""
+    solid = a[:, :, 3] > 128
+    lab, n = ndimage.label(solid)
+    if n <= 1:
+        return a
+    h, w = solid.shape
+    mid = lab[h // 4:3 * h // 4, w // 2 - w // 40:w // 2 + w // 40]
+    ids, cnt = np.unique(mid[mid > 0], return_counts=True)
+    if not len(ids):
+        return a
+    keep = ndimage.binary_dilation(lab == ids[np.argmax(cnt)], iterations=3)
+    out = a.copy()
+    out[:, :, 3] = np.where(keep, a[:, :, 3], 0)
+    return out
+
+
 def steps_of(a: np.ndarray) -> list[float]:
     """The mast steps: dark round spots on the hull's centreline, each ringed by lighter wood (fractions of the height)."""
     al = a[:, :, 3] > 128
@@ -93,7 +110,7 @@ def main(pairs: dict[str, str]) -> None:
         src = fetch(name, stem, m['cdn'])
         old = m['assets'].get(f'ship.{name}')
         ow, oh = Image.open(os.path.join(ROOT, 'assets', old['local'])).size if old else (320, 768)
-        im = Image.fromarray(key_magenta(np.array(Image.open(src).convert('RGBA'))))
+        im = Image.fromarray(central_only(key_magenta(np.array(Image.open(src).convert('RGBA')))))
         # the painting keeps its source's frame (1024×1536 with the old sprite fitted in it): that fitted box cut back
         W, H = im.size
         s = min(1000 / ow, 1500 / oh)
