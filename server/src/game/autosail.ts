@@ -4,6 +4,7 @@
 // sail within range, a shot at her, a storm, a reef he cannot steer round, a low hull — or the captain touches the
 // helm herself. No dice anywhere: the same sea gives the same course (tests replay `game.rng`).
 
+import { atOwnIsle } from './isleberth.ts';
 import { inBattle } from './inbattle.ts';
 import {
   AUTOSAIL_ARRIVE, AUTOSAIL_DANGER_R, AUTOSAIL_MAX_RANGE, AUTOSAIL_REPLANS, AUTOSAIL_STUCK_SEC, autosailSail,
@@ -139,7 +140,8 @@ export function pausedCourse(ship: ShipEntity | null | undefined): { x: number; 
 function stepResume(game: Game, s: PlayerSession, ship: ShipEntity): void {
   const p = paused.get(ship);
   if (!p) return;
-  if (!ship.alive || ship.docked || s.disconnectedAt !== null || game.now - p.at > RESUME_WINDOW || pursuitOf(ship)) {
+  // (lying at her own island: the course broken off is not taken up by itself — forum 115, isleberth.ts)
+  if (!ship.alive || ship.docked || s.disconnectedAt !== null || game.now - p.at > RESUME_WINDOW || pursuitOf(ship) || atOwnIsle(game, s)) {
     paused.delete(ship);
     return;
   }

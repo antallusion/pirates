@@ -18,6 +18,7 @@ import type { Game } from './Game.ts';
 import { inBattle } from './inbattle.ts';
 import type { PlayerSession } from './player.ts';
 import { shopState } from './shop.ts';
+import { atOwnIsle } from './isleberth.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 
 /** The orders that call a safe exit off: every one that moves, fights or does a thing at sea (the helm and the sails
@@ -55,6 +56,8 @@ export function askExit(game: Game, s: PlayerSession, cancel = false): void {
   if (cancel) return dropExit(game, s, 'cancel');
   const ship = s.ship;
   if (!ship || !ship.alive || ship.docked) return game.leaveWorld(s);
+  // hove to off her own island, out of a fight: at home, as in a port (forum 115, isleberth.ts)
+  if (!exitBlocked(game, s) && atOwnIsle(game, s)) return game.leaveWorld(s);
   if (s.exitAt) return game.sendTo(s, { t: 'exit', until: s.exitAt });
   const why = exitBlocked(game, s);
   if (why) return game.sendTo(s, { t: 'exit', until: 0, why });

@@ -16,6 +16,7 @@
 // `f` her trade (the fishing: by her tackle), `b:<group>` the beasts, `zb:<region>` a zone boss, `boss` the sea's bosses.
 // `sg:<good>` the nearest harbour that sells a good (the «Где взять» tooltip, client/src/ui/srctip.ts).
 
+import { atOwnIsle } from './isleberth.ts';
 import { armyMen } from '../../../shared/src/data/army.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
@@ -1209,6 +1210,7 @@ export function stepRoutes(game: Game): void {
     // No course on: after a port (cast off), after a fight, after a ship of the goal reached and dealt with — the next
     // place is sailed for once the sea is quiet and her hand is off the wheel; never a place she is at.
     if (pausedCourse(ship)) continue; // the helmsman takes up the broken-off course himself
+    if (atOwnIsle(game, s)) continue; // lying at her own island: only her own hand takes her off (forum 115)
     // (a harbour's step: on in to its quays while she is beyond putting in — the current, a run that ended a cable short)
     if (d <= (f.view.act === 'dock' ? near : Math.max(near, f.view.r))) {
       if (f.view.ship !== undefined) f.reachedAt ??= game.now;
