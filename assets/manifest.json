@@ -4110,6 +4110,12 @@
     "ship.cog_hull":                           { "local": "ships/cog_hull.webp", "remote": "hf_20261120_233118_ebb4f303-b5f2-43bf-aeb3-b68848c2429f.png", "job": "ebb4f303-b5f2-43bf-aeb3-b68848c2429f", "rev": 20261120233118},
     "ship.buss_hull":                          { "local": "ships/buss_hull.webp", "remote": "hf_20261120_233309_17b070c2-7ac1-4483-a894-aa367ea47f69.png", "job": "17b070c2-7ac1-4483-a894-aa367ea47f69", "rev": 20261120233309},
     "ship.pink_hull":                          { "local": "ships/pink_hull.webp", "remote": "hf_20261120_233458_9ab69caa-5644-4dc2-afe8-4587c07e8600.png", "job": "9ab69caa-5644-4dc2-afe8-4587c07e8600", "rev": 20261120233458},
-    "ship.hulk_hull":                          { "local": "ships/hulk_hull.webp", "remote": "hf_20261120_233644_dd6c23d2-64f6-4fd2-bed4-078e057b1f08.png", "job": "dd6c23d2-64f6-4fd2-bed4-078e057b1f08", "rev": 20261120233644}
+    "ship.hulk_hull":                          { "local": "ships/hulk_hull.webp", "remote": "hf_20261120_233644_dd6c23d2-64f6-4fd2-bed4-078e057b1f08.png", "job": "dd6c23d2-64f6-4fd2-bed4-078e057b1f08", "rev": 20261120233644},
+    "ship.collier_hull":                       { "local": "ships/collier_hull.webp", "remote": "hf_20261120_233829_1880103b-f4b5-4332-b0bd-c0de27caf0d9.png", "job": "1880103b-f4b5-4332-b0bd-c0de27caf0d9", "rev": 20261120233829},
+    "ship.storeship_hull":                     { "local": "ships/storeship_hull.webp", "remote": "hf_20261120_234029_94e261c5-fe83-4c5e-99f6-c1c9e39ffffb.png", "job": "94e261c5-fe83-4c5e-99f6-c1c9e39ffffb", "rev": 20261120234029},
+    "ship.cargo_frigate_hull":                 { "local": "ships/cargo_frigate_hull.webp", "remote": "hf_20261120_234219_87225364-b763-4036-926d-fd9e4650bf5d.png", "job": "87225364-b763-4036-926d-fd9e4650bf5d", "rev": 20261120234219},
+    "ship.plate_galleon_hull":                 { "local": "ships/plate_galleon_hull.webp", "remote": "hf_20261120_234414_296e7234-e1c6-4efe-91a8-ec18ba992069.png", "job": "296e7234-e1c6-4efe-91a8-ec18ba992069", "rev": 20261120234414},
+    "ship.turtle_barge_hull":                  { "local": "ships/turtle_barge_hull.webp", "remote": "hf_20261120_234644_205917fd-83cb-43e9-bb88-e86e8dd908ec.png", "job": "205917fd-83cb-43e9-bb88-e86e8dd908ec", "rev": 20261120234644},
+    "ship.menagerie_hull":                     { "local": "ships/menagerie_hull.webp", "remote": "hf_20261120_234829_6dcd4cda-39c7-4a05-8003-89c1bc043930.png", "job": "6dcd4cda-39c7-4a05-8003-89c1bc043930", "rev": 20261120234829}
   }
 }
