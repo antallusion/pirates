@@ -4073,6 +4073,13 @@
     "ship.ship_of_the_line_hull":              { "local": "ships/ship_of_the_line_hull.webp", "remote": "hf_20261120_221848_e7d3233e-cd8f-406a-a8c5-3082beac40c4.png", "job": "e7d3233e-cd8f-406a-a8c5-3082beac40c4", "rev": 20261120221848},
     "ship.wyvern_galleass_hull":               { "local": "ships/wyvern_galleass_hull.webp", "remote": "hf_20261120_222128_b295678a-c128-4f13-a5ee-49c9a50277a6.png", "job": "b295678a-c128-4f13-a5ee-49c9a50277a6", "rev": 20261120222128},
     "ship.kraken_hunter_hull":                 { "local": "ships/kraken_hunter_hull.webp", "remote": "hf_20261120_222304_028c2261-8df1-41f8-bb2a-42433e3e20f4.png", "job": "028c2261-8df1-41f8-bb2a-42433e3e20f4", "rev": 20261120222304},
-    "ship.crimson_tide_hull":                  { "local": "ships/crimson_tide_hull.webp", "remote": "hf_20261120_222448_8fe294fa-30bc-4b59-b87f-4bea66b39f7e.png", "job": "8fe294fa-30bc-4b59-b87f-4bea66b39f7e", "rev": 20261120222448}
+    "ship.crimson_tide_hull":                  { "local": "ships/crimson_tide_hull.webp", "remote": "hf_20261120_222448_8fe294fa-30bc-4b59-b87f-4bea66b39f7e.png", "job": "8fe294fa-30bc-4b59-b87f-4bea66b39f7e", "rev": 20261120222448},
+    "ship.sun_galleon_hull":                   { "local": "ships/sun_galleon_hull.webp", "remote": "hf_20261120_222639_ced42fe6-1c0e-4a94-9975-5e6ee810ded7.png", "job": "ced42fe6-1c0e-4a94-9975-5e6ee810ded7", "rev": 20261120222639},
+    "ship.tartane_hull":                       { "local": "ships/tartane_hull.webp", "remote": "hf_20261120_222817_06a219a0-0bd3-4549-9fca-2fc006b64750.png", "job": "06a219a0-0bd3-4549-9fca-2fc006b64750", "rev": 20261120222817},
+    "ship.hoy_hull":                           { "local": "ships/hoy_hull.webp", "remote": "hf_20261120_223019_01b2c395-583e-4251-b89f-4e334e2cd5d7.png", "job": "01b2c395-583e-4251-b89f-4e334e2cd5d7", "rev": 20261120223019},
+    "ship.pinnace_hull":                       { "local": "ships/pinnace_hull.webp", "remote": "hf_20261120_223149_8d651e93-5ce3-4f3e-a3c3-e3e303a8e9c2.png", "job": "8d651e93-5ce3-4f3e-a3c3-e3e303a8e9c2", "rev": 20261120223149},
+    "ship.snow_hull":                          { "local": "ships/snow_hull.webp", "remote": "hf_20261120_223331_d6082f79-c2cf-4e5f-a556-f729bad5159d.png", "job": "d6082f79-c2cf-4e5f-a556-f729bad5159d", "rev": 20261120223331},
+    "ship.barque_hull":                        { "local": "ships/barque_hull.webp", "remote": "hf_20261120_223819_53327cbb-fd27-4d98-9952-cfe5d8fcf473.png", "job": "53327cbb-fd27-4d98-9952-cfe5d8fcf473", "rev": 20261120223819},
+    "ship.spice_dhow_hull":                    { "local": "ships/spice_dhow_hull.webp", "remote": "hf_20261120_223639_abb4f5c2-eeae-4413-a037-dbe057b2441a.png", "job": "abb4f5c2-eeae-4413-a037-dbe057b2441a", "rev": 20261120223639}
   }
 }

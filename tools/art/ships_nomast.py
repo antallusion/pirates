@@ -40,7 +40,7 @@ def write_ts(steps: dict) -> None:
 
 def fetch(name: str, stem: str, cdn: str) -> str:
     os.makedirs(RAW, exist_ok=True)
-    p = os.path.join(RAW, f'{name}.png')
+    p = os.path.join(RAW, f'{stem}.png')  # by the result, not the ship: a re-done ship must not reuse the old file
     if not os.path.exists(p) or os.path.getsize(p) < 10000:
         req = urllib.request.Request(cdn + stem + '.png', headers={'User-Agent': 'gravetide-art'})
         with urllib.request.urlopen(req, timeout=120) as r, open(p, 'wb') as f:
