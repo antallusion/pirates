@@ -850,6 +850,7 @@ export class PortScreen {
         <p>${esc(L('build.costTime', { cost: fmt(cost), min: Math.ceil(time / 60) }))}</p><div class="mats">${matText}</div>
         <button class="btn btn-primary btn-block" data-act="build_order" ${self.builds.length ? 'disabled' : ''}>${esc(self.builds.length ? L('build.busy') : L('build.lay'))}</button>
         ${yard.plans ? `<p style="margin-top:8px"><button class="btn btn-small btn-block" data-act="plan_buy">${esc(L('build.planBuy', { ship: cls.name, cost: fmt(Math.round(cls.price * 0.3)) }))}</button></p>` : ''}
+        <p class="muted" style="margin-top:6px">${esc(L('build.planWhere'))}</p>
         ${yard.figureheads.map((f) => `<p><button class="btn btn-small btn-block" data-act="figurehead_buy" data-fh="${f}" title="${esc(FIGUREHEADS[f].description)}">${icon(f, '', 'ico-sm')}${esc(L('build.figureheadBuy', { fig: FIGUREHEADS[f].name, cost: fmt(FIGUREHEADS[f].price) }))}</button></p>`).join('')}
       </div></div>
       ${orders || berths ? `<div class="card"><h4 class="card-h">${icon('build_shipyard', '', 'ico-md')}${esc(L('build.orders'))}</h4>

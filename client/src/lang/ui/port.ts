@@ -181,6 +181,7 @@ export const EN = {
   'build.busy': 'The yard is busy with your order',
   'build.lay': 'Lay down the keel',
   'build.planBuy': 'Buy a good plan for a {ship} — {cost} silver',
+  'build.planWhere': 'Where plans come from: a good plan is sold at the yards of the Crown, the League, the Confederacy, the Harpoon and the Choir to captains they respect (standing 30 and more); masterwork and legendary plans are found in sea chests, treasure hoards, expeditions and wonders.',
   'build.figureheadBuy': 'Fit the {fig} to your ship — {cost} silver',
   'build.orders': 'Orders and berths',
 
@@ -562,6 +563,7 @@ export const RU: Record<keyof typeof EN, string> = {
   'build.busy': 'Верфь занята вашим заказом',
   'build.lay': 'Заложить киль',
   'build.planBuy': 'Купить добротный чертёж ({ship}) — {cost} серебра',
+  'build.planWhere': 'Где взять чертёж: добротный продают верфи Короны, Лиги, Конфедерации, Гарпуна и Хора капитанам с репутацией у них 30 и выше. Мастерские и легендарные чертежи находят в морских сундуках, кладах, экспедициях и у чудес света.',
   'build.figureheadBuy': 'Поставить на корабль фигуру «{fig}» — {cost} серебра',
   'build.orders': 'Заказы и стоянки',
 

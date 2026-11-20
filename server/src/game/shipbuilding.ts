@@ -3,6 +3,8 @@
 // yard; the old ship is berthed there and can be taken out again. Plus the living materials at sea
 // (cursed wood, drowned silk) and what the figureheads do.
 
+import { careerYardBonus } from './renown.ts';
+import type { FactionId } from '../../../shared/src/data/factions.ts';
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { researchWhy } from './research.ts';
 import { takeGearBack } from './gear.ts';
@@ -139,7 +141,7 @@ export function quoteBuild(game: Game, s: PlayerSession, port: Port, r: BuildReq
   // Shipwrights build faster: 1% per point in the tree, to 35%; an NPC master takes another quarter off.
   const skill = Math.min(0.35, 0.01 * pointsInTree(p.talents, 'shipwright'));
   out.time = Math.round(BUILD_TIME[cls.tier] * Math.max(frame.time, plank.time) * (1 - skill) * (master ? 0.75 : 1));
-  if (cls.tier > port.shipyardTier) return { ...out, error: `${port.name} cannot build a ${cls.name}` };
+  if (cls.tier > port.shipyardTier + careerYardBonus(p, port.faction as FactionId)) return { ...out, error: `${port.name} cannot build a ${cls.name}` };
   if (cls.factions && !cls.factions.includes(port.faction)) return { ...out, error: `Only ${cls.factions.join(', ')} yards build the ${cls.name}` };
   if (p.level < LEVEL_FOR_TIER[cls.tier]) return { ...out, error: `A ${cls.name} needs captain level ${LEVEL_FOR_TIER[cls.tier]}` };
   const unknown = researchWhy(p, r.classId); // the yard's tree of hulls (docs/20)
@@ -519,7 +521,8 @@ export function rehireAshore(game: Game, s: PlayerSession, port: Port): string |
 export function buyPlan(game: Game, s: PlayerSession, port: Port, classId: ShipClassId): string | null {
   const p = s.profile!;
   const cls = SHIP_CLASSES[classId];
-  if (!cls || !cls.purchasable || cls.tier > port.shipyardTier) return 'This yard has no plans for her';
+  // (with the career's yard rank, as for a hull bought here: forum post 109 — a Great Xebec sold, her plan refused)
+  if (!cls || !cls.purchasable || cls.tier > port.shipyardTier + careerYardBonus(p, port.faction as FactionId)) return 'This yard has no plans for her';
   if (!YARD_FACTIONS_WITH_PLANS.includes(port.faction as never)) return 'This yard sells no plans';
   if ((p.reputation[port.faction as never] ?? 0) < PLAN_REP) return `The yard shows its plans only to friends (standing ${PLAN_REP})`;
   const price = Math.round(cls.price * 0.3);

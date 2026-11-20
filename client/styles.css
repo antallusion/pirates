@@ -1296,6 +1296,11 @@ html.i18n-pending [data-i18n], html.i18n-pending [data-i18n-ph]::placeholder { v
 /* Talent points under the portrait: the key, the mark and the number (the sentence was cut off beside the law's
    word on a desktop). */
 .uf-sub .uf-pts { display: inline-flex; align-items: center; gap: 3px; flex: none; font-weight: 700; }
+.uf-sub .uf-ship-lvl { flex: none; font-weight: 700; color: var(--gold); margin-left: 6px; }
+.uf-sub .uf-food { display: inline-flex; align-items: center; gap: 3px; flex: none; font-weight: 700; margin-left: 6px; white-space: nowrap; }
+.uf-sub .uf-food.bad { animation: uf-food-pulse 1.2s ease-in-out infinite; }
+@keyframes uf-food-pulse { 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .uf-sub .uf-food.bad { animation: none; } }
 .uf-sub .wanted { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 body.touch #hud-region .rg-extra { display: none; }

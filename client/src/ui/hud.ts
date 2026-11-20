@@ -26,6 +26,7 @@ import { levelPct } from '../../../shared/src/data/xpcurve.ts';
 import { MAX_LEVEL } from '../../../shared/src/constants.ts';
 import { levelChip, maskedChip, threatTo } from './levels.ts';
 import { shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
+import { provisionsPerMinute } from '../../../shared/src/data/voyage.ts';
 import { DASH_COOLDOWN } from '../../../shared/src/data/gunnery.ts';
 import { dict, lang, plural, t } from '../i18n.ts';
 import { EN as TM_EN, RU as TM_RU } from '../lang/ui/maps.ts';
@@ -354,6 +355,8 @@ export class Hud {
   onEscort: (eid: number) => void = () => {};
   /** The overload's toast once per overload (forum 2026-10-30). */
   private overWarned = false;
+  /** The low-food toast said once until she is fed again (forum post 109). */
+  private foodWarned = false;
   /** The effects' row by her portrait (forum 45): when it was last reckoned and what it showed. */
   private fxAt = 0;
   private fxKey = '';
@@ -911,10 +914,20 @@ export class Hud {
       this.overWarned = true;
       this.toast(L('holdToast', { pct: hold.pct, n: hold.slow }), 'bad');
     } else if (!hold?.over) this.overWarned = false;
+    // Provisions (forum post 109, Эдуард: «очень не хватает визуального оповещения о количестве провизии»): minutes of
+    // food aboard on the captain's frame when they run short, and a toast once as they fall under five minutes at sea.
+    const foodPer = provisionsPerMinute(Math.max(0, you.crew), state.ownStats?.provisionUse ?? 1);
+    const foodMin = foodPer > 0 ? Math.floor((self.cargo.provisions ?? 0) / foodPer) : Infinity;
+    if (foodMin < 5 && !self.dockedAt && !this.foodWarned && you.crew > 0) {
+      this.foodWarned = true;
+      this.toast(foodMin <= 0 ? L('foodNone') : L('foodToast', { n: foodMin }), 'bad');
+    } else if (foodMin >= 10) this.foodWarned = false;
+    const foodChip = foodMin < 20 && you.crew > 0 ? `<span class="uf-food ${foodMin < 5 ? 'bad' : 'warn'}" style="color:var(${foodMin < 5 ? '--bad' : '--gold'})" title="${esc(L('foodChipT', { n: foodMin }))}">${icon('tab_market', '', 'ico-sm')}${esc(foodMin <= 0 ? L('foodNone') : L('foodChip', { n: foodMin }))}</span>` : '';
+    const lvlChip = `<span class="uf-ship-lvl" title="${esc(L('shipLvlT', { n: shipLevelOf(self.loadout) }))}">⚓${shipLevelOf(self.loadout)}</span>`;
     this.drawFx(state);
     if (simpleHud()) this.drawStatus(state);
     else {
-    const ckey = `${state.cos?.eq.frame ?? ''}|${lang()}|${streak ? `${streak.n}:${streak.mul}` : ''}|${pod ? `${pod.kind}:${Math.ceil(pod.left / 10)}` : ''}|${self.level}|${Math.round((self.xp / Math.max(1, self.xpNext)) * 200)}|${Math.round((self.rested / Math.max(1, self.xpNext)) * 200)}|${self.gold}|${self.wanted}|${self.talentPoints}|${you.hull}|${you.hullMax}|${you.sails}|${you.sailsMax}|${you.crew}|${you.crewMax}|${url ? 1 : 0}|${self.company.mood ?? ''}:${self.company.shantyUntil ?? 0}|${self.title ?? ''}|${self.glory ? `${self.glory.open}:${self.glory.rank}:${self.glory.pending}:${self.glory.points - self.glory.spent}` : ''}|${state.doubloons}`;
+    const ckey = `${state.cos?.eq.frame ?? ''}|${lang()}|${streak ? `${streak.n}:${streak.mul}` : ''}|${pod ? `${pod.kind}:${Math.ceil(pod.left / 10)}` : ''}|${self.level}|${Math.round((self.xp / Math.max(1, self.xpNext)) * 200)}|${Math.round((self.rested / Math.max(1, self.xpNext)) * 200)}|${self.gold}|${self.wanted}|${self.talentPoints}|${you.hull}|${you.hullMax}|${you.sails}|${you.sailsMax}|${you.crew}|${you.crewMax}|${url ? 1 : 0}|${self.company.mood ?? ''}:${self.company.shantyUntil ?? 0}|${self.title ?? ''}|${self.glory ? `${self.glory.open}:${self.glory.rank}:${self.glory.pending}:${self.glory.points - self.glory.spent}` : ''}|${state.doubloons}|${foodChip}|${lvlChip}`;
     if (ckey !== this.lastCaptainKey) {
       this.lastCaptainKey = ckey;
       $('hud-captain').innerHTML = `
@@ -923,7 +936,7 @@ export class Hud {
           <div class="uf-top"><span class="uf-name">${esc(self.name)}${self.title ? `<small class="uf-title">${esc(sv(self.title))}</small>` : ''}</span><span class="gold val uf-silver">${icon('coin', '⛁', 'ico-sm')}${fmt(self.gold)}${exchPlus()}</span>${shopChip(state.doubloons, 'uf-dbl')}</div>
           ${fbar('hull', you.hull, you.hullMax, L('hull'), 'stat_hull')}${fbar('sails', you.sails, you.sailsMax, L('sails'), 'stat_sails')}${fbar('crew', you.crew, you.crewMax, L('crew'), 'stat_crew')}
           <div class="fbar xp" title="${esc(self.rested > 0 ? `${xpLine(self)} · ${L('rested', { n: fmt(self.rested) })}` : xpLine(self))}"><i style="width:${pct(self.xp / Math.max(1, self.xpNext))}"></i>${self.rested > 0 ? `<b class="xp-rest" style="left:${pct(self.xp / Math.max(1, self.xpNext))};width:${pct(Math.min(self.rested, Math.max(0, self.xpNext - self.xp)) / Math.max(1, self.xpNext))}"></b>` : ''}</div>
-          <div class="uf-sub"><span class="wanted" title="${esc(skullsTip(state) || wantedTitle(self.wanted))}">${self.wanted ? icon('wanted', '☠', 'ico-sm') + '☠'.repeat(self.wanted) + ' ' + esc(wantedTitle(self.wanted)) : `<span class="muted">${esc(L('unknownToLaw'))}</span>`}</span>${self.talentPoints > 0 ? `<span class="gold uf-pts" title="${esc(keyless(L('talentPts', { n: self.talentPoints })))}">${keyChip('talents')}${icon('xp', '', 'ico-sm')}${self.talentPoints}</span>` : ''}${gloryChip(self.glory)}</div>
+          <div class="uf-sub"><span class="wanted" title="${esc(skullsTip(state) || wantedTitle(self.wanted))}">${self.wanted ? icon('wanted', '☠', 'ico-sm') + '☠'.repeat(self.wanted) + ' ' + esc(wantedTitle(self.wanted)) : `<span class="muted">${esc(L('unknownToLaw'))}</span>`}</span>${self.talentPoints > 0 ? `<span class="gold uf-pts" title="${esc(keyless(L('talentPts', { n: self.talentPoints })))}">${keyChip('talents')}${icon('xp', '', 'ico-sm')}${self.talentPoints}</span>` : ''}${gloryChip(self.glory)}${lvlChip}${foodChip}</div>
         </div>`;
       $('hud-captain').querySelector<HTMLElement>('[data-throne]')?.addEventListener('click', (e) => {
         e.stopPropagation();

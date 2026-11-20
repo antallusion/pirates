@@ -6,6 +6,7 @@
 // wounded — the surgeon and the medicine chest bring them back over time, and without them some die below.
 // All of it draws on its own dice, not the sea's stream.
 
+import { foodAboard } from './larder.ts';
 import {
   GRUMBLES, GRUMBLE_BELOW, GRUMBLE_EVERY, HEAL_AFTER, HEALED_PER_MEDICINE, PRACTICE_GAIN, SHANTIES, SHANTY_AT, SHANTY_EVERY, SHANTY_MODS, SHANTY_TIME,
   TALK, TALK_EVENT_GAP, TALK_GAP, TALK_PREFERS, WOUNDED_BASE, WOUNDED_MAX, healRate, practiceLevel, woundRates,
@@ -352,7 +353,7 @@ export function stepCrewLife(game: Game, s: PlayerSession): void {
     if (fresh) logNote(game, s, 'sea', [REGIONS[ship.region].name]);
   }
   st.region = ship.region;
-  const hungry = (ship.cargo.provisions ?? 0) <= 0;
+  const hungry = !foodAboard(ship); // (fish in the hold feed them too: larder.ts)
   if (hungry && (!st.hungry || now >= st.hungerAt)) {
     if (officerSays(game, s, 'hunger') || !st.hungry) st.hungerAt = now + 600;
   }

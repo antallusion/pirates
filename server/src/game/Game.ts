@@ -1,6 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
+import { FISH_FOOD, eatFish, foodAboard, isleLarder } from './larder.ts';
 import { stepShipFix } from './shipfix.ts';
 import { stormSails } from '../../../shared/src/data/adrift.ts';
 import { crewAwayOnLogin } from './crewaway.ts';
@@ -1469,7 +1470,7 @@ export class Game {
     const st = ship.stats;
     // Morale drifts toward a baseline set by provisions, rum and cursed cargo.
     let baseline = 70;
-    if (ship.isPlayer && (ship.cargo.provisions ?? 0) <= 0) baseline = 25;
+    if (ship.isPlayer && !foodAboard(ship)) baseline = 25; // (fish in the hold feed them too: larder.ts)
     if ((ship.cargo.rum ?? 0) > 0) baseline += 8;
     if ((ship.cargo.cursed_relics ?? 0) > 0 && ship.cls.passive.id !== 'dead_crew') baseline -= 6 + Math.min(20, (ship.cargo.cursed_relics ?? 0) * 2);
     if (this.weatherOf(ship) === 'black_storm') baseline -= 15;
@@ -1486,14 +1487,17 @@ export class Game {
       // docs/18 #37: the creatures aboard eat their own (fish, rum, bone), not the crew's provisions.
       const beasts = creaturesAboard(ship);
       if (beasts > 0) feedCreatures(this, ship, 10);
-      const eat = (provisionsPerMinute(ship.crew - beasts, st.provisionUse) / 6) * frontier; // ten seconds of it (shared/src/data/voyage.ts)
+      const perMin = provisionsPerMinute(ship.crew - beasts, st.provisionUse);
+      const eat = (perMin / 6) * frontier; // ten seconds of it (shared/src/data/voyage.ts)
+      // by her own island her crew is fed from its stores (forum post 109): five minutes' left fetches half an hour's
+      isleLarder(this, ship, perMin, perMin * 5);
       const have = ship.cargo.provisions ?? 0;
       if (have > 0) {
         const left = Math.max(0, have - eat);
         if (left <= 0) delete ship.cargo.provisions;
         else ship.cargo.provisions = Math.round(left * 100) / 100;
-        if (left <= 0) this.toastShip(ship, 'The last biscuit is gone. The crew grows mutinous.', 'bad');
-      }
+        if (left <= 0) this.toastShip(ship, FISH_FOOD.some((g) => (ship.cargo[g] ?? 0) > 0) ? 'The last biscuit is gone: the crew eats the fish in the hold.' : 'The last biscuit is gone. The crew grows mutinous.', 'bad');
+      } else if (eat > 0 && eatFish(ship, eat) > 0 && !foodAboard(ship)) this.toastShip(ship, 'The last of the fish is eaten. The crew grows mutinous.', 'bad');
     }
 
     // Perishables rot in the hold; salt aboard halves the loss.
