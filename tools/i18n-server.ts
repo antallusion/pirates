@@ -56,8 +56,9 @@ export function extract(root = 'server/src'): string[] {
     const src = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
     const visit = (n: Any): void => {
       // Skip the log calls: they are for operators, not players; an Error's message (thrown and logged, never said);
-      // a letter (written in its reader's language where it is sent).
-      if (ts.isCallExpression(n) && /\.log$|^console\.|mailer\.send$/.test(n.expression.getText(src))) return;
+      // a letter (written in its reader's language where it is sent); the account book's memo (db.ledger: the
+      // operator's record of a payment or a refund, never shown to a player).
+      if (ts.isCallExpression(n) && /\.log$|^console\.|mailer\.send$|\.ledger$/.test(n.expression.getText(src))) return;
       if (ts.isNewExpression(n) && /Error$/.test(n.expression.getText(src))) return;
       // A pair in both tongues written in place (`ru ? 'Открыть сообщение' : 'Open the post'`, the letters' buttons):
       // already in the reader's language, never looked up in the table.
