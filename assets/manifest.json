@@ -4131,6 +4131,11 @@
     "ship.polacre_hull":                       { "local": "ships/polacre_hull.webp", "remote": "hf_20261121_001822_06cb44a4-42cd-4581-a272-e81a94feff70.png", "job": "06cb44a4-42cd-4581-a272-e81a94feff70", "rev": 20261121001822},
     "ship.dunkirk_frigate_hull":               { "local": "ships/dunkirk_frigate_hull.webp", "remote": "hf_20261121_002022_f40f8525-f26b-467d-af5f-a319462a9add.png", "job": "f40f8525-f26b-467d-af5f-a319462a9add", "rev": 20261121002022},
     "ship.great_xebec_hull":                   { "local": "ships/great_xebec_hull.webp", "remote": "hf_20261121_002212_64abd658-cd37-42d3-b782-913a7caea4b9.png", "job": "64abd658-cd37-42d3-b782-913a7caea4b9", "rev": 20261121002212},
-    "ship.race_galleon_hull":                  { "local": "ships/race_galleon_hull.webp", "remote": "hf_20261121_002427_6a414622-cd14-4696-9207-797ce3c77e1c.png", "job": "6a414622-cd14-4696-9207-797ce3c77e1c", "rev": 20261121002427}
+    "ship.race_galleon_hull":                  { "local": "ships/race_galleon_hull.webp", "remote": "hf_20261121_002427_6a414622-cd14-4696-9207-797ce3c77e1c.png", "job": "6a414622-cd14-4696-9207-797ce3c77e1c", "rev": 20261121002427},
+    "ship.armed_fluyt_hull":                   { "local": "ships/armed_fluyt_hull.webp", "remote": "hf_20261121_002622_57a3e2cf-d5d8-4ee6-ba7e-928a18ad432d.png", "job": "57a3e2cf-d5d8-4ee6-ba7e-928a18ad432d", "rev": 20261121002622},
+    "ship.great_indiaman_hull":                { "local": "ships/great_indiaman_hull.webp", "remote": "hf_20261121_002826_991774ec-9afe-4cf0-a42e-d08454446fd4.png", "job": "991774ec-9afe-4cf0-a42e-d08454446fd4", "rev": 20261121002826},
+    "ship.manila_galleon_hull":                { "local": "ships/manila_galleon_hull.webp", "remote": "hf_20261121_003017_94fae1f2-a7e2-410f-a0b6-fe2859a1dfe2.png", "job": "94fae1f2-a7e2-410f-a0b6-fe2859a1dfe2", "rev": 20261121003017},
+    "ship.zb_black_coast_hull":                { "local": "ships/zb_black_coast_hull.webp", "remote": "hf_20261121_003211_f4bdeea4-1056-4bc9-b33d-7442da66e767.png", "job": "f4bdeea4-1056-4bc9-b33d-7442da66e767", "rev": 20261121003211},
+    "ship.zb_gravewater_hull":                 { "local": "ships/zb_gravewater_hull.webp", "remote": "hf_20261121_003412_452ece53-dfe0-495c-a4eb-bb250d7ad67d.png", "job": "452ece53-dfe0-495c-a4eb-bb250d7ad67d", "rev": 20261121003412}
   }
 }
