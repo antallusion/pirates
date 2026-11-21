@@ -4116,6 +4116,11 @@
     "ship.cargo_frigate_hull":                 { "local": "ships/cargo_frigate_hull.webp", "remote": "hf_20261120_234219_87225364-b763-4036-926d-fd9e4650bf5d.png", "job": "87225364-b763-4036-926d-fd9e4650bf5d", "rev": 20261120234219},
     "ship.plate_galleon_hull":                 { "local": "ships/plate_galleon_hull.webp", "remote": "hf_20261120_234414_296e7234-e1c6-4efe-91a8-ec18ba992069.png", "job": "296e7234-e1c6-4efe-91a8-ec18ba992069", "rev": 20261120234414},
     "ship.turtle_barge_hull":                  { "local": "ships/turtle_barge_hull.webp", "remote": "hf_20261120_234644_205917fd-83cb-43e9-bb88-e86e8dd908ec.png", "job": "205917fd-83cb-43e9-bb88-e86e8dd908ec", "rev": 20261120234644},
-    "ship.menagerie_hull":                     { "local": "ships/menagerie_hull.webp", "remote": "hf_20261120_234829_6dcd4cda-39c7-4a05-8003-89c1bc043930.png", "job": "6dcd4cda-39c7-4a05-8003-89c1bc043930", "rev": 20261120234829}
+    "ship.menagerie_hull":                     { "local": "ships/menagerie_hull.webp", "remote": "hf_20261120_234829_6dcd4cda-39c7-4a05-8003-89c1bc043930.png", "job": "6dcd4cda-39c7-4a05-8003-89c1bc043930", "rev": 20261120234829},
+    "ship.coral_hulk_hull":                    { "local": "ships/coral_hulk_hull.webp", "remote": "hf_20261120_235024_c073f73e-1392-44f6-8fb2-4740af7296b5.png", "job": "c073f73e-1392-44f6-8fb2-4740af7296b5", "rev": 20261120235024},
+    "ship.treasure_junk_hull":                 { "local": "ships/treasure_junk_hull.webp", "remote": "hf_20261120_235214_727a3d60-38fb-4173-917e-7a8d8a817ef9.png", "job": "727a3d60-38fb-4173-917e-7a8d8a817ef9", "rev": 20261120235214},
+    "ship.great_galleon_hull":                 { "local": "ships/great_galleon_hull.webp", "remote": "hf_20261120_235404_1de92caa-1926-4b3a-be88-af7bb7d2e82f.png", "job": "1de92caa-1926-4b3a-be88-af7bb7d2e82f", "rev": 20261120235404},
+    "ship.leviathan_ark_hull":                 { "local": "ships/leviathan_ark_hull.webp", "remote": "hf_20261120_235629_5c3e910b-85cf-4ff4-be59-5fc0be08b19b.png", "job": "5c3e910b-85cf-4ff4-be59-5fc0be08b19b", "rev": 20261120235629},
+    "ship.floating_fortress_hull":             { "local": "ships/floating_fortress_hull.webp", "remote": "hf_20261120_235819_488f3849-bce6-4f42-93c8-b4248e890865.png", "job": "488f3849-bce6-4f42-93c8-b4248e890865", "rev": 20261120235819}
   }
 }
