@@ -33,7 +33,9 @@ def write_ts(steps: dict) -> None:
     lines = ["// Written by tools/art/ships_nomast.py and tools/art/masts.py (2026-11-16): where each mastless hull's mast steps are",
              "// (fractions of its picture's height from the top, on its centreline), and each mast picture's pivot (its round top).",
              'export const MAST_STEPS: Record<string, number[]> = ' + json.dumps(ships, separators=(',', ':')) + ';',
-             'export const MAST_PIVOT: Record<string, number> = ' + json.dumps(piv, separators=(',', ':')) + ';', '']
+             'export const MAST_PIVOT: Record<string, number> = ' + json.dumps(piv, separators=(',', ':')) + ';',
+             '// the ships whose sails were dyed (their old paintings): the grey canvas of the mast sets takes this colour',
+             'export const MAST_TINT: Record<string, string> = ' + json.dumps(steps.get('_tint', {}), separators=(',', ':')) + ';', '']
     with open(os.path.join(ROOT, 'shared', 'src', 'data', 'maststeps.ts'), 'w', encoding='utf-8') as f:
         f.write('\n'.join(lines))
 

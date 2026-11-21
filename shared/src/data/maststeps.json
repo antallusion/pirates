@@ -13,6 +13,18 @@
 "fore_aft_bare_x": 0.1367,
 "fore_aft_bare": 0.3584
 },
+"_tint": {
+"crimson_tide": "#7a1f1c",
+"black_corsair": "#4e1a19",
+"dragon_junk": "#6e2a1e",
+"treasure_junk": "#6a2a22",
+"golden_lion": "#74322a",
+"zb_ashen_isles": "#4a2a22",
+"silk_junk": "#33456e",
+"spice_dhow": "#a57945",
+"golden_carrack": "#b8975e",
+"sun_galleon": "#cdb88e"
+},
 "albatross_xebec": [
 0.3125,
 0.6641
