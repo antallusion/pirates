@@ -51,7 +51,7 @@ def fetch(name: str, stem: str, cdn: str) -> str:
 
 
 # ships whose painting has parts standing apart from the hull (boats on davits, oars): only edge-cut strays go
-KEEP_PARTS = {'whale_mother', 'wyvern_galleass', 'hoy', 'great_xebec'}
+KEEP_PARTS = {'whale_mother', 'wyvern_galleass', 'hoy', 'great_xebec', 'smugglers_lugger'}
 
 
 def hull_only(a: np.ndarray) -> np.ndarray:
