@@ -4126,6 +4126,11 @@
     "ship.drowned_cathedral_hull":             { "local": "ships/drowned_cathedral_hull.webp", "remote": "hf_20261121_000220_dc2d5dfb-6af2-48e9-8078-bcad6841536a.png", "job": "dc2d5dfb-6af2-48e9-8078-bcad6841536a", "rev": 20261121000220},
     "ship.sloop_of_war_hull":                  { "local": "ships/sloop_of_war_hull.webp", "remote": "hf_20261121_001203_38c2c87a-db6e-4062-8ce4-5cea4c27ead6.png", "job": "38c2c87a-db6e-4062-8ce4-5cea4c27ead6", "rev": 20261121001203},
     "ship.phantom_brig_hull":                  { "local": "ships/phantom_brig_hull.webp", "remote": "hf_20261121_001307_22fc2e45-c55f-4858-a7db-be2b1d9346d9.png", "job": "22fc2e45-c55f-4858-a7db-be2b1d9346d9", "rev": 20261121001307},
-    "ship.pirate_haven_hull":                  { "local": "ships/pirate_haven_hull.webp", "remote": "hf_20261121_001409_1f1e055a-4d84-48e2-aa07-b0d4ac87d18f.png", "job": "1f1e055a-4d84-48e2-aa07-b0d4ac87d18f", "rev": 20261121001409}
+    "ship.pirate_haven_hull":                  { "local": "ships/pirate_haven_hull.webp", "remote": "hf_20261121_001409_1f1e055a-4d84-48e2-aa07-b0d4ac87d18f.png", "job": "1f1e055a-4d84-48e2-aa07-b0d4ac87d18f", "rev": 20261121001409},
+    "ship.iron_whale_hull":                    { "local": "ships/iron_whale_hull.webp", "remote": "hf_20261121_001607_c4252ab1-2213-4ca7-b27a-6c8781fbbe00.png", "job": "c4252ab1-2213-4ca7-b27a-6c8781fbbe00", "rev": 20261121001607},
+    "ship.polacre_hull":                       { "local": "ships/polacre_hull.webp", "remote": "hf_20261121_001822_06cb44a4-42cd-4581-a272-e81a94feff70.png", "job": "06cb44a4-42cd-4581-a272-e81a94feff70", "rev": 20261121001822},
+    "ship.dunkirk_frigate_hull":               { "local": "ships/dunkirk_frigate_hull.webp", "remote": "hf_20261121_002022_f40f8525-f26b-467d-af5f-a319462a9add.png", "job": "f40f8525-f26b-467d-af5f-a319462a9add", "rev": 20261121002022},
+    "ship.great_xebec_hull":                   { "local": "ships/great_xebec_hull.webp", "remote": "hf_20261121_002212_64abd658-cd37-42d3-b782-913a7caea4b9.png", "job": "64abd658-cd37-42d3-b782-913a7caea4b9", "rev": 20261121002212},
+    "ship.race_galleon_hull":                  { "local": "ships/race_galleon_hull.webp", "remote": "hf_20261121_002427_6a414622-cd14-4696-9207-797ce3c77e1c.png", "job": "6a414622-cd14-4696-9207-797ce3c77e1c", "rev": 20261121002427}
   }
 }
