@@ -4146,6 +4146,12 @@
     "ship.mimic_barge_hull":                   { "local": "ships/mimic_barge_hull.webp", "remote": "hf_20261121_004929_8dce3e57-bc40-4b10-82b7-fc1015f009d1.png", "job": "8dce3e57-bc40-4b10-82b7-fc1015f009d1", "rev": 20261121004929},
     "ship.icebound_hulk_hull":                 { "local": "ships/icebound_hulk_hull.webp", "remote": "hf_20261121_005136_9cbaaf68-da7b-49df-813f-7fad91bfca4b.png", "job": "9cbaaf68-da7b-49df-813f-7fad91bfca4b", "rev": 20261121005136},
     "ship.sailfish_hull":                      { "local": "ships/sailfish_hull.webp", "remote": "hf_20261121_005342_b82fd1a6-7d20-41c9-8264-c9bf3fcaa3c9.png", "job": "b82fd1a6-7d20-41c9-8264-c9bf3fcaa3c9", "rev": 20261121005342},
-    "ship.golden_lion_hull":                   { "local": "ships/golden_lion_hull.webp", "remote": "hf_20261121_005547_641faf3f-caaa-4822-9ce3-908fa94bcbb5.png", "job": "641faf3f-caaa-4822-9ce3-908fa94bcbb5", "rev": 20261121005547}
+    "ship.golden_lion_hull":                   { "local": "ships/golden_lion_hull.webp", "remote": "hf_20261121_005547_641faf3f-caaa-4822-9ce3-908fa94bcbb5.png", "job": "641faf3f-caaa-4822-9ce3-908fa94bcbb5", "rev": 20261121005547},
+    "ship.bulldog_hull":                       { "local": "ships/bulldog_hull.webp", "remote": "hf_20261121_005901_b7c1d2fe-0b94-490f-b46d-cf842e5def95.png", "job": "b7c1d2fe-0b94-490f-b46d-cf842e5def95", "rev": 20261121005901},
+    "ship.lantern_sampan_hull":                { "local": "ships/lantern_sampan_hull.webp", "remote": "hf_20261121_010151_677a9ce9-b42a-47b9-8f72-9351f14d8c19.png", "job": "677a9ce9-b42a-47b9-8f72-9351f14d8c19", "rev": 20261121010151},
+    "ship.dolphin_hull":                       { "local": "ships/dolphin_hull.webp", "remote": "hf_20261121_010351_eb2fe369-7bb4-47d6-a634-876779532dd5.png", "job": "eb2fe369-7bb4-47d6-a634-876779532dd5", "rev": 20261121010351},
+    "ship.saint_elmo_hull":                    { "local": "ships/saint_elmo_hull.webp", "remote": "hf_20261121_010551_8e70e768-ff2b-4fc1-9d4a-6d3bbb96d700.png", "job": "8e70e768-ff2b-4fc1-9d4a-6d3bbb96d700", "rev": 20261121010551},
+    "ship.scout_cutter_hull":                  { "local": "ships/scout_cutter_hull.webp", "remote": "hf_20261121_010811_f7c533f3-512f-44d1-a0d8-10b40e4a6d80.png", "job": "f7c533f3-512f-44d1-a0d8-10b40e4a6d80", "rev": 20261121010811},
+    "ship.bomb_ketch_hull":                    { "local": "ships/bomb_ketch_hull.webp", "remote": "hf_20261121_011011_b58e15a8-eff2-4af4-adba-bf2d501a43ca.png", "job": "b58e15a8-eff2-4af4-adba-bf2d501a43ca", "rev": 20261121011011}
   }
 }
