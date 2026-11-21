@@ -4141,6 +4141,11 @@
     "ship.zb_ashen_isles_hull":                { "local": "ships/zb_ashen_isles_hull.webp", "remote": "hf_20261121_003839_a2e3ca41-70c8-481a-a6b2-1ff52c227ded.png", "job": "a2e3ca41-70c8-481a-a6b2-1ff52c227ded", "rev": 20261121003839},
     "ship.zb_leviathan_reach_hull":            { "local": "ships/zb_leviathan_reach_hull.webp", "remote": "hf_20261121_004034_32fffa79-45fc-4980-9c48-6f7765b55dd7.png", "job": "32fffa79-45fc-4980-9c48-6f7765b55dd7", "rev": 20261121004034},
     "ship.zb_dead_mans_expanse_hull":          { "local": "ships/zb_dead_mans_expanse_hull.webp", "remote": "hf_20261121_004304_0a480571-87ec-4f6c-9aa8-425fa00f5757.png", "job": "0a480571-87ec-4f6c-9aa8-425fa00f5757", "rev": 20261121004304},
-    "ship.zb_drowned_crown_hull":              { "local": "ships/zb_drowned_crown_hull.webp", "remote": "hf_20261121_004509_4aa8ab20-8ba1-414e-89eb-0d652d8ff336.png", "job": "4aa8ab20-8ba1-414e-89eb-0d652d8ff336", "rev": 20261121004509}
+    "ship.zb_drowned_crown_hull":              { "local": "ships/zb_drowned_crown_hull.webp", "remote": "hf_20261121_004509_4aa8ab20-8ba1-414e-89eb-0d652d8ff336.png", "job": "4aa8ab20-8ba1-414e-89eb-0d652d8ff336", "rev": 20261121004509},
+    "ship.zb_the_abyss_hull":                  { "local": "ships/zb_the_abyss_hull.webp", "remote": "hf_20261121_004729_63bb0dbf-f1a0-4476-a188-fea217e3bd66.png", "job": "63bb0dbf-f1a0-4476-a188-fea217e3bd66", "rev": 20261121004729},
+    "ship.mimic_barge_hull":                   { "local": "ships/mimic_barge_hull.webp", "remote": "hf_20261121_004929_8dce3e57-bc40-4b10-82b7-fc1015f009d1.png", "job": "8dce3e57-bc40-4b10-82b7-fc1015f009d1", "rev": 20261121004929},
+    "ship.icebound_hulk_hull":                 { "local": "ships/icebound_hulk_hull.webp", "remote": "hf_20261121_005136_9cbaaf68-da7b-49df-813f-7fad91bfca4b.png", "job": "9cbaaf68-da7b-49df-813f-7fad91bfca4b", "rev": 20261121005136},
+    "ship.sailfish_hull":                      { "local": "ships/sailfish_hull.webp", "remote": "hf_20261121_005342_b82fd1a6-7d20-41c9-8264-c9bf3fcaa3c9.png", "job": "b82fd1a6-7d20-41c9-8264-c9bf3fcaa3c9", "rev": 20261121005342},
+    "ship.golden_lion_hull":                   { "local": "ships/golden_lion_hull.webp", "remote": "hf_20261121_005547_641faf3f-caaa-4822-9ce3-908fa94bcbb5.png", "job": "641faf3f-caaa-4822-9ce3-908fa94bcbb5", "rev": 20261121005547}
   }
 }
