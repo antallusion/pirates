@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>GRAVETIDE — корабли и паруса</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0d1418; color: #d8c9a6; font: 14px/1.35 Georgia, serif; }
+  #app { display: grid; grid-template-columns: 250px 1fr; height: 100%; }
+  #side { overflow: auto; border-right: 1px solid #3a2f1f; padding: 10px; background: #111a1f; }
+  #side input[type=search] { width: 100%; box-sizing: border-box; padding: 6px 8px; background: #0b1114; color: #e8dcc0; border: 1px solid #5a4a30; border-radius: 4px; }
+  #list { margin-top: 8px; }
+  #list button { display: block; width: 100%; text-align: left; padding: 5px 8px; margin: 1px 0; background: none; color: #d8c9a6; border: 1px solid transparent; border-radius: 3px; cursor: pointer; font: inherit; }
+  #list button:hover { border-color: #5a4a30; }
+  #list button.on { background: #2a2216; border-color: #b08a48; color: #fff3d6; }
+  #list small { color: #8d7c5c; }
+  #main { display: grid; grid-template-rows: auto 1fr; min-width: 0; }
+  #bar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 8px 12px; border-bottom: 1px solid #3a2f1f; background: #111a1f; }
+  #bar .grp { display: flex; gap: 4px; align-items: center; }
+  #bar button { padding: 5px 10px; background: #1c1610; color: #e8dcc0; border: 1px solid #5a4a30; border-radius: 4px; cursor: pointer; font: inherit; }
+  #bar button.on { background: #4a3a1e; border-color: #e0b862; color: #fff; }
+  #bar input[type=range] { width: 160px; accent-color: #c89a48; }
+  #view { position: relative; overflow: auto; background: radial-gradient(ellipse at center, #1d3a4a 0%, #0f2230 70%, #0a1820 100%); }
+  canvas { display: block; }
+  #title { font-size: 18px; color: #fff3d6; }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="side">
+    <input id="q" type="search" placeholder="Поиск корабля…" autocomplete="off">
+    <div id="list"></div>
+  </aside>
+  <section id="main">
+    <div id="bar">
+      <span id="title"></span>
+      <div class="grp" id="sails"></div>
+      <label class="grp">Ветер <input id="wind" type="range" min="-90" max="90" value="35"></label>
+      <label class="grp">Размер <input id="zoom" type="range" min="40" max="200" value="100"></label>
+      <label class="grp"><input id="old" type="checkbox" checked> старый рисунок рядом</label>
+      <button id="all">Все корабли</button>
+    </div>
+    <div id="view"><canvas id="cv"></canvas></div>
+  </section>
+</div>
+<script type="module" src="/src/dev/shipview.ts"></script>
+</body>
+</html>

@@ -81,7 +81,8 @@ import { drawTreasureScrolls } from './treasurescroll.ts';
 import { personName } from '../lang/names.ts';
 import { dec1 } from '../ui/dom.ts';
 import { colourArt, shipCloth, shipColours } from '../ui/flags.ts'; // docs/24 D1–D2
-import { MAST_PIVOT, MAST_STEPS, MAST_TINT } from '../../../shared/src/data/maststeps.ts'; // 2026-11-16: mastless hulls, masts apart
+import { MAST_STEPS, MAST_TINT } from '../../../shared/src/data/maststeps.ts';
+import { drawMastSet, dyeMast } from './masts.ts'; // 2026-11-16: mastless hulls, masts apart
 import type { ShipColours } from '../ui/flags.ts';
 import { EN as FL_EN, RU as FL_RU } from '../lang/ui/flags.ts';
 import { objective } from '../ui/track.ts';
@@ -2380,7 +2381,7 @@ export class Renderer {
     const a = this.atlas.get(`${art}|${stage}|${hullImg.canvas.width}x${hullImg.canvas.height}`, () => hullImg.canvas, this.sailKey(s), this.lookPaint(s, state));
     if (Math.max(imgW, imgH) * this.dpr > CELL) g.drawImage(a.full, -imgW * hullImg.cx, -imgH * hullImg.cy, imgW, imgH);
     else g.drawImage(a.page, a.sx, a.sy, a.sw, a.sh, -imgW * hullImg.cx, -imgH * hullImg.cy, imgW, imgH);
-    if (bare) this.drawMasts(s, cls.rig, steps!, imgW, imgH, hullImg.cx, hullImg.cy, state, sinking, MAST_TINT[art0.slice(5)]);
+    if (bare) this.drawMasts(s, steps!, imgW, imgH, hullImg.cy, state, sinking, MAST_TINT[art0.slice(5)]);
     // Torn sails (2026-10-16): the cloth of her own picture scorched and holed, by the damage (shipfx.ts).
     const dmg = damageLook(s.hull, s.sails);
     if (dmg.torn > 0 && !sinking && !bare) {
@@ -2526,8 +2527,7 @@ export class Renderer {
   /** The masts on a mastless hull's steps, in the ship's own frame (bow up): one yard and its sail each, seen from above,
    *  turned about its round top — braced across the wind, swung a little more in a turn — the canvas set, reefed, furled
    *  or bare by her sail (two neighbouring states crossfaded), torn sails dimmed. */
-  private drawMasts(s: DrawShip, rig: string, steps: number[], imgW: number, imgH: number, cx: number, cy: number, state: ClientState, sinking: boolean, tint?: string): void {
-    const g = this.g;
+  private drawMasts(s: DrawShip, steps: number[], imgW: number, imgH: number, cy: number, state: ClientState, sinking: boolean, tint?: string): void {
     const now = this.time;
     let a = this.mastAnim.get(s.id);
     const want = sinking ? 0 : clamp(s.sail, 0, 1);
@@ -2539,73 +2539,20 @@ export class Renderer {
     a.sail += (want - a.sail) * Math.min(1, dt * 1.6);
     a.brace += (braceWant - a.brace) * Math.min(1, dt * 0.9);
     if (this.mastAnim.size > 400) this.mastAnim.clear();
-    const order = ['bare', 'furl', 'reef', 'full'] as const;
-    const pos = a.sail * 3;
-    const i = Math.min(2, Math.floor(pos));
-    const f = pos - i;
-    const yard = imgW * 0.92;
     const breathe = settings().reduceMotion ? 0 : Math.sin(now * 1.7 + s.id) * 0.015 * a.sail;
-    steps.forEach((fy, k) => {
-      const kind = rig === 'square' || (rig === 'mixed' && k === 0) || !sprite(`mast.fore_aft_full`) ? 'square' : 'fore_aft';
-      const y = -imgH * cy + fy * imgH;
-      g.save();
-      g.translate(0, y);
-      // A fore-and-aft sail's boom runs aft from the mast (the picture's boom lies to its right) and swings to leeward
-      // with the canvas bellied the same way (the picture's belly is below its boom: mirrored for the other tack).
-      const swing = a!.brace * 0.8 * (1 - k * 0.06) + breathe;
-      if (kind === 'fore_aft') {
-        g.rotate(Math.PI / 2 + swing);
-        if (swing < 0) g.scale(1, -1);
-      } else g.rotate(a!.brace * (1 - k * 0.06) + breathe);
-      for (const [st, al] of [[order[i], 1 - f], [order[i + 1], f]] as const) {
-        if (al < 0.02) continue;
-        const spr = sprite(`mast.${kind}_${st}`);
-        if (!spr) continue;
-        const img = tint ? this.mastDyed(`mast.${kind}_${st}`, tint) ?? spr.img : spr.img;
-        if (kind === 'fore_aft') {
-          // the boom about a third of her length (as far as the next mast), the mast's round top on her step
-          const w = imgH * 0.22, h = (spr.img.naturalHeight / spr.img.naturalWidth) * w;
-          const ga = g.globalAlpha;
-          g.globalAlpha = ga * al;
-          g.drawImage(img, -(MAST_PIVOT[`${kind}_${st}_x`] ?? 0.15) * w, -(MAST_PIVOT[`${kind}_${st}`] ?? 0.3) * h, w, h);
-          g.globalAlpha = ga;
-          continue;
-        }
-        const w = yard, h = (spr.img.naturalHeight / spr.img.naturalWidth) * w;
-        const py = (MAST_PIVOT[`${kind}_${st}`] ?? 0.3) * h;
-        const ga = g.globalAlpha;
-        g.globalAlpha = ga * al;
-        g.drawImage(img, -w / 2, -py, w, h);
-        g.globalAlpha = ga;
-      }
-      g.restore();
-    });
-    void cx;
+    drawMastSet(this.g, (id) => this.mastLook(id, tint), steps, imgW, imgH, cy, a.sail, a.brace, breathe);
   }
 
-  /** A mast picture with its canvas dyed (MAST_TINT: the colour her old painting's sails had), cached per colour: the
-   *  light grey cloth multiplied up to the dye, the dark wood only a little warmed. */
+  /** A mast picture for drawMastSet, dyed (cached per colour) when she has a colour. */
   private mastDyes = new Map<string, HTMLCanvasElement>();
-  private mastDyed(id: string, tint: string): HTMLCanvasElement | null {
-    const key = id + tint;
-    let c = this.mastDyes.get(key);
-    if (c) return c;
+  private mastLook(id: string, tint?: string): { img: CanvasImageSource; w: number; h: number } | null {
     const spr = sprite(id);
     if (!spr || !spr.img.naturalWidth) return null;
-    c = document.createElement('canvas');
-    c.width = spr.img.naturalWidth;
-    c.height = spr.img.naturalHeight;
-    const x = c.getContext('2d')!;
-    x.drawImage(spr.img, 0, 0);
-    const n = parseInt(tint.slice(1), 16);
-    const up = (v: number) => Math.min(255, Math.round(v / 0.72));
-    x.globalCompositeOperation = 'multiply';
-    x.fillStyle = `rgb(${up(n >> 16)},${up((n >> 8) & 255)},${up(n & 255)})`;
-    x.fillRect(0, 0, c.width, c.height);
-    x.globalCompositeOperation = 'destination-in';
-    x.drawImage(spr.img, 0, 0);
-    this.mastDyes.set(key, c);
-    return c;
+    const w = spr.img.naturalWidth, h = spr.img.naturalHeight;
+    if (!tint) return { img: spr.img, w, h };
+    let c = this.mastDyes.get(id + tint);
+    if (!c) this.mastDyes.set(id + tint, (c = dyeMast(spr.img, tint)));
+    return { img: c, w, h };
   }
 
   /** A painted flag (flag.c_*, flag.guild…) as a canvas, once it is loaded (drawWavingFlag cuts a canvas in strips). */
