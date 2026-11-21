@@ -1577,20 +1577,33 @@ const guideTips = new GuideTips({
 }
 /** The «?» of the windows shown now, and the triggers of what is open (four times a second, from the frame). */
 let guideHelpAt = 0;
-function guideFrame(t: number): void {
-  guideTips.frame(t);
-  if (t - guideHelpAt < 250) return;
-  guideHelpAt = t;
+/** Puts the «?» back into the heads shown now. A window that redraws its head (the ship's, each refresh) drops it; the
+ *  observer below puts it back in the same task, before the frame is painted (it blinked out for up to a quarter
+ *  second before: the owner's video, 2026-11-21). */
+function syncHelp(): void {
   const panel = document.getElementById('modal-panel');
   if (panel && modal) {
     const win = modalWindowId(modal, { portTab: portScreen.tab, heroTab: heroWindow.tab, heroPage: heroWindow.heroPage });
     ensureHelp(panel.querySelector('.w-head .w-title') ?? panel.querySelector('.modal-head h2'), win);
   }
   if (isleScene.isOpen) ensureHelp(document.querySelector('#isle .is-top .is-name'), 'isle');
-  if (seasonPass.isOpen()) {
-    ensureHelp(document.querySelector('#spass-over .sp-head'), 'pass');
-    guideTips.offer('season-pass');
+  if (seasonPass.isOpen()) ensureHelp(document.querySelector('#spass-over .sp-head'), 'pass');
+}
+const helpWatch = new MutationObserver(() => syncHelp());
+const helpWatched = new Set<Element>();
+function guideFrame(t: number): void {
+  guideTips.frame(t);
+  if (t - guideHelpAt < 250) return;
+  guideHelpAt = t;
+  for (const sel of ['#modal-panel', '#isle', '#spass-over']) {
+    const el = document.querySelector(sel);
+    if (el && !helpWatched.has(el)) {
+      helpWatched.add(el);
+      helpWatch.observe(el, { childList: true, subtree: true });
+    }
   }
+  syncHelp();
+  if (seasonPass.isOpen()) guideTips.offer('season-pass');
   if (modal === 'recruit') guideTips.offer('first-hire');
 }
 /** What the sea about her shows, for the tips (once a second). */
