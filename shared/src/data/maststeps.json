@@ -3,7 +3,15 @@
 "square_full": 0.2397,
 "square_reef": 0.3503,
 "square_furl": 0.4419,
-"square_bare": 0.4348
+"square_bare": 0.4348,
+"fore_aft_full_x": 0.2105,
+"fore_aft_full": 0.2781,
+"fore_aft_reef_x": 0.1809,
+"fore_aft_reef": 0.3263,
+"fore_aft_furl_x": 0.1489,
+"fore_aft_furl": 0.3558,
+"fore_aft_bare_x": 0.1367,
+"fore_aft_bare": 0.3584
 },
 "albatross_xebec": [
 0.3125,

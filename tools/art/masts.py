@@ -25,6 +25,10 @@ from slice_flags import key_magenta  # noqa: E402
 RAW = os.path.join(os.path.expanduser('~'), 'Downloads', 'gravetide_art', 'ships2')
 STEPS = os.path.join(ROOT, 'shared', 'src', 'data', 'maststeps.json')
 CELLS = {'full': (0, 0), 'reef': (0, 1), 'furl': (2, 0), 'bare': (2, 1)}  # (row, col)
+# fore_aft (2026-11-21): the after half of a square sheet's yard — from the mast's round top to the yard's end — is a
+# boom with its canvas below it; the sheet's second row has the set sail bellied in a curve, which halves into the
+# wedge of a gaff sail (deepest at the mast)
+CELLS_FA = {'full': (1, 0), 'reef': (1, 1), 'furl': (2, 0), 'bare': (2, 1)}
 WIDTH = 480  # px: a yard's width in the asset
 
 
@@ -41,7 +45,7 @@ def main(rig: str, stem: str) -> None:
     os.makedirs(os.path.join(ROOT, 'assets', 'masts'), exist_ok=True)
     steps = json.load(open(STEPS, encoding='utf-8')) if os.path.exists(STEPS) else {}
     piv = steps.setdefault('_pivot', {})
-    for state, (r, c) in CELLS.items():
+    for state, (r, c) in (CELLS_FA if rig == 'fore_aft' else CELLS).items():
         cell = sheet.crop((c * W // 2 + 12, r * H // 4 + 12, (c + 1) * W // 2 - 12, (r + 1) * H // 4 - 12))
         a = np.array(cell)
         solid = a[:, :, 3] > 128
@@ -53,8 +57,24 @@ def main(rig: str, stem: str) -> None:
         cell = cell.crop(cell.getbbox())
         s = WIDTH / cell.width
         cell = cell.convert('RGBa').resize((WIDTH, max(1, round(cell.height * s))), Image.LANCZOS).convert('RGBA')
-        rows = (np.array(cell)[:, :, 3] > 128).sum(axis=1)
+        solid = np.array(cell)[:, :, 3] > 128
+        rows = solid.sum(axis=1)
         py = int(np.argmax(rows[: max(1, int(len(rows) * 0.45))]))
+        if rig == 'fore_aft':
+            # cut at the mast: keep its round top (the tallest columns about the middle) and everything after it
+            cols = solid.sum(axis=0)
+            mid = cell.width // 2
+            band = np.where(cols[mid - cell.width // 8:mid + cell.width // 8] >= cols[mid - cell.width // 8:mid + cell.width // 8].max() * 0.55)[0]
+            x0 = max(0, mid - cell.width // 8 + int(band.min()) - 4) if len(band) else mid - 20
+            # the pivot: the round top's middle (its top row plus its radius; below it the canvas may hang on)
+            ys = np.where(solid[:, mid])[0]
+            rad = (int(band.max()) - int(band.min())) / 2 if len(band) else 20
+            py = int(ys.min() + rad) if len(ys) else py
+            cell = cell.crop((x0, 0, cell.width, cell.height))
+            s2 = WIDTH / cell.width
+            cell = cell.convert('RGBa').resize((WIDTH, max(1, round(cell.height * s2))), Image.LANCZOS).convert('RGBA')
+            piv[f'{rig}_{state}_x'] = round((mid - x0) * s2 / cell.width, 4)
+            py = py * s2
         local = f'masts/{rig}_{state}.webp'
         cell.save(os.path.join(ROOT, 'assets', local), 'WEBP', quality=90, method=6)
         m['assets'][f'mast.{rig}_{state}'] = {'local': local, 'remote': stem + '.png', 'job': stem.split('_', 3)[3], 'fit': f'sheet:{rig}{r}{c}', 'rev': rev_of(stem)}

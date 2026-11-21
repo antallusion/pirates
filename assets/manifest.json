@@ -4152,6 +4152,10 @@
     "ship.dolphin_hull":                       { "local": "ships/dolphin_hull.webp", "remote": "hf_20261121_010351_eb2fe369-7bb4-47d6-a634-876779532dd5.png", "job": "eb2fe369-7bb4-47d6-a634-876779532dd5", "rev": 20261121010351},
     "ship.saint_elmo_hull":                    { "local": "ships/saint_elmo_hull.webp", "remote": "hf_20261121_010551_8e70e768-ff2b-4fc1-9d4a-6d3bbb96d700.png", "job": "8e70e768-ff2b-4fc1-9d4a-6d3bbb96d700", "rev": 20261121010551},
     "ship.scout_cutter_hull":                  { "local": "ships/scout_cutter_hull.webp", "remote": "hf_20261121_010811_f7c533f3-512f-44d1-a0d8-10b40e4a6d80.png", "job": "f7c533f3-512f-44d1-a0d8-10b40e4a6d80", "rev": 20261121010811},
-    "ship.bomb_ketch_hull":                    { "local": "ships/bomb_ketch_hull.webp", "remote": "hf_20261121_011011_b58e15a8-eff2-4af4-adba-bf2d501a43ca.png", "job": "b58e15a8-eff2-4af4-adba-bf2d501a43ca", "rev": 20261121011011}
+    "ship.bomb_ketch_hull":                    { "local": "ships/bomb_ketch_hull.webp", "remote": "hf_20261121_011011_b58e15a8-eff2-4af4-adba-bf2d501a43ca.png", "job": "b58e15a8-eff2-4af4-adba-bf2d501a43ca", "rev": 20261121011011},
+    "mast.fore_aft_full":                      { "local": "masts/fore_aft_full.webp", "remote": "hf_20261121_012249_dd737478-b005-448f-8961-efe5ba6b54e4.png", "job": "dd737478-b005-448f-8961-efe5ba6b54e4", "fit": "sheet:fore_aft10", "rev": 20261121012249},
+    "mast.fore_aft_reef":                      { "local": "masts/fore_aft_reef.webp", "remote": "hf_20261121_012249_dd737478-b005-448f-8961-efe5ba6b54e4.png", "job": "dd737478-b005-448f-8961-efe5ba6b54e4", "fit": "sheet:fore_aft11", "rev": 20261121012249},
+    "mast.fore_aft_furl":                      { "local": "masts/fore_aft_furl.webp", "remote": "hf_20261121_012249_dd737478-b005-448f-8961-efe5ba6b54e4.png", "job": "dd737478-b005-448f-8961-efe5ba6b54e4", "fit": "sheet:fore_aft20", "rev": 20261121012249},
+    "mast.fore_aft_bare":                      { "local": "masts/fore_aft_bare.webp", "remote": "hf_20261121_012249_dd737478-b005-448f-8961-efe5ba6b54e4.png", "job": "dd737478-b005-448f-8961-efe5ba6b54e4", "fit": "sheet:fore_aft21", "rev": 20261121012249}
   }
 }

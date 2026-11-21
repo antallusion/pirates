@@ -2550,11 +2550,26 @@ export class Renderer {
       const y = -imgH * cy + fy * imgH;
       g.save();
       g.translate(0, y);
-      g.rotate(a!.brace * (1 - k * 0.06) + breathe);
+      // A fore-and-aft sail's boom runs aft from the mast (the picture's boom lies to its right) and swings to leeward
+      // with the canvas bellied the same way (the picture's belly is below its boom: mirrored for the other tack).
+      const swing = a!.brace * 0.8 * (1 - k * 0.06) + breathe;
+      if (kind === 'fore_aft') {
+        g.rotate(Math.PI / 2 + swing);
+        if (swing < 0) g.scale(1, -1);
+      } else g.rotate(a!.brace * (1 - k * 0.06) + breathe);
       for (const [st, al] of [[order[i], 1 - f], [order[i + 1], f]] as const) {
         if (al < 0.02) continue;
         const spr = sprite(`mast.${kind}_${st}`);
         if (!spr) continue;
+        if (kind === 'fore_aft') {
+          // the boom about a third of her length (as far as the next mast), the mast's round top on her step
+          const w = imgH * 0.22, h = (spr.img.naturalHeight / spr.img.naturalWidth) * w;
+          const ga = g.globalAlpha;
+          g.globalAlpha = ga * al;
+          g.drawImage(spr.img, -(MAST_PIVOT[`${kind}_${st}_x`] ?? 0.15) * w, -(MAST_PIVOT[`${kind}_${st}`] ?? 0.3) * h, w, h);
+          g.globalAlpha = ga;
+          continue;
+        }
         const w = yard, h = (spr.img.naturalHeight / spr.img.naturalWidth) * w;
         const py = (MAST_PIVOT[`${kind}_${st}`] ?? 0.3) * h;
         const ga = g.globalAlpha;
