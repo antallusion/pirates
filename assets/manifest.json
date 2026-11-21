@@ -4136,6 +4136,11 @@
     "ship.great_indiaman_hull":                { "local": "ships/great_indiaman_hull.webp", "remote": "hf_20261121_002826_991774ec-9afe-4cf0-a42e-d08454446fd4.png", "job": "991774ec-9afe-4cf0-a42e-d08454446fd4", "rev": 20261121002826},
     "ship.manila_galleon_hull":                { "local": "ships/manila_galleon_hull.webp", "remote": "hf_20261121_003017_94fae1f2-a7e2-410f-a0b6-fe2859a1dfe2.png", "job": "94fae1f2-a7e2-410f-a0b6-fe2859a1dfe2", "rev": 20261121003017},
     "ship.zb_black_coast_hull":                { "local": "ships/zb_black_coast_hull.webp", "remote": "hf_20261121_003211_f4bdeea4-1056-4bc9-b33d-7442da66e767.png", "job": "f4bdeea4-1056-4bc9-b33d-7442da66e767", "rev": 20261121003211},
-    "ship.zb_gravewater_hull":                 { "local": "ships/zb_gravewater_hull.webp", "remote": "hf_20261121_003412_452ece53-dfe0-495c-a4eb-bb250d7ad67d.png", "job": "452ece53-dfe0-495c-a4eb-bb250d7ad67d", "rev": 20261121003412}
+    "ship.zb_gravewater_hull":                 { "local": "ships/zb_gravewater_hull.webp", "remote": "hf_20261121_003412_452ece53-dfe0-495c-a4eb-bb250d7ad67d.png", "job": "452ece53-dfe0-495c-a4eb-bb250d7ad67d", "rev": 20261121003412},
+    "ship.zb_whispering_hull":                 { "local": "ships/zb_whispering_hull.webp", "remote": "hf_20261121_003639_8ebfdd6c-2d6d-4af7-a371-11aa194396ae.png", "job": "8ebfdd6c-2d6d-4af7-a371-11aa194396ae", "rev": 20261121003639},
+    "ship.zb_ashen_isles_hull":                { "local": "ships/zb_ashen_isles_hull.webp", "remote": "hf_20261121_003839_a2e3ca41-70c8-481a-a6b2-1ff52c227ded.png", "job": "a2e3ca41-70c8-481a-a6b2-1ff52c227ded", "rev": 20261121003839},
+    "ship.zb_leviathan_reach_hull":            { "local": "ships/zb_leviathan_reach_hull.webp", "remote": "hf_20261121_004034_32fffa79-45fc-4980-9c48-6f7765b55dd7.png", "job": "32fffa79-45fc-4980-9c48-6f7765b55dd7", "rev": 20261121004034},
+    "ship.zb_dead_mans_expanse_hull":          { "local": "ships/zb_dead_mans_expanse_hull.webp", "remote": "hf_20261121_004304_0a480571-87ec-4f6c-9aa8-425fa00f5757.png", "job": "0a480571-87ec-4f6c-9aa8-425fa00f5757", "rev": 20261121004304},
+    "ship.zb_drowned_crown_hull":              { "local": "ships/zb_drowned_crown_hull.webp", "remote": "hf_20261121_004509_4aa8ab20-8ba1-414e-89eb-0d652d8ff336.png", "job": "4aa8ab20-8ba1-414e-89eb-0d652d8ff336", "rev": 20261121004509}
   }
 }
