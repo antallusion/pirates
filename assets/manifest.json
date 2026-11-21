@@ -4121,6 +4121,7 @@
     "ship.treasure_junk_hull":                 { "local": "ships/treasure_junk_hull.webp", "remote": "hf_20261120_235214_727a3d60-38fb-4173-917e-7a8d8a817ef9.png", "job": "727a3d60-38fb-4173-917e-7a8d8a817ef9", "rev": 20261120235214},
     "ship.great_galleon_hull":                 { "local": "ships/great_galleon_hull.webp", "remote": "hf_20261120_235404_1de92caa-1926-4b3a-be88-af7bb7d2e82f.png", "job": "1de92caa-1926-4b3a-be88-af7bb7d2e82f", "rev": 20261120235404},
     "ship.leviathan_ark_hull":                 { "local": "ships/leviathan_ark_hull.webp", "remote": "hf_20261120_235629_5c3e910b-85cf-4ff4-be59-5fc0be08b19b.png", "job": "5c3e910b-85cf-4ff4-be59-5fc0be08b19b", "rev": 20261120235629},
-    "ship.floating_fortress_hull":             { "local": "ships/floating_fortress_hull.webp", "remote": "hf_20261120_235819_488f3849-bce6-4f42-93c8-b4248e890865.png", "job": "488f3849-bce6-4f42-93c8-b4248e890865", "rev": 20261120235819}
+    "ship.floating_fortress_hull":             { "local": "ships/floating_fortress_hull.webp", "remote": "hf_20261120_235819_488f3849-bce6-4f42-93c8-b4248e890865.png", "job": "488f3849-bce6-4f42-93c8-b4248e890865", "rev": 20261120235819},
+    "ship.whale_mother_hull":                  { "local": "ships/whale_mother_hull.webp", "remote": "hf_20261121_000019_943f69e1-7e5b-4dcd-b3c1-39af8b00fc9a.png", "job": "943f69e1-7e5b-4dcd-b3c1-39af8b00fc9a", "rev": 20261121000019}
   }
 }

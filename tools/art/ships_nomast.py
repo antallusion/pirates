@@ -48,8 +48,12 @@ def fetch(name: str, stem: str, cdn: str) -> str:
     return p
 
 
-def central_only(a: np.ndarray) -> np.ndarray:
-    """Only the vessel in the picture's middle: the model sometimes paints stray neighbouring hulls at the sides."""
+# ships whose painting has parts standing apart from the hull (boats on davits, oars): only edge-cut strays go
+KEEP_PARTS = {'whale_mother', 'wyvern_galleass', 'hoy'}
+
+
+def hull_only(a: np.ndarray) -> np.ndarray:
+    """Only the piece in the picture's middle (stray sail scraps and neighbouring hulls out)."""
     solid = a[:, :, 3] > 128
     lab, n = ndimage.label(solid)
     if n <= 1:
@@ -62,6 +66,24 @@ def central_only(a: np.ndarray) -> np.ndarray:
     keep = ndimage.binary_dilation(lab == ids[np.argmax(cnt)], iterations=3)
     out = a.copy()
     out[:, :, 3] = np.where(keep, a[:, :, 3], 0)
+    return out
+
+
+def central_only(a: np.ndarray) -> np.ndarray:
+    """Stray neighbouring hulls out: the model sometimes paints pieces of other vessels cut by the picture's side edges.
+    Everything else stays (boats on davits, oars, flippers that stand apart from the hull), and so does the vessel in
+    the middle even if it touches an edge."""
+    solid = a[:, :, 3] > 128
+    lab, n = ndimage.label(solid)
+    if n <= 1:
+        return a
+    h, w = solid.shape
+    mid = set(np.unique(lab[h // 4:3 * h // 4, w // 2 - w // 40:w // 2 + w // 40]).tolist()) - {0}
+    edge = set(np.unique(np.concatenate([lab[:, :3].ravel(), lab[:, -3:].ravel()])).tolist()) - {0} - mid
+    if not edge:
+        return a
+    out = a.copy()
+    out[:, :, 3] = np.where(np.isin(lab, list(edge)), 0, a[:, :, 3])
     return out
 
 
@@ -110,7 +132,8 @@ def main(pairs: dict[str, str]) -> None:
         src = fetch(name, stem, m['cdn'])
         old = m['assets'].get(f'ship.{name}')
         ow, oh = Image.open(os.path.join(ROOT, 'assets', old['local'])).size if old else (320, 768)
-        im = Image.fromarray(central_only(key_magenta(np.array(Image.open(src).convert('RGBA')))))
+        keyed = key_magenta(np.array(Image.open(src).convert('RGBA')))
+        im = Image.fromarray(central_only(keyed) if name in KEEP_PARTS else hull_only(keyed))
         # the painting keeps its source's frame (1024×1536 with the old sprite fitted in it): that fitted box cut back
         W, H = im.size
         s = min(1000 / ow, 1500 / oh)
