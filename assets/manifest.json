@@ -4122,6 +4122,10 @@
     "ship.great_galleon_hull":                 { "local": "ships/great_galleon_hull.webp", "remote": "hf_20261120_235404_1de92caa-1926-4b3a-be88-af7bb7d2e82f.png", "job": "1de92caa-1926-4b3a-be88-af7bb7d2e82f", "rev": 20261120235404},
     "ship.leviathan_ark_hull":                 { "local": "ships/leviathan_ark_hull.webp", "remote": "hf_20261120_235629_5c3e910b-85cf-4ff4-be59-5fc0be08b19b.png", "job": "5c3e910b-85cf-4ff4-be59-5fc0be08b19b", "rev": 20261120235629},
     "ship.floating_fortress_hull":             { "local": "ships/floating_fortress_hull.webp", "remote": "hf_20261120_235819_488f3849-bce6-4f42-93c8-b4248e890865.png", "job": "488f3849-bce6-4f42-93c8-b4248e890865", "rev": 20261120235819},
-    "ship.whale_mother_hull":                  { "local": "ships/whale_mother_hull.webp", "remote": "hf_20261121_000019_943f69e1-7e5b-4dcd-b3c1-39af8b00fc9a.png", "job": "943f69e1-7e5b-4dcd-b3c1-39af8b00fc9a", "rev": 20261121000019}
+    "ship.whale_mother_hull":                  { "local": "ships/whale_mother_hull.webp", "remote": "hf_20261121_000019_943f69e1-7e5b-4dcd-b3c1-39af8b00fc9a.png", "job": "943f69e1-7e5b-4dcd-b3c1-39af8b00fc9a", "rev": 20261121000019},
+    "ship.drowned_cathedral_hull":             { "local": "ships/drowned_cathedral_hull.webp", "remote": "hf_20261121_000220_dc2d5dfb-6af2-48e9-8078-bcad6841536a.png", "job": "dc2d5dfb-6af2-48e9-8078-bcad6841536a", "rev": 20261121000220},
+    "ship.sloop_of_war_hull":                  { "local": "ships/sloop_of_war_hull.webp", "remote": "hf_20261121_001203_38c2c87a-db6e-4062-8ce4-5cea4c27ead6.png", "job": "38c2c87a-db6e-4062-8ce4-5cea4c27ead6", "rev": 20261121001203},
+    "ship.phantom_brig_hull":                  { "local": "ships/phantom_brig_hull.webp", "remote": "hf_20261121_001307_22fc2e45-c55f-4858-a7db-be2b1d9346d9.png", "job": "22fc2e45-c55f-4858-a7db-be2b1d9346d9", "rev": 20261121001307},
+    "ship.pirate_haven_hull":                  { "local": "ships/pirate_haven_hull.webp", "remote": "hf_20261121_001409_1f1e055a-4d84-48e2-aa07-b0d4ac87d18f.png", "job": "1f1e055a-4d84-48e2-aa07-b0d4ac87d18f", "rev": 20261121001409}
   }
 }
