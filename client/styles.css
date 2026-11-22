@@ -3070,6 +3070,7 @@ body.tac.tac-over #toasts { display: none; }
 .pr-card .pr-lv { grid-area: lv; font-size: 12px; color: var(--gold); white-space: nowrap; }
 .pr-card .pr-edge { grid-area: edge; font-size: 12px; color: var(--good); }
 .pr-card .pr-edge:empty { display: none; }
+.pr-card .pr-edge.pr-none { color: var(--fog); font-style: italic; overflow-wrap: anywhere; }
 .pr-card .pr-hint { font-size: 12px; margin: 6px 0 0; }
 .wd-card p { margin: 4px 0; }
 .wd-card .wd-n { font-size: 15px; }

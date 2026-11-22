@@ -142,21 +142,46 @@ export function poolTotal(pools: Pools): number {
   return n;
 }
 
-/** Keep the pools in step with the head count: losses and returns fall across trades by their share. */
+/** The trades below decks (forum 135): the surgeons in the orlop and the cooks in the galley are the last to fall — a
+ *  fight, a sinking, a storm takes the men on deck first — and the head count's returns (the wounded, the survivors
+ *  pulled from the water) come back to the deck trades: a surgeon or a cook is signed at a tavern, never multiplied. */
+export const BELOW_DECKS: readonly Profession[] = ['surgeon', 'cook'];
+const DECK: readonly Profession[] = PROFESSIONS.filter((k) => !BELOW_DECKS.includes(k));
+
+/** The trades below decks she had at her last step: the last of them fallen is told, once (forum 135). */
+const belowSeen = new WeakMap<Company, Partial<Record<Profession, number>>>();
+export const LAST_GONE: Partial<Record<Profession, string>> = {
+  surgeon: 'Your last surgeon has fallen: fewer of the men struck down live on as wounded, and the wounded heal slowly. Sign a surgeon on at a tavern: the surgeons\' practice is kept for him.',
+  cook: 'Your last cook has fallen: the crew loses the cook\'s morale and eats more. Sign a cook on at a tavern: the cooks\' practice is kept for him.',
+};
+
+/** After the head count is settled: a trade below decks left with nobody is told (not on the first step). */
+export function noteBelowDecks(game: Game, s: PlayerSession, c: Company): void {
+  const seen = belowSeen.get(c);
+  const now: Partial<Record<Profession, number>> = {};
+  for (const k of BELOW_DECKS) now[k] = c.pools[k];
+  belowSeen.set(c, now);
+  if (!seen) return;
+  for (const k of BELOW_DECKS) if ((seen[k] ?? 0) > 0 && c.pools[k] <= 0) game.sendTo(s, { t: 'toast', msg: LAST_GONE[k]!, kind: 'bad' });
+}
+
+/** Keep the pools in step with the head count: losses and returns fall across the deck trades by their share; the
+ *  trades below decks only when nobody else is left. */
 export function reconcile(game: Game, c: Company, crew: number): void {
   let diff = crew - poolTotal(c.pools);
   if (diff === 0) return;
-  if (poolTotal(c.pools) === 0) {
-    c.pools.sailor += Math.max(0, diff);
+  const deckTotal = (): number => DECK.reduce((a, k) => a + c.pools[k], 0);
+  if (diff > 0 && deckTotal() === 0) {
+    c.pools.sailor += diff;
     return;
   }
   const rng = game.rng;
   while (diff !== 0) {
-    // Pick a trade weighted by its head count (sailors take most of it).
-    const total = poolTotal(c.pools);
+    // Pick a deck trade weighted by its head count (sailors take most of it).
+    const total = deckTotal();
     let r = rng.float() * Math.max(1, total);
     let pick: Profession = 'sailor';
-    for (const k of PROFESSIONS) {
+    for (const k of DECK) {
       r -= c.pools[k];
       if (r <= 0) {
         pick = k;
@@ -167,7 +192,7 @@ export function reconcile(game: Game, c: Company, crew: number): void {
       c.pools[pick]++;
       diff--;
     } else {
-      if (c.pools[pick] <= 0) pick = PROFESSIONS.find((k) => c.pools[k] > 0) ?? 'sailor';
+      if (c.pools[pick] <= 0) pick = DECK.find((k) => c.pools[k] > 0) ?? PROFESSIONS.find((k) => c.pools[k] > 0) ?? 'sailor';
       if (c.pools[pick] <= 0) break;
       c.pools[pick]--;
       diff++;
@@ -353,6 +378,7 @@ export function stepCompany(game: Game, s: PlayerSession): void {
   const c = p.company;
   const now = game.now;
   reconcile(game, c, ship.crew);
+  noteBelowDecks(game, s, c);
   applyCompany(game, ship, c);
   // Officers come back from captivity; wounds heal (twice as fast with surgeons aboard).
   for (const o of c.officers) {
@@ -928,6 +954,8 @@ export function hireTrade(game: Game, s: PlayerSession, port: Port, prof: Profes
     if (n <= 0) return `No ${PROFESSION_DEFS[prof].name.toLowerCase()} to discharge`;
     c.pools[prof] -= n;
     ship.crew -= n;
+    const seen = belowSeen.get(c);
+    if (seen) seen[prof] = c.pools[prof]; // paid off by her own hand: nobody fell
     return null;
   }
   // Crew of the Drowned: lawful ports will not sign the living onto a dead ship.
@@ -974,8 +1002,10 @@ export function hireTrade(game: Game, s: PlayerSession, port: Port, prof: Profes
   c.skill = (c.skill * ship.crew + tav.stars * n) / total;
   c.loyalty = (c.loyalty * ship.crew + (port.faction === 'confederacy' ? 35 : 50) * n) / total;
   if (n > ship.crew * 0.2) c.fights = 0;
-  // New hands of a trade thin its practice by their share (docs/16 #18).
-  c.practice[prof] = (c.practice[prof] ?? 0) * c.pools[prof] / Math.max(1, c.pools[prof] + n);
+  // New hands of a trade thin its practice by their share of the men of it aboard (docs/16 #18); into a trade none of
+  // whom is left they take up her ways whole (forum 135: the first cook signed after a lost crew wiped the practice the
+  // cooks before him had earned).
+  if (c.pools[prof] > 0) c.practice[prof] = (c.practice[prof] ?? 0) * c.pools[prof] / (c.pools[prof] + n);
   // Into the army (docs/17 H1): marines to the marines' stack, gunners to the musketeers', the rest as deckhands —
   // or as seasoned sailors from a tavern of veterans.
   ship.addMen(prof === 'marine' ? 'marine' : prof === 'gunner' ? 'musketeer' : tav.stars >= 3.5 ? 'sailor' : 'deckhand', n);

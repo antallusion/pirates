@@ -1360,6 +1360,8 @@ export const SERVER_RU_B: Record<string, string> = {
   "The harbour's surgeons send {0} wounded back to duty.": "Портовые лекари возвращают в строй раненых: {0}.",
   "Your carpenters mend faster now (practice {0}).": "Ваши плотники теперь чинят быстрее (сноровка {0}).",
   "Your cooks feed the men better now (practice {0}).": "Ваши коки теперь кормят людей лучше (сноровка {0}).",
+  "Your last surgeon has fallen: fewer of the men struck down live on as wounded, and the wounded heal slowly. Sign a surgeon on at a tavern: the surgeons' practice is kept for him.": "Погиб ваш последний лекарь: меньше сражённых выживет ранеными, а раненые будут поправляться медленно. Наймите лекаря в таверне — сноровка лекарей сохранена и перейдёт к нему.",
+  "Your last cook has fallen: the crew loses the cook's morale and eats more. Sign a cook on at a tavern: the cooks' practice is kept for him.": "Погиб ваш последний кок: команда теряет прибавку к морали от кока и ест больше. Наймите кока в таверне — сноровка коков сохранена и перейдёт к нему.",
   "Your gunners know their guns better now (practice {0}).": "Ваши канониры теперь лучше знают свои пушки (сноровка {0}).",
   "Your helmsmen feel the ship better now (practice {0}).": "Ваши рулевые теперь лучше чувствуют корабль (сноровка {0}).",
   "Your marines fight better together now (practice {0}).": "Ваши морпехи теперь слаженнее в бою (сноровка {0}).",

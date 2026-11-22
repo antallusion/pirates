@@ -68,9 +68,11 @@ export function practiceHtml(pools: Record<Profession, number>, practice: Partia
     const lv = practiceLevel(pts);
     const prog = practiceProgress(pts);
     const none = (pools[k] ?? 0) <= 0;
+    // forum 135: a trade with nobody aboard says so, and that its practice waits for the first man signed.
+    const say = !none ? (lv > 0 ? edge(k, lv) : '') : lv > 0 ? LC('pr.noneKept', { edge: edge(k, lv) }) : LC('pr.none');
     return `<div class="pr-row${none ? ' muted' : ''}">${icon(`prof_${k}`, '', 'ico-sm')}<span class="pr-name">${esc(PROFESSION_DEFS[k].name)}</span>
       <span class="pr-bar" title="${esc(lv >= PRACTICE_MAX ? LC('practiceMax') : `${Math.round(prog * 100)}%`)}"><i style="width:${Math.round(prog * 100)}%"></i></span>
-      <b class="pr-lv">${esc(lv >= PRACTICE_MAX ? LC('practiceMax') : LC('practiceLv', { n: lv }))}</b><span class="pr-edge">${lv > 0 && !none ? esc(edge(k, lv)) : ''}</span></div>`;
+      <b class="pr-lv">${esc(lv >= PRACTICE_MAX ? LC('practiceMax') : LC('practiceLv', { n: lv }))}</b><span class="pr-edge${none ? ' pr-none' : ''}">${esc(say)}</span></div>`;
   }).join('');
   return `<div class="card pr-card"><h4 class="card-h">${icon('xp', '', 'ico-md')}${esc(LC('practice'))}</h4>${rows}<p class="muted pr-hint">${esc(LC('practiceHint'))}</p></div>`;
 }
