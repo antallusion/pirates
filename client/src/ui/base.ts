@@ -10,7 +10,7 @@ import { bindSupply, supplyTab } from './supply.ts'; // docs/18 #32
 import { bindScouts, scoutsCard, tickScouts } from './scouts.ts'; // the fog of war's scouts (owner, 2026-10-17)
 import { EN as I18_EN, RU as I18_RU } from '../lang/ui/isles18.ts';
 import { guildYardCard, wireGuildYard } from './social.ts';
-import { GRID, PLOT_CELLS, PRODUCERS, isProducer, producerOf, producerRate } from '../../../shared/src/data/base.ts';
+import { GRID, PLOT_CELLS, PRODUCERS, isProducer, producerLimit, producerOf, producerRate } from '../../../shared/src/data/base.ts';
 import { boostHtml, tickBoost, wireBoost } from './isleboost.ts'; // finishing a work: speed-ups or doubloons (owner, 2026-10-29)
 import type { ProducerKind } from '../../../shared/src/data/base.ts';
 import { ISLE_LEVELS } from '../../../shared/src/data/estate.ts';
@@ -374,7 +374,7 @@ export class BaseWindow {
         const prod = list.filter((x) => isProducer(x.what)), bld = list.filter((x) => !isProducer(x.what));
         return `${prod.length ? `<div class="bsec">${esc(L('producers'))}</div>${prod.map(row).join('')}` : ''}${bld.length ? `<div class="bsec">${esc(L('buildings'))}</div>${bld.map(row).join('')}` : ''}`;
       };
-      return `${back}<div class="bsheet-h"><span class="bthumb bthumb-empty">+</span><div><b>${esc(L('plot', { n: this.sel + 1 }))}</b> <span class="muted">${esc(L('empty'))}</span><p class="${busy ? 'bad' : 'muted'}">${esc(busy ? serverText('All your builders are at work.') : L('can_build'))}</p></div></div>
+      return `${back}<div class="bsheet-h"><span class="bthumb bthumb-empty">+</span><div><b>${esc(L('plot', { n: this.sel + 1 }))}</b> <span class="muted">${esc(L('empty'))}</span><p class="${busy ? 'bad' : 'muted'}">${esc(busy ? serverText('All your builders are at work.') : L('can_build'))}</p>${v.slots.used >= v.slots.total ? `<p class="bad">${esc(L('slots_full', { used: v.slots.used, total: v.slots.total, n: producerLimit(v.level) }))}</p>` : ''}</div></div>
         ${group(ok)}${no.length ? `<details class="bno"><summary>${esc(L('cannot', { n: no.length }))}</summary>${group(no)}</details>` : ''}${foot}`;
     }
     const kind = producerOf(c.what);
