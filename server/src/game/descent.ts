@@ -18,7 +18,7 @@ import type { RegionId } from '../../../shared/src/world/regions.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import { setBeastPrey, spawnGroup } from './beasts.ts';
 import type { Game } from './Game.ts';
-import { takeItem } from './gear.ts';
+import { keepItem } from './gear.ts';
 import { planWander } from './npc.ts';
 import { groupOfAccount } from './party.ts';
 import type { PlayerSession } from './player.ts';
@@ -292,7 +292,7 @@ function finishMember(game: Game, run: Run, account: number): void {
   if (o?.profile) {
     if (depth >= 3) {
       const it = makeItem(game.rng, o.profile.itemSeq++, { ilvl: run.level, rarity: (depth >= 9 ? 4 : depth >= 6 ? 3 : 2) as 2 });
-      if (takeItem(game, o, it)) game.sendTo(o, { t: 'toast', msg: `The deep gives up ${itemName(it)}.`, kind: 'gold' });
+      if (keepItem(game, o, it)) game.sendTo(o, { t: 'toast', msg: `The deep gives up ${itemName(it)}.`, kind: 'gold' });
     }
     if (depth >= 1 && o.ship) o.ship.cargo.abyssal_ore = (o.ship.cargo.abyssal_ore ?? 0) + depth * 2;
     if (depth >= 3) sagaNote(game, o, 'descent', [], depth);

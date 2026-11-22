@@ -32,7 +32,7 @@ import { islandScene } from './exploration.ts';
 import { mapChance } from './explorefx.ts';
 import type { Game } from './Game.ts';
 import { fogReveal } from './fog.ts';
-import { takeItem } from './gear.ts';
+import { keepItem } from './gear.ts';
 import { lighthouseIslands } from './havens.ts';
 import { strength } from './holdings.ts';
 import type { PlayerSession, Profile } from './player.ts';
@@ -290,7 +290,7 @@ export function combBank(game: Game, s: PlayerSession, b: TidalIsle, share: numb
   const good = TIDAL_GOODS[rng.int(0, TIDAL_GOODS.length - 1)];
   const n = giveGoods(ship, good, Math.max(1, Math.round(rng.int(1, 3) * share)));
   // Gear and a map say so themselves (the locker's and the map chest's own words).
-  if (rng.chance(TIDAL_ITEM * share)) takeItem(game, s, makeItem(rng, 0, { ilvl: ship.shipLevel, rarity: rng.chance(0.3) ? 3 : 2 }));
+  if (rng.chance(TIDAL_ITEM * share)) keepItem(game, s, makeItem(rng, 0, { ilvl: ship.shipLevel, rarity: rng.chance(0.3) ? 3 : 2 }));
   mapChance(game, s, TIDAL_MAP * share, 2, 'On the bared bank');
   game.grantXp(s, pointsXp(s.profile!.level, 90 * share), null);
   ship.morale = Math.min(100, ship.morale + 4);

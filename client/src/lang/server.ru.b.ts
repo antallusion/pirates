@@ -1490,4 +1490,11 @@ export const SERVER_RU_B: Record<string, string> = {
   "{0} Guild": "Гильдия {0}",
   "{0}: its castellan holds it again.": "{0}: снова за кастеляном.",
   "{0}: its garrison halved.": "{0}: гарнизон уполовинен.",
+  "Your locker is full: {0} waits for you in your letters.": "Рундук полон: {0} ждёт вас в письмах.",
+  "Your locker is full: what you find at sea will wait in your letters.": "Рундук полон: всё, что найдёте в море, будет ждать вас в письмах.",
+  "Into your locker from the letter: {0}.": "Из письма в рундук: {0}.",
+  "Your locker is full: {0} more wait in the letter.": "Рундук полон: ещё {0} ждут в письме.",
+  "Your locker was full": "Ваш рундук был полон",
+  "The harbour office": "Портовая контора",
+  "What you found at sea while your locker was full is kept here. Make room in the locker and take it in any port.": "Всё, что вы нашли в море, пока рундук был полон, хранится здесь. Освободите место в рундуке и заберите в любом порту.",
 };

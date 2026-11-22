@@ -32,7 +32,7 @@ import { isLand, nearHarbour } from '../../../shared/src/world/worldgen.ts';
 import { applyDamage, igniteShip } from './combat.ts';
 import { mapChance } from './explorefx.ts';
 import type { Game } from './Game.ts';
-import { takeItem } from './gear.ts';
+import { keepItem, takeItem } from './gear.ts';
 import { levelNear, newBrain, spawnPirate } from './npc.ts';
 import { pirateSworn } from './colours.ts';
 import type { PlayerSession } from './player.ts';
@@ -538,7 +538,7 @@ function resolve(game: Game, s: PlayerSession, live: Live, choice: string): { ou
       if (p.gold < price) return O('poor');
       p.gold -= price;
       game.db.ledger(s.accountId, 'encounter', -price, 'peddler');
-      takeItem(game, s, it);
+      keepItem(game, s, it);
       return O(choice === 'haggle' ? 'haggled' : 'bought', { item: it, silver: price });
     }
     case 'fishermen': {
@@ -859,7 +859,7 @@ function resolve(game: Game, s: PlayerSession, live: Live, choice: string): { ou
       }
       const it = makeItem(rng, 0, { ilvl: ship.shipLevel, rarity: 3 });
       ship.curse = Math.min(100, ship.curse + 25);
-      takeItem(game, s, it);
+      keepItem(game, s, it);
       return O('accepted', { item: it });
     }
     case 'sirens':

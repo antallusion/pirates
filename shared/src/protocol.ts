@@ -3445,6 +3445,8 @@ export interface LetterView {
   goods: { good: GoodId; qty: number; port: string } | null;
   /** Men enclosed and not yet taken (owner, 2026-10-28: the gift's musketeers; `gift`: a stack never refilled). */
   units?: { u: UnitId; n: number; gift?: 1 };
+  /** Gear enclosed (forum 140: found while the locker was full), taken in port as far as the locker has room. */
+  items?: Item[];
   sentAt: number; // epoch ms
   read: boolean;
   taken: boolean;

@@ -6,6 +6,7 @@ import { stepShipFix } from './shipfix.ts';
 import { stepIsleFix } from './islefix.ts';
 import { stepCargoFix } from './cargofix.ts';
 import { stepCrewFix } from './crewfix.ts';
+import { stepDescentFix } from './descentfix.ts';
 import { stormSails } from '../../../shared/src/data/adrift.ts';
 import { crewAwayOnLogin } from './crewaway.ts';
 import { DOCK_SLOW, LANDING_R, REACH_DOCK, REACH_SLACK, hullOf } from '../../../shared/src/data/reach.ts';
@@ -49,6 +50,7 @@ import { compassPoint, localTraffic, stepTraffic } from './traffic.ts';
 import { callClosed, onNpcHit, raiderSunk } from './npcwars.ts';
 import { buyWare, equip, mendGear, reforgeItem, rollDrop, salvageItem, sellItem, takeItem, temperItem, unequip, wearOnSinking } from './gear.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
+import { STASH_SIZE } from '../../../shared/src/data/items.ts';
 import { ADM_REFIT_HINT, ADM_REFIT_WORDS, orderRefit, refitHolds, stepRefit } from './refit.ts';
 import { clampLevel, ladder, levelRange, npcSkill } from '../../../shared/src/data/shiplevel.ts';
 import { ALPHA_OVER as ALPHA_OVER_RAM, alphaShare, npcSeaScale } from '../../../shared/src/data/seabalance.ts';
@@ -1196,6 +1198,7 @@ export class Game {
     if (Math.floor(this.now) % 2 === 0) stepIsleFix(this); // an island put right once (islefix.ts)
     if (Math.floor(this.now) % 2 === 0) stepCargoFix(this); // a hold a patrol emptied, given back once (cargofix.ts)
     if (Math.floor(this.now) % 2 === 0) stepCrewFix(this); // the trades' practice put right once (crewfix.ts)
+    if (Math.floor(this.now) % 2 === 0) stepDescentFix(this); // the Stair's prize given back once (descentfix.ts, forum 140)
     if (Math.floor(this.now) % 2 === 0) stepService(this); // letters of marque: orders, sunsets, the law's eye (docs/12 P10 #15)
     stepDescent(this); // the Descent into the Abyss (docs/12 P10 #17)
     if (sec % 5 === 0) stepHolidays(this); // the sea's holidays (docs/12 P10 #18)
@@ -5410,6 +5413,8 @@ export class Game {
     onUndockEvents(this, s, port);
     this.grid.upsert(ship.id, ship.state.x, ship.state.y);
     launchFleet(this, s);
+    // Forum 140: a full locker said at the harbour mouth (what she finds goes to her letters till there is room).
+    if (s.profile!.stash.length >= STASH_SIZE) this.sendTo(s, { t: 'toast', msg: 'Your locker is full: what you find at sea will wait in your letters.', kind: 'info' });
     this.sendTo(s, { t: 'port', view: null });
     this.pushSelf(s, true);
     return null;

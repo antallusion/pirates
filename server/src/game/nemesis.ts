@@ -14,7 +14,7 @@ import type { NamedPirate } from '../../../shared/src/data/pirates.ts';
 import { makeItem } from '../../../shared/src/data/items.ts';
 import type { NemesisView } from '../../../shared/src/protocol.ts';
 import type { Game } from './Game.ts';
-import { takeItem } from './gear.ts';
+import { keepItem } from './gear.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { deliver } from './post.ts';
 import type { ShipEntity } from './ship.ts';
@@ -128,7 +128,7 @@ export function nemesisRevenge(game: Game, s: PlayerSession, np: NamedPirate): b
   game.db.ledger(s.accountId, 'nemesis', silver, np.id);
   game.sendTo(s, { t: 'toast', msg: `Revenge! ${sur} ${ep} goes down at last.`, kind: 'gold' });
   game.sendTo(s, { t: 'toast', msg: `Revenge pays: ${silver} silver from the cabin.`, kind: 'gold' });
-  takeItem(game, s, makeItem(game.rng, p.itemSeq++, { ilvl: np.level, rarity: rec.rank >= 3 ? 4 : 3 }));
+  keepItem(game, s, makeItem(game.rng, p.itemSeq++, { ilvl: np.level, rarity: rec.rank >= 3 ? 4 : 3 }));
   const head = `The head of ${sur} ${ep}, your nemesis`;
   if (!p.trophies.includes(head)) p.trophies.push(head);
   for (const o of game.sessions) if (o !== s && o.ship?.region === np.region) game.sendTo(o, { t: 'toast', msg: `WORLD: ${s.name} took revenge on ${sur} ${ep}.`, kind: 'gold' });

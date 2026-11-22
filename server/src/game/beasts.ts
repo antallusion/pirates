@@ -36,7 +36,7 @@ import { applyDamage } from './combat.ts';
 import type { DamagePacket } from './combat.ts';
 import { giveGoods } from './director.ts';
 import type { Game } from './Game.ts';
-import { takeItem } from './gear.ts';
+import { keepItem } from './gear.ts';
 import { groupOfAccount } from './party.ts';
 import type { PlayerSession } from './player.ts';
 import { changeRep } from './player.ts';
@@ -1187,7 +1187,7 @@ export function beastSlain(game: Game, b: ShipEntity): boolean {
       if (!s.profile.figureheads.includes('fh_white_orca')) {
         s.profile.figureheads.push('fh_white_orca');
         game.sendTo(s, { t: 'toast', msg: 'The White Orca’s figurehead is yours.', kind: 'gold' });
-      } else takeItem(game, s, makeItem(game.rng, s.profile.itemSeq++, { ilvl: 8, source: 'elite' }));
+      } else keepItem(game, s, makeItem(game.rng, s.profile.itemSeq++, { ilvl: 8, source: 'elite' }));
     }
   }
   if (pack) packLoss(game, pack, b.id, now, killer);
@@ -1369,7 +1369,7 @@ function flensed(game: Game, s: PlayerSession, c: Carcass): void {
     giveGoods(ship, def.rare.good, 1);
     game.sendTo(s, { t: 'toast', msg: 'Ambergris! A lump of it in the belly — worth a fortune.', kind: 'gold' });
   }
-  if (S.rng.chance(0.08)) takeItem(game, s, makeItem(game.rng, s.profile!.itemSeq++, { ilvl: c.level, source: 'common', slots: ['tackle', 'hold', 'rigging', 'coat', 'spyglass'] }));
+  if (S.rng.chance(0.08)) keepItem(game, s, makeItem(game.rng, s.profile!.itemSeq++, { ilvl: c.level, source: 'common', slots: ['tackle', 'hold', 'rigging', 'coat', 'spyglass'] }));
   // The Order's licence: the catch is written down, and the Order remembers.
   if (hasLicence(s.profile!, 'harpoon', game.now)) {
     changeRep(s.profile!, 'harpoon', 1);

@@ -23,6 +23,8 @@ import { UNITS } from '../../../shared/src/data/army.ts';
 import type { UnitId } from '../../../shared/src/data/army.ts';
 import { GIFT28_NO_ROOM, GIFT28_UNIT, giftRoom } from '../../../shared/src/data/gift.ts';
 import { reconcile } from './crew.ts';
+import { STASH_SIZE, itemName } from '../../../shared/src/data/items.ts';
+import type { Item } from '../../../shared/src/data/items.ts';
 
 export const POSTAGE = 10;
 export const DRAFT_FEE = 0.02;
@@ -48,6 +50,10 @@ export interface Letter {
   units?: { u: UnitId; n: number; gift?: 1 } | null;
   unitsTaken?: boolean;
   goldTaken?: boolean;
+  /** Gear enclosed (forum 140): what she found while her locker was full waits here, not in the water; taken in any
+   *  port as far as the locker has room. `locker`: the one letter such finds gather in. */
+  items?: Item[] | null;
+  locker?: 1;
   sentAt: number;
   arriveAt: number;
   read: boolean;
@@ -119,7 +125,7 @@ function mailbox(game: Game, accountId: number): Mailbox {
 function saveMailbox(game: Game, accountId: number, box: Mailbox): void {
   // Keep the newest; never drop a letter still holding silver or goods.
   if (box.letters.length > MAILBOX_MAX) {
-    const keep = box.letters.filter((l) => (!l.taken && (l.gold > 0 || l.goods || l.units)) || !l.read);
+    const keep = box.letters.filter((l) => (!l.taken && (l.gold > 0 || l.goods || l.units || l.items?.length)) || !l.read);
     const rest = box.letters.filter((l) => !keep.includes(l)).slice(-Math.max(0, MAILBOX_MAX - keep.length));
     box.letters = [...keep, ...rest].sort((a, b) => a.id - b.id);
   }
@@ -135,7 +141,7 @@ export function lettersSince(game: Game, accountId: number, since: number): Lett
 export function deliver(game: Game, accountId: number, l: Omit<Letter, 'id' | 'sentAt' | 'arriveAt' | 'read' | 'taken'>, delayMs = 0): Letter {
   const box = mailbox(game, accountId);
   const now = game.wallNow();
-  const letter: Letter = { ...l, id: box.next++, sentAt: now, arriveAt: now + delayMs, read: false, taken: !(l.gold > 0 || l.goods || l.units) };
+  const letter: Letter = { ...l, id: box.next++, sentAt: now, arriveAt: now + delayMs, read: false, taken: !(l.gold > 0 || l.goods || l.units || l.items?.length) };
   box.letters.push(letter);
   saveMailbox(game, accountId, box);
   const s = game.sessionByAccount(accountId);
@@ -161,7 +167,7 @@ export function notice(game: Game, accountId: number, l: Omit<Letter, 'id' | 'se
   const s = game.sessionByAccount(accountId);
   const aboard = !!s && s.disconnectedAt === null && !s.conn.closed;
   if (aboard && toast) game.sendTo(s, { t: 'toast', msg: l.body, kind: toast });
-  if (l.gold > 0 || l.goods || l.units) {
+  if (l.gold > 0 || l.goods || l.units || l.items?.length) {
     deliver(game, accountId, l);
     return;
   }
@@ -178,6 +184,7 @@ function view(l: Letter): LetterView {
   return {
     id: l.id, from: l.from, subject: l.subject, body: l.body, gold: l.goldTaken ? 0 : l.gold, goods: l.goods, sentAt: l.sentAt, read: l.read, taken: l.taken,
     ...(l.units && !l.unitsTaken ? { units: l.units } : {}),
+    ...(l.items?.length ? { items: l.items } : {}),
   };
 }
 
@@ -235,6 +242,7 @@ export function mailTake(game: Game, s: PlayerSession, id: number): string | nul
   const l = box.letters.find((x) => x.id === id && x.arriveAt <= game.wallNow());
   if (!l || l.taken) return 'Nothing to collect';
   if (l.units) return takeUnits(game, s, box, l);
+  if (l.items?.length) return takeItems(game, s, box, l);
   if (l.goods) {
     if (l.goods.port !== ship.docked) return `The goods wait in ${game.portById(l.goods.port)?.name ?? l.goods.port}`;
     const g = l.goods.good;
@@ -292,6 +300,50 @@ function takeUnits(game: Game, s: PlayerSession, box: Mailbox, l: Letter): strin
   if (l.unitsTaken && !why) game.sendTo(s, { t: 'toast', msg: `New men aboard from the letter: ${u.n}, a stack of their own.`, kind: 'good' });
   sendMail(game, s);
   return why;
+}
+
+/** The gear of a letter into the locker, as much as it has room for; the rest waits in the letter. */
+function takeItems(game: Game, s: PlayerSession, box: Mailbox, l: Letter): string | null {
+  const p = s.profile!;
+  if (l.gold > 0 && !l.goldTaken) {
+    p.gold += l.gold;
+    l.goldTaken = true;
+    game.db.ledger(s.accountId, 'letter', l.gold, `mail:${l.id}`);
+  }
+  l.read = true;
+  const room = Math.max(0, STASH_SIZE - p.stash.length);
+  const moved = l.items!.slice(0, room);
+  for (const it of moved) p.stash.push({ ...it, uid: p.itemSeq++ });
+  l.items = l.items!.slice(moved.length);
+  l.taken = !l.items.length && (l.gold <= 0 || !!l.goldTaken);
+  saveMailbox(game, s.accountId, box);
+  game.saveSession(s);
+  if (moved.length) {
+    game.sendTo(s, { t: 'toast', msg: `Into your locker from the letter: ${moved.map((it) => itemName(it)).join(', ')}.`, kind: 'gold' });
+    game.pushSelf(s, true);
+  }
+  sendMail(game, s);
+  return l.items.length ? `Your locker is full: ${l.items.length} more wait in the letter.` : null;
+}
+
+const LOCKER_LETTER_MAX = 30;
+
+/** Forum 140: a find with the locker full goes into her letters (one letter gathers them), never into the water. */
+export function lockerLetter(game: Game, accountId: number, it: Item): void {
+  const box = mailbox(game, accountId);
+  const open = box.letters.find((l) => l.locker && !l.taken && (l.items?.length ?? 0) < LOCKER_LETTER_MAX);
+  if (open) {
+    open.items = [...(open.items ?? []), it];
+    open.read = false;
+    saveMailbox(game, accountId, box);
+    const s = game.sessionByAccount(accountId);
+    if (s && s.disconnectedAt === null) sendMail(game, s);
+    return;
+  }
+  deliver(game, accountId, {
+    from: 'The harbour office', subject: 'Your locker was full', locker: 1, gold: 0, goods: null, items: [it],
+    body: 'What you found at sea while your locker was full is kept here. Make room in the locker and take it in any port.',
+  });
 }
 
 export function mailDelete(game: Game, s: PlayerSession, id: number): string | null {

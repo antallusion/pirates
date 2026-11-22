@@ -29,7 +29,7 @@ import { giveGoods, loseHands, purse } from './director.ts';
 import { ownIsland } from './estate.ts';
 import { mapChance } from './explorefx.ts';
 import type { Game } from './Game.ts';
-import { takeItem } from './gear.ts';
+import { keepItem } from './gear.ts';
 import { forceBank, sendIsles } from './isles.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import { notice } from './post.ts';
@@ -134,7 +134,7 @@ export function hiddenCache(game: Game, s: PlayerSession, island: Island, share:
   const got: string[] = [];
   const n = giveGoods(s.ship, 'pearls', Math.max(1, Math.round(st(game).rng.int(1, 3) * share)));
   if (n > 0) got.push(`${n} ${GOODS.pearls.name}`);
-  if (st(game).rng.chance(0.35 * share)) takeItem(game, s, makeItem(st(game).rng, s.profile!.itemSeq++, { ilvl: s.ship.shipLevel + loot.tier, rarity: st(game).rng.chance(0.4) ? 3 : 2 }));
+  if (st(game).rng.chance(0.35 * share)) keepItem(game, s, makeItem(st(game).rng, s.profile!.itemSeq++, { ilvl: s.ship.shipLevel + loot.tier, rarity: st(game).rng.chance(0.4) ? 3 : 2 }));
   return { silverMul: loot.mul, got };
 }
 
@@ -240,7 +240,7 @@ export function combTurtle(game: Game, s: PlayerSession, d: TurtleDef, share: nu
   const goods: GoodId[] = ['pearls', 'provisions', 'whale_oil'];
   const good = goods[rng.int(0, goods.length - 1)];
   const n = giveGoods(ship, good, Math.max(1, Math.round(rng.int(2, 5) * share)));
-  if (rng.chance(0.25 * share)) takeItem(game, s, makeItem(rng, p.itemSeq++, { ilvl: ship.shipLevel, rarity: rng.chance(0.3) ? 3 : 2 }));
+  if (rng.chance(0.25 * share)) keepItem(game, s, makeItem(rng, p.itemSeq++, { ilvl: ship.shipLevel, rarity: rng.chance(0.3) ? 3 : 2 }));
   mapChance(game, s, 0.2 * share, 2, 'On the turtle’s back');
   game.grantXp(s, pointsXp(s.profile!.level, 140 * share), null);
   ship.morale = Math.min(100, ship.morale + 6);

@@ -23,7 +23,7 @@ import { giveGoods } from './director.ts';
 import type { WorldEvent } from './events.ts';
 import { scatterWreckage, startEvent } from './events.ts';
 import type { Game } from './Game.ts';
-import { takeItem } from './gear.ts';
+import { keepItem } from './gear.ts';
 import { findPath } from './nav.ts';
 import { planWander, setPath } from './npc.ts';
 import type { ShipEntity } from './ship.ts';
@@ -329,7 +329,7 @@ export function tickHappening(game: Game, e: WorldEvent): boolean {
         const n = giveGoods(ship, 'sulfur_iron', 5);
         tattooCount(game, s, 'star');
         game.sendTo(s, { t: 'toast', msg: `The star-iron is yours: ${n} of it in the hold.`, kind: 'gold' });
-        takeItem(game, s, makeItem(game.rng, 0, { ilvl: ship.shipLevel, source: 'elite' }));
+        keepItem(game, s, makeItem(game.rng, 0, { ilvl: ship.shipLevel, source: 'elite' }));
         for (const o of game.sessions) game.sendTo(o, { t: 'toast', msg: `WORLD: ${s.name} claims the fallen star on ${is.name}!`, kind: 'gold' });
         return true;
       }

@@ -37,7 +37,7 @@ import type { Island, Port } from '../../../shared/src/world/worldgen.ts';
 import { isLand, regionAt } from '../../../shared/src/world/worldgen.ts';
 import { applyDamage } from './combat.ts';
 import type { Game } from './Game.ts';
-import { takeItem } from './gear.ts';
+import { keepItem } from './gear.ts';
 import { spawnFireship } from './npc.ts';
 import { groupOfAccount } from './party.ts';
 import type { PlayerSession, Profile } from './player.ts';
@@ -332,7 +332,7 @@ export function lairLanding(game: Game, s: PlayerSession, island: Island): boole
   changeRep(p, lawful, 5);
   // A piece of gear from the captain's own cabin, and a map from her chart table (docs/16 #7).
   const it = makeItem(game.rng, p.itemSeq++, { ilvl: np.level, rarity: S.rng.chance(0.25) ? 3 : 2 });
-  const kept = takeItem(game, s, it);
+  const kept = keepItem(game, s, it);
   const tier = REGIONS[island.region].safety === 'lawless' ? 3 : 2;
   const m = makeMap(game, tier);
   const mapped = grantMap(game, s, m, `The lair of ${np.name[0]}`);
@@ -746,7 +746,7 @@ export function wantedKill(game: Game, s: PlayerSession, victim: ShipEntity): vo
       const slots = Object.keys(SETS.sea_terror.pieces) as Slot[];
       const it = makeItem(game.rng, p.itemSeq++, { ilvl: np.level, rarity: game.rng.chance(0.3) ? 4 : 3, slots });
       if (!it.legendary) it.set = 'sea_terror';
-      takeItem(game, s, it);
+      keepItem(game, s, it);
       addPoints(game, s, HUNTER_POINTS.baron);
     } else {
       for (const o of game.sessions) if (o.ship?.region === np.region || o === s) game.sendTo(o, { t: 'toast', msg: `WORLD: ${s.name} sank the pirate ${np.name[0]} — ${pay} silver on the head.`, kind: 'gold' });

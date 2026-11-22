@@ -13,6 +13,7 @@ import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { BOSSES } from '../../../shared/src/data/bosses.ts';
 import type { BossId } from '../../../shared/src/data/bosses.ts';
 import { GOODS, GOOD_IDS, isStore } from '../../../shared/src/data/goods.ts';
+import { RARITY_COLOR, itemName } from '../../../shared/src/data/items.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { GUILD_COST } from '../../../shared/src/data/social.ts';
 import { BUILDINGS, BUILDING_IDS } from '../../../shared/src/data/holdings.ts';
@@ -723,6 +724,7 @@ export class CompanyScreen {
         ${l.body ? `<p style="white-space:pre-wrap">${esc(serverText(l.body))}</p>` : ''}
         ${!l.taken ? `<p><b>${l.gold ? L('let_silver', { n: fmt(l.gold) }) : ''}${l.goods ? L('let_goods', { qty: l.goods.qty, good: esc(GOODS[l.goods.good].name), port: esc(state.ports.find((p) => p.id === l.goods!.port)?.name ?? l.goods.port) }) : ''}</b></p>` : ''}
         ${!l.taken && l.units ? letterUnits(state, l.units) : ''}
+        ${!l.taken && l.items?.length ? `<p class="let-items"><b>${esc(L('let_items', { n: l.items.length }))}</b> ${l.items.map((it) => `<span style="color:${RARITY_COLOR[it.rarity]}">${esc(itemName(it, lang() === 'ru'))}</span>`).join(', ')}</p>` : ''}
         <div class="row" style="gap:6px">${!l.read ? `<button class="btn btn-small" data-read="${l.id}">${L('let_mark')}</button>` : ''}
           ${!l.taken ? `<button class="btn btn-small btn-primary" data-take="${l.id}" ${docked && (!l.goods || l.goods.port === docked) ? '' : `disabled title="${L('let_collect_port')}"`}>${L('let_collect')}</button>` : `<button class="btn btn-small" data-del="${l.id}">${L('let_burn')}</button>`}</div></div>`).join('') || `<p class="muted">${L('let_none')}</p>`}
     </div><div>

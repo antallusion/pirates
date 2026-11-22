@@ -22,7 +22,7 @@ import type { RegionId } from '../../../shared/src/world/regions.ts';
 import { depthAt, isLand, nearHarbour, regionAt } from '../../../shared/src/world/worldgen.ts';
 import { applyDamage } from './combat.ts';
 import { eventsChanged } from './events.ts';
-import { takeItem } from './gear.ts';
+import { keepItem } from './gear.ts';
 import { deliver } from './post.ts';
 import { logNote } from './captainlog.ts';
 import { tattooCount } from './tattoos.ts';
@@ -443,7 +443,7 @@ function spoils(game: Game, live: ZbLive, ship: ShipEntity): void {
     for (const it of items) {
       // Into the locker (its own toast names the piece); a full locker leaves it floating where she sank, for this
       // captain alone.
-      if (takeItem(game, s, it)) continue;
+      if (keepItem(game, s, it)) continue;
       const id = game.allocId();
       game.loot.set(id, { id, x: ship.state.x, y: ship.state.y, cargo: {}, gold: 0, expires: game.now + 900, ownerOnly: sh.account, items: [it] });
     }

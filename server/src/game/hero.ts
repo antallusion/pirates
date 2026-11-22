@@ -30,7 +30,7 @@ import type { Port } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
-import { takeItem } from './gear.ts';
+import { keepItem } from './gear.ts';
 import { grailWill } from './grail.ts';
 import { foreignAt, learnForeign, npcFaceOf, npcPathOf, spendScrolls, stamMax, stamOf } from './pathbook.ts';
 import { STAM_REST_SEC, TALENT_BOOK, isPathPage, pathPagesAt, talentBook } from '../../../shared/src/data/paths.ts';
@@ -439,9 +439,10 @@ export function afterBattle(game: Game, ship: ShipEntity, left: number, lost: { 
 export function artifactFind(game: Game, s: PlayerSession, source: keyof typeof ART_WEIGHTS, id?: string): Item | null {
   const art = id && ARTIFACTS[id] ? id : rollArtifact(hr(game), source);
   const it = makeArtifact(art, 0);
-  if (!takeItem(game, s, it)) return null;
+  const room = s.profile!.stash.length < STASH_SIZE;
+  keepItem(game, s, it); // forum 140: a full locker keeps it in her letters
   game.sendTo(s, { t: 'toast', msg: `An artifact: ${ARTIFACTS[art].name[0]}!`, kind: 'gold' });
-  return s.profile!.stash[s.profile!.stash.length - 1];
+  return room ? s.profile!.stash[s.profile!.stash.length - 1] : it;
 }
 
 /** A chance at one: a hoard dug up, a guarded ship taken. */

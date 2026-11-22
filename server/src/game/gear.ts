@@ -18,6 +18,7 @@ import { watersBand } from '../../../shared/src/data/shiplevel.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import type { Game } from './Game.ts';
 import { smithTemper } from './estate.ts';
+import { lockerLetter } from './post.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 
@@ -277,6 +278,15 @@ export function rollDrop(game: Game, victim: ShipEntity, how: 'sunk' | 'boarded'
 }
 
 /** An item fished out of the water into the locker; a full locker leaves it floating. */
+/** A find (not a purchase): into the locker, or — the locker full — into her letters (forum 140), never lost. */
+export function keepItem(game: Game, s: PlayerSession, it: Item): boolean {
+  const p = s.profile!;
+  if (p.stash.length < STASH_SIZE) return takeItem(game, s, it);
+  lockerLetter(game, s.accountId, it);
+  game.sendTo(s, { t: 'toast', msg: `Your locker is full: ${itemName(it)} waits for you in your letters.`, kind: 'info' });
+  return true;
+}
+
 export function takeItem(game: Game, s: PlayerSession, it: Item): boolean {
   const p = s.profile!;
   if (p.stash.length >= STASH_SIZE) {

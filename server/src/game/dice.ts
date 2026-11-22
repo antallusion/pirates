@@ -13,7 +13,7 @@ import { makeItem } from '../../../shared/src/data/items.ts';
 import type { DiceView } from '../../../shared/src/protocol.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import type { Game } from './Game.ts';
-import { takeItem } from './gear.ts';
+import { keepItem } from './gear.ts';
 import type { PlayerSession } from './player.ts';
 import { deliver } from './post.ts';
 import { fresh } from './onboarding.ts';
@@ -211,7 +211,7 @@ function finish(game: Game, t: Table, winner: number): void {
       if (t.davy) {
         // A cursed thing: strong, and it weighs on the ship.
         const it = makeItem(game.rng, p.itemSeq++, { ilvl: 10, rarity: 4, source: 'elite' });
-        takeItem(game, s, it);
+        keepItem(game, s, it);
         if (s.ship) s.ship.curse = Math.min(100, s.ship.curse + 20);
         game.sendTo(s, { t: 'toast', msg: 'Davy Jones pushes a cursed thing across the table: it is yours.', kind: 'gold' });
       } else {
