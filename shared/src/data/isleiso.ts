@@ -30,15 +30,39 @@ export const ISO_W = 1536;
 export const ISO_H = 1024;
 
 export type Pt = [number, number];
+/** A map as drawn: its biome's map at the island's size (owner 2026-11-22: «три разных острова, маленький, средний,
+ *  большой»): the middling island on the biome's own picture, the small and large on their own (isle.map.<view>). */
+export type IsoView = IsoMap | `${IsoMap}_small` | `${IsoMap}_large`;
+/** The biome's map of a view (the sea's effects are the biome's). */
+export function isoBase(view: IsoView): IsoMap {
+  return view.replace(/_(small|large)$/, '') as IsoMap;
+}
+/** The view of an island: its size's own picture when there is one (`has`: the manifest holds isle.map.<view>). */
+export function isoView(map: IsoMap, size: 'small' | 'medium' | 'large' | undefined, has: (id: string) => boolean): IsoView {
+  const v = size === 'small' || size === 'large' ? (`${map}_${size}` as IsoView) : map;
+  return v !== map && ISO_CORNERS[v] && has(`isle.map.${v}`) ? v : map;
+}
 /** The plateau's four corners on each map, in the picture's pixels: the back (top), right, front (bottom), left —
  *  set by eye inside the paving, so no building stands on the cliffs or in the sea (tests/isleiso.test.ts). */
-export const ISO_CORNERS: Record<IsoMap, { t: Pt; r: Pt; b: Pt; l: Pt }> = {
+export const ISO_CORNERS: Record<IsoMap, { t: Pt; r: Pt; b: Pt; l: Pt }> & Partial<Record<IsoView, { t: Pt; r: Pt; b: Pt; l: Pt }>> = {
   temperate: { t: [745, 200], r: [1255, 460], b: [790, 705], l: [285, 440] },
+  temperate_large: { t: [738, 263], r: [1409, 605], b: [797, 928], l: [133, 579] },
+  temperate_small: { t: [752, 294], r: [1109, 476], b: [783, 647], l: [430, 462] },
   volcanic: { t: [760, 180], r: [1275, 430], b: [770, 650], l: [315, 420] },
+  volcanic_small: { t: [762, 280], r: [1123, 455], b: [769, 609], l: [451, 448] },
+  volcanic_large: { t: [758, 237], r: [1436, 566], b: [771, 855], l: [172, 553] },
   ice: { t: [760, 228], r: [1315, 482], b: [790, 718], l: [255, 470] },
+  ice_small: { t: [762, 313], r: [1151, 491], b: [783, 656], l: [409, 483] },
+  ice_large: { t: [758, 300], r: [1488, 634], b: [797, 945], l: [93, 618] },
   jungle: { t: [765, 215], r: [1170, 440], b: [780, 640], l: [405, 430] },
+  jungle_small: { t: [766, 304], r: [1049, 462], b: [776, 602], l: [514, 455] },
+  jungle_large: { t: [764, 283], r: [1297, 579], b: [784, 842], l: [291, 566] },
   dry: { t: [757, 262], r: [1150, 415], b: [776, 598], l: [362, 420] },
+  dry_small: { t: [760, 337], r: [1035, 444], b: [774, 572], l: [484, 448] },
+  dry_large: { t: [754, 345], r: [1271, 546], b: [779, 787], l: [234, 553] },
   drowned: { t: [725, 205], r: [1200, 412], b: [748, 645], l: [325, 405] },
+  drowned_small: { t: [738, 297], r: [1070, 442], b: [754, 605], l: [458, 437] },
+  drowned_large: { t: [712, 270], r: [1337, 542], b: [742, 849], l: [186, 533] },
 };
 
 /** One cell of a plot's diamond in the baked pictures, px (tools/art/isle_iso.py UNIT). */
@@ -50,8 +74,8 @@ export const ISO_SLOT = 4.5;
 export const ISO_CELLS = ISO_BOARD * ISO_SLOT;
 
 /** A point of the plateau at (u, v) ∈ [0, 1]² — u along the back-right edge, v along the back-left. */
-export function isoPoint(map: IsoMap, u: number, v: number): Pt {
-  const { t, r, b, l } = ISO_CORNERS[map];
+export function isoPoint(map: IsoView, u: number, v: number): Pt {
+  const { t, r, b, l } = ISO_CORNERS[map] ?? ISO_CORNERS[isoBase(map)];
   const x = t[0] + u * (r[0] - t[0]) + v * (l[0] - t[0]) + u * v * (b[0] - r[0] - l[0] + t[0]);
   const y = t[1] + u * (r[1] - t[1]) + v * (l[1] - t[1]) + u * v * (b[1] - r[1] - l[1] + t[1]);
   return [x, y];
@@ -73,7 +97,7 @@ export function isoSheet(what: string): string | null {
 
 /** Where a spot of the board stands: its footprint's four corners and its depth (the back first). A building of `foot`
  *  cells stands in the middle of its spot. */
-export function isoSpot(map: IsoMap, cell: [number, number], foot = ISO_SLOT): { t: Pt; r: Pt; b: Pt; l: Pt; z: number } {
+export function isoSpot(map: IsoView, cell: [number, number], foot = ISO_SLOT): { t: Pt; r: Pt; b: Pt; l: Pt; z: number } {
   const [i, j] = cell;
   const pad = (ISO_SLOT - foot) / 2;
   const u0 = (i * ISO_SLOT + pad) / ISO_CELLS, u1 = (i * ISO_SLOT + pad + foot) / ISO_CELLS;

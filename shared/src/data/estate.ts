@@ -5,7 +5,7 @@
 // a week at a time, and pirates come for a full store.
 
 import type { GoodId } from './goods.ts';
-import type { BuildingId } from './holdings.ts';
+import type { BuildingId, IslandSize } from './holdings.ts';
 import type { IslandBiome, RegionId } from '../world/regions.ts';
 import { GOODS } from './goods.ts';
 import { treePatterns } from './isletree.ts';
@@ -38,6 +38,9 @@ export const ISLE_LEVELS: IsleLevel[] = [
   { name: ['Pirate Capital', 'Пиратская столица'], slots: 12, outposts: 8, caravans: 6, residents: 20, silver: 160_000, goods: { planks: 900, iron: 360, sulfur_iron: 10 } },
 ];
 export const ISLE_MAX = 10;
+/** The building room a bigger island adds to its level's (owner 2026-11-22, forum 128: a large island had 18 plots but
+ *  room for 14 buildings — «сделать его просто больше»): a large island's room now meets its plots at every level. */
+export const SIZE_SLOTS: Record<IslandSize, number> = { small: 0, medium: 3, large: 6 };
 
 /** Where a captain may buy an island outright: the safe and contested seas (the lawless are for outposts). */
 export const BUY_REGIONS: RegionId[] = ['black_coast', 'gravewater', 'whispering', 'leviathan_reach'];

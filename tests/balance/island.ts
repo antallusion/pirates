@@ -9,7 +9,7 @@
 
 import { BASE_RES, PRODUCERS, PRODUCER_KINDS, TOKEN_SECS, baseCost, crewsAt, maxLevel, plotsOf, producerFits, producerLimit, producerRate, yardCap } from '../../shared/src/data/base.ts';
 import type { BaseRes, ProducerKind } from '../../shared/src/data/base.ts';
-import { ISLE_LEVELS, ISLE_MAX } from '../../shared/src/data/estate.ts';
+import { ISLE_LEVELS, ISLE_MAX, SIZE_SLOTS } from '../../shared/src/data/estate.ts';
 import { BUILDINGS } from '../../shared/src/data/holdings.ts';
 import type { BuildingId, IslandSize } from '../../shared/src/data/holdings.ts';
 import { GOODS } from '../../shared/src/data/goods.ts';
@@ -110,7 +110,7 @@ export function simulate(plan: Plan = NORMAL): SimResult {
   const crews = () => crewsAt(level, power() >= POWER_CREW ? 1 : 0);
   const busy = () => jobs.filter((j) => !j.ship).length;
   const cap = () => yardCap(level, lvlOf('warehouse'));
-  const slots = () => ISLE_LEVELS[level].slots + (plan.size === 'large' ? 2 : plan.size === 'medium' ? 1 : 0);
+  const slots = () => ISLE_LEVELS[level].slots + SIZE_SLOTS[plan.size];
   const slotsUsed = () => things.filter((t) => !t.what.startsWith('p:')).reduce((a, t) => a + BUILDINGS[t.what as BuildingId].slots, 0)
     + pending().filter((w) => !w.startsWith('p:')).reduce((a, w) => a + BUILDINGS[w as BuildingId].slots, 0);
   const pending = () => jobs.filter((j) => !j.ship && j.fresh).map((j) => j.what!);

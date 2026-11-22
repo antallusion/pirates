@@ -13,8 +13,8 @@
 
 import { detailAttr } from './detailattr.ts'; // the detail card (owner, 2026-10-30)
 import { HL, bindHaul, haulCard } from './islehaul.ts';
-import { ISO_H, ISO_LEVELS, ISO_MAP_OF, ISO_SLOT, ISO_UNIT, ISO_W, isoFoot, isoPic, isoSheet, isoSpot, isoStage } from '../../../shared/src/data/isleiso.ts';
-import type { IsoMap, Pt } from '../../../shared/src/data/isleiso.ts';
+import { ISO_H, ISO_LEVELS, ISO_MAP_OF, ISO_SLOT, ISO_UNIT, ISO_W, isoBase, isoFoot, isoPic, isoSheet, isoSpot, isoStage, isoView } from '../../../shared/src/data/isleiso.ts';
+import type { IsoView, Pt } from '../../../shared/src/data/isleiso.ts';
 import { PLOT_CELLS, PRODUCERS, producerOf } from '../../../shared/src/data/base.ts';
 import { TOWN_CELLS, isTreeTown } from '../../../shared/src/data/isletree.ts';
 import type { TownId } from '../../../shared/src/data/town.ts';
@@ -100,7 +100,7 @@ export class IsleScene {
   private recEl!: HTMLElement;
   /** Owner, 2026-10-28: «следующее улучшение откроет: …» — the next dwelling and the men it opens. */
   private armyEl!: HTMLElement;
-  private map: IsoMap = 'temperate';
+  private map: IsoView = 'temperate';
   private cam: Cam = { x: 0, y: 0, s: 1 };
   private framed = false;
   private spots: Spot[] = [];
@@ -251,18 +251,18 @@ export class IsleScene {
       this.cardEl.classList.add('hidden');
       return;
     }
-    const map = ISO_MAP_OF[v.biome] ?? 'temperate';
+    const map = isoView(ISO_MAP_OF[v.biome] ?? 'temperate', v.size, hasAsset);
     if (map !== this.map || !this.mapImg.getAttribute('src')) {
       this.map = map;
       // (a map of its own that fails to load: the volcanic one it borrowed before — dom.ts's fallback listener)
-      const own = isleUrl(`isle.map.${map}`) ?? '', old = map === 'dry' || map === 'drowned' ? isleUrl('isle.map.volcanic') : null;
+      const own = isleUrl(`isle.map.${map}`) ?? '', old = map !== isoBase(map) ? isleUrl(`isle.map.${isoBase(map)}`) : map === 'dry' || map === 'drowned' ? isleUrl('isle.map.volcanic') : null;
       if (old && own !== old) this.mapImg.dataset.fb = old;
       else delete this.mapImg.dataset.fb;
       this.mapImg.src = own;
       this.sig = '';
       if (this.revealed && this.fx) {
         const img = this.mapImg;
-        img.decode().then(() => this.isOpen && this.fx?.setMap(map, img), () => undefined);
+        img.decode().then(() => this.isOpen && this.fx?.setMap(isoBase(map), img), () => undefined);
       }
     }
     this.layout(v);
@@ -306,7 +306,7 @@ export class IsleScene {
     this.revealed = true;
     this.root?.classList.remove('is-veil');
     if (this.fx && this.mapImg.complete && this.mapImg.naturalWidth) {
-      this.fx.setMap(this.map, this.mapImg);
+      this.fx.setMap(isoBase(this.map), this.mapImg);
       this.fx.setSpots(this.fxSpots());
       this.fx.start();
     }
@@ -856,7 +856,11 @@ export class IsleScene {
     const bw = r[0] - l[0], dh = b[1] - t[1];
     const side = (this.sideEl.offsetWidth || 48) + 10;
     const top = this.topEl.offsetHeight || 34, bottom = this.queueEl.offsetHeight || 34;
-    const s = Math.max(this.sMin(), Math.min(this.sMax(), DEFAULT_MAX, (w - side - 8) / bw));
+    // never closer than the middling island of her biome is framed (owner 2026-11-22, the islands by size): a small
+    // island's plateau reads smaller with the sea round it, a large one's still fits and its land runs off the screen
+    const base = isoBase(this.map);
+    const bwMid = isoSpot(base, [5, 0]).r[0] - isoSpot(base, [0, 5]).l[0];
+    const s = Math.max(this.sMin(), Math.min(this.sMax(), DEFAULT_MAX, (w - side - 8) / bw, (w - side - 8) / bwMid));
     this.cam.s = s;
     const cx = (l[0] + r[0]) / 2, cy = (t[1] - 0.35 * dh + b[1]) / 2;
     this.cam.x = side + (w - side) / 2 - cx * s;

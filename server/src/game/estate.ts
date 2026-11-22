@@ -13,7 +13,7 @@ import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { welcome } from './guests.ts';
 import { isCitadelIsland } from '../../../shared/src/data/citadels.ts'; // docs/19 E4
 import {
-  CLAIM_DAYS, GUARDS, HANDS_BONUS, HANDS_WAGE, HOME_COOLDOWN, ISLE_LEVELS, ISLE_MAX, OUTPOSTS, OUTPOST_BUILD, OUTPOST_KINDS, OUTPOST_MAX_LEVEL,
+  CLAIM_DAYS, GUARDS, HANDS_BONUS, HANDS_WAGE, HOME_COOLDOWN, ISLE_LEVELS, ISLE_MAX, SIZE_SLOTS, OUTPOSTS, OUTPOST_BUILD, OUTPOST_KINDS, OUTPOST_MAX_LEVEL,
   PROFESSIONS, PROFESSION_DEFS, RAID_DAY, RAID_MIN, RESIDENT_BONUS, RESIDENT_HIRE, RESIDENT_WORK, ROB_SEC, SMITH_EXCELLENT, TROPHY_MAX, TROPHY_STEP, claimCost, outpostCap, outpostFits, outpostGood,
   outpostRate, outpostUpgrade, residentHand, residentName,
 } from '../../../shared/src/data/estate.ts';
@@ -154,7 +154,7 @@ export function buyIsland(game: Game, s: PlayerSession, islandId: number, move?:
 /** An owned island's slots: by its level, and one or two more on a middling or a large island. */
 export function ownedSlots(h: Holding, isl?: Island): number {
   const size = isl ? islandSize(isl.radius) : 'small';
-  return ISLE_LEVELS[Math.max(1, Math.min(ISLE_MAX, h.level ?? 1))].slots + (size === 'large' ? 2 : size === 'medium' ? 1 : 0);
+  return ISLE_LEVELS[Math.max(1, Math.min(ISLE_MAX, h.level ?? 1))].slots + SIZE_SLOTS[size];
 }
 
 /** docs/29: the island's level follows its town hall (isletree.ts ISLE_OF_HALL) — it is not raised on its own. */
