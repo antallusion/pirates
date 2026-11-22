@@ -7,7 +7,7 @@ import { personName } from '../lang/names.ts';
 import { levelRange } from '../../../shared/src/data/shiplevel.ts';
 import { CARAVAN_TASKS, ON_ATTACK, TASK_NAMES, escortCost } from '../../../shared/src/data/caravans.ts';
 import type { CaravanTask, OnAttack } from '../../../shared/src/data/caravans.ts';
-import { GUARDS, OUTPOSTS, OUTPOST_BUILD, PROFESSION_DEFS, residentIsWoman, residentName, OUTPOST_MAX_LEVEL, outpostUpgrade } from '../../../shared/src/data/estate.ts';
+import { GUARDS, OUTPOSTS, OUTPOST_BUILD, PROFESSION_DEFS, RESIDENT_BONUS, RESIDENT_WORK, residentHand, residentIsWoman, residentName, OUTPOST_MAX_LEVEL, outpostUpgrade } from '../../../shared/src/data/estate.ts';
 import type { Guard, OutpostKind, Profession } from '../../../shared/src/data/estate.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { BOSSES } from '../../../shared/src/data/bosses.ts';
@@ -870,14 +870,21 @@ function estateHtml(state: ClientState): string {
   if (isle) {
     const hs = state.holdings.mine.find((h) => h.island === isle.island);
     const builds = hs?.buildings.map((b) => b.id) ?? [];
-    const opts = (cur: string | null) => [`<option value="none"${cur === null ? ' selected' : ''}>${esc(L('est_idle'))}</option>`, ...builds.filter((b, i) => builds.indexOf(b) === i).map((b) => `<option value="${b}"${cur === b ? ' selected' : ''}>${esc(BUILDINGS[b].name)}</option>`), ...e.outposts.map((o) => `<option value="o:${o.id}"${cur === `o:${o.id}` ? ' selected' : ''}>${esc(OUTPOSTS[o.kind].name[ru])} · ${esc(placeName(o.name))}</option>`)].join('');
-    // Her face by her trade (docs/12 P11) and her name in the reader's tongue.
-    const residents = isle.residents.map((r) => `<div class="est-res">${icon(`portrait.res_${r.prof}_${residentIsWoman(r.id * 7 + isle.island) ? 'f' : 'm'}`, '', 'ico-md ico-round est-face')}<span><b>${esc(residentName(r.id * 7 + isle.island)[ru])}</b> <span class="muted">${esc(PROFESSION_DEFS[r.prof as Profession].name[ru])}</span><br><i class="muted">«${esc(serverText(r.line))}»</i></span><select data-assign="${r.id}">${opts(r.at)}</select></div>`).join('');
+    // forum 129: only where her hand tells (producers, the tavern, outposts), each with what she adds there; a building
+    // she was put in before that gives nothing stays listed, marked so, until she is moved.
+    const opts = (prof: Profession, cur: string | null) => [`<option value="none"${cur === null ? ' selected' : ''}>${esc(L('est_idle'))}</option>`,
+      ...builds.filter((b, i) => builds.indexOf(b) === i && (RESIDENT_WORK[b] || cur === b)).map((b) => {
+        const what = RESIDENT_WORK[b];
+        return `<option value="${b}"${cur === b ? ' selected' : ''}>${esc(BUILDINGS[b].name)} · ${esc(what ? L('est_res_adds', { n: Math.round(residentHand(prof, b) * 100), what: what[ru] }) : L('est_res_none'))}</option>`;
+      }),
+      ...e.outposts.map((o) => `<option value="o:${o.id}"${cur === `o:${o.id}` ? ' selected' : ''}>${esc(OUTPOSTS[o.kind].name[ru])} · ${esc(placeName(o.name))} · ${esc(L('est_res_adds', { n: Math.round(RESIDENT_BONUS * 100), what: L('est_res_yield') }))}</option>`)].join('');
+    // Her face by her trade (docs/12 P11) and her name in the reader's tongue; her trade's knack under it.
+    const residents = isle.residents.map((r) => `<div class="est-res">${icon(`portrait.res_${r.prof}_${residentIsWoman(r.id * 7 + isle.island) ? 'f' : 'm'}`, '', 'ico-md ico-round est-face')}<span><b>${esc(residentName(r.id * 7 + isle.island)[ru])}</b> <span class="muted">${esc(PROFESSION_DEFS[r.prof as Profession].name[ru])} · ${esc(PROFESSION_DEFS[r.prof as Profession].knack[ru])}</span><br><i class="muted">«${esc(serverText(r.line))}»</i></span><select data-assign="${r.id}">${opts(r.prof as Profession, r.at)}</select></div>`).join('');
     parts.push(`<div class="card est-card"><h4 class="card-h">${icon('tab_holdings', '', 'ico-md')}<span>${esc(L('est_isle', { name: placeName(isle.name), level: isle.level, title: serverText(isle.levelName) }))}</span></h4>
       <p class="muted">${esc(L('est_isle_meta', { slots: isle.slots, outposts: isle.outposts, n: isle.residents.length, cap: isle.cap }))}</p>
       ${isle.hall ? `<p>${esc(T29('hall', { n: isle.hall, isle: isle.level, max: TREE_MAX }))} ${isle.hall < TREE_MAX ? `<span class="muted">· ${esc(T29('hallText'))}</span>` : ''}</p>` : isle.next ? `<p>${withGoods('est_next', { title: serverText(isle.next.name), silver: fmt(isle.next.silver) }, isle.next.goods)} <button class="btn btn-small btn-primary" data-est="level">${esc(L('est_raise'))}</button></p>` : `<p class="good">${esc(L('est_max'))}</p>`}
       <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn btn-small btn-primary" data-est="base">${esc(L('est_base'))}</button>${state.self?.dockedAt ? `<button class="btn btn-small" data-est="home" ${e.homeIn ? 'disabled' : ''}>${esc(e.homeIn ? L('est_home_in', { n: e.homeIn }) : L('est_home'))}</button>` : ''}<button class="btn btn-small" data-est="hire">${esc(L('est_hire'))}</button><button class="btn btn-small" data-guests="${isle.island}">${esc(L('est_guests'))}</button>${isle.refugees ? `<span class="muted">${esc(L('est_refugees', { n: isle.refugees }))}</span>` : ''}</div>
-      ${residents ? `<h5 class="est-h">${esc(L('est_residents'))}</h5>${residents}` : `<p class="muted">${esc(L('est_no_res'))}</p>`}
+      ${residents ? `<h5 class="est-h">${esc(L('est_residents'))}</h5><p class="muted est-note">${esc(L('est_res_note'))}</p>${residents}` : `<p class="muted">${esc(L('est_no_res'))}</p>`}
       ${isle.trophies ? `<p class="muted">${esc(L('est_trophies', { flag: isle.trophies.flag, skull: isle.trophies.skull, fish: isle.trophies.fish, v: isle.visitors }))}</p>` : ''}
       ${(state.self?.company.memorial ?? []).length ? `<div class="est-h">${esc(L('est_memorial'))}</div>${state.self!.company.memorial.map((m) => `<p class="muted">† ${esc(personName(m.name))} — ${esc(serverText(m.cause))}</p>`).join('')}` : ''}</div>`);
   } else if (!e.claim) parts.push(`<div class="card est-card"><p class="muted">${esc(L('est_none'))}</p></div>`);
