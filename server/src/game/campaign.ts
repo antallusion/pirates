@@ -7,7 +7,7 @@
 // have no raiders of their own to board.
 
 import { inWatch } from './onboarding.ts'; // VK 4.2.4: the campaign waits for the First Watch
-import { MAX_LEVEL } from '../../../shared/src/constants.ts';
+import { THRONE_LEVEL } from '../../../shared/src/constants.ts';
 import { OPENING_SLOTS, arrival, buildCampaign } from '../../../shared/src/data/campaign/build.ts';
 import { headingVec } from '../../../shared/src/math.ts';
 import { hullWater, nearestWater } from './seaway.ts';
@@ -562,4 +562,4 @@ export function campaignOffers(game: Game, p: Profile): QuestDef[] {
 }
 
 /** The level a captain of the campaign alone stands at after it (the tests' and the docs' check). */
-export const CAMPAIGN_END_LEVEL = MAX_LEVEL;
+export const CAMPAIGN_END_LEVEL = THRONE_LEVEL;

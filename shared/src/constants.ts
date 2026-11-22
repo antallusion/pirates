@@ -45,7 +45,14 @@ export const LOGOUT_TIMER_SEC = 120; // ship lingers at sea after a disconnect, 
 export const SAFE_EXIT_SEC = 30; // «Выход» at sea (forum 45): she leaves the sea safely after this, unless she acts
 export const COMBAT_TAG_SEC = 20;
 
-export const MAX_LEVEL = 60;
+/** The cap (owner 2026-11-23: «предел уровня давай сделаем 80, но… года полтора»). */
+export const MAX_LEVEL = 80;
+/** The Throne's level: the endgame opens here (the Throne, the seals, the citadels, the Abyss, the Admiralty, the
+ *  Arena) and every bit of experience past it is glory too; the levels on to the cap are the long road. */
+export const THRONE_LEVEL = 60;
+/** Past the Throne's level each level asks this much more than the one before: 60→80 some 1,400 hours of play, the
+ *  whole road about 1,600 — a year and a half at three hours a day. */
+export const LATE_RISE = 1.135;
 export const SAIL_STEPS = [0, 0.25, 0.5, 0.75, 1] as const;
 
 // The curve of experience (docs/26, owner 2026-10-08: «чем больше уровень, тем больше кораблей потопить, абордажей
@@ -56,7 +63,7 @@ export const SAIL_STEPS = [0, 0.25, 0.5, 0.75, 1] as const;
 
 /** What one ship of her own level sunk teaches a captain of this level. */
 export function xpUnit(level: number): number {
-  return 40 + 10 * Math.max(1, Math.min(MAX_LEVEL, level));
+  return 40 + 10 * Math.max(1, Math.min(THRONE_LEVEL, level));
 }
 
 /** Ships of her own level sunk from `level` to the next (docs/26): K(L) = 5.9·L^0.7 — six at the first, thirty at the
@@ -64,7 +71,7 @@ export function xpUnit(level: number): number {
  *  (a softplus about the 32nd: the slope of ln K grows smoothly, no step) — about 150 at the fortieth, 300 at the
  *  fiftieth, 600 at the last. */
 export function killsPerLevel(level: number): number {
-  const L = Math.max(1, Math.min(MAX_LEVEL, level));
+  const L = Math.max(1, Math.min(THRONE_LEVEL, level));
   const soft = (x: number): number => Math.log1p(Math.exp(x));
   return KPL_BASE * Math.pow(L, KPL_POW) * Math.exp(KPL_CLIMB * KPL_EASE * (soft((L - KPL_FROM) / KPL_EASE) - soft((1 - KPL_FROM) / KPL_EASE)));
 }
@@ -77,6 +84,7 @@ export const KPL_EASE = 6;
 /** XP required to go from `level` to `level + 1`: her own level's ships to the next level × what each teaches, rounded
  *  to two or three figures (the captain reads it on her sheet). */
 export function xpForLevel(level: number): number {
+  if (level > THRONE_LEVEL) return Math.round((xpForLevel(THRONE_LEVEL) * Math.pow(LATE_RISE, Math.min(MAX_LEVEL, level) - THRONE_LEVEL)) / 1000) * 1000;
   const x = killsPerLevel(level) * xpUnit(level);
   const step = x < 1000 ? 10 : x < 10000 ? 50 : x < 100000 ? 100 : 1000;
   return Math.round(x / step) * step;

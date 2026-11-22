@@ -14,15 +14,15 @@ export const ARTICLES: GuideArticle[] = [
     title: ['Levels and experience', 'Уровни и опыт'],
     tags: ['level', 'experience', 'xp', 'rested', 'уровень', 'опыт', 'отдых', 'очки таланта'],
     summary: [
-      'Up to level 60. Quests are the steadiest source of experience; each level gives a talent point.',
-      'До 60-го уровня. Задания — самый ровный источник опыта; каждый уровень даёт очко таланта.',
+      'Up to level 80: the endgame opens at 60, the last twenty levels are a long road. Quests are the steadiest source of experience; each level gives a talent point.',
+      'До 80-го уровня: на 60-м открывается эндгейм, последние двадцать уровней — долгий путь. Задания — самый ровный источник опыта; каждый уровень даёт очко таланта.',
     ],
     slides: [
       {
         img: img('prog-levels', 1),
         text: [
-          'The number on your portrait is your captain\'s level, up to 60.',
-          'Число на портрете — уровень капитана, до 60-го.',
+          'The number on your portrait is your captain\'s level, up to 80.',
+          'Число на портрете — уровень капитана, до 80-го.',
         ],
       },
       {

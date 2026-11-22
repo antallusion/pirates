@@ -23,7 +23,7 @@ export const SERVER_RU_THRONE: Record<string, string> = {
   'Your share of tier {0} of the Abyss: {1} silver.': 'Ваша доля за ярус {0} Бездны: {1} серебра.',
   'Tier {0} of the Abyss': 'Ярус {0} Бездны',
   // glory
-  'The Throne of the Sea opens: past the cap your experience is glory. Open it from the captain’s plate.': 'Открывается Престол Моря: после потолка опыт идёт в славу. Откройте его с плашки капитана.',
+  'The Throne of the Sea opens: from level 60 your experience is glory as well, and the road goes on to level 80. Open it from the captain’s plate.': 'Открывается Престол Моря: с 60-го уровня опыт идёт и в славу, а путь продолжается до 80-го уровня. Престол открывается с таблички капитана.',
   'Glory rank {0}!': 'Ранг славы {0}!',
   'Glory rank {0}! A point of mastery is yours.': 'Ранг славы {0}! Вам очко мастерства.',
   'A boon of glory to choose: open the Throne.': 'Выберите дар славы: откройте окно «Престол».',

@@ -12,7 +12,7 @@
 //    No artifacts, glory, mastery, grandmasters, talents, officers or hull gifts.
 //  - The rating: Elo, a season's table (the calendar's, seasons.ts), its rewards at the season's end.
 
-import { MAX_LEVEL } from '../constants.ts';
+import { THRONE_LEVEL } from '../constants.ts';
 import { UNITS, armyWeight, hasSpecial } from './army.ts';
 import type { ArmyStack, UnitId } from './army.ts';
 import type { CaptainId } from './captains.ts';
@@ -24,7 +24,7 @@ import type { Rng } from '../rng.ts';
 export type Tr = [string, string];
 
 /** The Colosseum opens to captains of the cap (its tab is the Throne's; its season pays in glory). */
-export const ARENA_LEVEL = MAX_LEVEL;
+export const ARENA_LEVEL = THRONE_LEVEL;
 /** Draft points a captain spends. */
 export const ARENA_BUDGET = 100;
 /** Stacks a captain takes at the most (a hull's seven slots). */
@@ -272,7 +272,7 @@ export const ARENA_PATH: Partial<Record<CaptainId, Partial<Prims>>> = {
  *  remainders (no dice: every captain of a path the same), and its weight on the sand (ARENA_PATH). */
 export function arenaPrims(path: CaptainId): Prims {
   const base = PRIM_BASE[path], w = PRIM_WEIGHTS[path];
-  const ups = MAX_LEVEL - 1;
+  const ups = THRONE_LEVEL - 1;
   const tot = PRIMS.reduce((n, k) => n + w[k], 0);
   const raw = PRIMS.map((k) => (ups * w[k]) / tot);
   const whole = raw.map(Math.floor);
@@ -291,7 +291,7 @@ export function arenaPrims(path: CaptainId): Prims {
 /** The hero of the Colosseum on a path: its standard primaries, the eight skills at expert, its book, a full store. */
 export function arenaHero(path: CaptainId): HeroBattle {
   const prim = arenaPrims(path);
-  return heroBattle(prim, ARENA_SKILLS.map((id) => ({ id, r: 3 as const })), null, startingOrders(path), manaMaxOf(prim.will), { path, level: MAX_LEVEL });
+  return heroBattle(prim, ARENA_SKILLS.map((id) => ({ id, r: 3 as const })), null, startingOrders(path), manaMaxOf(prim.will), { path, level: THRONE_LEVEL });
 }
 
 // ------------------------------------------------------------------ the rating

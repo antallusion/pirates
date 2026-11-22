@@ -5,7 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MAX_LEVEL, xpForLevel } from '../shared/src/constants.ts';
+import { MAX_LEVEL, THRONE_LEVEL, xpForLevel } from '../shared/src/constants.ts';
 import { armyForLevel, armyMen } from '../shared/src/data/army.ts';
 import { GM_RANK, GM_TEXT, SKILLS, SKILL_IDS, skillBattle, skillOffer, skillSeaMods, skillText } from '../shared/src/data/hero.ts';
 import {
@@ -39,8 +39,8 @@ function capCaptain(game: Game, name: string): PlayerSession {
   ship.state.speed = 0;
   ship.protectedUntil = 0;
   ship.input = { rudder: 0, sailTarget: 0 };
-  s.profile!.level = MAX_LEVEL;
-  ship.level = MAX_LEVEL;
+  s.profile!.level = THRONE_LEVEL;
+  ship.level = THRONE_LEVEL;
   onHull(game, ship, 'brig', 6);
   ship.setArmy(armyForLevel(6, ship.stats.crewMax, ship.armySlots, 'player'));
   ship.morale = 80;
@@ -53,7 +53,7 @@ function capCaptain(game: Game, name: string): PlayerSession {
 const toasts = (game: Game, s: PlayerSession): string[] => ((s.conn as unknown as { inbox: { t: string; msg?: string }[] }).inbox.filter((m) => m.t === 'toast').map((m) => m.msg ?? ''));
 
 test('E1: glory past the cap — a gentle curve, experience turned to ranks, the bar on the plate is glory', () => {
-  assert.equal(GLORY_BASE, Math.round((xpForLevel(MAX_LEVEL) * 0.45) / 1000) * 1000, 'docs/26: about half the last level'); // (the cap's step itself before docs/26)
+  assert.equal(GLORY_BASE, Math.round((xpForLevel(THRONE_LEVEL) * 0.45) / 1000) * 1000, 'docs/26: about half the last level'); // (the cap's step itself before docs/26)
   assert.equal(gloryXp(0), GLORY_BASE);
   assert.ok(gloryXp(100) === Math.round(GLORY_BASE * 2), 'rank 100 asks twice the first');
   for (let r = 0; r < 300; r++) assert.ok(gloryXp(r + 1) >= gloryXp(r), 'never cheaper');
@@ -66,24 +66,36 @@ test('E1: glory past the cap — a gentle curve, experience turned to ranks, the
   const s = capCaptain(game, 'Glorious');
   const p = s.profile!;
   game.grantXp(s, gloryXp(0) + gloryXp(1) + 100, 'Test');
-  assert.equal(p.level, MAX_LEVEL, 'the level stays at the cap');
+  assert.equal(p.level, THRONE_LEVEL, 'the level stays at the cap');
   assert.equal(p.throne!.rank, 2);
   assert.equal(p.throne!.xp, 100);
   assert.ok(toasts(game, s).some((m) => m === 'Glory rank 2!'), 'the news of a rank');
   assert.ok(toasts(game, s).some((m) => /boon of glory/.test(m)), 'and the choice to make');
   game.pushSelf(s, true);
   const self = (s.conn as unknown as { last: (t: string) => { self: { xp: number; xpNext: number; glory?: { rank: number; pending: number } } } }).last('self').self;
-  assert.equal(self.xp, 100, 'the bar is glory');
-  assert.equal(self.xpNext, gloryXp(2));
+  // Owner 2026-11-23: the cap is 80 — from 60 to 80 the bar is the long road to the next level, the glory on its own plate.
+  assert.equal(self.xp, gloryXp(0) + gloryXp(1) + 100, 'the bar is the road to the 61st');
+  assert.equal(self.xpNext, xpForLevel(THRONE_LEVEL));
   assert.equal(self.glory?.rank, 2);
   assert.equal(self.glory?.pending, 2);
 
-  // A level-up into the cap: what is left goes on into glory.
-  const q = { ...p, level: MAX_LEVEL - 1, xp: 0, throne: undefined } as typeof p;
-  assert.equal(addXp(q, xpForLevel(MAX_LEVEL - 1) + 500), 1);
-  assert.equal(q.level, MAX_LEVEL);
-  assert.equal(q.xp, 0);
+  // A level-up into the Throne's level: what is left is glory, and counts on toward the 61st as well.
+  const q = { ...p, level: THRONE_LEVEL - 1, xp: 0, throne: undefined } as typeof p;
+  assert.equal(addXp(q, xpForLevel(THRONE_LEVEL - 1) + 500), 1);
+  assert.equal(q.level, THRONE_LEVEL);
+  assert.equal(q.xp, 500);
   assert.equal(q.throne?.xp, 500);
+  // At the cap (80) all of it is glory, the bar glory.
+  const z = { ...p, level: MAX_LEVEL, xp: 0, throne: { ...p.throne!, xp: 0 } } as typeof p;
+  assert.equal(addXp(z, 1234), 0);
+  assert.equal(z.level, MAX_LEVEL);
+  assert.equal(z.xp, 0);
+  assert.equal(z.throne!.xp, 1234);
+  // The road past the Throne's level: every level dearer, 60→80 well over a thousand hours' worth (a year and a half).
+  for (let L = THRONE_LEVEL + 1; L < MAX_LEVEL; L++) assert.ok(xpForLevel(L) > xpForLevel(L - 1), `L${L}`);
+  let late = 0;
+  for (let L = THRONE_LEVEL; L < MAX_LEVEL; L++) late += xpForLevel(L);
+  assert.ok(late > 80 * xpForLevel(THRONE_LEVEL), 'the last twenty levels: some eighty times the 60th');
 });
 
 test('E1: a boon a rank, each primary to its cap; the boons lie on her hero in a boarding', () => {
@@ -298,12 +310,12 @@ test('E18: reaching the cap, the Throne opens with a word, once', () => {
   const { game } = makeGame();
   const s = capCaptain(game, 'Climber');
   const p = s.profile!;
-  p.level = MAX_LEVEL - 1;
+  p.level = THRONE_LEVEL - 1;
   p.xp = 0;
   p.throne = undefined;
   game.pushSelf(s, true);
-  game.grantXp(s, xpForLevel(MAX_LEVEL - 1), 'Test');
-  assert.equal(p.level, MAX_LEVEL);
+  game.grantXp(s, xpForLevel(THRONE_LEVEL - 1), 'Test');
+  assert.equal(p.level, THRONE_LEVEL);
   const said = toasts(game, s).filter((m) => /Throne of the Sea opens/.test(m));
   assert.equal(said.length, 1);
   assert.equal(throneOf(p).hailed, true);

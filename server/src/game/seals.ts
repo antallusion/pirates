@@ -6,7 +6,7 @@
 // fast, +1 in time, 0 late, −1 lost) and, grown, turns to another lair. Her best of the week goes on the sea's table.
 // Every roll here is on this system's own Rng.
 
-import { MAX_LEVEL } from '../../../shared/src/constants.ts';
+import { THRONE_LEVEL } from '../../../shared/src/constants.ts';
 import { armyCost } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
 import { LAIRS, lairArmy } from '../../../shared/src/data/lairs.ts';
@@ -67,7 +67,7 @@ function pickKind(game: Game, not?: LairKind): LairKind {
 
 /** Her seal: given at the cap (seal 2 of a kind the sea has), kept within the rules after. */
 export function sealOf(game: Game, p: Profile): SealRec | null {
-  if (p.level < MAX_LEVEL) return null;
+  if (p.level < THRONE_LEVEL) return null;
   const r = (p.seal ??= { lv: SEAL_MIN, kind: pickKind(game), runs: 0, timed: 0 });
   r.lv = clampSeal(r.lv);
   if (!KINDS.has(r.kind)) r.kind = pickKind(game);
@@ -240,7 +240,7 @@ export function enterDepth(game: Game, s: PlayerSession): string | null {
   const p = s.profile;
   if (!p) return 'Not now';
   const seal = sealOf(game, p);
-  if (!seal) return `The seals open at level ${MAX_LEVEL}.`;
+  if (!seal) return `The seals open at level ${THRONE_LEVEL}.`;
   const l = lairInReachOf(game, s, new Set([seal.kind]));
   const why = whyNot(game, s, l);
   if (why || !l) return why ?? 'Not now';
@@ -356,7 +356,7 @@ export function sealBoard(game: Game, acc?: number): SealRow[] {
 /** Her seal for the Throne's tab (undefined below the cap). */
 export function sealView(game: Game, s: PlayerSession): SealView | undefined {
   const p = s.profile;
-  if (!p || p.level < MAX_LEVEL) return undefined;
+  if (!p || p.level < THRONE_LEVEL) return undefined;
   const seal = sealOf(game, p)!;
   const week = sealWeek(game);
   const ship = s.ship;
@@ -385,13 +385,13 @@ export function sealView(game: Game, s: PlayerSession): SealView | undefined {
 export function installSealHooks(): void {
   lairCardHooks.sealOf = (game, s) => {
     const p = s.profile;
-    const seal = p && p.level >= MAX_LEVEL ? sealOf(game, p) : null;
+    const seal = p && p.level >= THRONE_LEVEL ? sealOf(game, p) : null;
     return seal ? { kind: seal.kind, lv: seal.lv } : null;
   };
   lairCardHooks.enter = enterDepth;
   lairCardHooks.seal = (game, s, l) => {
     const p = s.profile;
-    if (!p || p.level < MAX_LEVEL) return undefined;
+    if (!p || p.level < THRONE_LEVEL) return undefined;
     const seal = sealOf(game, p);
     if (!seal) return undefined;
     // On whichever lair's card she sees while her boats reach her seal's (an island's chain shows its nearest step).
@@ -406,7 +406,7 @@ export function installSealHooks(): void {
 /** `/seal [lv N|kind K|go|win [rounds]|lose|reset|board]` (admin.ts). */
 export function adminSeal(game: Game, s: PlayerSession, args: string[]): string {
   const p = s.profile!;
-  if (p.level < MAX_LEVEL) return `The seals open at level ${MAX_LEVEL} (/level ${MAX_LEVEL}).`;
+  if (p.level < THRONE_LEVEL) return `The seals open at level ${THRONE_LEVEL} (/level ${THRONE_LEVEL}).`;
   const seal = sealOf(game, p)!;
   const say = () => `Seal ${seal.lv}: ${lairName(seal.kind)}, ${sealRounds(seal.lv)} rounds.`;
   switch (args[0]) {

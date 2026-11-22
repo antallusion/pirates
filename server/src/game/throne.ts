@@ -7,7 +7,7 @@
 // The trials' few rolls are on the Throne's own dice.
 
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
-import { MAX_LEVEL } from '../../../shared/src/constants.ts';
+import { THRONE_LEVEL } from '../../../shared/src/constants.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { GM_RANK, PRIMS, SKILLS, SKILL_IDS, SKILL_MAX, SKILL_SLOTS, heroBattle, startingOrders } from '../../../shared/src/data/hero.ts';
 import type { HeroBattle, PrimId, Prims, SkillId, SkillSlot } from '../../../shared/src/data/hero.ts';
@@ -77,7 +77,7 @@ export function throneOf(p: Profile): ThroneRec {
 
 /** Experience past the cap into glory (player.ts addXp). Returns the ranks gained. */
 export function addGlory(p: Profile, amount: number): number {
-  if (p.level < MAX_LEVEL || !(amount > 0)) return 0;
+  if (p.level < THRONE_LEVEL || !(amount > 0)) return 0;
   const t = throneOf(p);
   t.xp += Math.round(amount);
   let n = 0;
@@ -92,11 +92,11 @@ export function addGlory(p: Profile, amount: number): number {
 /** The cap reached (progression.ts onLevelUp): the Throne's word, once. */
 export function onCap(game: Game, s: PlayerSession): void {
   const p = s.profile;
-  if (!p || p.level < MAX_LEVEL) return;
+  if (!p || p.level < THRONE_LEVEL) return;
   const t = throneOf(p);
   if (t.hailed) return;
   t.hailed = true;
-  game.sendTo(s, { t: 'toast', msg: 'The Throne of the Sea opens: past the cap your experience is glory. Open it from the captain’s plate.', kind: 'gold' });
+  game.sendTo(s, { t: 'toast', msg: 'The Throne of the Sea opens: from level 60 your experience is glory as well, and the road goes on to level 80. Open it from the captain’s plate.', kind: 'gold' });
 }
 
 /** After experience (Game.grantXp): the news of ranks gained, and her choice of boon. */
@@ -136,7 +136,7 @@ export function masteryPointsLeft(p: Profile): number {
 export function learnMastery(game: Game, s: PlayerSession, id: string): string | null {
   const p = s.profile!;
   const t = throneOf(p);
-  if (p.level < MAX_LEVEL) return `The Throne opens at level ${MAX_LEVEL}`;
+  if (p.level < THRONE_LEVEL) return `The Throne opens at level ${THRONE_LEVEL}`;
   const why = masteryWhy(t.nodes, masteryPoints(t.rank), id);
   if (why) return why;
   t.nodes[id] = (t.nodes[id] ?? 0) + 1;
@@ -247,7 +247,7 @@ export function legendHero(skill: SkillId, prim: Prims, theirs: readonly SkillSl
   for (const x of theirs) if (x.id !== skill) skills.push({ id: x.id, r: Math.min(SKILL_MAX, x.r) as SkillSlot['r'] });
   for (const id of lg.also) if (skills.length < SKILL_SLOTS && !skills.some((x) => x.id === id)) skills.push({ id, r: SKILL_MAX });
   const p: Prims = { atk: prim.atk + TRIAL_PRIM, def: prim.def + TRIAL_PRIM, pow: prim.pow + TRIAL_PRIM, will: prim.will + TRIAL_PRIM };
-  return heroBattle(p, skills, null, startingOrders(lg.path), p.will * 10, { path: lg.path, level: MAX_LEVEL });
+  return heroBattle(p, skills, null, startingOrders(lg.path), p.will * 10, { path: lg.path, level: THRONE_LEVEL });
 }
 /** The legend's army: the challenger's, a share stronger in every stack. */
 export function legendArmy(army: readonly ArmyStack[], skill: SkillId): ArmyStack[] {
@@ -263,7 +263,7 @@ export function trialWhy(game: Game, s: PlayerSession, skill: string, force = fa
   const id = skill as SkillId;
   const h = heroOf(p);
   const t = throneOf(p);
-  if (p.level < MAX_LEVEL) return `The trials open at level ${MAX_LEVEL}`;
+  if (p.level < THRONE_LEVEL) return `The trials open at level ${THRONE_LEVEL}`;
   const r = h.skills.find((x) => x.id === id)?.r ?? 0;
   if (r >= GM_RANK) return 'You are a grandmaster of that skill already';
   if (r < SKILL_MAX) return 'The legend fights only an expert of her skill';
@@ -382,7 +382,7 @@ export function trialViews(now: number, p: Profile): TrialView[] {
     const rec = t.trials[id];
     // (by the minute, as the tab shows it: a count of seconds sent every second sent the whole glory with it — docs/19 E19)
     const wait = Math.max(0, Math.ceil(((rec?.next ?? 0) - now) / 60) * 60);
-    const state: TrialView['state'] = rank >= GM_RANK ? 'won' : rank < SKILL_MAX || p.level < MAX_LEVEL ? 'locked' : wait > 0 ? 'wait' : 'ready';
+    const state: TrialView['state'] = rank >= GM_RANK ? 'won' : rank < SKILL_MAX || p.level < THRONE_LEVEL ? 'locked' : wait > 0 ? 'wait' : 'ready';
     return { skill: id, rank, state, ...(state === 'wait' ? { wait } : {}), tries: rec?.tries ?? 0 };
   });
 }
@@ -390,13 +390,13 @@ export function trialViews(now: number, p: Profile): TrialView[] {
 export function gloryView(now: number, s: PlayerSession, seal?: SealView, raid?: RaidView, arena?: ArenaView): GloryView | undefined {
   const p = s.profile;
   if (!p) return undefined;
-  if (p.level < MAX_LEVEL - 5 && !p.throne) return undefined;
+  if (p.level < THRONE_LEVEL - 5 && !p.throne) return undefined;
   const t = throneOf(p);
   const spent = masterySpent(t.nodes);
   const fight = fightingNow.get(s.accountId);
   const picks: Prims = { atk: t.picks.atk ?? 0, def: t.picks.def ?? 0, pow: t.picks.pow ?? 0, will: t.picks.will ?? 0 };
   return {
-    open: p.level >= MAX_LEVEL, rank: t.rank, xp: Math.floor(t.xp), need: gloryXp(t.rank), picks, pending: gloryPending(t.rank, t.picks), points: masteryPoints(t.rank), spent, nodes: { ...t.nodes },
+    open: p.level >= THRONE_LEVEL, rank: t.rank, xp: Math.floor(t.xp), need: gloryXp(t.rank), picks, pending: gloryPending(t.rank, t.picks), points: masteryPoints(t.rank), spent, nodes: { ...t.nodes },
     trials: trialViews(now, p), reset: resetCost(spent), lift: liftOf(p), ...(fight && trials.get(fight) ? { fighting: trials.get(fight)!.skill } : {}),
     ...(seal ? { seal } : {}),
     ...(raid ? { raid } : {}),
@@ -456,8 +456,8 @@ export function throneAdmin(game: Game, s: PlayerSession, cmd: string, args: str
   const p = s.profile!;
   const t = throneOf(p);
   const lift = (): void => {
-    if (p.level < MAX_LEVEL) {
-      p.level = MAX_LEVEL;
+    if (p.level < THRONE_LEVEL) {
+      p.level = THRONE_LEVEL;
       p.xp = 0;
       if (s.ship) s.ship.level = p.level;
       heroOf(p);

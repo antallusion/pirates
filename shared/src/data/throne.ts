@@ -1,4 +1,4 @@
-// The Throne of the Sea, part 1 (docs/19 E1–E3): the first layer past the cap (MAX_LEVEL).
+// The Throne of the Sea, part 1 (docs/19 E1–E3): the first layer past the cap (THRONE_LEVEL).
 //
 //  E1. Glory. Past level 60 her experience flows into endless ranks of glory, each a little dearer than the last
 //      (GLORY_RISE a rank). Every rank lets her choose a small boon: +1% to the effect of one of her four primaries
@@ -19,7 +19,7 @@
 
 import type { SealView } from './seals.ts';
 import type { RaidView } from './abyssraid.ts';
-import { MAX_LEVEL, xpForLevel } from '../constants.ts';
+import { THRONE_LEVEL, xpForLevel } from '../constants.ts';
 import type { CaptainId } from './captains.ts';
 import type { PrimId, Prims, SkillId } from './hero.ts';
 import type { StatMods } from './stats.ts';
@@ -32,7 +32,7 @@ const T = (en: string, ru: string): [string, string] => [en, ru];
  *  ask some ten hours each; a rank of glory about five at first, ten by the hundredth), a hundredth dearer each rank
  *  (rank 100 asks twice the first; ranks 1–100 are about six and a half times the road from level 1 to the cap). */
 export const GLORY_SHARE = 0.45;
-export const GLORY_BASE = Math.round((xpForLevel(MAX_LEVEL) * GLORY_SHARE) / 1000) * 1000;
+export const GLORY_BASE = Math.round((xpForLevel(THRONE_LEVEL) * GLORY_SHARE) / 1000) * 1000;
 export const GLORY_RISE = 0.01;
 export function gloryXp(rank: number): number {
   return Math.round(GLORY_BASE * (1 + Math.max(0, rank) * GLORY_RISE));

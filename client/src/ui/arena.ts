@@ -14,7 +14,7 @@ import { CAPTAINS } from '../../../shared/src/data/captains.ts';
 import { seaHourOf } from '../../../shared/src/data/seamarks.ts';
 import type { GloryView } from '../../../shared/src/data/throne.ts';
 import type { ClientMsg } from '../../../shared/src/protocol.ts';
-import { MAX_LEVEL } from '../../../shared/src/constants.ts';
+import { THRONE_LEVEL } from '../../../shared/src/constants.ts';
 import { dict, lang } from '../i18n.ts';
 import { EN, RU } from '../lang/ui/arena.ts';
 import { EN as TEN, RU as TRU } from '../lang/ui/throne.ts';
@@ -172,7 +172,7 @@ function board(v: ArenaDraftView): string {
 function arenaTab(g: GloryView, state: ClientState): string {
   stateRef = state;
   const v = g.arena;
-  if (!g.open || !v) return `<div class="ar-wrap"><p class="muted th-locked">${esc(TL('locked', { n: MAX_LEVEL, m: state.self?.level ?? 0 }))}</p></div>`;
+  if (!g.open || !v) return `<div class="ar-wrap"><p class="muted th-locked">${esc(TL('locked', { n: THRONE_LEVEL, m: state.self?.level ?? 0 }))}</p></div>`;
   if (!v.draft) sel = null;
   return `<div class="ar-wrap">${v.draft ? board(v.draft) : lobby(v, state)}</div>`;
 }

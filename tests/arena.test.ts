@@ -13,7 +13,7 @@ import {
 import type { Draft } from '../shared/src/data/arena.ts';
 import { armyForLevel, armyMen, armyWeight } from '../shared/src/data/army.ts';
 import { CAPTAIN_IDS } from '../shared/src/data/captains.ts';
-import { MAX_LEVEL } from '../shared/src/constants.ts';
+import { THRONE_LEVEL } from '../shared/src/constants.ts';
 import { Rng } from '../shared/src/rng.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import type { PlayerSession } from '../server/src/game/player.ts';
@@ -107,7 +107,7 @@ test('the hero of the Colosseum: her path\'s standard primaries, the same eight 
   for (const c of CAPTAIN_IDS) {
     const h = arenaHero(c);
     assert.equal(h.path, c);
-    assert.equal(h.level, MAX_LEVEL);
+    assert.equal(h.level, THRONE_LEVEL);
     assert.deepEqual(arenaHero(c), h, 'no dice');
     const p = arenaPrims(c);
     assert.equal(h.atk, p.atk);
@@ -132,7 +132,7 @@ function capped(game: Game, name: string, captain: 'corsair' | 'reaver' | 'smugg
   join(game, name, captain);
   const s = game.sessionByName(name)!;
   onHull(game, s.ship!, 'man_o_war', 10);
-  s.profile!.level = MAX_LEVEL;
+  s.profile!.level = THRONE_LEVEL;
   s.ship!.setArmy(armyForLevel(10, s.ship!.stats.crewMax, s.ship!.armySlots, 'player'));
   s.ship!.morale = 80;
   if (s.ship!.docked) game.undock(s);

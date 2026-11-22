@@ -6,7 +6,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MAX_LEVEL } from '../shared/src/constants.ts';
+import { THRONE_LEVEL } from '../shared/src/constants.ts';
 import { armyForLevel } from '../shared/src/data/army.ts';
 import {
   ADM_GARRISON_MEN, ADM_KINDS, ADM_LEGEND_R, ADM_PAY, ADM_SEAL_ASKS, ADM_WATCH, ADM_WATCHES, admPay, admiraltyPatterns, admiraltyPorts, admiraltyWeek, sealHours,
@@ -52,8 +52,8 @@ function capped(game: Game, name: string): PlayerSession {
   join(game, name);
   const s = game.sessionByName(name)!;
   onHull(game, s.ship!, 'man_o_war', 10);
-  s.profile!.level = MAX_LEVEL;
-  s.ship!.level = MAX_LEVEL;
+  s.profile!.level = THRONE_LEVEL;
+  s.ship!.level = THRONE_LEVEL;
   s.ship!.setArmy(armyForLevel(10, s.ship!.stats.crewMax, s.ship!.armySlots, 'player'));
   s.ship!.morale = 80;
   return s;
@@ -92,7 +92,7 @@ test('three a week, three of four kinds by turns, the same for every call; each 
       seen[c.kind] = (seen[c.kind] ?? 0) + 1;
       assert.equal(QUESTS_BY_ID[c.id], c.quest, 'registered as a quest');
       assert.equal(c.quest.category, 'admiralty');
-      assert.equal(c.quest.requires.level, MAX_LEVEL);
+      assert.equal(c.quest.requires.level, THRONE_LEVEL);
       // 1–3 hours of a geared captain, paid by them.
       assert.ok(c.hours >= 1 && c.hours <= 3, `${c.kind}: ${c.hours} h`);
       assert.deepEqual(c.pay, admPay(c.hours));
@@ -155,10 +155,10 @@ test('the board: a captain of the cap takes a contract at a great harbour, besid
   assert.ok(said(s, n).includes('You have that contract already.'));
   // Below the cap: no contract.
   const young = capped(game, 'Young Reader');
-  young.profile!.level = MAX_LEVEL - 2;
+  young.profile!.level = THRONE_LEVEL - 2;
   docked(game, young, 'gravesend');
-  assert.equal(admView(game, young)!.rows[0].why, `The Admiralty gives its contracts to captains of level ${MAX_LEVEL}.`);
-  young.profile!.level = MAX_LEVEL - 6;
+  assert.equal(admView(game, young)!.rows[0].why, `The Admiralty gives its contracts to captains of level ${THRONE_LEVEL}.`);
+  young.profile!.level = THRONE_LEVEL - 6;
   assert.equal(admView(game, young), undefined, 'not shown far below the cap');
   // A contract is not shared from the journal: the Admiralty's own boards give it.
   push(s, { t: 'quest', action: 'share', id: c.id });

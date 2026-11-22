@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MAX_LEVEL, killsPerLevel, xpForLevel, xpUnit } from '../shared/src/constants.ts';
+import { THRONE_LEVEL, killsPerLevel, xpForLevel, xpUnit } from '../shared/src/constants.ts';
 import { armyForLevel } from '../shared/src/data/army.ts';
 import {
   QUEST_FLOOR, XP_UNITS, battleXp, levelPct, prizeXp, questGap, questXpFor, shipBandOf, targetXp, xpGap, xpThreat,
@@ -26,7 +26,7 @@ import { giveScrolls, join, makeGame, steps } from './helpers.ts';
 type Credit = { creditKill(k: ShipEntity, v: ShipEntity, how: 'sunk' | 'boarded'): void };
 
 test('the curve grows steadily: every level dearer, no step, the ships to a level always more', () => {
-  for (let L = 1; L < MAX_LEVEL; L++) {
+  for (let L = 1; L < THRONE_LEVEL; L++) {
     assert.ok(xpForLevel(L + 1) > xpForLevel(L), `level ${L + 1} dearer than ${L}`);
     assert.ok(killsPerLevel(L + 1) > killsPerLevel(L), `more ships to level ${L + 1}`);
     const r = xpForLevel(L + 1) / xpForLevel(L);
@@ -36,9 +36,9 @@ test('the curve grows steadily: every level dearer, no step, the ships to a leve
   // (the first levels a power: the climb eases from level to level, never turns up there)
   const g = (L: number) => Math.log(killsPerLevel(L + 1) / killsPerLevel(L));
   for (let L = 2; L < 6; L++) assert.ok(g(L) < g(L - 1), `level ${L}: the first climb eases`);
-  for (let L = 6; L < MAX_LEVEL - 1; L++) assert.ok(Math.abs(g(L) - g(L - 1)) < 0.02, `level ${L}: the climb turns by ${(g(L) - g(L - 1)).toFixed(3)}`);
+  for (let L = 6; L < THRONE_LEVEL - 1; L++) assert.ok(Math.abs(g(L) - g(L - 1)) < 0.02, `level ${L}: the climb turns by ${(g(L) - g(L - 1)).toFixed(3)}`);
   // Time per level of mixed play grows steadily too (the model's noise of the quest boards allowed, 4%).
-  for (let L = 2; L < MAX_LEVEL; L++) assert.ok(minutesAt(CURRENT, L) >= 0.96 * minutesAt(CURRENT, L - 1), `level ${L}: ${minutesAt(CURRENT, L).toFixed(1)} min after ${minutesAt(CURRENT, L - 1).toFixed(1)}`);
+  for (let L = 2; L < THRONE_LEVEL; L++) assert.ok(minutesAt(CURRENT, L) >= 0.96 * minutesAt(CURRENT, L - 1), `level ${L}: ${minutesAt(CURRENT, L).toFixed(1)} min after ${minutesAt(CURRENT, L - 1).toFixed(1)}`);
   // A level is worth what the HUD says: N% to the next.
   assert.equal(levelPct(0, 300), 0);
   assert.equal(levelPct(150, 300), 50);
@@ -51,7 +51,7 @@ test('the ships a level asks: five at the first, thirty at the tenth, eighty at 
   assert.ok(k(1) >= 4 && k(1) <= 6, `L1: ${k(1)}`);
   assert.ok(k(10) >= 25 && k(10) <= 35, `L10: ${k(10)}`);
   assert.ok(k(30) >= 60 && k(30) <= 80, `L30: ${k(30)}`);
-  for (let L = 50; L < MAX_LEVEL; L++) assert.ok(k(L) >= 100, `L${L}: ${k(L)}`);
+  for (let L = 50; L < THRONE_LEVEL; L++) assert.ok(k(L) >= 100, `L${L}: ${k(L)}`);
   // …but since 2026-10-17 (docs/26 §11: the campaign carries the road) a ship sunk pays half of it: twice the ships.
   assert.ok(simKills(CURRENT, 1) >= 10 && simKills(CURRENT, 1) <= 13, `L1: ${simKills(CURRENT, 1)} ships sunk`);
   assert.ok(Math.abs(simKills(CURRENT, 30) / k(30) - 2) < 0.01);
@@ -80,7 +80,7 @@ test('the road in hours of mixed play: 1→2 six to ten minutes, 1→10 2.5 to 4
 });
 
 test('quests are the main steady source: at least 40% of the mixed hour at every level, about half of the road', () => {
-  for (let L = 1; L < MAX_LEVEL; L++) assert.ok(questShare(CURRENT, L) >= 0.4, `L${L}: ${Math.round(questShare(CURRENT, L) * 100)}%`);
+  for (let L = 1; L < THRONE_LEVEL; L++) assert.ok(questShare(CURRENT, L) >= 0.4, `L${L}: ${Math.round(questShare(CURRENT, L) * 100)}%`);
   const road = questShareRoad(CURRENT);
   assert.ok(road >= 0.4 && road <= 0.65, `the road: ${Math.round(road * 100)}%`);
   // Questing keeps pace with hunting (its legs are longer in the wide seas): the steadier road, not a slower one.
@@ -255,9 +255,9 @@ test('the boarding battle on the hexes: its lesson a bonus by the share cut down
 });
 
 test('glory past the cap: a rank at first about half the last level, rank 100 twice that; ranks 1–100 about six and a half roads', () => {
-  assert.equal(GLORY_BASE, Math.round((xpForLevel(MAX_LEVEL) * 0.45) / 1000) * 1000);
+  assert.equal(GLORY_BASE, Math.round((xpForLevel(THRONE_LEVEL) * 0.45) / 1000) * 1000);
   let road = 0;
-  for (let L = 1; L < MAX_LEVEL; L++) road += xpForLevel(L);
+  for (let L = 1; L < THRONE_LEVEL; L++) road += xpForLevel(L);
   let ranks = 0;
   for (let r = 0; r < 100; r++) ranks += Math.round(GLORY_BASE * (1 + r * 0.01));
   assert.ok(ranks / road > 5.5 && ranks / road < 8, `ranks 1–100: ${(ranks / road).toFixed(1)} roads`);

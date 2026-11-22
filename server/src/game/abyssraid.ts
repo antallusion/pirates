@@ -12,7 +12,7 @@
 
 import { REACH_SLACK, hullOf } from '../../../shared/src/data/reach.ts';
 import { GATE_BODY, atGate } from '../../../shared/src/data/descent.ts';
-import { MAX_LEVEL } from '../../../shared/src/constants.ts';
+import { THRONE_LEVEL } from '../../../shared/src/constants.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { ArmyStack } from '../../../shared/src/data/army.ts';
 import { ARTIFACTS, abyssPartChance } from '../../../shared/src/data/artifacts.ts';
@@ -112,7 +112,7 @@ export function raidHero(tier: number): HeroBattle {
   const skills: SkillSlot[] = SKILL_IDS.filter((id) => id !== 'trading' && id !== 'navigation').slice(0, 3 + Math.floor(tier / 2)).map((id) => ({ id, r: t.rank }));
   const own = startingOrders(t.path);
   const book: OrderId[] = [...own, ...ORDER_IDS.filter((id) => !own.includes(id))].slice(0, Math.max(own.length, Math.ceil(ORDER_IDS.length * t.book)));
-  return heroBattle(prim, skills, null, book, manaMaxOf(prim.will) * 2, { path: t.path, level: MAX_LEVEL });
+  return heroBattle(prim, skills, null, book, manaMaxOf(prim.will) * 2, { path: t.path, level: THRONE_LEVEL });
 }
 
 /** A raid legend's orders as a captain's (tactical.ts sets it on her side): the ⚓10 crew's strength times her tier's
@@ -150,7 +150,7 @@ const GATE_FAR = 'Come to the gate of the Stair: the Maw opens there.';
 /** Why she may not board the raid's legend now (null: she may). */
 function whyNot(game: Game, s: PlayerSession, r: Raid | null): string | null {
   const p = s.profile, ship = s.ship;
-  if (!p || p.level < MAX_LEVEL) return `The Abyss opens at level ${MAX_LEVEL}.`;
+  if (!p || p.level < THRONE_LEVEL) return `The Abyss opens at level ${THRONE_LEVEL}.`;
   if (!ship || !ship.alive || ship.docked) return 'Put to sea first.';
   if (ship.boarding || ship.grappled || ship.landing) return 'Not in the middle of a boarding';
   if (r && r.tier > RAID_TIERS) return 'The Master of the Abyss is down: the Maw opens again next week.';
@@ -327,7 +327,7 @@ export function stepAbyssRaid(game: Game): void {
 /** Her raid for the Throne's tab (undefined below the cap). */
 export function raidView(game: Game, s: PlayerSession): RaidView | undefined {
   const p = s.profile;
-  if (!p || p.level < MAX_LEVEL) return undefined;
+  if (!p || p.level < THRONE_LEVEL) return undefined;
   const S = store(game);
   const r = raidOf(game, s.accountId, false);
   const tier = r?.tier ?? 1;
@@ -346,7 +346,7 @@ export function raidView(game: Game, s: PlayerSession): RaidView | undefined {
 
 /** `/maw [tier N|win|lose|go|reset|board]` (admin.ts): her raid's tier set, taken or worn down at once, the gate. */
 export function adminMaw(game: Game, s: PlayerSession, args: string[]): string {
-  if ((s.profile?.level ?? 0) < MAX_LEVEL) return `The Abyss opens at level ${MAX_LEVEL} (/level ${MAX_LEVEL}).`;
+  if ((s.profile?.level ?? 0) < THRONE_LEVEL) return `The Abyss opens at level ${THRONE_LEVEL} (/level ${THRONE_LEVEL}).`;
   const S = store(game);
   if (args[0] === 'go') {
     const g = gateOf(game);

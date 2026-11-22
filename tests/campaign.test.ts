@@ -8,7 +8,7 @@ import type { Island } from '../shared/src/world/worldgen.ts';
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MAX_LEVEL, WORLD_SEED, xpForLevel } from '../shared/src/constants.ts';
+import { THRONE_LEVEL, WORLD_SEED, xpForLevel } from '../shared/src/constants.ts';
 import { CHAPTER_LEG, LOCAL_R, OPENING_SLOTS, buildCampaign, locDist, nearGood } from '../shared/src/data/campaign/build.ts';
 import { campaignChainLegs } from '../shared/src/data/chainaudit.ts';
 import { CHAIN_LEG, legTo, nearestSellerByRoute } from '../shared/src/data/questlegs.ts';
@@ -92,12 +92,12 @@ test('the experience: the whole road to the 60th exactly, each quest at its leve
     if (i) assert.ok(paces[i].gate >= paces[i - 1].gate, `gate ${i} falls`);
     assert.equal(paces[i].gate, level, `slot ${i}: its gate is the level a campaign-only captain stands at`);
     xp += paces[i].xp;
-    while (level < MAX_LEVEL && xp >= xpForLevel(level)) {
+    while (level < THRONE_LEVEL && xp >= xpForLevel(level)) {
       xp -= xpForLevel(level);
       level++;
     }
   }
-  assert.equal(level, MAX_LEVEL, 'the 60th at the end');
+  assert.equal(level, THRONE_LEVEL, 'the 60th at the end');
   assert.equal(xp, 0, 'and not a point past it');
   // early quests quick, late ones long: six to eight at the first levels, thirteen and more at the last
   const perLevel = (l: number) => paces.filter((p) => p.gate === l).length;
@@ -495,7 +495,7 @@ test('a captain who does only the campaign: every quest taken and done by the ga
     if (p.campaign!.at === FIRST_SLOT[WALL_CHAPTER - 1]) assert.ok(abyssCleared(game, s), 'the Wall lets her through at the Abyss’s chapters');
   }
   assert.equal(p.campaign!.at, CAMPAIGN_SIZE, 'the whole campaign');
-  assert.equal(p.level, MAX_LEVEL, 'the 60th level from the campaign alone');
+  assert.equal(p.level, THRONE_LEVEL, 'the 60th level from the campaign alone');
   assert.ok(Object.keys(p.campaign!.picks).length >= 8, 'the branches chosen');
   assert.ok(c.all('toast').some((t) => t.msg === 'The campaign is done. The tide sleeps.'));
   // the pace (docs/36 §4): the chapters' levels rise with the plan

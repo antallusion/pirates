@@ -17,7 +17,7 @@
 // Every roll is on this system's own Rng; the clock is the game's wall clock.
 
 import { LANDING_R, REACH_SLACK, hullOf } from '../../../shared/src/data/reach.ts';
-import { MAX_LEVEL } from '../../../shared/src/constants.ts';
+import { THRONE_LEVEL } from '../../../shared/src/constants.ts';
 import { UNITS } from '../../../shared/src/data/army.ts';
 import type { ArmyStack, UnitId } from '../../../shared/src/data/army.ts';
 import {
@@ -198,7 +198,7 @@ export function castellanHero(id: number, level: 9 | 10): HeroBattle {
   const own = startingOrders(c.path);
   const keep = KEEPER.filter((x) => ORDER_IDS.includes(x) && !own.includes(x));
   const book: OrderId[] = [...own, ...keep.slice(0, Math.ceil(keep.length * c.book * 2))];
-  return heroBattle(prim, skills, null, book, manaMaxOf(prim.will) * 2, { path: c.path, level: MAX_LEVEL });
+  return heroBattle(prim, skills, null, book, manaMaxOf(prim.will) * 2, { path: c.path, level: THRONE_LEVEL });
 }
 
 /** The castellans alongside now: whose assault, which citadel, the garrison as it came aboard. */
@@ -238,7 +238,7 @@ export function siegeSetup(game: Game, a: ShipEntity, b: ShipEntity): { siege: S
 /** Why she may not declare a siege on this citadel now (null: she may). */
 function declareWhy(game: Game, s: PlayerSession, id: number): string | null {
   const p = s.profile;
-  if (!p || p.level < MAX_LEVEL) return `The Throne war opens at level ${MAX_LEVEL}.`;
+  if (!p || p.level < THRONE_LEVEL) return `The Throne war opens at level ${THRONE_LEVEL}.`;
   const g = game.guilds.of(game, s.accountId);
   if (!g) return 'Only a guild may besiege a citadel.';
   if (!rankAtLeast(member(g, s.accountId), 'captain')) return 'Only a captain of your guild or above may declare a siege.';
@@ -310,7 +310,7 @@ const CIT_FAR = 'Come to its anchorage: the assault begins before its gate.';
 /** Why she may not assault this citadel now (null: she may). */
 function assaultWhy(game: Game, s: PlayerSession, id: number): string | null {
   const p = s.profile, ship = s.ship;
-  if (!p || p.level < MAX_LEVEL) return `The Throne war opens at level ${MAX_LEVEL}.`;
+  if (!p || p.level < THRONE_LEVEL) return `The Throne war opens at level ${THRONE_LEVEL}.`;
   const g = game.guilds.of(game, s.accountId);
   if (!g) return 'Only a guild may besiege a citadel.';
   const S = store(game);
@@ -732,7 +732,7 @@ function shared(game: Game): NonNullable<typeof sharedNow>['list'] {
 /** The Throne's citadels and war tabs (undefined below level 55, as the Throne itself). */
 export function citView(game: Game, s: PlayerSession): CitView | undefined {
   const p = s.profile;
-  if (!p || p.level < MAX_LEVEL - 5) return undefined;
+  if (!p || p.level < THRONE_LEVEL - 5) return undefined;
   const S = store(game);
   const now = game.wallNow();
   const g = game.guilds.of(game, s.accountId);
@@ -843,7 +843,7 @@ export function adminCit(game: Game, s: PlayerSession, args: string[]): string {
       openWindow(game, c.id);
       return `The window of the ${nameOf(c)} is open for two hours.`;
     case 'siege': {
-      if ((s.profile?.level ?? 0) < MAX_LEVEL) return `The Throne war opens at level ${MAX_LEVEL} (/level ${MAX_LEVEL}).`;
+      if ((s.profile?.level ?? 0) < THRONE_LEVEL) return `The Throne war opens at level ${THRONE_LEVEL} (/level ${THRONE_LEVEL}).`;
       const e = testGuild(game, s);
       if (e) return e;
       if (rec.owner === game.guilds.of(game, s.accountId)!.id) rec.owner = null;

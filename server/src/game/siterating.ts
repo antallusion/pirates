@@ -5,7 +5,7 @@
 // kind (her portrait), the level, the board's value, the guild's tag and what she wears that others see (the title on
 // its plate, the avatar frame: shared/src/data/cosmetics.ts). No account id, no e-mail.
 
-import { MAX_LEVEL } from '../../../shared/src/constants.ts';
+import { THRONE_LEVEL } from '../../../shared/src/constants.ts';
 import { CAMPAIGN_SIZE } from '../../../shared/src/data/campaign/plan.ts';
 import { chapterOfSlot } from '../../../shared/src/data/campaign/progress.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
@@ -219,7 +219,7 @@ export class SiteRating {
       case 'isle': return by((c) => [c.pw.isle, c.pw.total]).filter((c) => c.pw.isle > 0);
       case 'gear': return by((c) => [c.pw.gear, c.pw.total]).filter((c) => c.pw.gear > 0);
       case 'level': return by((c) => [c.level, c.glory, c.gloryXp, c.xp]);
-      case 'glory': return by((c) => [c.glory, c.gloryXp, c.level]).filter((c) => c.level >= MAX_LEVEL);
+      case 'glory': return by((c) => [c.glory, c.gloryXp, c.level]).filter((c) => c.level >= THRONE_LEVEL);
       case 'boarded': return by((c) => [c.boarded, c.level]).filter((c) => c.boarded > 0);
       case 'arena': return by((c) => [c.arena, c.arenaW, c.level]).filter((c) => c.arenaN > 0);
       case 'pvp': return by((c) => [c.pvp, c.pvpK, -c.pvpD]).filter((c) => c.pvp > 0);

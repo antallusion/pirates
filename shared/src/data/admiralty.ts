@@ -16,7 +16,7 @@
 // contracts are QuestDefs (registered by id like the ports' group contracts, shared/src/data/elite.ts), so the journal,
 // the pointers and the cargo steps of the quests carry them.
 
-import { MAX_LEVEL } from '../constants.ts';
+import { THRONE_LEVEL } from '../constants.ts';
 import { Rng, hashString } from '../rng.ts';
 import { REGIONS } from '../world/regions.ts';
 import type { RegionId } from '../world/regions.ts';
@@ -299,7 +299,7 @@ export function admiraltyWeek(week: number, world: World | null = WORLD): AdmCon
     if (!steps.length) return;
     const pay = admPay(hours);
     const quest: QuestDef = {
-      id, kind: 'job', name, mentor: fill(MENTOR[0], { giver }), port, summary, requires: { level: MAX_LEVEL }, steps,
+      id, kind: 'job', name, mentor: fill(MENTOR[0], { giver }), port, summary, requires: { level: THRONE_LEVEL }, steps,
       reward: { xp: pay.glory, silver: pay.silver }, category: 'admiralty', portrait: giverPortrait(GIVER[kind], giver),
     };
     QUESTS_BY_ID[id] = quest;

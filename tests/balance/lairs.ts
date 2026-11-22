@@ -17,7 +17,7 @@ import { PATHS, captainAt } from './boardlen.ts';
 import type { HeroBattle } from '../../shared/src/data/hero.ts';
 import type { CaptainId } from '../../shared/src/data/captains.ts';
 import { CAPTAIN_LEVEL_FOR_SHIP } from '../../shared/src/data/shiplevel.ts';
-import { MAX_LEVEL } from '../../shared/src/constants.ts';
+import { THRONE_LEVEL } from '../../shared/src/constants.ts';
 
 const side = (army: ArmyStack[], beasts: boolean, hero?: HeroBattle, captain: CaptainId = 'corsair'): TacSideInput => ({
   name: beasts ? 'Lair' : 'Captain', ship: beasts ? 'Island' : 'Wake', captain: beasts ? null : captain, hands: 0, marines: 0, gunners: 0, army, officers: [], skill: 3,
@@ -30,7 +30,7 @@ const side = (army: ArmyStack[], beasts: boolean, hero?: HeroBattle, captain: Ca
  *  her hero lost 2–8% of her men where the table asked 30% (a captain of 40 routed them in a round). The hero of the
  *  middle of the ⚓'s captains (CAPTAIN_LEVEL_FOR_SHIP), her path in turn, in her level's kit (boardlen.ts captainAt). */
 export const heroLevelOf = (L: number): number => {
-  const lo = CAPTAIN_LEVEL_FOR_SHIP[Math.max(1, Math.min(10, L))], hi = L >= 10 ? MAX_LEVEL + 1 : CAPTAIN_LEVEL_FOR_SHIP[L + 1];
+  const lo = CAPTAIN_LEVEL_FOR_SHIP[Math.max(1, Math.min(10, L))], hi = L >= 10 ? THRONE_LEVEL + 1 : CAPTAIN_LEVEL_FOR_SHIP[L + 1];
   return Math.round((lo + hi - 1) / 2);
 };
 

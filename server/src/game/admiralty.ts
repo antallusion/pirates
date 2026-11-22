@@ -14,7 +14,7 @@
 //  - the week: a contract lapses with it; the tester may turn it (`/contract week`).
 // Every roll here is on this system's own Rng.
 
-import { MAX_LEVEL } from '../../../shared/src/constants.ts';
+import { THRONE_LEVEL } from '../../../shared/src/constants.ts';
 import { RAID, raidArmy } from '../../../shared/src/data/abyssraid.ts';
 import {
   ADM_BAND_SHIPS, ADM_GARRISON_MEN, ADM_KIND_NAMES, ADM_LEGEND_R, ADM_LEGEND_SPELL, ADM_WATCH, admWeekEnd, admWeekOf, admiraltyPorts, admiraltyWeek, isAdmId, isAdmiraltyPort,
@@ -114,7 +114,7 @@ export function takeWhy(game: Game, s: PlayerSession, c: AdmContract | undefined
   const p = s.profile;
   if (!p) return 'Not now';
   if (!c) return 'No such contract this week.';
-  if (p.level < MAX_LEVEL) return `The Admiralty gives its contracts to captains of level ${MAX_LEVEL}.`;
+  if (p.level < THRONE_LEVEL) return `The Admiralty gives its contracts to captains of level ${THRONE_LEVEL}.`;
   if (p.quests.active.some((a) => a.id === c.id)) return 'You have that contract already.';
   if (p.quests.done.includes(c.id)) return 'That contract is done this week.';
   if (!admin && !isAdmiraltyPort(s.ship?.docked ? game.portById(s.ship.docked) : null)) return 'Contracts are taken at an Admiralty board, in a great harbour.';
@@ -198,7 +198,7 @@ export function legendHero(tier: number, path: CaptainId): HeroBattle {
   const skills: SkillSlot[] = SKILL_IDS.filter((id) => id !== 'trading' && id !== 'navigation').slice(0, 3 + Math.floor(tier / 2)).map((id) => ({ id, r: t.rank }));
   const own = startingOrders(path);
   const book: OrderId[] = [...own, ...ORDER_IDS.filter((id) => !own.includes(id))].slice(0, Math.max(own.length, Math.ceil(ORDER_IDS.length * t.book)));
-  return heroBattle(prim, skills, null, book, manaMaxOf(prim.will) * 2, { path, level: MAX_LEVEL });
+  return heroBattle(prim, skills, null, book, manaMaxOf(prim.will) * 2, { path, level: THRONE_LEVEL });
 }
 
 /** A captain's hunt of the legend: her group's (the group wears the same legend down, as the Abyss's raid does), or her
@@ -238,7 +238,7 @@ function legendLeft(game: Game, hunt: string, c: AdmContract): ArmyStack[] {
 /** Why the legend will not come alongside now (null: she will). */
 export function legendWhy(game: Game, s: PlayerSession, c: AdmContract | undefined): string | null {
   const p = s.profile, ship = s.ship;
-  if (!p || p.level < MAX_LEVEL) return `The Admiralty gives its contracts to captains of level ${MAX_LEVEL}.`;
+  if (!p || p.level < THRONE_LEVEL) return `The Admiralty gives its contracts to captains of level ${THRONE_LEVEL}.`;
   if (!c?.legend) return 'No such contract this week.';
   if (!p.quests.active.some((a) => a.id === c.id)) return 'Take the Admiralty’s contract first.';
   if (!ship || !ship.alive || ship.docked) return 'Put to sea first.';
@@ -432,7 +432,7 @@ export function contractPointer(game: Game, id: string): { x: number; y: number;
 /** The week's three as the Throne's tab and the board show them (from five levels short of the cap). */
 export function admView(game: Game, s: PlayerSession, cit?: CitView, seal?: SealView): AdmView | undefined {
   const p = s.profile;
-  if (!p || p.level < MAX_LEVEL - 5) return undefined;
+  if (!p || p.level < THRONE_LEVEL - 5) return undefined;
   const S = store(game);
   const ship = s.ship;
   const port = ship?.docked ? game.portById(ship.docked) : undefined;
@@ -491,8 +491,8 @@ export function adminContract(game: Game, s: PlayerSession, args: string[]): str
     return ` ${i + 1}: ${ADM_KIND_NAMES[c.kind][0]}, ${c.pay.silver} silver, ${c.pay.glory} glory — ${st}.`;
   }).join('')}`;
   const lift = (): void => {
-    if (p.level >= MAX_LEVEL) return;
-    p.level = MAX_LEVEL;
+    if (p.level >= THRONE_LEVEL) return;
+    p.level = THRONE_LEVEL;
     p.xp = 0;
     if (s.ship) s.ship.level = p.level;
   };

@@ -46,7 +46,7 @@ import { AMMO_IDS, SHIP_CLASSES, emptyAmmo } from '../../../shared/src/data/ship
 import type { AmmoId } from '../../../shared/src/data/ships.ts';
 import type { TalentRanks } from '../../../shared/src/data/talents.ts';
 import { totalPointsSpent } from '../../../shared/src/data/talents.ts';
-import { MAX_LEVEL, talentPointsForLevel, xpForLevel } from '../../../shared/src/constants.ts';
+import { MAX_LEVEL, THRONE_LEVEL, talentPointsForLevel, xpForLevel } from '../../../shared/src/constants.ts';
 import { MAX_COUNTED_DEEDS } from '../../../shared/src/data/deeds.ts';
 import type { BoardingResult, ClientMsg, Contract, PrivateState, QuestTarget, ResourceSiteView, TradeRunView } from '../../../shared/src/protocol.ts';
 import type { AmmoStock, Cargo, ShipLoadout } from '../../../shared/src/sim/shipstats.ts';
@@ -561,10 +561,11 @@ export function talentPointsAvailable(p: Profile): number {
 /** Adds XP, handles level-ups. Returns number of levels gained. */
 export function addXp(p: Profile, amount: number): number {
   hullXp(p, amount); // the hull she sails learns what the captain does (docs/20)
-  if (p.level >= MAX_LEVEL) {
-    addGlory(p, amount); // docs/19 E1: past the cap, experience is glory
-    return 0;
-  }
+  // docs/19 E1: past the Throne's level (60) experience is glory — and, since the cap went to 80 (owner 2026-11-23),
+  // it still counts on toward the next level as well: the Throne's ranks keep their pace, the levels are the long road.
+  if (p.level >= THRONE_LEVEL) addGlory(p, amount);
+  if (p.level >= MAX_LEVEL) return 0;
+  const below = p.level < THRONE_LEVEL;
   p.xp += Math.max(0, Math.round(amount));
   let gained = 0;
   while (p.level < MAX_LEVEL && p.xp >= xpForLevel(p.level)) {
@@ -572,10 +573,8 @@ export function addXp(p: Profile, amount: number): number {
     p.level++;
     gained++;
   }
-  if (p.level >= MAX_LEVEL) {
-    addGlory(p, p.xp); // what is left past the cap goes on into glory (docs/19 E1)
-    p.xp = 0;
-  }
+  if (below && p.level >= THRONE_LEVEL) addGlory(p, p.xp); // what is left past the Throne's level is glory too
+  if (p.level >= MAX_LEVEL) p.xp = 0;
   return gained;
 }
 

@@ -18,7 +18,7 @@ import { unitIcon, unitName } from './army.ts';
 import { esc, fmt, icon, money } from './dom.ts';
 import { placeName } from './maps.ts';
 import type { ThroneTab } from './throne.ts';
-import { MAX_LEVEL } from '../../../shared/src/constants.ts';
+import { THRONE_LEVEL } from '../../../shared/src/constants.ts';
 
 const L = dict(EN, RU);
 const ru = (): 0 | 1 => (lang() === 'ru' ? 1 : 0);
@@ -96,9 +96,9 @@ function learnPorts(state: ClientState): void {
 function contractsTab(_g: GloryView, state: ClientState): string {
   const v = state.self?.adm;
   const self = state.self;
-  if (!v || !self) return `<p class="muted th-locked">${esc(L('locked', { n: MAX_LEVEL, m: self?.level ?? 0 }))}</p>`;
+  if (!v || !self) return `<p class="muted th-locked">${esc(L('locked', { n: THRONE_LEVEL, m: self?.level ?? 0 }))}</p>`;
   learnPorts(state);
-  const locked = self.level < MAX_LEVEL ? `<p class="muted th-locked">${esc(L('locked', { n: MAX_LEVEL, m: self.level }))}</p>` : '';
+  const locked = self.level < THRONE_LEVEL ? `<p class="muted th-locked">${esc(L('locked', { n: THRONE_LEVEL, m: self.level }))}</p>` : '';
   return `<div class="th-head adm-head">
       <div class="th-medal adm-medal" title="${esc(L('doneOf', { n: v.done, m: v.rows.length }))}"><span>${icon(ADM_ICON, '⚓', 'ico-sm')}</span><b>${v.done}/${v.rows.length}</b></div>
       <div class="th-hside"><div class="gi-h">${esc(L('head'))}</div>

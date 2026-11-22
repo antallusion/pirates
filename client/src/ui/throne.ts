@@ -7,7 +7,7 @@
 import { artBgAttr, artBgWire } from './artfall.ts';
 import { END_HEADER } from '../../../shared/src/data/paintart.ts';
 import { CAPTAINS } from '../../../shared/src/data/captains.ts';
-import { MAX_LEVEL } from '../../../shared/src/constants.ts';
+import { THRONE_LEVEL } from '../../../shared/src/constants.ts';
 import { PRIMS, PRIM_ICON, PRIM_NAMES, SKILLS, skillText } from '../../../shared/src/data/hero.ts';
 import type { PrimId } from '../../../shared/src/data/hero.ts';
 import {
@@ -54,7 +54,7 @@ function pips(r: number, max: number): string {
 
 function gloryTab(g: GloryView, state: ClientState): string {
   const self = state.self!;
-  if (!g.open) return `<p class="muted th-locked">${esc(L('locked', { n: MAX_LEVEL, m: self.level }))}</p>`;
+  if (!g.open) return `<p class="muted th-locked">${esc(L('locked', { n: THRONE_LEVEL, m: self.level }))}</p>`;
   const f = g.need ? Math.max(0, Math.min(1, g.xp / g.need)) : 0;
   const next = (Math.floor(g.rank / MASTERY_EVERY) + 1) * MASTERY_EVERY;
   const allCap = PRIMS.every((k) => g.picks[k] >= GLORY_CAP);
@@ -92,7 +92,7 @@ function nodeTile(g: GloryView, n: MasteryNode): string {
 }
 
 function masteryTab(g: GloryView, state: ClientState): string {
-  if (!g.open) return `<p class="muted th-locked">${esc(L('locked', { n: MAX_LEVEL, m: state.self!.level }))}</p>`;
+  if (!g.open) return `<p class="muted th-locked">${esc(L('locked', { n: THRONE_LEVEL, m: state.self!.level }))}</p>`;
   const branch = (b: Branch) => {
     const tiers = [1, 2, 3].map((t) => {
       const list = MASTERY.filter((n) => n.branch === b && n.tier === t);
@@ -115,7 +115,7 @@ function trialRow(v: TrialView, docked: boolean, busy: boolean): string {
   let act = '';
   if (v.state === 'won') act = `<span class="th-st won">${icon('tattoo_star', '★', 'ico-sm')}${esc(L('st.won'))}</span>`;
   else if (v.state === 'wait') act = `<span class="th-st wait">${esc(L('st.wait', { n: Math.ceil((v.wait ?? 0) / 60) }))}</span>`;
-  else if (v.state === 'locked') act = `<span class="th-st muted">${esc(v.rank >= 3 ? L('st.lockedCap', { n: MAX_LEVEL }) : L('st.locked'))}</span>`;
+  else if (v.state === 'locked') act = `<span class="th-st muted">${esc(v.rank >= 3 ? L('st.lockedCap', { n: THRONE_LEVEL }) : L('st.locked'))}</span>`;
   else act = `<button class="btn btn-small btn-primary" data-thtrial="${v.skill}" ${docked || busy ? 'disabled' : ''} title="${esc(docked ? L('st.sea') : '')}">${esc(docked ? L('st.sea') : L('st.ready'))}</button>`;
   return `<div class="th-trial th-${v.state}">
     <div class="th-face">${icon(face, '', 'ico-lg ico-round')}${icon(d.icon, '', 'ico-sm th-sk')}</div>
@@ -139,7 +139,7 @@ const AFFIX_ICON: Record<SealAffix, string> = { tide: 'boon_black_water', fury: 
 
 function sealsTab(g: GloryView, state: ClientState): string {
   const v = g.seal;
-  if (!g.open || !v) return `<p class="muted th-locked">${esc(L('locked', { n: MAX_LEVEL, m: state.self?.level ?? 0 }))}</p>`;
+  if (!g.open || !v) return `<p class="muted th-locked">${esc(L('locked', { n: THRONE_LEVEL, m: state.self?.level ?? 0 }))}</p>`;
   const lair = T(LAIRS[v.kind].name);
   const affixes = v.affixes.map((a) => `<div class="th-affix">${icon(AFFIX_ICON[a], '', 'ico-md')}<span><b>${esc(T(SEAL_AFFIX_NAMES[a]))}</b><small>${esc(T(SEAL_AFFIX_TEXT[a]))}</small></span></div>`).join('');
   const near = v.near ? L('seal.near', { island: placeName(v.near.island), km: (state.farTo(v.near.x, v.near.y) / 1000).toFixed(1).replace('.', lang() === 'ru' ? ',' : '.') }) : L('seal.nearNone');
@@ -173,7 +173,7 @@ function sealsTab(g: GloryView, state: ClientState): string {
 
 function raidTab(g: GloryView, state: ClientState): string {
   const v = g.raid;
-  if (!g.open || !v) return `<p class="muted th-locked">${esc(L('locked', { n: MAX_LEVEL, m: state.self?.level ?? 0 }))}</p>`;
+  if (!g.open || !v) return `<p class="muted th-locked">${esc(L('locked', { n: THRONE_LEVEL, m: state.self?.level ?? 0 }))}</p>`;
   const km = (state.farTo(v.gate.x, v.gate.y) / 1000).toFixed(1).replace('.', lang() === 'ru' ? ',' : '.');
   const steps = RAID.map((t) => {
     const st = v.cleared.includes(t.n) ? 'done' : t.n === v.tier ? 'on' : 'off';
@@ -294,7 +294,7 @@ export class ThroneWindow {
     const headArt = this.tab === 'raid' ? END_HEADER.raid : this.tab.startsWith('cit') || this.tab === 'war' ? END_HEADER.citadel : END_HEADER.throne;
     const head = `<div class="modal-head art-head"${artBgAttr([headArt])}><div><h2>${icon('tattoo_crown', '', 'ico-md')}${esc(L('title'))}</h2><div class="sub">${esc(L('sub', { name: self.name, n: self.level, g: g?.rank ?? 0 }))}</div></div></div>`;
     if (!g) {
-      root.innerHTML = `${head}<div class="modal-body throne-win"><p class="muted th-locked">${esc(L('locked', { n: MAX_LEVEL, m: self.level }))}</p></div>`;
+      root.innerHTML = `${head}<div class="modal-body throne-win"><p class="muted th-locked">${esc(L('locked', { n: THRONE_LEVEL, m: self.level }))}</p></div>`;
     } else {
       const tab = THRONE_TABS.find((t) => t.id === this.tab) ?? THRONE_TABS[0];
       // docs/19 E14: her draft in the Colosseum's tab — on a narrow phone the other tabs step aside for its board.
@@ -322,7 +322,7 @@ export function gloryChip(g: GloryView | undefined, cls = 'uf-glory'): string {
   const open = !!g?.open;
   const rank = open ? g!.rank : 0;
   const wait = open && (g!.pending > 0 || g!.points - g!.spent > 0);
-  const tip = open ? L('plateTip', { n: rank }) : L('plateLocked', { n: MAX_LEVEL });
+  const tip = open ? L('plateTip', { n: rank }) : L('plateLocked', { n: THRONE_LEVEL });
   return `<button type="button" class="${cls}${wait ? ' wait' : ''}${open ? '' : ' locked'}" data-throne title="${esc(tip)}" aria-label="${esc(tip)}">${GLORY_STAR}<i>${rank}</i></button>`;
 }
 /** Glory's star, drawn in the buttons' 24-unit box (gold, currentColor). */
