@@ -337,3 +337,21 @@ test('both languages: every word of the base in English and Russian', () => {
     setLang('en');
   }
 });
+
+test('an island put right once (forum 128): a razed producer laid back at its level, one rebuilt low raised, a letter', async () => {
+  const { applyIsleFix } = await import('../server/src/game/islefix.ts');
+  const { lettersSince } = await import('../server/src/game/post.ts');
+  const game = world();
+  const { s, home } = owner(game, 'Razed Rhys');
+  const h = ownIsland(game, s.accountId)!;
+  const y = yardOf(game, h);
+  y.producers = [{ kind: 'tar', plot: 3, level: 1 }];
+  const done = applyIsleFix(game, { ref: 't', account: s.accountId, island: home.id, restore: [{ kind: 'tar', level: 5 }, { kind: 'fishery', level: 5 }] });
+  assert.equal(done.length, 2);
+  assert.equal(y.producers.find((p) => p.kind === 'tar')!.level, 5);
+  const fish = y.producers.find((p) => p.kind === 'fishery')!;
+  assert.equal(fish.level, 5);
+  assert.notEqual(fish.plot, 3);
+  assert.ok(lettersSince(game, s.accountId, 0).some((l) => /артель/.test(l.subject)));
+  assert.deepEqual(applyIsleFix(game, { ref: 't', account: s.accountId, island: home.id, restore: [{ kind: 'tar', level: 5 }, { kind: 'fishery', level: 5 }] }), []);
+});

@@ -3,6 +3,7 @@
 
 import { FISH_FOOD, eatFish, foodAboard, isleLarder } from './larder.ts';
 import { stepShipFix } from './shipfix.ts';
+import { stepIsleFix } from './islefix.ts';
 import { stormSails } from '../../../shared/src/data/adrift.ts';
 import { crewAwayOnLogin } from './crewaway.ts';
 import { DOCK_SLOW, LANDING_R, REACH_DOCK, REACH_SLACK, hullOf } from '../../../shared/src/data/reach.ts';
@@ -1190,6 +1191,7 @@ export class Game {
     stepRegatta(this); // the Regatta of Equal Waters (docs/12 P10 #5)
     stepStorms(this); // the heart of the Storm of the Century (docs/12 P10 #14)
     if (Math.floor(this.now) % 2 === 0) stepShipFix(this); // a ship's level put right once (shipfix.ts)
+    if (Math.floor(this.now) % 2 === 0) stepIsleFix(this); // an island put right once (islefix.ts)
     if (Math.floor(this.now) % 2 === 0) stepService(this); // letters of marque: orders, sunsets, the law's eye (docs/12 P10 #15)
     stepDescent(this); // the Descent into the Abyss (docs/12 P10 #17)
     if (sec % 5 === 0) stepHolidays(this); // the sea's holidays (docs/12 P10 #18)
