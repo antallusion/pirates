@@ -12,6 +12,8 @@ import type { PlayerSession } from '../server/src/game/player.ts';
 import { setLang } from '../client/src/i18n.ts';
 import { serverText } from '../client/src/lang/server.ts';
 import { join, makeGame, onHull, steps } from './helpers.ts';
+import { outcomeHtml } from '../client/src/ui/encounter.ts';
+import { applyDataLocale } from '../client/src/lang/data.ts';
 import type { FakeConn } from './helpers.ts';
 
 function atSea(game: Game, name: string, region = 'gravewater'): { c: FakeConn; s: PlayerSession } {
@@ -181,4 +183,42 @@ test('the director’s lines read in Russian', () => {
   setLang('en');
   assert.deepEqual(lines.slice(0, 2).filter((l) => /[A-Za-z]{3,}/.test(l)), []);
   assert.ok(encounterPatterns().length >= 5);
+});
+
+test('forum 134: a Crown search takes only contraband and the marked plunder, never the stores or honest cargo, and names it', () => {
+  const { game } = makeGame();
+  const { c, s } = atSea(game, 'Eduard Search', 'leviathan_reach');
+  const ship = s.ship!;
+  onHull(game, ship, 'brig');
+  const p = s.profile!;
+  // One plundered biscuit and two plundered casks of rum among an honest hold (the old search took ALL of each kind).
+  ship.cargo = { provisions: 200, planks: 60, sailcloth: 60, tar: 10, medicine: 4, rum: 12, iron: 50, dreamleaf: 3 };
+  p.stolen = { provisions: 1, rum: 2, medicine: 9 };
+  const live = startEncounter(game, s, 'patrol_search')!;
+  alongside(game, s, live);
+  assert.equal(chooseEncounter(game, s, live.id, 'submit'), null);
+  const r = c.last('encounter_result')!;
+  assert.equal(r.outcome, 'seized');
+  assert.deepEqual(r.vars.goods, { medicine: 4, rum: 2, dreamleaf: 3 }, 'contraband in full, plunder only its marked units (no more than aboard)');
+  assert.equal(r.vars.n, 9);
+  assert.deepEqual(ship.cargo, { provisions: 200, planks: 60, sailcloth: 60, tar: 10, rum: 10, iron: 50 }, 'stores and honest cargo stay');
+  assert.equal(p.stolen.rum, undefined);
+  assert.equal(p.stolen.medicine, undefined, 'a stale mark above the hold is gone with the boat');
+  // The line names the goods, in Russian too.
+  setLang('ru');
+  applyDataLocale('ru');
+  const ru = outcomeHtml(r);
+  applyDataLocale('en');
+  setLang('en');
+  assert.match(ru, /ром — 2/);
+  assert.doesNotMatch(ru.replace(/\{\w+\}/g, ''), /[A-Za-z]{3,}/, ru);
+  assert.doesNotMatch(outcomeHtml(r), /\{goods\}/);
+  // The ship's stores alone are nothing to search for; a False Bottom hides the contraband.
+  ship.cargo = { provisions: 200, sailcloth: 40 };
+  p.stolen = { provisions: 200 };
+  assert.equal(fits(game, s, ENCOUNTERS.patrol_search), false, 'plundered stores are no reason to stop her');
+  ship.cargo.dreamleaf = 4;
+  assert.equal(fits(game, s, ENCOUNTERS.patrol_search), true);
+  ship.stats.flags.add('false_bottom');
+  assert.equal(fits(game, s, ENCOUNTERS.patrol_search), false, 'a False Bottom: never found by a patrol');
 });

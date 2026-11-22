@@ -25,7 +25,14 @@ export interface EncounterResult {
   id: number;
   def: EncounterId;
   outcome: string;
-  vars: { n?: number; silver?: number; good?: GoodId; item?: Item; cloth?: number; planks?: number };
+  vars: { n?: number; silver?: number; good?: GoodId; item?: Item; cloth?: number; planks?: number; goods?: Partial<Record<GoodId, number>> };
+}
+
+/** Goods by name and count, in the reader's language: «ром — 12, лекарства — 3» (forum 134: a search names what it took). */
+function goodsList(goods: Partial<Record<GoodId, number>> | undefined): string {
+  const parts: string[] = [];
+  for (const [g, n] of Object.entries(goods ?? {}) as [GoodId, number][]) if (GOODS[g] && n > 0) parts.push(`${GOODS[g].name.toLowerCase()} — ${n}`);
+  return parts.join(', ');
 }
 
 /** The words of an outcome with its numbers put in (the good and the item in the reader's language). */
@@ -38,6 +45,7 @@ export function outcomeHtml(r: EncounterResult): string {
     if (k === 'planks') return String(v.planks ?? 0);
     if (k === 'silver') return money(v.silver ?? 0);
     if (k === 'good') return v.good ? esc(GOODS[v.good].name.toLowerCase()) : '';
+    if (k === 'goods') return esc(goodsList(v.goods)) || String(v.n ?? 0);
     if (k === 'item') return v.item ? `<b style="color:${RARITY_COLOR[v.item.rarity]}">${esc(itemName(v.item, ru() === 1))}</b>` : '';
     return '';
   });

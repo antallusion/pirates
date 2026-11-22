@@ -2204,7 +2204,7 @@ export type ServerMsg =
   | { t: 'trek'; view: TrekView | null }
   | { t: 'isles'; view: IslesView }
   | { t: 'mapoffer'; offer: MapOfferView | null }
-  | { t: 'encounter_result'; id: number; def: EncounterId; outcome: string; vars: { n?: number; silver?: number; good?: GoodId; item?: Item; cloth?: number; planks?: number } }
+  | { t: 'encounter_result'; id: number; def: EncounterId; outcome: string; vars: { n?: number; silver?: number; good?: GoodId; item?: Item; cloth?: number; planks?: number; goods?: Partial<Record<GoodId, number>> } }
   | { t: 'legends'; view: LegendsView }
   | { t: 'renown'; view: RenownView }
   | { t: 'away'; view: AwayView }

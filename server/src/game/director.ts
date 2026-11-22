@@ -16,7 +16,7 @@ import { onboardingProtected } from './onboarding.ts';
 import { siteViews } from './expeditions.ts';
 import { ENCOUNTERS, ENCOUNTER_IDS, SEA_LETTERS } from '../../../shared/src/data/encounters.ts';
 import type { EncounterDef, EncounterId, SightKind } from '../../../shared/src/data/encounters.ts';
-import { GOODS } from '../../../shared/src/data/goods.ts';
+import { GOODS, isStore } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { gearSource, makeItem } from '../../../shared/src/data/items.ts';
 import type { Item } from '../../../shared/src/data/items.ts';
@@ -151,11 +151,23 @@ export function quietSea(game: Game, s: PlayerSession, harbour = HARBOUR_R): boo
   return !(ship.inCombat(game.now) || ship.state.speed < 1.5 || nearHarbour(game.world, ship.state.x, ship.state.y, harbour) || !!ship.boarding || busyElsewhere(game, s));
 }
 
-/** Stolen or contraband goods aboard (for the Crown's patrols). */
-function hotGoods(s: PlayerSession): GoodId[] {
+/** What a Crown patrol's search finds aboard, good by good (forum 134, Эдуард, 2026-11-22: one plundered unit made
+ *  the patrol take ALL his provisions, planks, sailcloth, tar, medicine and rum, and his crew went hungry to no spirit
+ *  on the way home): every unit of contraband (none under a False Bottom — the smuggler's promise), and of a plundered
+ *  good only the marked units still aboard, never her honest cargo beside them. The ship's stores (provisions,
+ *  sailcloth, planks) are never taken: they are the voyage's supply, not trade. */
+export function hotGoods(s: PlayerSession): Partial<Record<GoodId, number>> {
   const ship = s.ship!;
   const p = s.profile!;
-  return (Object.keys(ship.cargo) as GoodId[]).filter((g) => (ship.cargo[g] ?? 0) > 0 && (GOODS[g].contraband || (p.stolen[g] ?? 0) > 0));
+  const hidden = ship.hasFlag('false_bottom');
+  const out: Partial<Record<GoodId, number>> = {};
+  for (const g of Object.keys(ship.cargo) as GoodId[]) {
+    const have = Math.floor(ship.cargo[g] ?? 0);
+    if (have <= 0 || isStore(g)) continue;
+    const n = GOODS[g].contraband ? (hidden ? 0 : have) : Math.min(have, Math.floor(p.stolen[g] ?? 0));
+    if (n > 0) out[g] = n;
+  }
+  return out;
 }
 
 /** Whether an encounter may happen to this captain here and now. */
@@ -177,7 +189,7 @@ export function fits(game: Game, s: PlayerSession, def: EncounterDef): boolean {
     if (w.open && n.d < 3000) return false;
     if (w.biomes && (!n.is || n.d > 4000 || !w.biomes.includes(n.is.biome))) return false;
   }
-  if (w.hot && !hotGoods(s).length) return false;
+  if (w.hot && !Object.keys(hotGoods(s)).length) return false;
   if (w.lowMorale && ship.morale >= 25) return false;
   if (w.longVoyage && (!ship.voyageStart || game.now - ship.voyageStart < 1200)) return false;
   // The ambush only where no pirate already sails near.
@@ -371,6 +383,8 @@ interface Vars {
   /** owner 2026-10-20: the flotsam's sailcloth and planks besides its good. */
   cloth?: number;
   planks?: number;
+  /** forum 134: what a patrol's search took, good by good (the line names it). */
+  goods?: Partial<Record<GoodId, number>>;
 }
 
 function settle(game: Game, s: PlayerSession, live: Live, choice: string): void {
@@ -777,19 +791,27 @@ function resolve(game: Game, s: PlayerSession, live: Live, choice: string): { ou
       sendPirates(game, s, 1);
       return O('come');
     case 'patrol_search': {
+      // (forum 134: only what hotGoods finds goes into the boat, and the line names it)
       const hot = hotGoods(s);
-      const seize = () => {
+      const seize = (): number => {
         let n = 0;
-        for (const g of hot) {
-          n += Math.floor(ship.cargo[g] ?? 0);
-          delete ship.cargo[g];
+        for (const g of Object.keys(hot) as GoodId[]) {
+          const k = Math.min(hot[g] ?? 0, Math.floor(ship.cargo[g] ?? 0));
+          n += k;
+          ship.cargo[g] = (ship.cargo[g] ?? 0) - k;
+          if ((ship.cargo[g] ?? 0) <= 1e-9) delete ship.cargo[g];
+          // every marked unit aboard went with the boat (a mark above the hold's count was stale)
           delete p.stolen[g];
         }
         return n;
       };
-      if (choice === 'submit') return O('seized', { n: seize() });
+      const taken = (outcome: 'seized' | 'refused') => {
+        const n = seize();
+        return n > 0 ? O(outcome, { n, goods: hot }) : O('clean');
+      };
+      if (choice === 'submit') return taken('seized');
       if (choice === 'bribe') {
-        const value = hot.reduce((a, g) => a + (ship.cargo[g] ?? 0) * GOODS[g].basePrice, 0);
+        const value = (Object.keys(hot) as GoodId[]).reduce((a, g) => a + (hot[g] ?? 0) * GOODS[g].basePrice, 0);
         const bribe = Math.max(100, Math.round(value * 0.15));
         if (p.gold >= bribe && rng.chance(check(s, 'trade', 0.55))) {
           p.gold -= bribe;
@@ -797,7 +819,7 @@ function resolve(game: Game, s: PlayerSession, live: Live, choice: string): { ou
           return O('bribed', { silver: bribe });
         }
         game.addInfamy(ship, 10, 'offered a bribe to the Crown');
-        return O('refused', { n: seize() });
+        return taken('refused');
       }
       game.addInfamy(ship, 20, 'ran from a Crown patrol');
       return O('run');

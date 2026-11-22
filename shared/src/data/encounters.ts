@@ -411,9 +411,10 @@ export const ENCOUNTERS: Record<EncounterId, EncounterDef> = {
     text: ['A cutter with the Crown’s ensign fires a gun to leeward: heave to and show your hold.', 'Катер под флагом Короны даёт выстрел под ветер: лечь в дрейф и предъявить трюм.'],
     choices: [{ id: 'submit', label: ['Heave to', 'Лечь в дрейф'] }, { id: 'bribe', label: ['Offer a bribe (Trade)', 'Предложить взятку (Торговля)'] }, { id: 'run', label: ['Crack on and run', 'Поставить все паруса и уйти'] }],
     outcomes: {
-      seized: ['They take what should not be aboard: {n} of it goes into the Crown’s boat.', 'Изымают то, чего не должно быть на борту: {n} уходит в шлюпку Короны.'],
+      seized: ['They take only what should not be aboard — contraband and marked plunder: {goods}. Your stores and honest cargo stay.', 'Изымают только то, чего не должно быть на борту, — контрабанду и меченую добычу: {goods}. Припасы и честный груз остаются при вас.'],
       bribed: ['{silver} changes hands, and the officer sees nothing.', '{silver} переходит из рук в руки, и офицер ничего не видит.'],
-      refused: ['The officer pockets nothing and takes everything: {n} seized, and your name goes in his book.', 'Офицер не берёт ни гроша и забирает всё: изъято {n}, а ваше имя — в его книгу.'],
+      refused: ['The officer pockets nothing and takes all that should not be aboard: {goods}, and your name goes in his book.', 'Офицер не берёт ни гроша и забирает всё, чего не должно быть на борту: {goods}, а ваше имя — в его книгу.'],
+      clean: ['They turn the hold over and find nothing that should not be there. The cutter lets you go.', 'Трюм перерывают и не находят ничего запретного. Катер отпускает вас.'],
       run: ['You crack on. The cutter comes after you, and your name goes on the Crown’s list.', 'Вы ставите все паруса. Катер идёт следом, а ваше имя — в списке Короны.'],
     },
   }),
