@@ -194,3 +194,19 @@ test('the caravans read in Russian', () => {
   }
   setLang('en');
 });
+
+test('a caravan’s letter home reads in Russian line by line, its name not doubled (forum 130)', async () => {
+  const { setLang } = await import('../client/src/i18n.ts');
+  const { serverText } = await import('../client/src/lang/server.ts');
+  setLang('ru');
+  const name = "Эдуард's Caravan";
+  const body = [`Caravan ${name} is home.`, '', `Caravan ${name} took on the store of the outpost on Bellpoint.`, `Caravan ${name} took on the store of the outpost on Coldwick.`].join('\n');
+  const ru = serverText(body);
+  setLang('en');
+  const lines = ru.split('\n');
+  assert.equal(lines[0], 'Караван «Эдуард» вернулся домой.');
+  assert.equal(lines[1], '');
+  assert.match(lines[2], /^Караван «Эдуард» принял склад аванпоста на острове /);
+  assert.match(lines[3], /^Караван «Эдуард» принял склад аванпоста на острове /);
+  assert.ok(!/Caravan|took on/.test(ru), ru);
+});

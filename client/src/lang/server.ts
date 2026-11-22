@@ -300,6 +300,12 @@ function translateLine(s: string): string {
     const a = translateLine(more[1]), b = translateLine(`${more[1]}.`);
     return `${(latin(b) < latin(a) ? b : a).replace(/\.$/, '')}: не хватает ещё ${more[2]}`;
   }
+  // (a letter of many lines — a caravan's log — line by line when the whole would not go: forum 130, a pattern's
+  // placeholder ran over the lines and left the log in English)
+  if (latin(whole) && s.includes('\n')) {
+    const lines = s.split('\n').map((l) => (l.trim() ? translateLine(l) : l)).join('\n');
+    if (latin(lines) < latin(whole)) return lines;
+  }
   const i = s.indexOf(': ');
   if (i <= 0 || !latin(whole)) return whole;
   const split = `${translateLine(s.slice(0, i))}: ${translateLine(s.slice(i + 2))}`;
@@ -316,7 +322,8 @@ export function serverText(s: string): string {
   // A name quoted in its own Russian («Фитиль и сало») inside a line that quotes it again keeps one pair of guillemets
   // («нападение на ««Фитиль и сало»»», QA 2026-10-09).
   // (a count's noun in the number's form: «22 человека», not the table's one word for all — lang/counts.ts)
-  return typeset(feminineRu(s, ruCounts(translateLine(s)))).replace(/««([^«»]*)»»/g, '«$1»').replace(/(\d),(?=\d{3}(?!\d))/g, '$1\u00a0').replace(/(\d)\.(\d+)(?=\s?(?:\u043a\u043c|\u043c\u00b3|\u0443\u0437\u043b)(?![\u0430-\u044f\u0451]))/g, '$1,$2').replace(/\b(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{4})\b/g, (_, d: string, m: string, y: string) => `${d} ${MONTHS_RU[m]} ${y}`);
+  // (a caravan's name «Караван: Эдуард» inside a line that names the caravan again: «Караван «Эдуард»», forum 130)
+  return typeset(feminineRu(s, ruCounts(translateLine(s)))).replace(/(Караван )?«Караван: ([^«»]+)»/g, 'Караван «$2»').replace(/««([^«»]*)»»/g, '«$1»').replace(/(\d),(?=\d{3}(?!\d))/g, '$1\u00a0').replace(/(\d)\.(\d+)(?=\s?(?:\u043a\u043c|\u043c\u00b3|\u0443\u0437\u043b)(?![\u0430-\u044f\u0451]))/g, '$1,$2').replace(/\b(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{4})\b/g, (_, d: string, m: string, y: string) => `${d} ${MONTHS_RU[m]} ${y}`);
 }
 
 /** For tests: how many patterns are known. */
