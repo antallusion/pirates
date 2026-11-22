@@ -13,7 +13,8 @@
 
 import { REACH_MOOR, hullOf, shoreGap, shoreWithin } from '../../../shared/src/data/reach.ts';
 import { lackMore, lackRoom } from '../../../shared/src/data/buyfail.ts';
-import { estateProduce, ownedSlots, residentMul } from './estate.ts';
+import { estateProduce, knack, ownedSlots, residentMul } from './estate.ts';
+import { GUNNER_RELOAD } from '../../../shared/src/data/estate.ts';
 import type { Resident } from './estate.ts';
 import { reckonBase, startBuild } from './base.ts';
 import type { Yard } from './base.ts';
@@ -636,12 +637,13 @@ export function islandService(game: Game, s: PlayerSession, islandId: number, wh
       if (!has(h, 'chart_house')) return 'No chart house here';
       const m = p.explore.maps.find((x) => x.id === String(arg));
       if (!m) return 'No such map';
-      const price = chartCopy(levelOf(h, 'chart_house'));
+      // A cartographer living on the island copies for nothing (forum 129).
+      const price = knack(h, 'cartographer') ? 0 : chartCopy(levelOf(h, 'chart_house'));
       if (p.gold < price) return lackMore(`A copy costs ${price} silver`, price, p.gold);
       if (p.explore.maps.length >= 12) return 'Your chart chest is full';
       p.gold -= price;
       p.explore.maps.push({ ...m, id: `m${game.allocId()}`, hoard: m.hoard ?? m.id, copy: true, verdict: undefined, sealed: undefined }); // a copy leads to the same chest
-      game.db.ledger(s.accountId, 'chart_copy', -price, m.name);
+      if (price > 0) game.db.ledger(s.accountId, 'chart_copy', -price, m.name);
       break;
     }
     default:
@@ -745,6 +747,9 @@ function hostileToIsland(game: Game, h: Holding, o: ShipEntity): boolean {
   return game.islandHostile?.(h, o) ?? false; // sieges and wars
 }
 
+/** Seconds between the island guns' salvos. */
+export const SALVO_SEC = 12;
+
 function fireShoreGuns(game: Game, h: Holding, isl: Island, guns: number): void {
   let target: ShipEntity | null = null, bd = Infinity;
   game.forShipsNear(isl.x, isl.y, isl.radius + 1200, (o) => {
@@ -760,7 +765,8 @@ function fireShoreGuns(game: Game, h: Holding, isl: Island, guns: number): void 
   const lead = 1.4;
   const v = { x: Math.sin(t.state.heading) * t.state.speed * SPEED_SCALE, y: -Math.cos(t.state.heading) * t.state.speed * SPEED_SCALE };
   game.strikes.push({ at: game.now + lead, x: t.state.x + v.x * lead, y: t.state.y + v.y * lead, radius: Math.max(22, 60 - guns * 1.2), hull: 45, rudder: 0, owner: 0, slow: 0, shells: Math.max(1, Math.round(guns)), fx: 'barrage' });
-  game.holdings.nextSalvo.set(salvoKey(h), game.now + 12);
+  // A gunner living on the island: a third more salvos (forum 129).
+  game.holdings.nextSalvo.set(salvoKey(h), game.now + SALVO_SEC * (knack(h, 'gunner') ? GUNNER_RELOAD : 1));
   game.emit({ k: 'fx', fx: 'war_cry', x: Math.round(isl.x), y: Math.round(isl.y), r: 60 }, isl.x, isl.y);
 }
 
@@ -873,7 +879,8 @@ function produce(game: Game, h: Holding, isl: Island, hours: number): void {
 
 function upkeep(game: Game, h: Holding, isl: Island): void {
   // Income first: the tavern and the village.
-  h.treasury += Math.round((200 + game.rng.float() * 400) * strength(h, 'tavern') + 300 * strength(h, 'fishing_village'));
+  // (forum 129: a resident at the tavern brings in her +40% of its takings, as at a producing building)
+  h.treasury += Math.round((200 + game.rng.float() * 400) * strength(h, 'tavern') * residentMul(h, 'tavern') + 300 * strength(h, 'fishing_village'));
   // docs/29: one's own island keeps its buildings for what they cost to raise — no daily upkeep, and nothing falls to
   // ruin; a building weathered by raiders mends a tenth a day.
   if (h.owned) {

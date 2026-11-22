@@ -1,7 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
-import { FISH_FOOD, eatFish, foodAboard, isleLarder } from './larder.ts';
+import { FISH_FOOD, cookKeeps, eatFish, foodAboard, isleLarder } from './larder.ts';
 import { stepShipFix } from './shipfix.ts';
 import { stepIsleFix } from './islefix.ts';
 import { stormSails } from '../../../shared/src/data/adrift.ts';
@@ -1479,7 +1479,9 @@ export class Game {
     baseline -= CURSE_MORALE[curseStage(ship.curse)];
     baseline -= weariness(this, ship); // a long voyage wears on a crew
     baseline += tval(st, 'moraleBase'); // cooks, one-legged storytellers, superstition
-    ship.morale += clamp(baseline - ship.morale, -1, 1) * st.moraleRegen;
+    // A cook of her own island: lying by it, her spirits do not fall (forum 129).
+    const drift = clamp(baseline - ship.morale, -1, 1);
+    if (drift >= 0 || !cookKeeps(this, ship)) ship.morale += drift * st.moraleRegen;
     ship.morale = clamp(ship.morale, 0, 100);
 
     // Provisions: FOOD_PER_40 units feed 40 sailors for a minute (passage.ts), eaten every tenth second of each ship's own. (This runs on the
