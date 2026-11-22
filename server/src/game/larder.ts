@@ -4,9 +4,10 @@
 
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import { yardOf } from './base.ts';
-import { ownIsland } from './estate.ts';
+import { knack, ownIsland } from './estate.ts';
 import type { Game } from './Game.ts';
 import { islandNear } from './holdings.ts';
+import type { Holding } from './holdings.ts';
 import type { ShipEntity } from './ship.ts';
 
 /** The fish a crew eats in place of provisions, a unit for a unit, the keeping kinds first. */
@@ -15,15 +16,26 @@ export const FISH_FOOD: readonly GoodId[] = ['salted_fish', 'smoked_fish', 'fish
 /** Minutes of food she takes aboard from her island at a time. */
 const ISLE_TAKE_MIN = 30;
 
+/** Her own island, if she is by it (moored at its yard or lying off it). */
+export function byOwnIsle(game: Game, ship: ShipEntity): Holding | null {
+  if (!ship.isPlayer || ship.accountId === undefined || ship.accountId === null) return null;
+  const h = ownIsland(game, ship.accountId);
+  if (!h) return null;
+  return (ship.docked ? ship.docked === `isle:${h.island}` : islandNear(game, ship)?.id === h.island) ? h : null;
+}
+
+/** A cook living on her island: the crew lying by it does not lose heart (forum 129). */
+export function cookKeeps(game: Game, ship: ShipEntity): boolean {
+  return knack(byOwnIsle(game, ship), 'cook');
+}
+
 /** By her own island (moored at its yard or lying off it) with less than `low` provisions aboard: up to ISLE_TAKE_MIN
  *  minutes' worth taken from the island's yard, then its warehouse. What came aboard. */
 export function isleLarder(game: Game, ship: ShipEntity, perMin: number, low: number): number {
   if (!ship.isPlayer || ship.accountId === undefined || ship.accountId === null) return 0;
   if ((ship.cargo.provisions ?? 0) >= low) return 0;
-  const h = ownIsland(game, ship.accountId);
+  const h = byOwnIsle(game, ship);
   if (!h) return 0;
-  const by = ship.docked ? ship.docked === `isle:${h.island}` : islandNear(game, ship)?.id === h.island;
-  if (!by) return 0;
   let want = Math.ceil(perMin * ISLE_TAKE_MIN) - Math.floor(ship.cargo.provisions ?? 0);
   if (want <= 0) return 0;
   let got = 0;

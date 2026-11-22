@@ -14,8 +14,8 @@ import { welcome } from './guests.ts';
 import { isCitadelIsland } from '../../../shared/src/data/citadels.ts'; // docs/19 E4
 import {
   CLAIM_DAYS, GUARDS, HANDS_BONUS, HANDS_WAGE, HOME_COOLDOWN, ISLE_LEVELS, ISLE_MAX, OUTPOSTS, OUTPOST_BUILD, OUTPOST_KINDS, OUTPOST_MAX_LEVEL,
-  PROFESSIONS, PROFESSION_DEFS, RAID_DAY, RAID_MIN, RESIDENT_BONUS, RESIDENT_HIRE, ROB_SEC, TROPHY_MAX, TROPHY_STEP, claimCost, outpostCap, outpostFits, outpostGood,
-  outpostRate, outpostUpgrade, residentName,
+  PROFESSIONS, PROFESSION_DEFS, RAID_DAY, RAID_MIN, RESIDENT_BONUS, RESIDENT_HIRE, RESIDENT_WORK, ROB_SEC, SMITH_EXCELLENT, TROPHY_MAX, TROPHY_STEP, claimCost, outpostCap, outpostFits, outpostGood,
+  outpostRate, outpostUpgrade, residentHand, residentName,
 } from '../../../shared/src/data/estate.ts';
 import type { Guard, OutpostKind, Profession, TrophyKind } from '../../../shared/src/data/estate.ts';
 import { islandSize } from '../../../shared/src/data/holdings.ts';
@@ -27,6 +27,7 @@ import { dist } from '../../../shared/src/math.ts';
 import type { EstateView, OutpostView } from '../../../shared/src/protocol.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import type { Cargo } from '../../../shared/src/sim/shipstats.ts';
+import type { Item } from '../../../shared/src/data/items.ts';
 import { cargoVolume } from '../../../shared/src/sim/shipstats.ts';
 import { REGIONS } from '../../../shared/src/world/regions.ts';
 import type { Island, Port } from '../../../shared/src/world/worldgen.ts';
@@ -250,6 +251,9 @@ export function assignResident(game: Game, s: PlayerSession, id: number, where: 
     r.at = { o: o.id };
   } else {
     if (!has(h, where as BuildingId)) return 'No such building on the island';
+    // forum 129: a resident in the warehouse, the lighthouse or the shipyard added nothing; she works for her hand only
+    // where it tells (RESIDENT_WORK). One already put there stays until moved.
+    if (!RESIDENT_WORK[where as BuildingId]) return 'A resident adds nothing there: send her to a producing building, the tavern or an outpost.';
     r.at = { b: where as BuildingId };
   }
   game.holdings.touch();
@@ -257,10 +261,15 @@ export function assignResident(game: Game, s: PlayerSession, id: number, where: 
   return null;
 }
 
-/** A building's hands: +40% for each resident working it. */
+/** A building's hands: +40% for each resident working it (a fisher +50% at the fishing village or the smokehouse); nothing
+ *  where a hand does not tell (RESIDENT_WORK). */
 export function residentMul(h: Holding, id: BuildingId): number {
-  const n = h.residents?.filter((r) => r.at && 'b' in r.at && r.at.b === id).length ?? 0;
-  return 1 + RESIDENT_BONUS * n;
+  return 1 + (h.residents ?? []).reduce((a, r) => a + (r.at && 'b' in r.at && r.at.b === id ? residentHand(r.prof, id) : 0), 0);
+}
+
+/** Whether someone of that trade lives on the island: her knack works island-wide while she does (forum 129). */
+export function knack(h: Holding | null | undefined, prof: Profession): boolean {
+  return !!h?.residents?.some((r) => r.prof === prof);
 }
 
 function residentsAt(game: Game, o: Outpost): Resident[] {
@@ -292,6 +301,15 @@ export function isleForge(game: Game, s: PlayerSession): Port | null {
   if (ship.docked || dist(isl.x, isl.y, ship.state.x, ship.state.y) - isl.radius > forgeReach(levelOf(h, 'forge'))) return null;
   const port = islePort(game, h);
   return { ...port, shipyardTier: Math.max(2, port.shipyardTier) };
+}
+
+/** A smith living on the island, at its forge: one tempering in five comes out Excellent work (forum 129). Whether it did. */
+export function smithTemper(game: Game, s: PlayerSession, port: Port, it: Item): boolean {
+  const h = ownIsland(game, s.accountId);
+  if (!h || it.excellent || port.id !== `isle:${h.island}` || !has(h, 'forge') || !knack(h, 'smith')) return false;
+  if (!es(game).rng.chance(SMITH_EXCELLENT)) return false;
+  it.excellent = true;
+  return true;
 }
 
 // ------------------------------------------------------------------------------------------------ trophies

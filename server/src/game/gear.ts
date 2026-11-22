@@ -17,6 +17,7 @@ import type { Port } from '../../../shared/src/world/worldgen.ts';
 import { watersBand } from '../../../shared/src/data/shiplevel.ts';
 import { Rng } from '../../../shared/src/rng.ts';
 import type { Game } from './Game.ts';
+import { smithTemper } from './estate.ts';
 import type { PlayerSession, Profile } from './player.ts';
 import type { ShipEntity } from './ship.ts';
 
@@ -155,8 +156,9 @@ export function temperItem(game: Game, s: PlayerSession, port: Port, uid: number
   if (!cargo.planks) delete cargo.planks;
   game.db.ledger(s.accountId, 'temper', -c.silver, it.base);
   it.temper = (it.temper ?? 0) + 1;
+  const fine = smithTemper(game, s, port, it); // a smith of her own island (forum 129)
   applyWorn(game, s);
-  game.sendTo(s, { t: 'toast', msg: `Tempered: ${itemName(it)} +${it.temper}.`, kind: 'good' });
+  game.sendTo(s, { t: 'toast', msg: fine ? `${itemName(it)} +${it.temper} is Excellent work: the smith of your island tempered it.` : `Tempered: ${itemName(it)} +${it.temper}.`, kind: 'good' });
   game.pushSelf(s, true);
   return null;
 }

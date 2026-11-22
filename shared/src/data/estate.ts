@@ -5,6 +5,7 @@
 // a week at a time, and pirates come for a full store.
 
 import type { GoodId } from './goods.ts';
+import type { BuildingId } from './holdings.ts';
 import type { IslandBiome, RegionId } from '../world/regions.ts';
 import { GOODS } from './goods.ts';
 import { treePatterns } from './isletree.ts';
@@ -58,12 +59,12 @@ export interface ProfessionDef {
 }
 
 export const PROFESSION_DEFS: Record<Profession, ProfessionDef> = {
-  fisher: { name: ['Fisher', 'Рыбак'], knack: ['a fishery or a smokehouse yields a tenth more again', 'артель или коптильня дают ещё на десятую больше'], lines: [['The herring are thick off the north point this week.', 'У северного мыса на этой неделе густо сельди.'], ['Nets don’t mend themselves, captain.', 'Сети сами не чинятся, капитан.']] },
-  carpenter: { name: ['Carpenter', 'Плотник'], knack: ['buildings wear half as fast', 'постройки изнашиваются вдвое медленнее'], lines: [['Good timber, this. It’ll stand a hundred years.', 'Добрый лес. Сто лет простоит.'], ['Give me planks and I’ll give you a town.', 'Дайте мне брусья — дам вам город.']] },
-  smith: { name: ['Smith', 'Кузнец'], knack: ['tempering at the forge may make a piece excellent', 'закалка в кузнице может сделать вещь отличной'], lines: [['The forge is hot. Bring me iron worth the fire.', 'Горн горячий. Несите железо, достойное огня.'], ['A blade is only as good as its temper.', 'Клинок хорош настолько, насколько хороша закалка.']] },
-  cook: { name: ['Cook', 'Кок'], knack: ['a crew moored here keeps its spirits high', 'команда у острова не падает духом'], lines: [['Salt pork again? No, captain — tonight it’s fish stew.', 'Опять солонина? Нет, капитан, сегодня уха.'], ['A fed crew is a loyal crew.', 'Сытая команда — верная команда.']] },
-  cartographer: { name: ['Cartographer', 'Картограф'], knack: ['copies charts in the chart house for free', 'бесплатно копирует карты в картографической'], lines: [['There’s an island on your chart that isn’t there.', 'На вашей карте есть остров, которого нет.'], ['Every coast has a secret. Mine is patience.', 'У каждого берега есть тайна. Моя — терпение.']] },
-  herbalist: { name: ['Herbalist', 'Травник'], knack: ['two medicine a day into the store', 'два лекарства в день в склад'], lines: [['Chew this. Don’t ask what it is.', 'Жуйте. Не спрашивайте, что это.'], ['The fever takes the careless first.', 'Лихорадка первой берёт беспечных.']] },
+  fisher: { name: ['Fisher', 'Рыбак'], knack: ['at the fishing village or the smokehouse she adds +50%, not +40%', 'в рыбацкой деревне или коптильне даёт +50%, а не +40%'], lines: [['The herring are thick off the north point this week.', 'У северного мыса на этой неделе густо сельди.'], ['Nets don’t mend themselves, captain.', 'Сети сами не чинятся, капитан.']] },
+  carpenter: { name: ['Carpenter', 'Плотник'], knack: ['buildings wear half as much from raids and an unpaid tax', 'постройки вдвое меньше ветшают от налётов и неуплаты налога'], lines: [['Good timber, this. It’ll stand a hundred years.', 'Добрый лес. Сто лет простоит.'], ['Give me planks and I’ll give you a town.', 'Дайте мне брусья — дам вам город.']] },
+  smith: { name: ['Smith', 'Кузнец'], knack: ['a tempering at the island’s forge makes a piece Excellent one time in five', 'закалка в кузнице острова в одном случае из пяти делает вещь отличной'], lines: [['The forge is hot. Bring me iron worth the fire.', 'Горн горячий. Несите железо, достойное огня.'], ['A blade is only as good as its temper.', 'Клинок хорош настолько, насколько хороша закалка.']] },
+  cook: { name: ['Cook', 'Кок'], knack: ['a crew lying off the island does not lose heart', 'команда у острова не падает духом'], lines: [['Salt pork again? No, captain — tonight it’s fish stew.', 'Опять солонина? Нет, капитан, сегодня уха.'], ['A fed crew is a loyal crew.', 'Сытая команда — верная команда.']] },
+  cartographer: { name: ['Cartographer', 'Картограф'], knack: ['copies treasure maps in the chart house for free', 'бесплатно копирует карты сокровищ в картографической'], lines: [['There’s an island on your chart that isn’t there.', 'На вашей карте есть остров, которого нет.'], ['Every coast has a secret. Mine is patience.', 'У каждого берега есть тайна. Моя — терпение.']] },
+  herbalist: { name: ['Herbalist', 'Травник'], knack: ['two medicine a day into the store', 'два лекарства в день на склад'], lines: [['Chew this. Don’t ask what it is.', 'Жуйте. Не спрашивайте, что это.'], ['The fever takes the careless first.', 'Лихорадка первой берёт беспечных.']] },
   gunner: { name: ['Gunner', 'Канонир'], knack: ['the island’s guns fire a third more often', 'пушки острова стреляют на треть чаще'], lines: [['Powder dry, guns run out. Let them come.', 'Порох сухой, пушки выкачены. Пусть приходят.'], ['I can hit a gull at half a mile. Twice.', 'Попаду в чайку за полмили. Дважды.']] },
   pilot: { name: ['Pilot', 'Лоцман'], knack: ['caravans from here sail a tenth faster', 'караваны отсюда идут на десятую быстрее'], lines: [['I know every reef from here to the Ashen Isles.', 'Я знаю каждый риф отсюда до Пепельных островов.'], ['Wind’s backing. Weather by nightfall.', 'Ветер заходит. К ночи будет погода.']] },
 };
@@ -91,6 +92,33 @@ export const RESIDENT_HIRE = 800;
 /** A resident's hand in a building or an outpost; hired hands' at an outpost (and their wage a day). */
 export const RESIDENT_BONUS = 0.4;
 export const HANDS_BONUS = 0.2;
+/** A fisher's hand at the fishing village or the smokehouse (forum 129). */
+export const FISHER_BONUS = 0.5;
+/** The knacks (forum 129): a smith's chance of Excellent work at the island's forge, the carpenter's share of the wear,
+ *  the gunner's share of the reload. */
+export const SMITH_EXCELLENT = 0.2;
+export const CARPENTER_WEAR = 0.5;
+export const GUNNER_RELOAD = 0.75;
+
+/** The buildings a resident works for her hand, and what it adds there (forum 129: anywhere else she added nothing). */
+export const RESIDENT_WORK: Partial<Record<BuildingId, Tr>> = {
+  farm: ['provisions', 'провизии'],
+  fishing_village: ['provisions', 'провизии'],
+  mine: ['ore', 'руды'],
+  plantation: ['harvest', 'урожая'],
+  sawmill: ['planks', 'досок'],
+  distillery: ['rum', 'рома'],
+  powder_mill: ['powder', 'пороха'],
+  smokehouse: ['smoked fish', 'копчёной рыбы'],
+  try_works: ['scrimshaw', 'резьбы'],
+  tavern: ['takings', 'дохода'],
+};
+
+/** A resident's hand at a building: +40% (a fisher +50% at the fishing village or the smokehouse), or nothing. */
+export function residentHand(prof: Profession, id: BuildingId): number {
+  if (!RESIDENT_WORK[id]) return 0;
+  return prof === 'fisher' && (id === 'fishing_village' || id === 'smokehouse') ? FISHER_BONUS : RESIDENT_BONUS;
+}
 export const HANDS_WAGE = 150;
 
 // ------------------------------------------------------------------------------------------------ outposts
@@ -215,6 +243,8 @@ export function estatePatterns(): [string, string][] {
     ['{0} settles on your island: {1}.', 'На острове поселяется {0}: {1}.'],
     ['The houses are full: build a Residents’ House or raise the island.', 'Дома полны: постройте дом жителей или поднимите остров.'],
     ['{0} goes to work: {1}.', '{0} идёт работать: {1}.'],
+    ['A resident adds nothing there: send her to a producing building, the tavern or an outpost.', 'Там житель ничего не даёт: отправьте его в добывающую постройку, таверну или на аванпост.'],
+    ['{0} +{1} is Excellent work: the smith of your island tempered it.', '{0} +{1} — отличная работа: закалил кузнец вашего острова.'],
     ['An outpost is founded on {0}: {1}.', 'На острове {0} основан аванпост: {1}.'],
     ['This island does not suit a {0}.', 'Этот остров не годится для такого аванпоста: {0}.'],
     ['Bring {0} in the hold to found it.', 'Для основания привезите в трюме: {0}.'],

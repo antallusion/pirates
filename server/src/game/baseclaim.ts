@@ -30,7 +30,8 @@ import { isLand } from '../../../shared/src/world/worldgen.ts';
 import { capOf } from './base.ts';
 import { baseCost, plotsOf, producerFits } from '../../../shared/src/data/base.ts';
 import { caravans } from './caravans.ts';
-import { ownIsland } from './estate.ts';
+import { knack, ownIsland } from './estate.ts';
+import { CARPENTER_WEAR } from '../../../shared/src/data/estate.ts';
 import type { Game } from './Game.ts';
 import { caravanExtra, coveHide, forgeReach, residentRooms, signalMins, signalRisk, trophyCap } from '../../../shared/src/data/baselevels.ts';
 import { has, island, islandNear, levelOf, newOwnHolding, ownKey } from './holdings.ts';
@@ -87,6 +88,11 @@ function cs(game: Game): ClaimState {
   let s = states.get(game);
   if (!s) states.set(game, (s = { rng: new Rng(game.world.seed ^ 0x15c1a1), robbing: new Map() }));
   return s;
+}
+
+/** A carpenter living on the island halves what raiders and an unpaid tax take from its buildings (forum 129). */
+function wearOf(h: Holding): number {
+  return knack(h, 'carpenter') ? CARPENTER_WEAR : 1;
 }
 
 export function watersOf(isl: Island): Waters {
@@ -408,7 +414,7 @@ export function stepTax(game: Game, h: Holding, isl: Island, c: IsleClaim, wall:
       continue;
     }
     c.unpaid++;
-    for (const b of h.buildings) b.condition = Math.max(0.05, b.condition - TAX_WEATHER);
+    for (const b of h.buildings) b.condition = Math.max(0.05, b.condition - TAX_WEATHER * wearOf(h));
     mail(game, h, `${isl.name}: the week’s tax is unpaid`, `The harbour office asked ${tax} silver of the island’s treasury and found ${h.treasury}. Its buildings weather for want of the harbour’s goodwill; put silver in the treasury.`);
   }
 }
@@ -567,7 +573,7 @@ function lose(game: Game, h: Holding, isl: Island, c: IsleClaim): void {
   c.lossShare += share;
   const standing = h.buildings.filter((b) => b.condition > 0.1);
   const hit = standing.length ? standing[S.rng.int(0, standing.length - 1)] : null;
-  if (hit) hit.condition = Math.max(0.05, hit.condition - RAID_WEATHER);
+  if (hit) hit.condition = Math.max(0.05, hit.condition - RAID_WEATHER * wearOf(h));
   game.holdings.touch();
   const body = hit
     ? `Nobody came in time and the island could not hold them. The raiders carried off ${lost} units from ${isl.name} and set a building afire. Batteries, a fort and your own ships lying at the island make the next raid a harder landing.`
