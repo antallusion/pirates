@@ -34,6 +34,7 @@ import type { Island, Port } from '../../../shared/src/world/worldgen.ts';
 import { isLand } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
 import { caravanExtra, coveHide, forgeReach, residentRooms, signalMins, signalRisk, trophyCap } from '../../../shared/src/data/baselevels.ts';
+import { BUILDINGS } from '../../../shared/src/data/holdings.ts';
 import { GRACE_MS, has, island, islandNear, islePort, levelOf, mayUse, strength } from './holdings.ts';
 import type { Holding } from './holdings.ts';
 import { spawnPirate } from './npc.ts';
@@ -257,7 +258,7 @@ export function assignResident(game: Game, s: PlayerSession, id: number, where: 
     r.at = { b: where as BuildingId };
   }
   game.holdings.touch();
-  game.sendTo(s, { t: 'toast', msg: `${residentName(r.id * 7 + h.island)[0]} goes to work: ${where === 'none' ? '—' : where}.`, kind: 'info' });
+  game.sendTo(s, { t: 'toast', msg: `${residentName(r.id * 7 + h.island)[0]} goes to work: ${where === 'none' ? '—' : where.startsWith('o:') ? (island(game, outposts(game)[where.slice(2)]!.island)?.name ?? '—') : BUILDINGS[where as BuildingId].name}.`, kind: 'info' });
   return null;
 }
 
