@@ -20,6 +20,27 @@ export const RESEARCH_COST: Record<number, number> = { 1: 0, 2: 3000, 3: 28000, 
 /** The share of a hull's experience that also goes into the free pool. */
 export const FREE_XP_SHARE = 0.05;
 
+/** Owner, 2026-11-23: «на все корабли нужны какие-то ресурсы чтобы их качать, не только опыт… до 5 не обязательно
+ *  ресурсы, будет достаточно просто серебра». A research asks, beside the experience, the yard's drawings and trials:
+ *  silver for the second tier (the ⚓3–5 hulls), silver and the yard's goods from the third (⚓5–7) on, the great
+ *  beasts' and the deep's for the fifth — paid at a shipyard, the goods from her hold and her warehouse there. About an
+ *  hour of her band's income at sea for the second tier, two for the third, five for the fourth, eight for the fifth. */
+export interface ResearchPrice {
+  silver: number;
+  goods: { good: 'planks' | 'iron' | 'sailcloth' | 'timber' | 'sulfur_iron' | 'leviathan_bone' | 'abyssal_ore'; qty: number }[];
+}
+export const RESEARCH_PRICE: Record<number, ResearchPrice> = {
+  2: { silver: 2500, goods: [] },
+  3: { silver: 9000, goods: [{ good: 'planks', qty: 50 }, { good: 'iron', qty: 20 }, { good: 'sailcloth', qty: 15 }] },
+  4: { silver: 30000, goods: [{ good: 'planks', qty: 90 }, { good: 'iron', qty: 40 }, { good: 'sailcloth', qty: 25 }, { good: 'timber', qty: 10 }, { good: 'sulfur_iron', qty: 10 }] },
+  5: { silver: 90000, goods: [{ good: 'planks', qty: 150 }, { good: 'iron', qty: 80 }, { good: 'sailcloth', qty: 50 }, { good: 'timber', qty: 20 }, { good: 'leviathan_bone', qty: 20 }, { good: 'abyssal_ore', qty: 15 }] },
+};
+
+/** What a hull's research asks beside the experience. */
+export function researchPrice(id: ShipClassId): ResearchPrice {
+  return RESEARCH_PRICE[SHIP_CLASSES[id]?.tier ?? 1] ?? { silver: 0, goods: [] };
+}
+
 /** Where a list's own silver hulls end, the line goes on in another's. None now: the runners' line ran out at the
  *  Baltimore clipper and led on to the razee, the traders' at the East Indiaman and led on to the great galleon, until
  *  the eight that make the lines whole (2026-10-04: the polacre and the Dunkirk frigate, the great xebec and the

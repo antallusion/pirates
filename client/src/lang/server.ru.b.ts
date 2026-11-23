@@ -1508,4 +1508,5 @@ export const SERVER_RU_B: Record<string, string> = {
   "{0} hearts of the storm": "сердца бури — {0}",
   "The Admiralty seals your {0}: ships of level {1} are yours to command.": "Адмиралтейство скрепило печатью: «{0}» ваша, теперь вам подвластны корабли {1}-го уровня.",
   "{0} is granted the {1} by the Admiralty.": "Адмиралтейство пожаловало капитану {0}: «{1}».",
+  "A hull is researched at a shipyard: make port": "Корпус исследуют на верфи: зайдите в порт",
 };

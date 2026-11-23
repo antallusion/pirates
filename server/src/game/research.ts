@@ -2,7 +2,9 @@
 // дальше качаешься»; docs/20; shared/src/data/research.ts). Every experience the captain earns is earned by the hull she
 // sails too; that experience researches the next tier of the hull's list, and a yard sells only what is researched.
 
-import { CHILDREN, FREE_XP_SHARE, initialResearch, isResearched, needsResearch, researchQuote, spendResearch } from '../../../shared/src/data/research.ts';
+import { CHILDREN, FREE_XP_SHARE, initialResearch, isResearched, needsResearch, researchPrice, researchQuote, spendResearch } from '../../../shared/src/data/research.ts';
+import { GOODS } from '../../../shared/src/data/goods.ts';
+import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import type { ResearchView } from '../../../shared/src/data/research.ts';
 import { SHIP_CLASSES } from '../../../shared/src/data/ships.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
@@ -57,6 +59,23 @@ export function research(game: Game, s: PlayerSession, id: ShipClassId): string 
   const q = researchQuote(r, id, owned);
   if (!q.known.length) return 'Research a hull of the tier below first: the tree of hulls shows which';
   if (!q.ready) return `Needs ${q.cost} experience on the hulls below and the free pool — ${q.pool} so far`;
+  // Owner, 2026-11-23: beside the experience, silver (and from the third tier the yard's goods) paid at a shipyard.
+  const price = researchPrice(id);
+  const at = s.ship?.docked ? game.portById(s.ship.docked) : null;
+  if ((price.silver || price.goods.length) && (!at || !(at.shipyardTier >= 1))) return 'A hull is researched at a shipyard: make port';
+  if (p.gold < price.silver) return lackMore(`Needs ${price.silver} silver`, price.silver, p.gold);
+  const cargo = s.ship?.cargo ?? p.cargo;
+  const wh = at ? p.warehouses[at.id] : undefined;
+  const have = (g: string) => Math.floor((cargo[g as 'iron'] ?? 0) + (wh?.[g as 'iron'] ?? 0));
+  for (const g of price.goods) if (have(g.good) < g.qty) return `Needs ${g.qty} ${GOODS[g.good].name.toLowerCase()} (in the hold or your warehouse here)`;
+  p.gold -= price.silver;
+  if (price.silver) game.db.ledger(s.accountId, 'research', -price.silver, id);
+  for (const g of price.goods) {
+    let left = g.qty;
+    const fromHold = Math.min(left, Math.floor(cargo[g.good] ?? 0));
+    if (fromHold > 0) { cargo[g.good] = (cargo[g.good] ?? 0) - fromHold; if (!(cargo[g.good]! > 0)) delete cargo[g.good]; left -= fromHold; }
+    if (left > 0 && wh) { wh[g.good] = (wh[g.good] ?? 0) - left; if (!(wh[g.good]! > 0)) delete wh[g.good]; }
+  }
   spendResearch(r, id, owned);
   game.sendTo(s, { t: 'researched', classId: id });
   game.sendTo(s, { t: 'toast', msg: `Researched: the ${def.name}. Any yard that builds her sells her now.`, kind: 'good' });

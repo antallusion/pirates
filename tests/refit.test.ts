@@ -30,19 +30,22 @@ test('a refit: the captain’s level first, then silver and materials; the yard 
   assert.equal(bad(c).at(-1), 'Captain level 4 is needed to command her at level 2');
   p.level = 5;
   p.gold = 5000;
-  c.push({ t: 'shipyard', action: 'refit' });
-  assert.match(bad(c).at(-1)!, /^Needs 14 planks/);
-  // Ten planks in the hold and four from the warehouse make fourteen; the iron all in the hold.
+  // Up to ⚓5 silver only (owner, 2026-11-23): the hold and the warehouse are not touched.
   s.ship!.cargo.planks = 10;
   s.ship!.cargo.iron = 5;
   p.warehouses[port.id] = { planks: 15 };
   const hull0 = s.ship!.stats.hullMax;
-  c.push({ t: 'shipyard', action: 'refit' });
   const cost = refitCost(2)!;
+  assert.deepEqual(cost.goods, []);
+  p.gold = cost.silver - 1;
+  c.push({ t: 'shipyard', action: 'refit' });
+  assert.match(bad(c).at(-1)!, /^Needs \d+ silver/);
+  p.gold = 5000;
+  c.push({ t: 'shipyard', action: 'refit' });
   assert.equal(p.gold, 5000 - cost.silver);
-  assert.equal(s.ship!.cargo.planks, undefined, 'the hold emptied first');
-  assert.equal(p.warehouses[port.id].planks, 11, 'then the warehouse');
-  assert.equal(s.ship!.cargo.iron, 2);
+  assert.equal(s.ship!.cargo.planks, 10, 'the hold untouched');
+  assert.equal(p.warehouses[port.id].planks, 15, 'and the warehouse');
+  assert.equal(s.ship!.cargo.iron, 5);
   assert.ok(p.refit && p.refit.to === 2);
   c.push({ t: 'undock' });
   assert.match(bad(c).at(-1)!, /^The yard is still at work on her: \d+ min more$/);
@@ -126,7 +129,9 @@ test('the refit card says where a short good is sold: the nearest harbour with i
   const s = game.sessionByName('Iron Ines')!;
   const p = s.profile!;
   p.admRefit = true;
-  p.level = 9;
+  p.level = 26; // a brig ⚓5 → ⚓6: the first refit that asks the yard's goods (up to ⚓5 silver only, owner 2026-11-23)
+  p.loadout = { ...p.loadout, classId: 'brig', level: 5 };
+  s.ship!.loadout = p.loadout;
   s.ship!.cargo = {};
   const port = game.portById(s.ship!.docked!)!;
   const v = refitView(game, s, port);

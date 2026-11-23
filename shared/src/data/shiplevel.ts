@@ -177,10 +177,12 @@ export interface RefitCost {
 // the goods — dearer than a brigantine at ⚓4 (7 500) or a brig at ⚓5 (12 500) bought new, so no captain kept her hull. Now
 // each is two loads of the hull she refits and, goods and all, two thirds of the new hull of that level.
 const REFIT: Record<number, RefitCost> = {
-  2: { silver: 1200, goods: [{ good: 'planks', qty: 14 }, { good: 'iron', qty: 3 }], sec: 120 },
-  3: { silver: 2800, goods: [{ good: 'planks', qty: 30 }, { good: 'iron', qty: 8 }, { good: 'sailcloth', qty: 6 }], sec: 300 },
-  4: { silver: 3200, goods: [{ good: 'planks', qty: 40 }, { good: 'iron', qty: 12 }, { good: 'sailcloth', qty: 10 }], sec: 600 },
-  5: { silver: 6000, goods: [{ good: 'planks', qty: 60 }, { good: 'iron', qty: 20 }, { good: 'sailcloth', qty: 14 }], sec: 1200 },
+  // Owner, 2026-11-23: «до 5 например не обязательно ресурсы, будет достаточно просто серебра» — up to ⚓5 silver only,
+  // the goods' worth at base prices added to it (the same price as before: planks 22, iron 34, sailcloth 26).
+  2: { silver: 1600, goods: [], sec: 120 },
+  3: { silver: 3900, goods: [], sec: 300 },
+  4: { silver: 4750, goods: [], sec: 600 },
+  5: { silver: 8350, goods: [], sec: 1200 },
   // docs/30, band 3 (QA playthrough B): ⚓6 and ⚓7 asked 600 and 870 of hold — seven brig loads, eight a frigate's,
   // 260 planks where a port stocks fifty — and 28 000 and 47 000 with the goods: a frigate ⚓6 bought new was 24 000, and
   // a captain of 33–35 on her frigate ⚓6 never saved the ⚓7 of her band. The same rule as ⚓4–5: two loads of the

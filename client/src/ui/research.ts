@@ -4,7 +4,8 @@
 // cost and what is earned toward them, the doubloon hulls in gold. Research is a click: the server spends the
 // experience (server/src/game/research.ts).
 
-import { CROSS_LINES, TREE, isResearched, needsResearch, researchQuote } from '../../../shared/src/data/research.ts';
+import { CROSS_LINES, TREE, isResearched, needsResearch, researchPrice, researchQuote } from '../../../shared/src/data/research.ts';
+import { GOODS } from '../../../shared/src/data/goods.ts';
 import type { ResearchView } from '../../../shared/src/data/research.ts';
 import { hullCard, hullCardHtml } from '../../../shared/src/data/hullcard.ts';
 import { levelRange, shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
@@ -25,6 +26,14 @@ const span = (id: ShipClassId): string => {
   const [lo, hi] = levelRange(id);
   return lo === hi ? `⚓${lo}` : `⚓${lo}–${hi}`;
 };
+
+/** Owner, 2026-11-23: what a research asks beside the experience — silver, and from the third tier the yard's goods. */
+function priceLine(id: ShipClassId): string {
+  const pr = researchPrice(id);
+  if (!pr.silver && !pr.goods.length) return '';
+  const list = [L('priceSilver', { n: fmt(pr.silver) }), ...pr.goods.map((g) => `${GOODS[g.good].name} ${fmt(g.qty)}`)].join(' · ');
+  return `<span class="rs-price muted">${esc(L('price', { list }))}</span>`;
+}
 
 export class ResearchWindow {
   list: FleetList | null = null;
@@ -89,7 +98,7 @@ export class ResearchWindow {
       sailing: self.loadout.classId, sailLevel: shipLevelOf(self.loadout), captainLevel: self.level, research: r,
       berths: self.berths.map((b) => ({ classId: b.classId, port: b.port.startsWith('isle:') ? undefined : placeName(state.ports.find((p) => p.id === b.port)?.name ?? b.port) })),
     });
-    const act = card.tree.state === 'ready' ? `<button class="btn btn-small btn-primary" data-research="${id}">${esc(L('research', { n: fmt(card.tree.cost) }))}</button>` : '';
+    const act = card.tree.state === 'ready' || card.tree.state === 'near' ? `${priceLine(id)}${card.tree.state === 'ready' ? `<button class="btn btn-small btn-primary" data-research="${id}">${esc(L('research', { n: fmt(card.tree.cost) }))}</button>` : ''}` : '';
     return `<div class="rs-detail">${hullCardHtml(card, lang(), { art: assetUrl(SHIP_CLASSES[id].sprite), actions: act })}</div>`;
   }
 
@@ -116,7 +125,7 @@ export class ResearchWindow {
       state = q.ready ? 'ready' : q.known.length ? 'near' : 'locked';
       line = q.known.length ? L('cost', { have: fmt(have), cost: fmt(q.cost) }) : L('st.lockedBy', { names: q.parents.map((p) => SHIP_CLASSES[p].name).join(', ') });
       const pct = q.cost ? Math.round((have / q.cost) * 100) : 0;
-      act = `${q.known.length ? `<div class="rs-bar"><i style="width:${pct}%"></i></div>` : ''}${q.ready ? `<button class="btn btn-small btn-primary" data-research="${id}">${esc(L('research', { n: fmt(q.cost) }))}</button>` : ''}`;
+      act = `${q.known.length ? `<div class="rs-bar"><i style="width:${pct}%"></i></div>` : ''}${q.ready ? `${priceLine(id)}<button class="btn btn-small btn-primary" data-research="${id}">${esc(L('research', { n: fmt(q.cost) }))}</button>` : ''}`;
     }
     const cross = CROSS_LINES[id]?.map((p) => `<div class="rs-cross muted">${esc(L('cross', { name: SHIP_CLASSES[p].name }))}</div>`).join('') ?? '';
     return `<div class="rs-card rs-${state}" data-rs-hull="${id}" role="button" tabindex="0">

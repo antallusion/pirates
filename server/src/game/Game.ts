@@ -3989,7 +3989,7 @@ export class Game {
       case 'build_launch':
         return portAction((pt) => launchBuild(this, s, pt, String(msg.id)));
       case 'research': {
-        // The yard's tree of hulls (docs/20): learned anywhere, with the experience her hulls have earned.
+        // The yard's tree of hulls (docs/20): the experience her hulls have earned, and silver and goods at a shipyard (owner, 2026-11-23).
         const why = research(this, s, msg.classId);
         if (why) this.sendTo(s, { t: 'toast', msg: why, kind: 'bad' });
         return;
