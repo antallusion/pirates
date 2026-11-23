@@ -1509,4 +1509,8 @@ export const SERVER_RU_B: Record<string, string> = {
   "The Admiralty seals your {0}: ships of level {1} are yours to command.": "Адмиралтейство скрепило печатью: «{0}» ваша, теперь вам подвластны корабли {1}-го уровня.",
   "{0} is granted the {1} by the Admiralty.": "Адмиралтейство пожаловало капитану {0}: «{1}».",
   "A hull is researched at a shipyard: make port": "Корпус исследуют на верфи: зайдите в порт",
+  "The Admiralty takes the fortune once the experience is earned: in command of a ship of level {0}": "Адмиралтейство примет взнос, когда будет набран опыт: командуя кораблём {0}-го уровня",
+  "The Admiralty": "Адмиралтейство",
+  "Your warrant payment returned": "Ваш взнос за грамоту возвращён",
+  "The Admiralty now takes the fortune for the {0} only once its experience is earned. What you handed in comes back to you.": "Теперь Адмиралтейство принимает взнос за «{0}» только после того, как набран опыт. Всё, что вы внесли, возвращается к вам.",
 };

@@ -11,6 +11,7 @@ import type { WarrantRate, WarrantState, WarrantView } from '../../../shared/src
 import type { Port } from '../../../shared/src/world/worldgen.ts';
 import type { Game } from './Game.ts';
 import type { PlayerSession, Profile } from './player.ts';
+import { deliver } from './post.ts';
 
 /** A great yard (tier 4 or more) keeps an Admiralty office: the warrants are handed in there. */
 export function warrantOffice(port: Port): boolean {
@@ -86,7 +87,9 @@ export function warrantView(s: PlayerSession, port: Port): WarrantView | undefin
 }
 
 /** «Hand in»: what she has toward the warrant — silver (all that is still asked, as far as her purse goes), the goods
- *  from her hold and her warehouse here, the hearts of the storm. Granted when all is in and the experience earned. */
+ *  from her hold and her warehouse here, the hearts of the storm. Granted when all is in. Only once the experience is
+ *  earned (owner, 2026-11-23: «делай как лучше, чтобы баланс соблюдался» — a captain of 47 put 460 000 silver in
+ *  hundreds of hours before the warrant could be hers, silver gone from her trade and her ship for all that time). */
 export function warrantHandIn(game: Game, s: PlayerSession, port: Port): string | null {
   const p = s.profile!;
   if (!warrantOffice(port)) return 'The Admiralty keeps its offices at the great shipyards only';
@@ -94,6 +97,7 @@ export function warrantHandIn(game: Game, s: PlayerSession, port: Port): string 
   if (!rate) return 'You hold every warrant there is';
   const def = WARRANTS[rate];
   const w = state(p);
+  if ((w.xp[rate] ?? 0) < def.xp) return `The Admiralty takes the fortune once the experience is earned: in command of a ship of level ${def.earnedOn}`;
   const paid = (w.paid[rate] ??= { silver: 0, goods: {}, hearts: 0 });
   const brought: string[] = [];
   const silver = Math.max(0, Math.min(def.silver - paid.silver, Math.floor(p.gold)));
@@ -140,4 +144,32 @@ export function warrantHandIn(game: Game, s: PlayerSession, port: Port): string 
   }
   game.saveSession(s);
   return null;
+}
+
+/** On sign-in: what was handed in toward a warrant before its experience was earned (the rule before 2026-11-23 took
+ *  it at once) goes back to her in a letter — silver, goods and hearts — taken in any port. */
+export function warrantRefundEarly(game: Game, s: PlayerSession): void {
+  const p = s.profile;
+  const w = p?.warrant;
+  if (!p || !w) return;
+  for (const rate of [9, 10] as WarrantRate[]) {
+    const paid = w.paid[rate];
+    if (!paid || (w.xp[rate] ?? 0) >= WARRANTS[rate].xp) continue;
+    delete w.paid[rate];
+    const goods = (Object.entries(paid.goods) as [GoodId, number][]).filter(([, n]) => n > 0);
+    if (paid.hearts > 0) p.stormHearts = (p.stormHearts ?? 0) + paid.hearts;
+    if (!(paid.silver > 0) && !goods.length) continue;
+    // The goods wait at the harbour she lies in (at sea: the nearest great yard); a letter carries one good, so one
+    // letter each after the first.
+    const ship = s.ship;
+    const at = ship?.docked ?? (ship ? game.world.ports.filter(warrantOffice).sort((a, b) => Math.hypot(a.x - ship.state.x, a.y - ship.state.y) - Math.hypot(b.x - ship.state.x, b.y - ship.state.y))[0]?.id : undefined) ?? game.world.ports[0].id;
+    const body = `The Admiralty now takes the fortune for the ${WARRANTS[rate].name} only once its experience is earned. What you handed in comes back to you.`;
+    const parts = goods.length ? goods : [null];
+    parts.forEach((g, i) => deliver(game, s.accountId, {
+      from: 'The Admiralty', subject: 'Your warrant payment returned', body,
+      gold: i === 0 ? Math.round(paid.silver) : 0, goods: g ? { good: g[0], qty: Math.round(g[1]), port: at } : null,
+    }));
+    game.db.ledger(s.accountId, 'warrant_refund', Math.round(paid.silver), `${rate}`);
+    console.log(`[warrant] refund ${s.accountId}: ${Math.round(paid.silver)} silver, ${JSON.stringify(goods)} at ${at}, ${paid.hearts} hearts`);
+  }
 }

@@ -8,7 +8,8 @@ import { THRONE_LEVEL } from '../shared/src/constants.ts';
 import { addXp } from '../server/src/game/player.ts';
 import { refitView } from '../server/src/game/refit.ts';
 import { shipyardBuy } from '../server/src/game/ports.ts';
-import { warrantHandIn, warrantSeen, warrantWhy } from '../server/src/game/warrant.ts';
+import { warrantHandIn, warrantRefundEarly, warrantSeen, warrantWhy } from '../server/src/game/warrant.ts';
+import { lettersSince } from '../server/src/game/post.ts';
 import { CURRENT, mixedHour } from './balance/xp.ts';
 import { seaHour } from './balance/island.ts';
 import { join, makeGame } from './helpers.ts';
@@ -49,6 +50,10 @@ test('warrants: no ⚓9 bought or refitted without one; experience counts on ⚓
   addXp(p, 1000);
   assert.equal(p.warrant!.xp[9], 1000);
   assert.equal(p.warrant!.xp[10], undefined, 'the admiral’s after the first rate’s');
+  // nothing taken before the experience is earned (owner, 2026-11-23: the balance)
+  p.gold = 1_000_000;
+  assert.match(warrantHandIn(game, s, great) ?? '', /once the experience is earned/);
+  assert.equal(p.gold, 1_000_000);
   // everything handed in (a part at a time), the experience earned: granted
   p.warrant!.xp[9] = WARRANTS[9].xp;
   p.gold = WARRANTS[9].silver / 2;
@@ -80,4 +85,22 @@ test('warrants: the ships held on the day are kept — a ⚓10 in a berth gives 
   p.warrant!.has = 0;
   warrantSeen(p);
   assert.equal(p.warrant!.has, 0, 'once only');
+});
+
+test('warrants: a fortune handed in before its experience was earned comes back in letters, the hearts at once', () => {
+  const { game } = makeGame();
+  join(game, 'Early Payer');
+  const s = game.sessionByName('Early Payer')!;
+  const p = s.profile!;
+  p.warrant = { has: 0, xp: { 9: 30_793 }, paid: { 9: { silver: 460_226, goods: { leviathan_bone: 6, abyssal_ore: 2 }, hearts: 1 } }, seen: 1 };
+  const hearts = p.stormHearts ?? 0;
+  warrantRefundEarly(game, s);
+  assert.equal(p.warrant.paid[9], undefined);
+  assert.equal(p.stormHearts, hearts + 1);
+  const back = lettersSince(game, s.accountId, 0).filter((l) => l.subject === 'Your warrant payment returned');
+  assert.equal(back.length, 2, 'one letter a good');
+  assert.equal(back.reduce((a, l) => a + l.gold, 0), 460_226);
+  assert.deepEqual(back.map((l) => l.goods && [l.goods.good, l.goods.qty]).sort(), [['abyssal_ore', 2], ['leviathan_bone', 6]]);
+  warrantRefundEarly(game, s);
+  assert.equal(lettersSince(game, s.accountId, 0).filter((l) => l.subject === 'Your warrant payment returned').length, 2, 'once');
 });

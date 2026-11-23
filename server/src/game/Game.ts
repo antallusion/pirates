@@ -1,7 +1,7 @@
 // The authoritative game server: owns the world, runs the fixed-rate simulation, manages sessions,
 // interest management, snapshots and persistence. Systems live in sibling modules.
 
-import { warrantHandIn, warrantSeen } from './warrant.ts';
+import { warrantHandIn, warrantRefundEarly, warrantSeen } from './warrant.ts';
 import { FISH_FOOD, cookKeeps, eatFish, foodAboard, isleLarder } from './larder.ts';
 import { stepShipFix } from './shipfix.ts';
 import { stepIsleFix } from './islefix.ts';
@@ -5142,6 +5142,7 @@ export class Game {
     applyPantheon(this, s);
     ensureLegendary(this, s);
     if (s.profile) warrantSeen(s.profile); // the ⚓9–10 ships held on the day the warrants came stay hers
+    warrantRefundEarly(this, s); // a fortune handed in before its experience was earned, given back
     sendSites(this, s);
     pushParty(this, s);
     friendsPresence(this, s, true);
