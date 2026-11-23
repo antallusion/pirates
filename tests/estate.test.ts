@@ -8,7 +8,7 @@ import { claimOf } from '../server/src/game/baseclaim.ts';
 import { test } from 'node:test';
 import { lairIsland } from '../server/src/game/wanted.ts';
 import assert from 'node:assert/strict';
-import { ISLE_LEVELS, OUTPOST_BUILD, OUTPOST_KINDS, ROB_SEC, estatePatterns, outpostCap, outpostFits } from '../shared/src/data/estate.ts';
+import { ISLE_LEVELS, claimCost, OUTPOST_BUILD, OUTPOST_KINDS, ROB_SEC, estatePatterns, outpostCap, outpostFits } from '../shared/src/data/estate.ts';
 import type { OutpostKind } from '../shared/src/data/estate.ts';
 import { REGIONS } from '../shared/src/world/regions.ts';
 import type { RegionId } from '../shared/src/world/regions.ts';
@@ -189,6 +189,18 @@ test('outposts: founded on a fitting island with materials brought, working by t
   const v = estateView(game, s);
   assert.equal(v.outposts.length, 1);
   const o = outpostById(game, v.outposts[0].id)!;
+  // Forum 153: a guard and a renewed claim cost their price, never the purse.
+  s.profile!.gold = 200_000;
+  assert.equal(outpostOrder(game, s, o.id, 'guard', 'battery'), null);
+  assert.equal(s.profile!.gold, 200_000 - 4000);
+  assert.equal(outpostOrder(game, s, o.id, 'guard', 'battery'), null);
+  assert.equal(s.profile!.gold, 200_000 - 4000, 'the same guard again costs nothing');
+  assert.equal(outpostOrder(game, s, o.id, 'guard', 'militia'), null);
+  assert.equal(s.profile!.gold, 200_000 - 4000, 'nor does a lighter one');
+  assert.equal(outpostOrder(game, s, o.id, 'guard', 'battery'), null);
+  s.profile!.gold = 200_000 - 4000;
+  assert.equal(outpostOrder(game, s, o.id, 'renew'), null);
+  assert.equal(s.profile!.gold, 200_000 - 4000 - claimCost(REGIONS[site!.region].safety));
   // A second on another island: the island allows one at level 1.
   assert.match(foundOutpost(game, s, kind!)!, /(allows|already works)/);
   // Hours pass: the store fills to its cap and no more.
@@ -205,7 +217,7 @@ test('outposts: founded on a fitting island with materials brought, working by t
   assert.equal(outpostOrder(game, s, o.id, 'upgrade'), null);
   assert.equal(o.level, 2);
   // The claim lapses.
-  clock += 11 * 86_400_000;
+  clock += 18 * 86_400_000; // (a week more for the claim renewed above)
   stepEstate(game);
   assert.equal(outpostById(game, o.id), undefined, 'abandoned');
 });

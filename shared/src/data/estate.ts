@@ -181,11 +181,13 @@ export function claimCost(safety: 'safe' | 'contested' | 'lawless'): number {
 export const CLAIM_DAYS = 7;
 
 export type Guard = 'none' | 'militia' | 'battery' | 'fort';
-export const GUARDS: Record<Guard, { name: Tr; cost: number; chance: number; holds: boolean }> = {
-  none: { name: ['None', 'Нет'], cost: 0, chance: 1, holds: false },
-  militia: { name: ['Militia', 'Ополчение'], cost: 500, chance: 0.7, holds: false },
-  battery: { name: ['Battery', 'Батарея'], cost: 4000, chance: 0.4, holds: false },
-  fort: { name: ['Fort', 'Форт'], cost: 12000, chance: 0.15, holds: true },
+/** `chance`: the raids' odds; `loss`: what of the stripped share is still lost when nobody comes (forum 153, 2026-11-23:
+ *  a battery fired at nobody — it only made raids rarer; now it shoots and saves half, the militia a quarter). */
+export const GUARDS: Record<Guard, { name: Tr; cost: number; chance: number; holds: boolean; loss: number }> = {
+  none: { name: ['None', 'Нет'], cost: 0, chance: 1, holds: false, loss: 1 },
+  militia: { name: ['Militia', 'Ополчение'], cost: 500, chance: 0.7, holds: false, loss: 0.75 },
+  battery: { name: ['Battery', 'Батарея'], cost: 4000, chance: 0.4, holds: false, loss: 0.5 },
+  fort: { name: ['Fort', 'Форт'], cost: 12000, chance: 0.15, holds: true, loss: 0 },
 };
 /** A raid's chance a day by the safety of the waters, before the store's fill and the guard. */
 export const RAID_DAY: Record<string, number> = { safe: 0.05, contested: 0.25, lawless: 0.5 };

@@ -1513,4 +1513,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "The Admiralty": "Адмиралтейство",
   "Your warrant payment returned": "Ваш взнос за грамоту возвращён",
   "The Admiralty now takes the fortune for the {0} only once its experience is earned. What you handed in comes back to you.": "Теперь Адмиралтейство принимает взнос за «{0}» только после того, как набран опыт. Всё, что вы внесли, возвращается к вам.",
+  "Nobody came in time. The raiders took {0}% of the store at {1}. Your battery fired on them the whole time and saved half of it.": "Никто не успел. Налётчики забрали {0}% запасов на {1}. Ваша батарея всё это время стреляла по ним и спасла половину.",
+  "Nobody came in time. The raiders took {0}% of the store at {1}. Your militia fought for the store and saved a quarter of it.": "Никто не успел. Налётчики забрали {0}% запасов на {1}. Ваше ополчение дралось за склад и спасло четверть.",
+  "Nobody came in time. The raiders took {0}% of the store at {1}. No guard stood there: a militia, a battery or a fort would have saved part of it, or all.": "Никто не успел. Налётчики забрали {0}% запасов на {1}. Охраны там не было: ополчение, батарея или форт спасли бы часть запасов или всё.",
 };

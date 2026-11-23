@@ -384,6 +384,7 @@ export function foundOutpost(game: Game, s: PlayerSession, kind: OutpostKind): s
   const fee = claimCost(safety);
   if (p.gold < fee) return lackMore(`Needs ${fee} silver`, fee, p.gold);
   p.gold -= fee;
+  if (fee) game.db.ledger(s.accountId, 'outpost_found', -fee, `${kind}:${isl.id}`);
   for (const [g, n] of Object.entries(OUTPOST_BUILD) as [GoodId, number][]) {
     ship.cargo[g] = (ship.cargo[g] ?? 0) - n;
     if (!ship.cargo[g]) delete ship.cargo[g];
@@ -436,9 +437,14 @@ export function outpostOrder(game: Game, s: PlayerSession, id: string, action: s
     case 'guard': {
       const g = (arg ?? 'none') as Guard;
       if (!GUARDS[g]) return 'Unknown order';
-      const cost = GUARDS[g].cost;
+      // Forum 153: the same guard again costs nothing (it was paid for again), nor does a lighter one; a stronger one
+      // its price — written in the ledger.
+      if (g === o.guard) return null;
+      const order: Guard[] = ['none', 'militia', 'battery', 'fort'];
+      const cost = order.indexOf(g) > order.indexOf(o.guard) ? GUARDS[g].cost : 0;
       if (p.gold < cost) return lackMore(`Needs ${cost} silver`, cost, p.gold);
       p.gold -= cost;
+      if (cost) game.db.ledger(s.accountId, 'outpost_guard', -cost, `${o.id}:${g}`);
       o.guard = g;
       touch(game);
       return null;
@@ -463,6 +469,7 @@ export function outpostOrder(game: Game, s: PlayerSession, id: string, action: s
       const fee = claimCost(REGIONS[isl.region].safety);
       if (p.gold < fee) return lackMore(`Needs ${fee} silver`, fee, p.gold);
       p.gold -= fee;
+      if (fee) game.db.ledger(s.accountId, 'outpost_renew', -fee, o.id);
       o.claimUntil = Math.max(o.claimUntil, game.wallNow()) + CLAIM_DAYS * DAY;
       touch(game);
       game.sendTo(s, { t: 'toast', msg: `The claim on ${isl.name} is renewed for a week.`, kind: 'good' });
@@ -622,9 +629,17 @@ function stepRaid(game: Game, o: Outpost, isl: Island): void {
       touch(game);
       return;
     }
-    const loss = S.rng.range(0.3, 0.6);
+    // Forum 153: the guard stands — the militia saves a quarter of what they would carry off, the battery half.
+    const guard = GUARDS[o.guard];
+    const loss = S.rng.range(0.3, 0.6) * guard.loss;
     for (const g of Object.keys(o.store) as GoodId[]) o.store[g] = Math.floor((o.store[g] ?? 0) * (1 - loss));
-    alert(game, o.owner, `The raiders stripped your ${OUTPOSTS[o.kind].name[0]} on ${isl.name}: ${Math.round(loss * 100)}% of its store is gone.`, `Nobody came in time. The raiders took ${Math.round(loss * 100)}% of the store at ${isl.name}.`);
+    const pct = Math.round(loss * 100);
+    const body = o.guard === 'battery'
+      ? `Nobody came in time. The raiders took ${pct}% of the store at ${isl.name}. Your battery fired on them the whole time and saved half of it.`
+      : o.guard === 'militia'
+        ? `Nobody came in time. The raiders took ${pct}% of the store at ${isl.name}. Your militia fought for the store and saved a quarter of it.`
+        : `Nobody came in time. The raiders took ${pct}% of the store at ${isl.name}. No guard stood there: a militia, a battery or a fort would have saved part of it, or all.`;
+    alert(game, o.owner, `The raiders stripped your ${OUTPOSTS[o.kind].name[0]} on ${isl.name}: ${pct}% of its store is gone.`, body);
     touch(game);
     return;
   }
@@ -678,7 +693,7 @@ export function outpostView(game: Game, o: Outpost, account: number): OutpostVie
   return {
     id: o.id, kind: o.kind, island: o.island, name: isl.name, region: isl.region, x: Math.round(isl.x), y: Math.round(isl.y), level: o.level, good: outpostGood(o.kind, isl.biome),
     rate: Math.round(rate * 10) / 10, store: Math.floor(used), cap, fullIn: used >= cap ? 0 : Math.round(((cap - used) / Math.max(0.01, rate)) * 3600), claimUntil: o.claimUntil,
-    workers: o.workers, residents: res, guard: o.guard, raid: o.raid ? Math.max(0, Math.round((o.raid.until - game.wallNow()) / 1000)) : null, mine: o.owner === account, owner: o.ownerName,
+    workers: o.workers, residents: res, guard: o.guard, renewFee: claimCost(REGIONS[isl.region].safety), raid: o.raid ? Math.max(0, Math.round((o.raid.until - game.wallNow()) / 1000)) : null, mine: o.owner === account, owner: o.ownerName,
     auto: o.auto !== null,
   };
 }

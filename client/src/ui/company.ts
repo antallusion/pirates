@@ -437,12 +437,20 @@ export class CompanyScreen {
       if (a === 'found') return this.send({ t: 'estate', action: 'found', kind: el.dataset.kind as never });
       if (a === 'visit') return this.send({ t: 'estate', action: 'visit', island: Number(el.dataset.isl) });
       if (a === 'base') return this.onBase();
+      if (a === 'op' && el.dataset.order === 'renew' && Number(el.dataset.fee) > 0) return void ask(L('est_renew_confirm', { cost: fmt(Number(el.dataset.fee)) })).then((ok) => ok && this.send({ t: 'estate', action: 'outpost', id: el.dataset.id!, order: 'renew' })); // forum 153
       if (a === 'op') return this.send({ t: 'estate', action: 'outpost', id: el.dataset.id!, order: el.dataset.order as 'haul', arg: el.dataset.arg });
       this.send({ t: 'estate', action: a as 'level' });
     }));
     body.querySelectorAll<HTMLSelectElement>('[data-assign]').forEach((el) => (el.onchange = () => this.send({ t: 'estate', action: 'assign', id: Number(el.dataset.assign), where: el.value })));
     this.bindCaravans(body, state);
-    body.querySelectorAll<HTMLSelectElement>('[data-guard]').forEach((el) => (el.onchange = () => this.send({ t: 'estate', action: 'outpost', id: el.dataset.guard!, order: 'guard', arg: el.value })));
+    // Forum 153: a guard and a renewed claim are asked with their price before they are paid.
+    body.querySelectorAll<HTMLSelectElement>('[data-guard]').forEach((el) => (el.onchange = () => {
+      const was = el.dataset.was ?? 'none', g = el.value as Guard, order: Guard[] = ['none', 'militia', 'battery', 'fort'];
+      const cost = order.indexOf(g) > order.indexOf(was as Guard) ? GUARDS[g].cost : 0;
+      const send = () => this.send({ t: 'estate', action: 'outpost', id: el.dataset.guard!, order: 'guard', arg: g });
+      if (!cost) return send();
+      void ask(L('est_guard_confirm', { name: GUARDS[g].name[lang() === 'ru' ? 1 : 0], cost: fmt(cost) })).then((ok) => (ok ? send() : (el.value = was)));
+    }));
     body.querySelectorAll<HTMLElement>('[data-siege]').forEach((el) => (el.onclick = () => void ask(L('isl_confirm_siege')).then((ok) => ok && this.send({ t: 'isle', action: 'siege', island: Number(el.dataset.siege) }))));
     body.querySelectorAll<HTMLElement>('[data-sgc]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'siege_choice', island: Number(el.dataset.isl), choice: el.dataset.sgc as 'capture' })));
     body.querySelectorAll<HTMLElement>('[data-fortify]').forEach((el) => (el.onclick = () => this.send({ t: 'isle', action: 'fortify', island: Number(el.dataset.fortify) })));
@@ -904,7 +912,7 @@ function estateHtml(state: ClientState): string {
         ${o.raid !== null ? `<div class="bad">${esc(L('est_raid', { m: Math.floor(o.raid / 60), s: String(o.raid % 60).padStart(2, '0') }))}</div>` : ''}</div>
         <div class="row" style="gap:4px;flex-wrap:wrap"><button class="btn btn-small" data-est="op" data-id="${esc(o.id)}" data-order="haul">${esc(L('est_haul'))}</button><button class="btn btn-small" data-est="op" data-id="${esc(o.id)}" data-order="upgrade">${esc(L('est_upgrade'))}</button><button class="btn btn-small" data-est="op" data-id="${esc(o.id)}" data-order="renew">${esc(L('est_renew'))}</button>
         <button class="btn btn-small" data-est="op" data-id="${esc(o.id)}" data-order="workers" data-arg="${o.workers === 'hands' ? 'none' : 'hands'}">${esc(o.workers === 'hands' ? L('est_hands_off') : L('est_hands_on'))}</button>
-        <select data-guard="${esc(o.id)}">${(Object.keys(GUARDS) as Guard[]).map((g) => `<option value="${g}"${o.guard === g ? ' selected' : ''}>${esc(L('est_guard', { name: GUARDS[g].name[ru], cost: fmt(GUARDS[g].cost) }))}</option>`).join('')}</select></div></div>`;
+        <select data-guard="${esc(o.id)}" data-was="${esc(o.guard)}">${(Object.keys(GUARDS) as Guard[]).map((g) => `<option value="${g}"${o.guard === g ? ' selected' : ''}>${esc(L('est_guard', { name: GUARDS[g].name[ru], cost: fmt(GUARDS[g].cost) }))}</option>`).join('')}</select><div class="muted">${esc(L(`est_guard_${o.guard as Guard}`))}</div></div></div>`;
     }).join('');
     const found = e.kinds.map((k: OutpostKind) => `<button class="btn btn-small est-found" data-est="found" data-kind="${k}" title="${esc(L('est_found_title', { name: OUTPOSTS[k].name[ru], goods: goodsText(OUTPOST_BUILD) }))}">${icon(`outpost_${k}`, '', 'ico-sm')}${withGoods('est_found', { name: OUTPOSTS[k].name[ru] }, OUTPOST_BUILD)}</button>`).join('');
     parts.push(`<div class="card est-card"><h4 class="card-h">${icon('build_mine', '', 'ico-md')}${esc(serverText('Outposts'))}</h4>${rows || `<p class="muted">${esc(L('est_no_ops'))}</p>`}${found ? `<p class="muted">${esc(L('est_found_here'))}</p><div class="row" style="gap:4px;flex-wrap:wrap">${found}</div>` : ''}</div>`);

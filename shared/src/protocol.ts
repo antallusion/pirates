@@ -2649,6 +2649,8 @@ export interface OutpostView {
   workers: 'none' | 'hands';
   residents: number;
   guard: string;
+  /** Forum 153: a week's claim renewed costs this (asked before it is paid). */
+  renewFee?: number;
   /** Seconds left before raiders ruin it, while a raid is on. */
   raid: number | null;
   mine: boolean;
