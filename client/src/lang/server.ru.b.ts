@@ -47,7 +47,7 @@ export const SERVER_RU_B: Record<string, string> = {
   "The Leviathan dives and the sea turns! Sail WITH the current or be drawn to its mouth.": "Левиафан ныряет, и море закручивается! Идите ПО течению — или вас затянет в его пасть.",
   "The Leviathan sounds! {0} harpoon lines would have held it.": "Левиафан уходит в глубину! Его удержали бы {0} гарпунных линя.",
   "The Maelstrom Wall tears at your rigging. Turn back.": "Стена Мальстрёма рвёт ваш такелаж. Поворачивайте.",
-  "The Maelstrom Wall throws you back. The Abyss is for captains of level {0} who carry Wren's Last Leaf (Wrecktide) — or who sail with one.": "Стена Мальстрёма отбрасывает вас. Бездна — для капитанов {0}-го уровня с Последним листом Рена (Прилив крушений) — или для тех, кто идёт с таким капитаном.",
+  "The Maelstrom Wall throws you back. The Abyss is for captains of level {0} who carry Wren's Last Leaf (Wrecktide) — or who sail with one.": "Стена Мальстрёма отбрасывает вас. Бездна — для капитанов {0}-го уровня, выполнивших задание «Последний лист» (Тобиас Рен в Рэктайде), или для тех, кто идёт в группе с таким капитаном.",
   "The Maw dies around you — you cut your way out into the night air!": "Пасть умирает вокруг вас — вы прорубаетесь наружу, в ночной воздух!",
   "The Maw retches you out into the night! Its gut is torn.": "Пасть изрыгает вас в ночь! Её брюхо разорвано.",
   "The Maw spits you out as it sinks away.": "Пасть выплёвывает вас, уходя в глубину.",

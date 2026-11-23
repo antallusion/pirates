@@ -12,7 +12,7 @@
 //     back to the port's own level at the port's rate (its production, consumption or a tenth of its mark an hour).
 // Kept lazily on her profile: an entry only for a good she traded in a port, dropped once back at the port's level.
 
-import { GOODS, INF_STOCK, STOCK_FLOOR, isSupply } from '../../../shared/src/data/goods.ts';
+import { GOODS, INF_STOCK, STOCK_FLOOR, isSupply, isTrophyGood } from '../../../shared/src/data/goods.ts';
 import type { GoodId } from '../../../shared/src/data/goods.ts';
 import type { Port } from '../../../shared/src/world/worldgen.ts';
 import { ECON_HOUR } from './economy.ts';
@@ -28,13 +28,19 @@ export const OWN_RESTOCK = 0.1;
 const key = (port: string, good: GoodId) => `${port}|${good}`;
 
 /** How much bigger her stock of a good is than the port's (her units): its normal stock no less than STOCK_FLOOR. */
-export function stockScale(gm: GoodMarket): number {
+export function stockScale(gm: GoodMarket, good?: GoodId): number {
+  if (good && isTrophyGood(good)) return 1; // forum 147: the harbour's true stock
   return Math.max(1, STOCK_FLOOR / Math.max(1, gm.base ?? gm.target));
+}
+
+/** Her floor of a good: STOCK_FLOOR, none for the great beasts' and the deep's (forum 147). */
+function floorOf(good: GoodId): number {
+  return isTrophyGood(good) ? 0 : STOCK_FLOOR;
 }
 
 /** Her stock of a good in a port at world time `now` (her units, before the floor). */
 function ownLevel(p: Profile, portId: string, good: GoodId, gm: GoodMarket, now: number): number {
-  const k = stockScale(gm);
+  const k = stockScale(gm, good);
   const port = gm.stock * k;
   const e = p.ownStock?.[key(portId, good)];
   if (!e) return port;
@@ -48,11 +54,12 @@ export function ownGood(game: Game, p: Profile, port: Port, good: GoodId): GoodM
   const gm = game.markets.get(port.id)?.goods[good];
   if (!gm) return undefined;
   if (isSupply(good)) return { ...gm, stock: gm.base ?? gm.target, flat: true };
-  const k = stockScale(gm);
+  const k = stockScale(gm, good);
+  const floor = floorOf(good);
   return {
-    stock: Math.max(STOCK_FLOOR, ownLevel(p, port.id, good, gm, game.now)),
+    stock: Math.max(floor, ownLevel(p, port.id, good, gm, game.now)),
     target: gm.target * k, prod: gm.prod * k, cons: gm.cons * k,
-    history: gm.history, shock: gm.shock, base: (gm.base ?? gm.target) * k, floor: STOCK_FLOOR,
+    history: gm.history, shock: gm.shock, base: (gm.base ?? gm.target) * k, floor,
     ...(gm.season !== undefined ? { season: gm.season, seasonPrev: gm.seasonPrev } : {}),
   };
 }
@@ -81,10 +88,11 @@ export function ownTrade(game: Game, p: Profile, port: Port, good: GoodId, delta
   const gm = game.markets.get(port.id)?.goods[good];
   if (!gm || isSupply(good) || !delta) return;
   const now = game.now;
-  const level = Math.max(STOCK_FLOOR, Math.max(STOCK_FLOOR, ownLevel(p, port.id, good, gm, now)) + delta);
+  const floor = floorOf(good);
+  const level = Math.max(floor, Math.max(floor, ownLevel(p, port.id, good, gm, now)) + delta);
   const book = (p.ownStock ??= {});
   const k = key(port.id, good);
-  if (Math.abs(level - gm.stock * stockScale(gm)) < 0.5) delete book[k]; // back at the port's own
+  if (Math.abs(level - gm.stock * stockScale(gm, good)) < 0.5) delete book[k]; // back at the port's own
   else book[k] = [Math.round(level * 10) / 10, now];
   gcOwnStock(game, p);
 }
@@ -101,7 +109,7 @@ export function gcOwnStock(game: Game, p: Profile): void {
       delete book[k];
       continue;
     }
-    if (Math.abs(ownLevel(p, portId, good, gm, game.now) - gm.stock * stockScale(gm)) < 0.5) delete book[k];
+    if (Math.abs(ownLevel(p, portId, good, gm, game.now) - gm.stock * stockScale(gm, good)) < 0.5) delete book[k];
   }
   const left = Object.keys(book);
   if (left.length > OWN_STOCK_MAX) for (const k of left.sort((a, b) => book[a][1] - book[b][1]).slice(0, left.length - OWN_STOCK_MAX)) delete book[k];

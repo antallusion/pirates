@@ -4,6 +4,7 @@
 // normal price, flat, and never a round trip that pays; every other good her own stock, never under 100, untouched by
 // another captain's trade; prices from her own stock; kept on her profile across a relog; the advisor reads it all.
 
+import { isTrophyGood } from '../shared/src/data/goods.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { GOODS, INF_STOCK, STOCK_FLOOR, SUPPLY_GOODS, isInfStock, stockText, walkBuyCost } from '../shared/src/data/goods.ts';
@@ -156,14 +157,16 @@ test('the floor: every captain sees at least 100 of every good in every harbour,
     const market = ownMarket(game, p, pt)!;
     for (const r of marketRows(market, mods)) {
       rows++;
-      assert.ok(r.stock >= STOCK_FLOOR, `${pt.id} ${r.good}: ${r.stock}`);
+      // (the great beasts' and the deep's goods keep no floor: a harbour's true stock — forum 147)
+      assert.ok(isTrophyGood(r.good) || r.stock >= STOCK_FLOOR, `${pt.id} ${r.good}: ${r.stock}`);
       const gm = market.goods[r.good]!;
       if (gm.flat) continue;
       // the row's price is the first unit's quote, and the client's walk reads the quote (never under; over by the row's rounding up, walked)
       assert.ok(Math.abs(quoteBuy(r.good, gm, 1, mods) - r.buy) <= 1, `${pt.id} ${r.good}: row ${r.buy}`);
-      for (const n of [5, 40, 100]) {
+      for (const n of [5, 40, 100].filter((x) => !isTrophyGood(r.good) || x <= r.stock / 2)) {
         const real = quoteBuy(r.good, gm, n, mods), shown = walkBuyCost(r.good, r.buy, r.stock, n);
-        assert.ok(shown >= real - 1 && shown <= real + n * 1.2 + 1, `${pt.id} ${r.good} ×${n}: shown ${shown}, charged ${real}`);
+        // (a trophy good's thin stock: the walk shown never under what is charged, over by no more than 3 %)
+        assert.ok(shown >= real - 1 && shown <= (isTrophyGood(r.good) ? real * 1.03 + 2 : real + n * 1.2 + 1), `${pt.id} ${r.good} ×${n}: shown ${shown}, charged ${real}`);
       }
       // at her normal stock the price is the port's own
       const world = game.markets.get(pt.id)!.goods[r.good]!;

@@ -114,6 +114,14 @@ export function isSupply(good: GoodId): boolean {
 /** A captain's own stock of any other good in a harbour never stands below this: bought below it, it is topped up at
  *  once (server/src/game/ownstock.ts). */
 export const STOCK_FLOOR = 100;
+
+/** Forum 147 (2026-11-23): the great beasts' and the deep's goods — the bone of the leviathan bought by the hundred at
+ *  Harpoon's Rest built a legendary ship without a hunt, and the Admiralty's warrants ask them. They keep no floor of
+ *  STOCK_FLOOR and are not magnified: a captain buys a harbour's true stock of them, restocked at its own pace. */
+export function isTrophyGood(good: GoodId): boolean {
+  const c = GOODS[good]?.category;
+  return c === 'rare' || c === 'mystic' || good === 'narwhal_tusk' || good === 'ambergris';
+}
 /** The stock a market row shows for a store without end (the client draws «∞»; any number she asks is under it). */
 export const INF_STOCK = 999_999;
 export function isInfStock(stock: number): boolean {
@@ -147,7 +155,7 @@ export function walkBuyCost(good: GoodId, buy: number, stock: number, n: number)
   if (isInfStock(stock)) return Math.ceil(buy * n);
   // (the price's own ceiling: 3.2 times the good's base, with the buying spread)
   const cap = Math.max(buy, GOODS[good].basePrice * 3.2 * 1.055);
-  const floor = stock >= STOCK_FLOOR ? STOCK_FLOOR : 1; // (a row from before the floor walks to the last unit)
+  const floor = !isTrophyGood(good) && stock >= STOCK_FLOOR ? STOCK_FLOOR : 1; // (a row from before the floor, and a trophy good — forum 147 — walk to the last unit)
   let total = 0;
   for (let i = 0; i < n; i++) total += Math.min(cap, buy * Math.pow(Math.max(1, stock) / Math.max(floor, stock - i), MARKET_ELASTICITY));
   return Math.ceil(total);

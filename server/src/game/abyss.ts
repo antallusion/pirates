@@ -102,11 +102,27 @@ export function abyssSecond(game: Game, s: PlayerSession): void {
   }
   // The Maelstrom Wall throws back those who have no leave to pass.
   if (!abyssCleared(game, s)) {
-    const [cx, cy] = REGIONS.the_abyss.center;
-    const dx = ship.state.x - cx, dy = ship.state.y - cy, d = Math.hypot(dx, dy) || 1;
-    ship.state.x += (dx / d) * 350;
-    ship.state.y += (dy / d) * 350;
-    ship.state.heading = Math.atan2(dx, -dy);
+    // Forum 147 (2026-11-23): thrown straight back the way she came, just past the Wall, and turned about — the push
+    // away from the Abyss's centre ran along the Wall at its corner, left her inside, and threw her again and again,
+    // kilometres in all, 3% of her hull each time.
+    const h = ship.state.heading;
+    const bx = -Math.sin(h), by = Math.cos(h);
+    let out = false;
+    for (let k = 1; k <= 60 && !out; k++) {
+      const x = ship.state.x + bx * 50 * k, y = ship.state.y + by * 50 * k;
+      if (regionAt(game.world, x, y) === 'the_abyss' || isLand(game.world, x, y)) continue;
+      ship.state.x = x + bx * 150;
+      ship.state.y = y + by * 150;
+      ship.state.heading = h + Math.PI;
+      out = true;
+    }
+    if (!out) {
+      const [cx, cy] = REGIONS.the_abyss.center;
+      const dx = ship.state.x - cx, dy = ship.state.y - cy, d = Math.hypot(dx, dy) || 1;
+      ship.state.x += (dx / d) * 350;
+      ship.state.y += (dy / d) * 350;
+      ship.state.heading = Math.atan2(dx, -dy);
+    }
     ship.state.speed *= 0.3;
     ship.hull -= ship.stats.hullMax * 0.03;
     if (ship.hull <= 0) {
@@ -115,7 +131,7 @@ export function abyssSecond(game: Game, s: PlayerSession): void {
     }
     game.grid.upsert(ship.id, ship.state.x, ship.state.y);
     if ((ship.talentReady.wallMsg ?? 0) <= now) {
-      ship.talentReady.wallMsg = now + 20;
+      ship.talentReady.wallMsg = now + 5;
       game.toastShip(ship, `The Maelstrom Wall throws you back. The Abyss is for captains of level ${ABYSS_LEVEL} who carry Wren's Last Leaf (Wrecktide) — or who sail with one.`, 'bad');
     }
     return;
