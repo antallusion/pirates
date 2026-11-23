@@ -1497,4 +1497,15 @@ export const SERVER_RU_B: Record<string, string> = {
   "Your locker was full": "Ваш рундук был полон",
   "The harbour office": "Портовая контора",
   "What you found at sea while your locker was full is kept here. Make room in the locker and take it in any port.": "Всё, что вы нашли в море, пока рундук был полон, хранится здесь. Освободите место в рундуке и заберите в любом порту.",
+  // The Admiralty's warrants for ⚓9 and ⚓10 (owner, 2026-11-23; server/src/game/warrant.ts).
+  "Warrant of the First Rate": "Грамота первого ранга",
+  "Admiral’s Warrant": "Адмиральская грамота",
+  "A ship of level {0} is commanded only under the {1}: the Admiralty office at a great shipyard": "Для корабля {0}-го уровня нужна «{1}»: её выдаёт Адмиралтейство на верфи большого порта",
+  "The Admiralty keeps its offices at the great shipyards only": "Адмиралтейство принимает только на верфях больших портов",
+  "You hold every warrant there is": "У вас уже есть все грамоты",
+  "You bring nothing the warrant still asks": "У вас нет ничего из того, что ещё нужно для грамоты",
+  "The Admiralty takes {0} toward the {1}.": "Адмиралтейство принимает в счёт «{1}»: {0}.",
+  "{0} hearts of the storm": "сердца бури — {0}",
+  "The Admiralty seals your {0}: ships of level {1} are yours to command.": "Адмиралтейство скрепило печатью: «{0}» ваша, теперь вам подвластны корабли {1}-го уровня.",
+  "{0} is granted the {1} by the Admiralty.": "Адмиралтейство пожаловало капитану {0}: «{1}».",
 };

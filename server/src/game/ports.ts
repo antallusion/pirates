@@ -1,6 +1,8 @@
 // Port services: market, chandlery (ammo), tavern (crew, rumours), shipyard, contracts board,
 // harbour master (pardons, insurance). Every action is validated against the docked port.
 
+import { warrantView, warrantWhyFor } from './warrant.ts';
+import { yardLegend } from './legendary.ts'; // forum 143
 import { escortMends, escortRepairCost, repairEscorts } from './fleet.ts';
 import { ferryView } from './ferry.ts';
 import { fogReveal } from './fog.ts'; // forum post 68: a bought chart's yards out of the fog
@@ -284,6 +286,10 @@ export function buildPortView(game: Game, s: PlayerSession, port: Port): PortVie
     }
     view.priceIntel = intel.sort((a, b) => b.sell - a.sell).slice(0, 40);
   }
+  const legend = yardLegend(game, s, port);
+  if (legend) view.legend = legend;
+  const warrant = warrantView(s, port);
+  if (warrant) view.warrant = warrant;
   return view;
 }
 
@@ -631,6 +637,8 @@ export function shipyardBuy(game: Game, s: PlayerSession, port: Port, classId: S
   // Canon D12: a hull comes at her class's first level, and the captain must be up to it.
   const needLv = captainLevelFor(levelRange(classId)[0]);
   if (s.profile!.level < needLv) return `Captain level ${needLv} is needed to command a ${def.name}`;
+  const warrant = warrantWhyFor(s.profile!, classId); // owner, 2026-11-23: ⚓9–10 under the Admiralty's warrant
+  if (warrant) return warrant;
   if (ship.loadout.legendary) return 'Berth your legendary ship before you buy another hull';
   const p = s.profile!;
   // A hull bought for doubloons is never traded in for silver (docs/02 §1.A.9): she goes to a berth at this quay, her

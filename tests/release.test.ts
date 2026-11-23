@@ -121,7 +121,9 @@ test('a tab older than the server is told to reload and its socket shut with 400
   assert.equal(code, 4002);
   // The client reloads on it (once a minute at most), and «Продолжить» opens no second socket.
   const net = src('client/src/net.ts');
-  assert.ok(net.includes('if (ev.code === 4002) {') && net.includes('location.reload();'));
+  assert.ok(net.includes('if (ev.code === 4002) return reloadOnce();') && net.includes('location.reload();'));
+  // …and after any reconnect a bundle no longer its own reloads it too (forum 142: the protocol's number had not moved)
+  assert.ok(net.includes("fetch('/play/build'") && net.includes('if (r.build && r.build !== own.build) reloadOnce();'));
   assert.ok(src('client/src/main.ts').includes('if (!net.live) net.connect();'));
 });
 

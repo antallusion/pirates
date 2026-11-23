@@ -3,6 +3,7 @@
 // be up to the ship's. The work goes on by the wall clock, so a refit ordered before a night's sleep is done by
 // morning.
 
+import { warrantWhy } from './warrant.ts';
 import { ownStockOf } from './ownstock.ts';
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
 import { GOODS } from '../../../shared/src/data/goods.ts';
@@ -97,6 +98,8 @@ function refitBlocked(game: Game, s: PlayerSession, port: Port): string | null {
   if (l.guild) return 'A guild hull on loan is not yours to rebuild';
   const need = captainLevelFor(level + 1);
   if (p.level < need) return `Captain level ${need} is needed to command her at level ${level + 1}`;
+  const warrant = warrantWhy(p, level + 1); // owner, 2026-11-23
+  if (warrant) return warrant;
   const cost = refitCostFor(p, level + 1)!;
   if (p.gold < cost.silver) return lackMore(`Needs ${cost.silver} silver`, cost.silver, p.gold);
   for (const g of cost.goods) if (have(s, port, g.good) < g.qty) return `Needs ${g.qty} ${GOODS[g.good].name.toLowerCase()} (in the hold or your warehouse here)`;

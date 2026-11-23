@@ -3,6 +3,7 @@
 // Snapshot entity rows are positional arrays to keep packets small; see docs/04_TECHNICAL_ARCHITECTURE.md
 // for the planned binary encoding.
 
+import type { WarrantView } from './data/warrant.ts';
 import type { AwayCrewOut } from './data/crewaway.ts';
 import type { OutcomeNums } from './data/outcome.ts';
 import type { ArmyAdvice } from './data/armyadvice.ts';
@@ -344,6 +345,7 @@ export type ClientMsg =
   | { t: 'away'; action: 'take' | 'close' }
   | { t: 'empire'; action: 'view' | 'charter' | 'convoy' | 'cancel' | 'bid'; from?: string; to?: string; good?: string; qty?: number; every?: number; escorts?: number; id?: number; amount?: number; lot?: number }
   | { t: 'legendary'; action: 'deliver'; id: string }
+  | { t: 'warrant' }
   | { t: 'season'; action: 'title' | 'pennant' | 'name'; value?: string; islandId?: number }
   | { t: 'map'; action: 'forge' | 'appraise' | 'seal' | 'give' | 'burn'; id?: string; to?: string }
   | { t: 'licence' }
@@ -1184,6 +1186,11 @@ export interface PortView {
   /** The goods her quests ask her to bring and she has not aboard (owner, 2026-10-21: «квест на покупку рома»): sold here
    *  or not, the stock, how many fit her hold now, and the nearest harbours that sell it — the market's card for it. */
   questBuys?: { quest: string; name: string; good: GoodId; qty: number; soldHere: boolean; stock: number; fit: number; sellers: BuySeller[] }[];
+  /** Forum 143: the legendary ship this harbour's yard builds, while the sea brings what she needs — shown at the
+   *  shipyard with its «deliver» (it was only in the Legends window, and found by no one at the yard itself). */
+  legend?: LegendaryView;
+  /** Owner, 2026-11-23: the Admiralty's warrant she works toward (⚓9, then ⚓10) — warrant.ts. */
+  warrant?: WarrantView;
 }
 
 /** A ship with her that the port's yard would mend (forum 2026-10-30): her name, her hull now (per cent), the price; `away`

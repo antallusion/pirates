@@ -286,6 +286,14 @@ export function createStaticHandler(root: string, opts: { dist?: string; forumPa
     // The website stands at the root of the public domain (owner, 2026-10-18: «да, переноси»); the game is at /play.
     // The Telegram host, a local server and a root with a query (/?battle, /?boss=…) keep the game at the root.
     const host = (req.headers.host ?? '').split(':')[0].toLowerCase();
+    // Forum 142 (2026-11-23): a tab kept open across a deploy reconnected to the new server with the old client (a new
+    // letter shown untranslated, its gear unseen) — the protocol's number had not moved. The tab asks this after every
+    // reconnect and reloads when the bundle is no longer its own (net.ts).
+    if (path === '/play/build') {
+      const b = await currentBundle();
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }).end(JSON.stringify({ build: b?.build ?? null }));
+      return true;
+    }
     if (path === '/play' || path === '/play/') path = '/index.html';
     else if (path === '/') path = SITE_HOSTS.has(host) && !url.search ? '/site/index.html' : '/index.html';
     // The website's short addresses: /site, /forum and /wiki lead into it; its folders answer with their index.html.

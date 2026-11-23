@@ -78,7 +78,7 @@ export interface WebOrder {
  *  limit reached for now, at its cap, not on sale, out of its season, her level not there yet (a level's gift, a hull),
  *  no island for it, her ship's level too low, no slot or hammocks, the hold full, three ships berthed, the very class
  *  she sails, the first brigade first, nothing for it to do. */
-export type Unavailable = 'owned' | 'claimed' | 'limit' | 'max' | 'gone' | 'season' | 'level' | 'island' | 'tier' | 'slot' | 'room' | 'hold' | 'berths' | 'yours' | 'order' | 'none' | 'deep';
+export type Unavailable = 'owned' | 'claimed' | 'limit' | 'max' | 'gone' | 'season' | 'level' | 'island' | 'tier' | 'slot' | 'room' | 'hold' | 'berths' | 'yours' | 'order' | 'none' | 'deep' | 'warrant';
 
 export type OrderError = 'bad_name' | 'not_found' | 'bad_item' | Unavailable | 'email' | 'test_only' | 'rate' | 'provider';
 

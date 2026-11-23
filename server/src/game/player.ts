@@ -1,5 +1,7 @@
 // Player session and persistent captain profile, plus progression, reputation and wanted rules.
 
+import type { WarrantState } from '../../../shared/src/data/warrant.ts';
+import { warrantXp } from './warrant.ts';
 import type { NavLog } from './charting.ts';
 import { holdView } from '../../../shared/src/data/overload.ts';
 import { SnapState } from '../../../shared/src/codec.ts';
@@ -301,6 +303,8 @@ export interface Profile {
   nemesisHeads?: number;
   /** Hearts of the storm caught and not yet forged or built into a keel (docs/12 P10 #14). */
   stormHearts?: number;
+  /** The Admiralty's warrants for ⚓9 and ⚓10 (owner, 2026-11-23; warrant.ts). */
+  warrant?: WarrantState;
   /** A letter of marque: the service, merit, rank, pay and order (docs/12 P10 #15); no service before this time. */
   service?: ServiceRec | null;
   serviceBan?: number;
@@ -561,6 +565,7 @@ export function talentPointsAvailable(p: Profile): number {
 /** Adds XP, handles level-ups. Returns number of levels gained. */
 export function addXp(p: Profile, amount: number): number {
   hullXp(p, amount); // the hull she sails learns what the captain does (docs/20)
+  warrantXp(p, amount); // in command of ⚓8 (⚓9), toward the warrant above (owner, 2026-11-23)
   // docs/19 E1: past the Throne's level (60) experience is glory — and, since the cap went to 80 (owner 2026-11-23),
   // it still counts on toward the next level as well: the Throne's ranks keep their pace, the levels are the long road.
   if (p.level >= THRONE_LEVEL) addGlory(p, amount);

@@ -4,6 +4,7 @@
 // for, in one tap: «Продать всё», «Припасы», «Починить», the upgrade «было → стало», the hire slider, the three best
 // quests; the full lists stay below for those who trade by hand.
 
+import { WARRANT_XP_HOUR } from '../../../shared/src/data/warrant.ts';
 import { detailAttr } from './detailattr.ts'; // the detail card (owner, 2026-10-30)
 import { EN as ISLES_EN, RU as ISLES_RU } from '../lang/ui/isles.ts';
 import { priceClockHtml } from './portcard.ts'; // the price period's countdown (owner, 2026-10-30)
@@ -485,6 +486,11 @@ export class PortScreen {
         return;
       case 'dregs':
         return this.send({ t: 'hire_crew', qty: 10, prof: 'sailor', dregs: true });
+      case 'warrant':
+        void ask(L('warrant.confirm', { n: fmt(Number(d.n ?? 0)) })).then((ok) => ok && this.send({ t: 'warrant' }));
+        return;
+      case 'leg_deliver':
+        return this.send({ t: 'legendary', action: 'deliver', id: d.id! });
       case 'officer_hire':
         return this.send({ t: 'officer', action: 'hire', id: d.id! });
       case 'repair':
@@ -745,7 +751,19 @@ export class PortScreen {
     // The refit up a level on top when her captain may take it (docs/30: at 5 the ⚓1 sloop's waters teach nothing — her
     // next ⚓ is the way on, and it lay folded under «Пушки и оснастка» below a sidegrade to another ⚓1 hull).
     const refitTop = !!sy.refit.busy || (!!sy.refit.next && self.level >= sy.refit.next.captain);
-    return `${repair}${refitTop ? refitCard(sy.refit, self.loadout.name) : ''}${this.upgradeCard(view, state)}
+    // Forum 143: the legendary ship this yard builds — what she needs and the «hand in» (only in the Legends window before).
+    const lg = view.legend;
+    const legend = lg ? `<div class="card"><h4 class="card-h">${icon('tab_legends', '', 'ico-md')}${esc(L('legyard.title', { name: serverText(lg.name) }))}</h4><p class="muted">${esc(L('legyard.text'))}</p>
+      <p>${esc(L('legyard.need', { need: lg.need.map((n) => `${serverText(n.good)} ${n.have}/${n.need}`).join(' · ') }))}${lg.mine ? `<br>${esc(L('legyard.yours', { n: fmt(lg.mine) }))}` : ''}</p>
+      <button class="btn btn-small btn-primary" data-act="leg_deliver" data-id="${esc(lg.id)}">${esc(L('legyard.deliver'))}</button></div>` : '';
+    // Owner, 2026-11-23: the Admiralty's warrant for ⚓9 / ⚓10 — what it asks and what is in.
+    const wr = view.warrant;
+    const warrant = wr ? `<div class="card"><h4 class="card-h">${icon('tab_board', '', 'ico-md')}${esc(L('warrant.title', { name: serverText(wr.name), rate: wr.rate }))}</h4><p class="muted">${esc(L('warrant.text', { rate: wr.rate, below: wr.rate - 1 }))}</p>
+      <p>${esc(wr.xp >= wr.xpNeed ? L('warrant.xpDone', { below: wr.rate - 1 }) : L('warrant.xp', { below: wr.rate - 1, xp: fmt(wr.xp), need: fmt(wr.xpNeed), h: fmt(Math.ceil((wr.xpNeed - wr.xp) / WARRANT_XP_HOUR)) }))}<br>
+      ${esc(L('warrant.silver', { paid: fmt(wr.silver), need: fmt(wr.silverNeed) }))}<br>${esc(L('warrant.hearts', { paid: wr.hearts, need: wr.heartsNeed, have: wr.heartsHave }))}</p>
+      <p class="muted" style="margin-bottom:2px">${esc(L('warrant.goods'))}</p><p>${wr.goods.map((g) => `<span style="white-space:nowrap">${icon(`good_${g.good}`, '', 'ico-sm')}${esc(GOODS[g.good].name)} ${fmt(g.paid)}/${fmt(g.need)}${g.have && g.paid < g.need ? ` <span class="muted">(+${fmt(Math.min(g.have, g.need - g.paid))})</span>` : ''}</span>`).join(' · ')}</p>
+      ${wr.here ? `<button class="btn btn-small btn-primary" data-act="warrant" data-n="${wr.silverNeed - wr.silver}">${esc(L('warrant.handIn'))}</button>` : `<p class="muted">${esc(L('warrant.elsewhere'))}</p>`}</div>` : '';
+    return `${repair}${legend}${refitTop ? refitCard(sy.refit, self.loadout.name) : ''}${this.upgradeCard(view, state)}${warrant}
       ${more(W('yd.moreGuns'), `${refitTop ? '' : refitCard(sy.refit, self.loadout.name)}${keel}${guns}${mounts}${modules}`, 'yd-guns')}
       ${more(W('yd.moreShips'), `<div class="hulls-head"><p class="muted" style="margin:0 0 8px">${esc(L('hulls.note'))}</p><button class="btn btn-small" data-research-open title="${esc(RL('openTip'))}">${icon('tab_board', '', 'ico-sm')}${esc(RL('open'))}</button></div><div class="hull-list">${ships}</div><p class="muted">${esc(L('yard.note', { tier: sy.tier }))}</p>`, 'yd-ships')}
       ${more(W('yd.moreBuild'), this.buildCard(view, state), 'yd-build')}`;

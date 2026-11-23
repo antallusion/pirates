@@ -145,6 +145,7 @@ test('a ship’s tenth level wants a heart of the storm in her keel', () => {
   p.loadout.classId = 'man_o_war';
   p.loadout.level = 9;
   p.level = 60;
+  p.warrant = { has: 10, xp: {}, paid: {}, seen: 1 }; // (the Admiral's warrant is tests/warrant.test.ts's)
   p.gold = 500_000;
   s.ship!.docked = yard.id;
   p.docked = yard.id;

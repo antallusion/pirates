@@ -3,6 +3,8 @@
 // yard; the old ship is berthed there and can be taken out again. Plus the living materials at sea
 // (cursed wood, drowned silk) and what the figureheads do.
 
+import { warrantWhy, warrantWhyFor } from './warrant.ts';
+import { shipLevelOf } from '../../../shared/src/data/shiplevel.ts';
 import { careerYardBonus } from './renown.ts';
 import type { FactionId } from '../../../shared/src/data/factions.ts';
 import { lackMore } from '../../../shared/src/data/buyfail.ts';
@@ -199,6 +201,8 @@ export function launchBuild(game: Game, s: PlayerSession, port: Port, orderId: s
   if (!o) return 'No such order';
   if (o.port !== port.id) return `She is being built at ${game.portById(o.port)?.name ?? o.port}`;
   if (o.done > game.now) return `Not finished yet (${Math.ceil((o.done - game.now) / 60)} min)`;
+  const warrant = warrantWhyFor(p, o.classId); // owner, 2026-11-23
+  if (warrant) return warrant;
   if (berthsFull(p)) return berthsFullWhy(p);
   const old: Berth = { port: port.id, loadout: ship.loadout, hull: ship.hull / ship.stats.hullMax };
   p.berths.push(old);
@@ -285,6 +289,8 @@ function swapWhy(game: Game, s: PlayerSession, port: Port, index: number, force:
   const refitting = refitHolds(game, p);
   if (refitting) return refitting; // the yard has her on the ways
   if (ship.loadout.legendary && b.loadout.legendary) return 'Cannot do that now';
+  const warrant = warrantWhy(p, shipLevelOf(b.loadout)); // owner, 2026-11-23: a ⚓9–10 berth under the warrant only
+  if (warrant) return warrant;
   const fit = berthFit(s, b.loadout);
   if (fit.holdOver > 0) return `Her hold takes ${fit.hold}: sell or store ${fit.holdOver} more in the warehouse first`;
   if (fit.menOver > 0 && !force) return `${fit.menOver} ${BERTH_MEN_ASK}`;

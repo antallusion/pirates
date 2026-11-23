@@ -305,3 +305,8 @@ export function legendaryViews(game: Game, s: PlayerSession): LegendaryView[] {
     };
   });
 }
+
+/** Forum 143: the commission of this harbour's yard, for the port's shipyard tab (none: no keel laid here, or built). */
+export function yardLegend(game: Game, s: PlayerSession, port: Port): LegendaryView | undefined {
+  return legendaryViews(game, s).find((v) => v.status === 'commission' && LEGENDARY[v.id as LegendaryId].port === port.id);
+}

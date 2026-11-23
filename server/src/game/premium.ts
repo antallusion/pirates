@@ -5,6 +5,7 @@
 // in port and the ship she sailed is berthed there, as a hull built to order is; creatures join the army as a tamer's
 // do (a slot, the hammocks). The pay, the goods and her save go in one transaction.
 
+import { warrantWhyFor } from './warrant.ts';
 import { lackDoubloons, lackSlot } from '../../../shared/src/data/buyfail.ts';
 import { UNITS, armyMen, armyTidy, isPremiumUnit, stackKey } from '../../../shared/src/data/army.ts';
 import { isShipBeast } from '../../../shared/src/data/shipbeasts.ts';
@@ -209,6 +210,7 @@ export function shipWhy(game: Game, s: PlayerSession, c: ShipClassId, price: num
   if (ship.loadout.classId === c) return 'yours';
   if (refitHolds(game, p)) return 'refit';
   if (p.level < captainLevelFor(levelRange(c)[0])) return 'level';
+  if (warrantWhyFor(p, c)) return 'warrant';
   if (berthsFull(p)) return 'berths';
   return balance < price ? 'poor' : null;
 }
@@ -235,6 +237,7 @@ function whyText(game: Game, s: PlayerSession, why: PremiumWhy, c?: ShipClassId,
     case 'yours': return 'You already sail one';
     case 'refit': return refitHolds(game, s.profile!) ?? 'The yard has her on the ways.';
     case 'level': return `Captain level ${captainLevelFor(levelRange(c!)[0])} is needed to command a ${SHIP_CLASSES[c!].name}`;
+    case 'warrant': return warrantWhyFor(s.profile!, c!) ?? 'Cannot do that now';
     case 'berths': return berthsFullWhy(s.profile!);
     case 'slot': return s.ship ? lackSlot(s.ship.army.length, s.ship.armySlots) : 'No free slot in the army for a new kind of man.';
     case 'room': return `No hammocks aboard for ${n} more: ${Math.max(0, Math.floor((s.ship?.stats.crewMax ?? 0) - (s.ship?.crew ?? 0)))} free.`;

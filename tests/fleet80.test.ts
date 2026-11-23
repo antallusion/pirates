@@ -381,6 +381,7 @@ test('a premium purchase delivers the hull and her own creatures — hands with 
   for (const [i, c] of SOLD.entries()) {
     const x = captain(`Buyer ${i + 1}`, game); // one sea, forty captains
     x.ship.setArmy([{ u: 'deckhand', n: 8 }]);
+    x.s.profile!.warrant = { has: 10, xp: {}, paid: {}, seen: 1 }; // (the ⚓9 hulls' warrants: tests/warrant.test.ts)
     assert.ok(x.s.profile!.level >= captainLevelFor(levelRange(c)[0]));
     x.conn.push({ t: 'premium', action: 'buy_ship', id: c });
     assert.equal(x.ship.loadout.classId, c, `${c} delivered`);

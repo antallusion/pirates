@@ -76,6 +76,7 @@ test('a career rises from standing and deeds: titles, a price off in the flag’
   const { s } = captain(game, 'Rose Carrow');
   const p = s.profile!;
   knowHulls(p); // the yard's next class is tried, not the tree of hulls (docs/20)
+  p.warrant = { has: 10, xp: {}, paid: {}, seen: 1 }; // (the Admiralty's warrants are another test's: tests/warrant.test.ts)
   // Pirates sunk count for the Crown (and a little for the League).
   for (let i = 0; i < 10; i++) renownKill(game, s, victim('confederacy', 'pirate'), 'sunk');
   assert.equal(rn(p).deeds.crown, 120);

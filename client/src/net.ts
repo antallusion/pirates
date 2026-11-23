@@ -6,11 +6,22 @@ import type { ClientMsg, ServerMsg } from '../../shared/src/protocol.ts';
 
 const TOKEN_KEY = 'gravetide.token';
 
+/** Out of date: the new client is a reload away. Once a minute at most, so a server and a client that disagree for
+ *  some other reason do not reload each other for ever (docs/23 item 96). */
+function reloadOnce(): void {
+  let last = 0;
+  try { last = Number(sessionStorage.getItem('gravetide.reloadAt') ?? 0); } catch { /* no storage */ }
+  if (Date.now() - last <= 60_000) return;
+  try { sessionStorage.setItem('gravetide.reloadAt', String(Date.now())); } catch { /* no storage */ }
+  location.reload();
+}
+
 export class Net {
   private ws: WebSocket | null = null;
   private handlers: ((m: ServerMsg) => void)[] = [];
   private pendingName: string | null = null;
   private retry = 0;
+  private wasOpen = false;
   onStatus: (connected: boolean) => void = () => {};
   /** She left the sea by «Выход» (forum 45, the server's close 4003): no reconnecting — the «Вы вышли» screen. */
   onLeft: () => void = () => {};
@@ -54,6 +65,8 @@ export class Net {
       clearTimeout(stuck);
       this.retry = 0;
       this.onStatus(true);
+      if (this.wasOpen) void this.checkBuild();
+      this.wasOpen = true;
       const token = this.token;
       this.send({ t: 'hello', v: PROTOCOL_VERSION, token: token ?? undefined, name: this.pendingName ?? undefined });
     };
@@ -93,18 +106,21 @@ export class Net {
       if (ev.code === 4000) return; // replaced by another login
       // Out of date (a tab kept open across a deploy, docs/23 item 96): the new client is a reload away. Once a minute
       // at most, so a server and a client that disagree for some other reason do not reload each other for ever.
-      if (ev.code === 4002) {
-        let last = 0;
-        try { last = Number(sessionStorage.getItem('gravetide.reloadAt') ?? 0); } catch { /* no storage */ }
-        if (Date.now() - last > 60_000) {
-          try { sessionStorage.setItem('gravetide.reloadAt', String(Date.now())); } catch { /* no storage */ }
-          location.reload();
-        }
-        return;
-      }
+      if (ev.code === 4002) return reloadOnce();
       const delay = Math.min(8000, 500 * 2 ** this.retry++);
       setTimeout(() => this.connect(), delay);
     };
+  }
+
+  /** Forum 142: after a reconnect (a deploy restarts the server) the bundle asked of the server; another than this
+   *  tab's own — the page reloaded, once a minute at most (the protocol's number does not move with every change). */
+  private async checkBuild(): Promise<void> {
+    const own = (window as { __boot?: { cfg?: { mode?: string; build?: string } } }).__boot?.cfg;
+    if (own?.mode !== 'bundle' || !own.build) return;
+    try {
+      const r = (await (await fetch('/play/build', { cache: 'no-store' })).json()) as { build?: string | null };
+      if (r.build && r.build !== own.build) reloadOnce();
+    } catch { /* offline again: the next reconnect asks */ }
   }
 
   send(m: ClientMsg): void {
