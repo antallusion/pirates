@@ -130,7 +130,7 @@ export function salvageItem(game: Game, s: PlayerSession, port: Port, uid: numbe
 }
 
 /** A piece by its number: in the locker or worn. */
-function findPiece(p: Profile, uid: number): Item | undefined {
+export function findPiece(p: Profile, uid: number): Item | undefined {
   return p.stash.find((x) => x.uid === uid) ?? wornItems(p).find((x) => x.uid === uid);
 }
 

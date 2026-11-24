@@ -101,6 +101,8 @@ import { addGlory, gloryView } from './throne.ts';
 import { gloryXp } from '../../../shared/src/data/throne.ts';
 import type { ThroneRec } from './throne.ts';
 import type { RelicRec } from './relics.ts'; // docs/19 E12
+import { sanitizeBlight } from './blight.ts'; // docs/40
+import type { BlightSave } from './blight.ts';
 import type { InvasionView } from '../../../shared/src/data/invasions.ts'; // docs/19 E16
 import type { SealRec, SealView } from '../../../shared/src/data/seals.ts';
 import type { RaidView } from '../../../shared/src/data/abyssraid.ts';
@@ -379,6 +381,9 @@ export interface Profile {
   seal?: SealRec;
   /** docs/19 E12: her relics — assembled now, ever assembled, the parts the drops gave her (relics.ts). */
   relics?: RelicRec;
+  /** docs/40: the Blighted Sea — her banked marks, her run, the chapter «Зелёный огонь» (blight.ts; absent until the
+   *  sea counts her its own). */
+  blight?: BlightSave;
   /** docs/19 E10: the titans she hired at the Grail this week (titans.ts). */
   titans?: { week: number; n: number };
   /** docs/19 D1–D5: her day's finds at their full worth by source, and her seconds at sea that day (seahaul.ts). */
@@ -660,6 +665,8 @@ export interface WorldView {
   monsters?: PrivateState['monsters'];
   explore?: Pick<PrivateState, 'maps' | 'legendEcho' | 'wrecks' | 'trails' | 'soundings' | 'forecast' | 'goldTrails'>;
   abyss?: PrivateState['abyss'];
+  /** docs/40: the Blighted Sea (blight.ts blightView). */
+  blight?: PrivateState['blight'];
   pvp?: PrivateState['pvp'];
   /** Where each active quest's current step points (a port, an island, a region's middle). */
   questTargets?: Record<string, QuestTarget>;
@@ -719,6 +726,7 @@ export function toPrivateState(s: PlayerSession, now: number, world: WorldView =
     claimIsle: world.claimIsle ?? null,
     pennant: p.pennant,
     abyss: world.abyss ?? null,
+    ...(world.blight ? { blight: world.blight } : {}), // docs/40 (absent: the green water has not taken her)
     fragments: p.explore.fragments,
     wrecks: world.explore?.wrecks ?? [],
     trails: world.explore?.trails ?? [],
@@ -945,6 +953,7 @@ export function sanitizeProfile(raw: Profile): Profile {
   for (const a of AMMO_IDS) p.ammo[a] = Math.max(0, Math.floor(p.ammo[a] ?? 0));
   p.gold = Math.max(0, p.gold ?? 0);
   p.gunsDisabled ??= { port: 0, starboard: 0 };
+  sanitizeBlight(p); // docs/40: a record of the green water made sound (none: none made)
   heroOf(p); // docs/17 H2: a captain from before the heroes grown from her level
   return p;
 }

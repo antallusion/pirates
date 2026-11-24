@@ -243,6 +243,7 @@ import { stepCastaways } from './castaways.ts'; // seaux: castaways
 import { gyardCancel, gyardGive, gyardStart } from './guildyard.ts';
 import { applyIslandNames, applyPantheon, seasonAction, seasonMods, seasonStat, seasonXp, stepSeasons, warKill } from './seasons.ts';
 import { abyssMap, abyssSecond, abyssView, abyssWind, onAbyssKill, raisingRitual, recordEcho, stepAbyssSea } from './abyss.ts';
+import { blightKill, blightMessage, blightNoBubble, blightSecond, blightSinking, blightView, blightWater, stepBlight } from './blight.ts'; // docs/40: the Blighted Sea
 import type { AbyssMap } from './abyss.ts';
 import { digNoise, legendEcho, mapAction, mapView, onGhostSunk, stealMaps } from './treasure.ts';
 import { ExpeditionHub, cityHere, cityPrompt, diveMove, diveSurface, expeditionsSecond, onYardCaptainSunk, sendSites, startDive, stepExpeditions } from './expeditions.ts';
@@ -1194,6 +1195,7 @@ export class Game {
     stepCompanions(this); // the orca calves in their captains' wakes (docs/12 P10 #2)
     stepPets(this); // the parrots' watch (docs/12 P10 #3)
     stepDice(this); // the tavern tables (docs/12 P10 #4)
+    stepBlight(this); // docs/40: the Blighted Sea — its Heart's calendar, the casks, the Chosen, the week
     stepRegatta(this); // the Regatta of Equal Waters (docs/12 P10 #5)
     stepStorms(this); // the heart of the Storm of the Century (docs/12 P10 #14)
     if (Math.floor(this.now) % 2 === 0) stepShipFix(this); // a ship's level put right once (shipfix.ts)
@@ -1384,6 +1386,7 @@ export class Game {
       if (this.tick % 100 < 20) isleFirstCheck(this, s); // the island's first build (owner, 2026-10-28)
       firstFightsSecond(this, s); // docs/23 item 81
       abyssSecond(this, s);
+      blightSecond(this, s); // docs/40: the Veil, the Taint, the hunters, the Raft (nothing for a captain elsewhere)
       legendarySecond(this, s);
       // The governor's purple, unless a season pennant is flown.
       const gov = !s.profile.pennant && s.ship.guildTag && governsAny(this, s.accountId) ? GOVERNOR_PENNANT : s.profile.pennant;
@@ -2182,6 +2185,7 @@ export class Game {
       } : undefined,
       pvp: pvpView(this, s),
       abyss: abyssView(this, s),
+      blight: blightView(this, s), // docs/40 (null: the green water has not taken her)
     };
   }
 
@@ -2475,6 +2479,7 @@ export class Game {
     const victor = killer ? (killer.accountId ?? (killer.ownerId !== null && (killer.hiredBy === undefined || (ship.attackers.get(killer.ownerId) ?? -999) >= this.now - 60) ? this.ships.get(killer.ownerId)?.accountId ?? null : null)) : null;
     // Boarding is the way to take a ship (docs/17 H1): sunk by the guns, a ship of the sea gives up a quarter of her
     // hold and little of her purse (a captain's ship still spills her two-fifths).
+    blightSinking(this, ship); // docs/40: a captain's marks in the hold inside the green water; the Heart's spoils
     if (!onboardingProtected(this.sessionOf(ship)) && !this.wreckLaid.has(ship.id)) this.dropWreckage(ship, (ship.isPlayer ? 0.4 : SINK_LOOT) * lootMul(this, killer, ship) * streakAhead(this, killer, ship), victor); // the First Watch loses nothing
     if (ship.hiredBy !== undefined) hireSunk(this, ship); // a hired guard sunk: the contract over, nothing back (seahire.ts)
     if (!ship.isPlayer) replaceDefeated(this, ship); // one like her puts out elsewhere in these waters (density.ts)
@@ -2640,7 +2645,8 @@ export class Game {
     // standing with its flag: fireships cost Free Harbors ten a piece until chapter 4's hub shut its quays, QA 2026-10-23)
     const hb = this.npcs.get(victim.id);
     const sentAfter = !!hb && (hb.fireship === killer.id || hb.huntFor === killer.id || hb.huntAccount === s.accountId);
-    if (victim.faction !== 'player' && !victim.cls.monster && !sentAfter) {
+    // (docs/40: in the green water no kill costs infamy or standing)
+    if (victim.faction !== 'player' && !victim.cls.monster && !sentAfter && !blightWater(victim)) {
       const f = FACTIONS[victim.faction];
       if (f.lawful) {
         const zone = REGIONS[victim.region].safety;
@@ -2662,6 +2668,7 @@ export class Game {
       pvpRankKill(this, killer, victim, how, paid); // the PvP points and the month's table (pvprank.ts)
       onWarKill(this, killer, victim, how);
     }
+    blightKill(this, s, killer, victim, how); // docs/40: a hunter's marks, a captain's (nothing outside the green water)
     // Contracts: a ship counts on one bounty only, and a grey one on none (docs/26: no prize paid twice).
     const bounty = !paid && xpGap(p.level, vLevel) > 0 ? p.contracts.find((c) => c.kind === 'bounty' && victim.faction === c.targetFaction && (c.progress ?? 0) < (c.kills ?? 1)) : undefined;
     if (bounty) {
@@ -2694,7 +2701,7 @@ export class Game {
     }
     if (ship.loadout.legendary) legendarySunk(this, s, ship); // Sunken Glory
     sunkByNote(this, s, ship); // «Хроника» (forum post 40): «а ещё кто тебя убил»
-    grantBubble(this, s);
+    if (!blightNoBubble(this, s.accountId)) grantBubble(this, s); // (docs/40: sunk in the green water — no bubble)
     onSunkCrew(this, s);
     questEvent(this, s, { k: 'die', region: ship.region });
     anchorFleet(this, s, 0.5); // without the flagship the squadron scatters home
@@ -2916,6 +2923,7 @@ export class Game {
     const s = this.sessionOf(loser);
     const p = s?.profile;
     if (!s || !p) return;
+    blightSinking(this, loser); // docs/40: taken in the green water — the marks in her hold are lost as in a sinking
     loser.boarding = null;
     loser.lootLockedFor = null;
     loser.surrendered = false;
@@ -3793,6 +3801,7 @@ export class Game {
     if (msg.t === 'guide_read' || msg.t === 'guide_seen') return guideMessage(this, s, msg); // «Лоцманская книга» (2026-11-02)
     if (msg.t === 'scout') return scoutMessage(this, s, msg); // the island's scouts (owner, 2026-10-17)
     if (msg.t === 'way') return wayMessage(this, s, msg); // docs/35: the floating waystations, the resurrection
+    if (msg.t === 'blight') return blightMessage(this, s, msg); // docs/40: the Raft's orders
     if (msg.t === 'army') return armyMessage(this, s, msg); // owner, 2026-10-28: split, merge, dismiss a stack
     switch (msg.t) {
       case 'onboarding':

@@ -76,6 +76,7 @@ import type { PassClientMsg, PassServerMsg } from './spassproto.ts'; // «Сез
 import type { GuideClientMsg, GuideServerMsg } from './guideproto.ts'; // «Лоцманская книга» (2026-11-02)
 import type { WayClientMsg, WayData, WayServerMsg } from './wayproto.ts'; // docs/35: the floating waystations, the resurrection
 import type { CosClientMsg, CosServerMsg } from './cosproto.ts'; // docs/32 §12: the cosmetics
+import type { BlightClientMsg, BlightServerMsg, BlightView } from './blightproto.ts'; // docs/40: the Blighted Sea
 import type { PvpRankClientMsg, PvpRankServerMsg } from './pvprankproto.ts'; // the PvP points (owner, 2026-10-30)
 import type { PowerClientMsg, PowerServerMsg } from './powerproto.ts'; // «Мощь» (owner, 2026-10-31)
 import type { IsleType } from './world/archipelago.ts';
@@ -424,6 +425,8 @@ export type ClientMsg =
   | PowerClientMsg
   /** docs/35: the floating waystations and the resurrection of the fallen. */
   | WayClientMsg
+  /** docs/40: her orders at the Raft of the Blight (the mooring, blackjack, the shop, the chapter, the contracts). */
+  | BlightClientMsg
   /** The dense sea's marks (driftwood, wrecks, buoys…): work the one within reach, or leave off. */
   | { t: 'seamark'; action: 'work'; id: number }
   | { t: 'seamark'; action: 'cancel' }
@@ -846,6 +849,9 @@ export interface PrivateState {
   pennant: string | null;
   /** The Abyss: pressure, the lying stars, visions, the Islands of Light, the chapters (null until it matters). */
   abyss: AbyssView | null;
+  /** docs/40: the Blighted Sea as a cleared captain sees it (absent or null: the green water has not taken her — she
+   *  knows nothing of it; shared/src/blightproto.ts). */
+  blight?: BlightView | null;
   fragments: number;
   /** Sunken wrecks you know of. */
   wrecks: { name: string; x: number; y: number; depth: number }[];
@@ -2338,6 +2344,8 @@ export type ServerMsg =
   | PowerServerMsg
   /** docs/35: the waystation's window, her fallen and their price. */
   | WayServerMsg
+  /** docs/40: the dealer's table and the green water's events. */
+  | BlightServerMsg
   /** The marks she has worked (no more today) and the one her boats are at now (world seconds). */
   | { t: 'seamarks'; done: number[]; busy: { id: number; until: number; total: number } | null }
   | { t: 'pong'; c: number; s: number }

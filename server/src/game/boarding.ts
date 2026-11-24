@@ -5,6 +5,7 @@
 // may call the other out: a duel of three timed exchanges decides the fight.
 
 import { ZB_NO_BOARD, zbBoardBlocked } from './zonebosses.ts';
+import { heartBoardBlocked } from './blight.ts';
 import { ladderBetween } from './ladder.ts';
 import { inDuel } from './pvp.ts';
 import { NO_BOARD_HER, NO_BOARD_OWN, boardingOff, boardingOffVs, markPvp, noBoardHolds } from './colours.ts';
@@ -109,6 +110,8 @@ export function canBoard(game: Game, a: ShipEntity, b: ShipEntity): string | nul
   if (captainsShip(game, a) ? boardingOffVs(game, b, captainOf(game, a)) : boardingOff(game, b)) return NO_BOARD_HER;
   const zb = zbBoardBlocked(b) ?? zbBoardBlocked(a); // a zone boss: guns only (docs/21)
   if (zb) return zb;
+  const heart = heartBoardBlocked(game, a, b); // docs/40: the Blight's Heart — guns only
+  if (heart) return heart;
   // A boarding just lost (owner, 2026-10-05: «бесконечный абордаж при проигрыше»): her decks are let be a while.
   if (b.boardShieldUntil > game.now && !b.surrendered) return 'She was boarded only now: let her be a while';
   if (b.lootLockedFor !== null) return b.lootLockedFor === a.id ? 'She is already yours' : 'She has struck to another captain';

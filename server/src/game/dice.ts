@@ -17,6 +17,14 @@ import { keepItem } from './gear.ts';
 import type { PlayerSession } from './player.ts';
 import { deliver } from './post.ts';
 import { fresh } from './onboarding.ts';
+import { raftMoored } from './blight.ts'; // docs/40
+import { RAFT_TABLE } from '../../../shared/src/data/blight.ts';
+
+/** Where she sits down to the dice: the port she lies in, or the Raft of the Blight she is moored at (docs/40 §5 — the
+ *  Raft is no port; its tables are kept under RAFT_TABLE). */
+function placeOf(game: Game, s: PlayerSession): string | undefined {
+  return (s.ship?.docked ? game.portById(s.ship.docked)?.id : undefined) ?? (raftMoored(game, s) ? RAFT_TABLE : undefined);
+}
 
 interface Seat {
   name: string;
@@ -102,7 +110,8 @@ function newRound(game: Game, t: Table, starter: number): void {
 
 export function diceAvailableDavy(game: Game, s: PlayerSession): boolean {
   const port = s.ship?.docked ? game.portById(s.ship.docked) : undefined;
-  if (!port || port.region !== 'the_abyss') return false;
+  // (docs/40: a port of the Abyss never was — Davy Jones keeps his table at the Raft of the Blight)
+  if (port?.region !== 'the_abyss' && !raftMoored(game, s)) return false;
   const t = timeOfDay(game.now);
   return t < 1.5 / 24 || t > 23.5 / 24;
 }
@@ -110,15 +119,15 @@ export function diceAvailableDavy(game: Game, s: PlayerSession): boolean {
 /** Open a table at a stake (or Davy's), and sit at it. */
 export function diceOpen(game: Game, s: PlayerSession, stake: number, davy = false): string | null {
   const p = s.profile!;
-  const port = s.ship?.docked ? game.portById(s.ship.docked) : undefined;
-  if (!port) return 'Dice are played in a tavern.';
+  const place = placeOf(game, s);
+  if (!place) return 'Dice are played in a tavern.';
   if (tableOf(game, s.accountId)) return 'You are at a table already.';
   if (davy && !diceAvailableDavy(game, s)) return 'Davy Jones plays only at midnight, and only in the Abyss.';
   const st = davy ? DAVY_STAKE : DICE_STAKES.includes(stake) ? stake : DICE_STAKES[0];
   if (p.gold < st) return lackSilver(st, p.gold);
   p.gold -= st;
   const S = ds(game);
-  const t: Table = { id: S.seq++, port: port.id, stake: st, davy, phase: 'open', seats: [], turn: 0, bid: null, deadline: game.now + (davy ? 2 : DICE_OPEN_S), log: [], reveal: null, revealUntil: 0, starter: 0, winner: null, pot: st };
+  const t: Table = { id: S.seq++, port: place, stake: st, davy, phase: 'open', seats: [], turn: 0, bid: null, deadline: game.now + (davy ? 2 : DICE_OPEN_S), log: [], reveal: null, revealUntil: 0, starter: 0, winner: null, pot: st };
   t.seats.push({ name: s.name, account: s.accountId, cup: [], dice: DICE_START, nerve: 0.5 });
   S.tables.set(t.id, t);
   say(game, t, `${s.name} sits down at the table.`);
@@ -132,7 +141,7 @@ export function diceJoin(game: Game, s: PlayerSession, id: number): string | nul
   const p = s.profile!;
   const t = ds(game).tables.get(id);
   if (tableOf(game, s.accountId)) return 'You are at a table already.';
-  if (!t || t.phase !== 'open' || t.davy || t.seats.length >= DICE_MAX_SEATS || s.ship?.docked !== t.port) return 'That table is full or already playing.';
+  if (!t || t.phase !== 'open' || t.davy || t.seats.length >= DICE_MAX_SEATS || placeOf(game, s) !== t.port) return 'That table is full or already playing.';
   if (p.gold < t.stake) return lackSilver(t.stake, p.gold);
   p.gold -= t.stake;
   t.pot += t.stake;
@@ -335,7 +344,7 @@ export function stepDice(game: Game): void {
     for (const x of t.seats) {
       if (x.account === null) continue;
       const s = game.sessionByAccount(x.account);
-      if (!s || s.ship?.docked !== t.port) {
+      if (!s || placeOf(game, s) !== t.port) {
         if (s) diceLeave(game, s);
         else {
           x.account = null;

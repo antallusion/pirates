@@ -47,6 +47,7 @@ import { grandBattery, nightRaider, stormGunnerRange } from './bridgefx.ts';
 import { cursedDamageMul, onCursedHit, onCursedVolley, onOwnCrewKilled, pactDamageMul } from './abyssfx.ts';
 import { bossIncoming, innerVolley, swallowedShield } from './bosses.ts';
 import { zbCredit } from './zonebosses.ts';
+import { blightCredit, raftBlocked } from './blight.ts'; // docs/40
 import { kegImpact } from './holidays.ts';
 import { SPEED_SCALE } from '../../../shared/src/constants.ts';
 import { killFactor, menLost, wallsOf } from './army.ts';
@@ -557,6 +558,9 @@ export function damageBlocked(game: Game, a: ShipEntity | null, b: ShipEntity): 
   const battle = battleBlocked(game, a, b);
   if (battle) return battle;
   if (!a) return null;
+  // docs/40: no gun is fired at the Raft of the Blight — a moored captain neither takes a shot nor gives one.
+  const raft = raftBlocked(game, a, b);
+  if (raft) return raft;
   // Duels, the Green Pennant (pvp.ts).
   const pv = pvpBlocked(game, a, b);
   if (pv === 'duel_ok') return null;
@@ -1009,6 +1013,7 @@ export function applyDamage(game: Game, target: ShipEntity, d: DamagePacket, sou
     // the lesson's raider and towed home before she had fired a gun): her round shot leaves the pupil a quarter.
     if (source?.npcRole && game.npcs.get(source.id)?.practice === target.id) hull = Math.min(hull, Math.max(0, target.hull - PUPIL_HULL * target.stats.hullMax));
     if (target.zoneBoss) zbCredit(game, target, source, Math.min(Math.max(0, target.hull), hull)); // each captain's part of her (docs/21)
+    else if (target.abyssSpawn) blightCredit(game, target, source, Math.min(Math.max(0, target.hull), hull)); // docs/40: the Blight's Heart
     target.hull -= hull;
     onHullDamage(game, target, hull, source, d.cut ?? 0);
     if (source && source !== target && hull > 0) noteDealt(game, target, source, hull, 0);
