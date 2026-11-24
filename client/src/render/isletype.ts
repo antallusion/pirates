@@ -41,6 +41,28 @@ function rnd(seed: number): () => number {
   };
 }
 
+/** The vents' two soft discs, made once: the scorch about a vent and the ember light in it. */
+let EMBER: { scorch: HTMLCanvasElement; glow: HTMLCanvasElement } | null = null;
+function emberSprite(): { scorch: HTMLCanvasElement; glow: HTMLCanvasElement } | null {
+  if (EMBER) return EMBER;
+  if (typeof document === 'undefined') return null;
+  const disc = (stops: [number, string][]): HTMLCanvasElement => {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 64;
+    const x = cv.getContext('2d')!;
+    const grd = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+    for (const [at, col] of stops) grd.addColorStop(at, col);
+    x.fillStyle = grd;
+    x.fillRect(0, 0, 64, 64);
+    return cv;
+  };
+  EMBER = {
+    scorch: disc([[0, 'rgba(8,4,3,0.85)'], [0.5, 'rgba(14,7,5,0.45)'], [1, 'rgba(14,7,5,0)']]),
+    glow: disc([[0, 'rgba(255,196,120,0.95)'], [0.18, 'rgba(255,120,40,0.75)'], [0.5, 'rgba(170,46,14,0.28)'], [1, 'rgba(120,24,8,0)']]),
+  };
+  return EMBER;
+}
+
 /** Her kind on her land (over the painting, under what grows and stands on it): fills and strokes inside her coast,
  *  no clipping (a frame's few marks, not a pass of their own). */
 export function drawIsleOver(g: G, is: IslandData, c: IsleTypeCtx): void {
@@ -94,25 +116,40 @@ export function drawIsleOver(g: G, is: IslandData, c: IsleTypeCtx): void {
       g.fillStyle = 'rgba(30,14,10,0.22)';
       g.fill();
       if (z < 0.2) break;
-      // Cracks of fire from the middle, glowing by night (short enough to stay ashore).
-      const glow = 0.5 + 0.4 * c.night + 0.1 * Math.sin(c.time * 2 + is.id);
-      g.strokeStyle = `rgba(255,${100 + Math.round(50 * c.night)},36,${Math.min(0.9, glow).toFixed(3)})`;
-      g.lineWidth = Math.max(1.4, 3.2 * z);
-      g.lineCap = 'round';
-      g.beginPath();
-      for (let k = 0; k < 5; k++) {
-        let a = r() * Math.PI * 2;
-        let px = is.x, py = is.y;
-        g.moveTo(c.sx(px), c.sy(py));
-        for (let st = 0; st < 5; st++) {
-          a += (r() - 0.5) * 0.9;
-          const d = is.r * 0.055 * (1 + r());
-          px += Math.sin(a) * d;
-          py -= Math.cos(a) * d;
-          g.lineTo(c.sx(px), c.sy(py));
+      // Vents, not lines (owner, 2026-11-25: «это что, лава? надо переделать эти полоски»): a few scorched patches
+      // off the middle (her landmark stands there), each with a soft ember light breathing in it and hairline dark
+      // cracks about it. No bright stroke anywhere — a flat orange line read as paint on the ground.
+      const sp = emberSprite();
+      const hair = Math.max(0.7, 1.1 * z);
+      for (let k = 0; k < 7; k++) {
+        const a0 = r() * Math.PI * 2, d0 = is.r * (0.2 + 0.32 * r());
+        const vx = is.x + Math.sin(a0) * d0, vy = is.y - Math.cos(a0) * d0;
+        const size = is.r * (0.05 + 0.05 * r()) * z, ph = r() * 6.28;
+        const x = c.sx(vx), y = c.sy(vy);
+        // (the same count of r() whether she is on the screen or not: the cracks must not move as the view does)
+        g.strokeStyle = 'rgba(12,6,5,0.5)';
+        g.lineWidth = hair;
+        g.beginPath();
+        for (let j = 0; j < 3; j++) {
+          let a = r() * Math.PI * 2, px = vx, py = vy;
+          g.moveTo(x, y);
+          for (let st = 0; st < 3; st++) {
+            a += (r() - 0.5) * 1.3;
+            const d = is.r * 0.016 * (0.6 + r());
+            px += Math.sin(a) * d;
+            py -= Math.cos(a) * d;
+            g.lineTo(c.sx(px), c.sy(py));
+          }
         }
+        if (x < -size * 2 || y < -size * 2 || x > c.w + size * 2 || y > c.h + size * 2) continue;
+        g.stroke();
+        if (!sp) continue;
+        g.globalAlpha = 0.55;
+        g.drawImage(sp.scorch, x - size * 1.5, y - size * 1.5, size * 3, size * 3);
+        g.globalAlpha = Math.min(0.85, 0.28 + 0.4 * c.night + 0.1 * Math.sin(c.time * 1.1 + ph));
+        g.drawImage(sp.glow, x - size, y - size * 0.8, size * 2, size * 1.6);
+        g.globalAlpha = 1;
       }
-      g.stroke();
       break;
     }
     case 'swamp': {

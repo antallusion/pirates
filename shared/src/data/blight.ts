@@ -581,6 +581,7 @@ export const BLIGHT_WORDS = {
   moorHot: ['No mooring within half a minute of a shot given or taken.', 'Нельзя швартоваться в течение полминуты после выстрела — своего или по вам.'],
   moorBusy: ['Not while she is boarded or going down.', 'Не во время абордажа и не когда корабль тонет.'],
   raftOnly: ['That is done moored at the Raft.', 'Это делается у Плота.'],
+  veilPeace: ['The green water lies between you: your guns do not reach her, nor hers you.', 'Между вами зелёная вода: ваши пушки её не достают, и её пушки — вас.'],
   raftPeace: ['She lies at the Raft: no gun is fired there, hers or yours.', 'Корабль стоит у Плота: там не стреляет никто — ни он, ни вы.'],
   heartNoBoard: ['The ships the Blight sends cannot be boarded — guns only.', 'Корабли Скверны не взять на абордаж — только пушки.'],
   sunkLost: ['The green water keeps what rode in your hold: {0} marks lost.', 'Зелёная вода оставляет себе то, что было в трюме: потеряно меток — {0}.'],

@@ -1257,3 +1257,15 @@ test('every word of the green water reads in Russian', () => {
     setLang('en');
   }
 });
+
+test('the open Veil: between a captain counted in and one the sea does not count its own, no shot lands either way', () => {
+  const { game } = makeGame();
+  const a = captain(game, 'Veil Vera'), b = captain(game, 'Low Lars', false), c = captain(game, 'Veil Vik');
+  enter(game, a.s);
+  put(game, b.s, INSIDE.x + 200, INSIDE.y);
+  blightSecond(game, b.s);
+  assert.equal(damageBlocked(game, b.s.ship!, a.s.ship!), BLIGHT_WORDS.veilPeace[0], 'a passer-by cannot fire on her');
+  assert.equal(damageBlocked(game, a.s.ship!, b.s.ship!), BLIGHT_WORDS.veilPeace[0], 'nor she on a passer-by');
+  enter(game, c.s);
+  assert.equal(damageBlocked(game, c.s.ship!, a.s.ship!), null, 'two captains counted in: fair game');
+});

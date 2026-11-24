@@ -653,9 +653,13 @@ function castOff(game: Game, s: PlayerSession, tell: boolean): void {
 /** No gun is fired at the Raft: a moored captain's ship (and those that sail with her) neither takes a shot nor gives
  *  one (combat.ts damageBlocked). */
 export function raftBlocked(game: Game, a: ShipEntity, b: ShipEntity): string | null {
+  const ca = captainBehind(game, a), cb = captainBehind(game, b);
+  // The Veil stands open (the circle is live water between four towns), so a captain the sea does not count its own
+  // sails through it — but she is no part of the fight there: between her and a captain counted in, no shot lands
+  // either way (owner, 2026-11-25: «делай как лучше»).
+  if (ca && cb && ca !== cb && ca.accountId !== null && cb.accountId !== null && blightInside(game, ca) !== blightInside(game, cb)) return say('veilPeace');
   const S = states.get(game);
   if (!S || !S.moored.size) return null;
-  const ca = captainBehind(game, a), cb = captainBehind(game, b);
   if ((cb && cb.accountId !== null && S.moored.has(cb.accountId)) || (ca && ca.accountId !== null && S.moored.has(ca.accountId))) return say('raftPeace');
   return null;
 }
