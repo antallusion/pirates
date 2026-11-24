@@ -243,7 +243,7 @@ import { stepCastaways } from './castaways.ts'; // seaux: castaways
 import { gyardCancel, gyardGive, gyardStart } from './guildyard.ts';
 import { applyIslandNames, applyPantheon, seasonAction, seasonMods, seasonStat, seasonXp, stepSeasons, warKill } from './seasons.ts';
 import { abyssMap, abyssSecond, abyssView, abyssWind, onAbyssKill, raisingRitual, recordEcho, stepAbyssSea } from './abyss.ts';
-import { blightKill, blightMessage, blightNoBubble, blightRules, blightSecond, blightSinking, blightView, stepBlight } from './blight.ts'; // docs/40: the Blighted Sea
+import { blightKill, blightMessage, blightNoBubble, blightRules, blightSecond, blightSinking, blightView, raftBlocked, stepBlight } from './blight.ts'; // docs/40: the Blighted Sea
 import type { AbyssMap } from './abyss.ts';
 import { digNoise, legendEcho, mapAction, mapView, onGhostSunk, stealMaps } from './treasure.ts';
 import { ExpeditionHub, cityHere, cityPrompt, diveMove, diveSurface, expeditionsSecond, onYardCaptainSunk, sendSites, startDive, stepExpeditions } from './expeditions.ts';
@@ -1022,7 +1022,7 @@ export class Game {
         // infamy, no quarrel, no escort's answer from a brush.)
         const peace = !this.meantRam(a, b) && !this.meantRam(b, a) && !this.isHostile(a, b) && !this.isHostile(b, a);
         // (forum 34: a peaceful ship and a captain whose colours keep her off it — a bump, whoever meant it, both ways)
-        const friends = peace || (a.ownerId !== null && a.ownerId === b.ownerId) || damageBlocked(this, a, b) === 'friendly' || havenBlocked(this, a, b) !== null || peaceBlocked(this, a, b) !== null || peaceBlocked(this, b, a) !== null;
+        const friends = peace || (a.ownerId !== null && a.ownerId === b.ownerId) || damageBlocked(this, a, b) === 'friendly' || havenBlocked(this, a, b) !== null || raftBlocked(this, a, b) !== null || peaceBlocked(this, a, b) !== null || peaceBlocked(this, b, a) !== null; // (docs/40: nor a ram on a captain moored at the Raft of the Blight)
         if (closing > 3 && friends) {
           // (forum 40: a bump costs the captain who ran into her a little of her own hull — no blow on the other, no
           // aggression, no skull: bump.ts)

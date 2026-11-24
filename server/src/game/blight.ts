@@ -581,21 +581,27 @@ function captainKill(game: Game, S: State, ks: PlayerSession, kr: BlightSave, ki
   if (!loss || !kr.in) return;
   // Group-mates and guild-mates pay nothing.
   if (sameGroupAccounts(game, ks.accountId, vs.accountId) || guildFriends(game, killer, victim)) return toast(game, ks, 'pvpNone', 'info', vs.name);
+  // One barely through the rim with no kill of hers: no marks for her — nor Taint, experience, a line on the week's
+  // board or a quest's count (a friend sailing in to be sunk is worth nothing); what rode in her hold is still half
+  // the victor's.
+  if (loss.fresh) {
+    kr.hold += loss.half;
+    if (loss.half) toast(game, ks, 'pvpPaid', 'gold', vs.name, loss.half);
+    else toast(game, ks, 'pvpNone', 'info', vs.name);
+    return game.pushSelf(ks, true);
+  }
   const wall = game.wallNow();
   const again = wall - (kr.paid[vs.accountId] ?? 0) < PVP_REPEAT_MS;
   const share = again ? PVP_REPEAT_SHARE : 1;
   if (!again) kr.paid[vs.accountId] = wall;
   for (const k of Object.keys(kr.paid)) if (wall - kr.paid[k] > PVP_REPEAT_MS) delete kr.paid[k];
   const before = tierNow(kr);
-  const base = loss.fresh ? 0 : pvpMarks(loss.tier) * (loss.chosen ? CHOSEN_PAYS : 1) * share * (S.chosen === ks.accountId ? CHOSEN_EARNS : 1);
+  const base = pvpMarks(loss.tier) * (loss.chosen ? CHOSEN_PAYS : 1) * share * (S.chosen === ks.accountId ? CHOSEN_EARNS : 1);
   const n = Math.round(base) + loss.half;
   kr.hold += n;
   kr.kills++;
-  if (loss.fresh && !loss.half) toast(game, ks, 'pvpNone', 'info', vs.name);
-  else {
-    if (again) toast(game, ks, 'pvpRepeat', 'info', vs.name);
-    toast(game, ks, 'pvpPaid', 'gold', vs.name, n);
-  }
+  if (again) toast(game, ks, 'pvpRepeat', 'info', vs.name);
+  toast(game, ks, 'pvpPaid', 'gold', vs.name, n);
   // Experience ×2 of the usual prize, by her tier (capped): the usual one is paid already (Game.creditKill).
   const usual = prizeXp(ks.profile!.level, victim.onLadder ? victim.combatLevel : null, how);
   const extra = usual * (2 * blightXpMul(before) * share - 1);

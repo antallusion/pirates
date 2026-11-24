@@ -98,9 +98,9 @@ export interface HunterSpec {
  *  three, from X four (the last band has no end: it grows a tier at a time for ever). Tuned on tests/balance/blight.ts
  *  (docs/40 §7). */
 export const HUNTER_BANDS: { hull: number; hullStep: number; guns: number; gunsStep: number }[] = [
-  { hull: 3.0, hullStep: 0.1, guns: 1.85, gunsStep: 0.07 },
-  { hull: 1.35, hullStep: 0.1, guns: 1.5, gunsStep: 0.1 },
-  { hull: 1.0, hullStep: 0.05, guns: 1.5, gunsStep: 0.1 },
+  { hull: 3.0, hullStep: 0.05, guns: 1.85, gunsStep: 0.04 },
+  { hull: 1.35, hullStep: 0.1, guns: 1.5, gunsStep: 0.12 },
+  { hull: 1.0, hullStep: 0.05, guns: 1.55, gunsStep: 0.1 },
   { hull: 1.0, hullStep: 0.05, guns: 1.2, gunsStep: 0.05 },
 ];
 /** Every hunter sails this hull (the one ghost ship of the sea's own yards: `ship.ghost_ship`). */
