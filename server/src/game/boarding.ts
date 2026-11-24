@@ -110,7 +110,7 @@ export function canBoard(game: Game, a: ShipEntity, b: ShipEntity): string | nul
   if (captainsShip(game, a) ? boardingOffVs(game, b, captainOf(game, a)) : boardingOff(game, b)) return NO_BOARD_HER;
   const zb = zbBoardBlocked(b) ?? zbBoardBlocked(a); // a zone boss: guns only (docs/21)
   if (zb) return zb;
-  const heart = heartBoardBlocked(game, a, b); // docs/40: the Blight's Heart — guns only
+  const heart = heartBoardBlocked(game, a, b); // docs/40: the Blight's hunters and its Heart — guns only
   if (heart) return heart;
   // A boarding just lost (owner, 2026-10-05: «бесконечный абордаж при проигрыше»): her decks are let be a while.
   if (b.boardShieldUntil > game.now && !b.surrendered) return 'She was boarded only now: let her be a while';

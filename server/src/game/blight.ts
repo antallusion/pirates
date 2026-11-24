@@ -14,7 +14,7 @@
 import {
   BJ_HANDS_HOUR, BJ_SILVER_DAY, BJ_STAKES, BLIGHT, BLIGHT_AWAY_MS, BLIGHT_CHAPTER, BLIGHT_PENNANT, BLIGHT_QUESTS, BLIGHT_RAFT, BLIGHT_SHOP, BLIGHT_TITLE, CASK_CHANCE, CASK_MARKS,
   CASK_REACH, CASK_SECS, CASK_TIER, CHOSEN_EARNS, CHOSEN_MIN_TIER, CHOSEN_PAYS, CONTRACTS_A_DAY, HEART_CAPTAIN, HEART_EVERY_MS, HEART_GUNS, HEART_HULL, HEART_MIN_PART, HEART_NAME,
-  HEART_POOL, HEART_STAY_S, HEART_WARN_MS, HUNTER_CAPTAIN, HUNTER_FIRST_S, HUNTER_GAP_S, HUNTER_MARKS, HUNTER_NAMES, LANTERN_SECS, PVP_FRESH_S, PVP_REPEAT_MS, PVP_REPEAT_SHARE,
+  HEART_POOL, HEART_STAY_S, HEART_WARN_MS, HUNTER_CAPTAIN, HUNTER_FIRST_S, HUNTER_HULL, HUNTER_GAP_S, HUNTER_MARKS, HUNTER_NAMES, LANTERN_SECS, PVP_FRESH_S, PVP_REPEAT_MS, PVP_REPEAT_SHARE,
   RAFT_CUT, RAFT_LEAVE, RAFT_TABLE, RAFT_MOOR_SECS, RAFT_QUIET_SECS, RAFT_REACH, TAINT_CAPTAIN, TAINT_HEART, TAINT_HUNTER, TAINT_PER_SEC, TAINT_PER_TIER, WEEK_MARKS, WEEK_TITLES, bjDealer,
   bjDeck, bjNatural, bjResult, bjReturn, bjTotal, blightMul, blightOpen, blightXpMul, dayContracts, hunterSpec, inBlight, pvpMarks, say, shopPrice, stepNeed, stepText, tierOf,
 } from '../../../shared/src/data/blight.ts';
@@ -24,7 +24,6 @@ import { timeOfDay } from '../../../shared/src/constants.ts';
 import { lackSilver } from '../../../shared/src/data/buyfail.ts';
 import { dayOf } from '../../../shared/src/data/dailies.ts';
 import { itemName, reforgeLine } from '../../../shared/src/data/items.ts';
-import { hullsFor } from '../../../shared/src/data/shiplevel.ts';
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { lumpXp, prizeXp } from '../../../shared/src/data/xpcurve.ts';
 import { headingOf } from '../../../shared/src/math.ts';
@@ -168,13 +167,15 @@ interface State {
   lost: Map<number, Loss>;
   /** Sunk inside: no bubble when she sails again. */
   noBubble: Set<number>;
+  /** The Veil a wall (null: not read from the store yet). */
+  wall: boolean | null;
 }
 
 const states = new WeakMap<Game, State>();
 function st(game: Game): State {
   let s = states.get(game);
   if (!s) {
-    s = { rng: new Rng((game.world.seed ^ 0xb11647) >>> 0), hunters: new Map(), inside: new Map(), next: new Map(), moored: new Set(), mooring: new Map(), casks: [], heart: null, heartSlot: -1, warned: -1, chosen: null, hands: new Map(), rig: null, lost: new Map(), noBubble: new Set() };
+    s = { rng: new Rng((game.world.seed ^ 0xb11647) >>> 0), hunters: new Map(), inside: new Map(), next: new Map(), moored: new Set(), mooring: new Map(), casks: [], heart: null, heartSlot: -1, warned: -1, chosen: null, hands: new Map(), rig: null, lost: new Map(), noBubble: new Set(), wall: null };
     states.set(game, s);
   }
   return s;
@@ -199,8 +200,16 @@ export function blightInside(game: Game, ship: ShipEntity | null | undefined): b
   return !!game.profileOf(ship)?.blight?.in;
 }
 
-/** A ship of any kind within the circle (the rules of the place: no infamy, no standing lost). */
+/** A ship of any kind within the circle. */
 export const blightWater = (ship: ShipEntity): boolean => inBlight(ship.state.x, ship.state.y);
+
+/** The rules of the place hold for this kill (no infamy, no standing lost, no minnow's shame): the killer is counted
+ *  in, and her victim lies in the circle — a ship of the sea, or a captain the green water has taken too. For a captain
+ *  the sea does not count its own, crossing that water, every rule is as it was. */
+export function blightRules(game: Game, killer: ShipEntity, victim: ShipEntity): boolean {
+  if (!blightWater(victim) || !blightInside(game, captainBehind(game, killer))) return false;
+  return !victim.isPlayer || !!game.profileOf(victim)?.blight?.told;
+}
 
 /** Moored at the Raft. */
 export function raftMoored(game: Game, s: PlayerSession): boolean {
@@ -242,7 +251,12 @@ export function blightSecond(game: Game, s: PlayerSession): void {
     if (had?.in) leaveAlive(game, s, had);
     return;
   }
-  if (!cleared) return veil(game, s, ship);
+  if (!cleared) {
+    // The Veil. As a wall it throws her back; left open (the default: see veilWall) the green water is not there for
+    // her at all — she crosses it as the lawless water it always was, sees nothing, is hunted by nothing, gathers nothing.
+    if (veilWall(game)) veil(game, s, ship);
+    return;
+  }
   const S = st(game);
   const r = rec(p);
   const wall = game.wallNow();
@@ -303,6 +317,23 @@ export function blightSecond(game: Game, s: PlayerSession): void {
     game.sendTo(s, { t: 'blight_ev', ev: 'cask', n: c.marks });
   }
   hunt(game, s, ship, r);
+}
+
+/** Is the Veil a wall? docs/40 §1 asks for one (as the Maelstrom Wall). But the circle is 50 km² of open water in the
+ *  middle of a live sea — four towns lie 6–7 km from its middle, the world's waystations and sea marks stand in it,
+ *  wrecks and quest fights may fall in it, and the helmsman's courses between those towns run through it: walled, it
+ *  would turn back every captain below the gate who sails there today (and a helmsman steering across it for ever).
+ *  That breaks the live game's first rule, so the wall is built and tested but stands OPEN until the owner shuts it
+ *  (`/blight veil wall`; kept in the store). Open, the zone is simply inert for a captain it has not taken. */
+export function veilWall(game: Game): boolean {
+  const S = st(game);
+  if (S.wall === null) S.wall = game.db.getKv<boolean>('blight_wall') === true;
+  return S.wall;
+}
+
+export function setVeilWall(game: Game, on: boolean): void {
+  st(game).wall = on;
+  game.db.setKv('blight_wall', on);
 }
 
 /** The Veil: thrown back once, the way she came, just past the rim, and turned about (abyss.ts abyssSecond, the
@@ -391,21 +422,29 @@ function bank(game: Game, s: PlayerSession, r: BlightSave, how: 'rim' | 'raft'):
 
 // ================================================================================================ the hunters
 
+/** A ship of the green water's own at a ⚓, with an elite's hull and guns on the broadside table (seabalance.ts
+ *  npcSeaScale) — and nothing else of an elite's: her wreck gives the gear of a common ship (gear.ts rollDrop), so the
+ *  zone sells no power by the kill. */
+function eliteScale(game: Game, ship: ShipEntity, anchor: number): void {
+  ship.elite = true;
+  game.setNpcLevel(ship, anchor);
+  ship.elite = false;
+}
+
 /** A hunter of a tier on the water at a spot (the balance bench puts her where it wants). */
 export function blightHunterAt(game: Game, tier: number, x: number, y: number, heading: number): ShipEntity {
   const S = st(game);
   const spec = hunterSpec(tier);
-  // (the sea's own hulls of her ⚓: a hull sold for doubloons is never sailed by the sea — Game.spawnNpcShip, silverKin)
-  const pool: ShipClassId[] = ['ghost_ship', 'ghost_ship', ...hullsFor('pirate', spec.anchor)];
+  // A ghost ship of the sea's own yards under the Choir's flag, fought as a ship of the ladder (the role «hunter»: the
+  // role «ghost» is off the broadside table and falls to five broadsides at any ⚓ — measured), an elite of ⚓10, her
+  // hull and guns by the tier. (The premium ghost hulls of docs/40 §3 are never sailed by the sea: Game.spawnNpcShip.)
   const name = S.rng.pick(HUNTER_NAMES)[0];
-  const ship = game.spawnNpcShip('ghost', S.rng.pick(pool), 'choir', x, y, heading, { ship: name, captain: HUNTER_CAPTAIN[0] });
+  const ship = game.spawnNpcShip('hunter', HUNTER_HULL as ShipClassId, 'choir', x, y, heading, { ship: name, captain: HUNTER_CAPTAIN[0] });
   ship.abyssSpawn = true; // (no hull to raise, none put out in her place: density.ts, Game.beginSinking)
-  game.setNpcLevel(ship, spec.anchor);
-  if (spec.hull > 1 || spec.guns > 1) {
-    ship.effects.push({ id: 'blight_tier', until: 1e12, mods: { hullMax: spec.hull - 1, gunDamageMul: spec.guns - 1 } });
-    ship.recompute(game.now);
-    ship.hull = ship.stats.hullMax;
-  }
+  eliteScale(game, ship, spec.anchor);
+  ship.effects.push({ id: 'blight_tier', until: 1e12, mods: { hullMax: spec.hull - 1, gunDamageMul: spec.guns - 1 } });
+  ship.recompute(game.now);
+  ship.hull = ship.stats.hullMax;
   ship.crew = ship.stats.crewMax;
   ship.morale = 100;
   ship.removeAt = game.now + 1500;
@@ -615,10 +654,14 @@ export function raftBlocked(game: Game, a: ShipEntity, b: ShipEntity): string | 
   return null;
 }
 
-/** The Heart's decks cannot be taken (boarding.ts canBoard). */
+/** The ships the green water sends — its hunters, its Heart — are fought with the guns alone: they board nobody and
+ *  no deck of theirs is taken (boarding.ts canBoard). So no ghost ship is ever had as a prize here, and a captain's
+ *  marks are lost only by her sinking or to another captain. */
 export function heartBoardBlocked(game: Game, a: ShipEntity, b: ShipEntity): string | null {
-  const id = states.get(game)?.heart?.id;
-  return id !== undefined && (a.id === id || b.id === id) ? say('heartNoBoard') : null;
+  const S = states.get(game);
+  if (!S) return null;
+  const own = (x: ShipEntity): boolean => S.heart?.id === x.id || S.hunters.has(x.id);
+  return own(a) || own(b) ? say('heartNoBoard') : null;
 }
 
 // ------------------------------------------------------------------------------------------------ blackjack
@@ -935,10 +978,9 @@ export function blightHeartRise(game: Game): ShipEntity | null {
   const S = st(game);
   if (S.heart && game.ships.get(S.heart.id)?.alive) return game.ships.get(S.heart.id)!;
   const x = BLIGHT_RAFT.x, y = BLIGHT_RAFT.y - 900;
-  const ship = game.spawnNpcShip('ghost', 'ghost_ship', 'choir', x, y, Math.PI, { ship: HEART_NAME[0], captain: HEART_CAPTAIN[0] });
+  const ship = game.spawnNpcShip('hunter', HUNTER_HULL as ShipClassId, 'choir', x, y, Math.PI, { ship: HEART_NAME[0], captain: HEART_CAPTAIN[0] });
   ship.abyssSpawn = true;
-  ship.elite = true;
-  game.setNpcLevel(ship, 10);
+  eliteScale(game, ship, 10);
   ship.effects.push({ id: 'blight_heart', until: 1e12, mods: { hullMax: HEART_HULL - 1, gunDamageMul: HEART_GUNS - 1 } });
   ship.recompute(game.now);
   ship.hull = ship.stats.hullMax;
@@ -1216,7 +1258,7 @@ export function blightView(game: Game, s: PlayerSession): BlightView | null {
 
 // ================================================================================================ the admin's word
 
-/** `/blight [go|clear|tier N|marks N|heart|week|status]`. */
+/** `/blight [go|clear|tier N|marks N|heart|week|veil wall|open|status]`. */
 export function adminBlight(game: Game, s: PlayerSession, args: string[]): string {
   const p = s.profile!, ship = s.ship!;
   const r = rec(p);
@@ -1255,6 +1297,9 @@ export function adminBlight(game: Game, s: PlayerSession, args: string[]): strin
     case 'week':
       weekTurn(game, true);
       return say('adminWeek');
+    case 'veil':
+      if (args[1] === 'wall' || args[1] === 'open') setVeilWall(game, args[1] === 'wall');
+      return say(veilWall(game) ? 'adminVeilWall' : 'adminVeilOpen');
     case 'status':
       return say('adminStatus', blightCleared(game, s) ? 1 : 0, r.in ? 1 : 0, tierNow(r), r.hold, r.marks, r.ch.at + 1);
     default:

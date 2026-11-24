@@ -37,7 +37,7 @@ import type { Game } from './Game.ts';
 import { groupOfAccount, sameGroup, sameGroupAccounts } from './party.ts';
 import { atWar, guildFriends } from './guilds.ts';
 import { cityOf, coloursBlocked, coloursOf, enemies, hasPennant, neutralRefused, setColours } from './colours.ts';
-import { blightWater } from './blight.ts'; // docs/40
+import { blightRules } from './blight.ts'; // docs/40
 import { PENNANT_SECONDS } from '../../../shared/src/data/colours.ts';
 import { peaceBlocked, washView } from './flaglaw.ts'; // forum 34: the three flags and the sea's peaceful ships
 import { patentFoes, patentOfferView, patentView, privateerOf } from './patent.ts'; // «Каперский патент» (owner, 2026-11-02)
@@ -515,8 +515,9 @@ export function onPlayerKill(game: Game, killer: ShipEntity, victim: ShipEntity,
   const n = repeats(game, pk, vs.accountId);
   const legal = legalTarget(game, killer, victim);
   const kBR = battleRating(game, killer), vBR = battleRating(game, victim);
-  // (docs/40: in the green water of the Blight every protection is off — no minnow's shame, no infamy for it)
-  const minnow = vBR / Math.max(0.1, kBR) < 0.5 && !blightWater(victim);
+  // (docs/40: between captains the green water of the Blight has taken every protection is off — no minnow's shame,
+  // no infamy for it)
+  const minnow = vBR / Math.max(0.1, kBR) < 0.5 && !blightRules(game, killer, victim);
   pk.pvp.kills = [...pk.pvp.kills.filter((k) => now - k.t < 2 * H), { v: vs.accountId, t: now }].slice(-40);
   pv.pvp.sunkBy = [...pv.pvp.sunkBy.filter((k) => now - k.t < 14 * 24 * H && k.account !== ks.accountId), { account: ks.accountId, name: ks.name, t: now }].slice(-20);
   game.sendTo(vs, { t: 'toast', msg: `${ks.name} sank you. For a day you will see them within 3 km — and you may put a price on their head, free of the League's cut.`, kind: 'bad' });

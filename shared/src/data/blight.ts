@@ -83,20 +83,36 @@ export const CASK_SECS = 300;
 export const CASK_REACH = 90;
 
 export interface HunterSpec {
-  /** Her ⚓ (8 at tier I, 9 at II, 10 from III). */
+  /** Her ⚓: always 10, an elite of the sea's table (a captain the green water takes sails ⚓9–10: measured, a full
+   *  build sinks an elite ⚓9 five times in five with four fifths of her hull left). */
   anchor: number;
-  /** How many are kept on the captain. */
+  /** How many are kept on the captain: one more each three tiers, never more than HUNTERS_MAX. */
   n: number;
-  /** Past ⚓10 (tier IV on): her hull and her guns over a ⚓10 ship of the sea's. */
+  /** Her hull and her guns over an elite ⚓10 ship of the sea's. */
   hull: number;
   guns: number;
 }
 
+/** The hunters' might by how many of them a tier keeps on her (one, two, three, four): the first tier of each band,
+ *  and what each tier further into the band adds. One great ship at tiers I–III; from IV two lesser ones, from VII
+ *  three, from X four (the last band has no end: it grows a tier at a time for ever). Tuned on tests/balance/blight.ts
+ *  (docs/40 §7). */
+export const HUNTER_BANDS: { hull: number; hullStep: number; guns: number; gunsStep: number }[] = [
+  { hull: 3.0, hullStep: 0.1, guns: 1.85, gunsStep: 0.07 },
+  { hull: 1.35, hullStep: 0.1, guns: 1.5, gunsStep: 0.1 },
+  { hull: 1.0, hullStep: 0.05, guns: 1.5, gunsStep: 0.1 },
+  { hull: 1.0, hullStep: 0.05, guns: 1.2, gunsStep: 0.05 },
+];
+/** Every hunter sails this hull (the one ghost ship of the sea's own yards: `ship.ghost_ship`). */
+export const HUNTER_HULL = 'ghost_ship';
+
 /** The hunters of a tier (docs/40 §3; the table measured by tests/balance/blight.ts is in docs/40 §7). */
 export function hunterSpec(tier: number): HunterSpec {
   const t = Math.max(1, Math.floor(tier));
-  const over = Math.max(0, t - 3);
-  return { anchor: Math.min(10, 7 + t), n: Math.min(HUNTERS_MAX, 1 + Math.floor((t - 1) / 3)), hull: 1 + 0.1 * over, guns: 1 + 0.06 * over };
+  const band = Math.min(HUNTERS_MAX - 1, Math.floor((t - 1) / 3));
+  const into = t - 1 - band * 3; // tiers into the band (the last band: without end)
+  const b = HUNTER_BANDS[band];
+  return { anchor: 10, n: band + 1, hull: Math.round((b.hull + b.hullStep * into) * 100) / 100, guns: Math.round((b.guns + b.gunsStep * into) * 100) / 100 };
 }
 
 /** The names the green water gives its ships. */
@@ -566,7 +582,7 @@ export const BLIGHT_WORDS = {
   moorBusy: ['Not while she is boarded or going down.', 'Не во время абордажа и не когда корабль тонет.'],
   raftOnly: ['That is done moored at the Raft.', 'Это делается у Плота.'],
   raftPeace: ['She lies at the Raft: no gun is fired there, hers or yours.', 'Корабль стоит у Плота: там не стреляет никто — ни он, ни вы.'],
-  heartNoBoard: ['The Heart’s decks cannot be taken — guns only.', 'Палубы Сердца не взять — только пушки.'],
+  heartNoBoard: ['The ships the Blight sends cannot be boarded — guns only.', 'Корабли Скверны не взять на абордаж — только пушки.'],
   sunkLost: ['The green water keeps what rode in your hold: {0} marks lost.', 'Зелёная вода оставляет себе то, что было в трюме: потеряно меток — {0}.'],
   pvpPaid: ['{0} is sent down in the green water: +{1} marks.', '{0} идёт ко дну в зелёной воде: +{1} меток.'],
   pvpNone: ['{0} pays no marks: a mate of yours, or one barely through the rim.', '{0} не платит меток: это свой — или тот, кто едва переступил кромку.'],
@@ -613,7 +629,9 @@ export const BLIGHT_WORDS = {
   weekLetter: ['The week in the green water', 'Неделя в зелёной воде'],
   weekBody: ['The Raft’s slate for the week is wiped. Your place on it: {0}. The title is yours until the next slate, and these marks with it.', 'Доску Плота за неделю стёрли. Ваше место на ней: {0}. Титул ваш до следующей доски, и эти метки — вместе с ним.'],
   weekPaid: ['The Raft’s week: place {0}, +{1} marks.', 'Неделя Плота: место {0}, +{1} меток.'],
-  adminHelp: ['Usage: /blight [go|clear|tier N|marks N|heart|week|status]', 'Usage: /blight [go|clear|tier N|marks N|heart|week|status]'],
+  adminHelp: ['Usage: /blight [go|clear|tier N|marks N|heart|week|veil wall|open|status]', 'Usage: /blight [go|clear|tier N|marks N|heart|week|veil wall|open|status]'],
+  adminVeilWall: ['The Veil is a wall: a captain the sea does not count its own is turned back at the rim.', 'Завеса — стена: капитана, которого море не считает своим, разворачивает у кромки.'],
+  adminVeilOpen: ['The Veil is open: a captain the sea does not count its own crosses that water as any other, and the green water is not there for her.', 'Завеса открыта: капитан, которого море не считает своим, проходит эту воду как любую другую, а зелёной воды для него нет.'],
   adminGo: ['At the rim of the Blighted Sea.', 'У кромки Моря Скверны.'],
   adminClear: ['The green water is yours: the Veil lets this captain through.', 'Зелёная вода ваша: Завеса пропускает этого капитана.'],
   adminTier: ['Tier {0} of the Taint.', 'Ступень Скверны {0}.'],

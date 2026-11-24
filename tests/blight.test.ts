@@ -16,9 +16,9 @@ import { buildCitadels } from '../shared/src/data/citadels.ts';
 import { REGION_IDS } from '../shared/src/world/regions.ts';
 import { waystations } from '../shared/src/world/waystations.ts';
 import { isLand, regionAt } from '../shared/src/world/worldgen.ts';
-import { adminBlight, blightCleared, blightCredit, blightHeartRise, blightHunterAt, blightMessage, blightMoor, blightRigDeck, blightSecond, blightTest, blightView, heartBoardBlocked, raftMoored, stepBlight } from '../server/src/game/blight.ts';
+import { adminBlight, setVeilWall, veilWall, blightCleared, blightCredit, blightHeartRise, blightHunterAt, blightMessage, blightMoor, blightRigDeck, blightSecond, blightTest, blightView, heartBoardBlocked, raftMoored, stepBlight } from '../server/src/game/blight.ts';
 import { damageBlocked } from '../server/src/game/combat.ts';
-import { diceLeave, diceOpen } from '../server/src/game/dice.ts';
+import { diceAvailableDavy, diceLeave, diceOpen } from '../server/src/game/dice.ts';
 import type { Game } from '../server/src/game/Game.ts';
 import type { BlightSave } from '../server/src/game/blight.ts';
 import { groupAnswer, groupInvite, groupOfAccount } from '../server/src/game/party.ts';
@@ -153,6 +153,7 @@ test('an overlay: no new region, no 37th chapter in the campaign’s plan, the c
 test('the Veil turns back a captain the sea does not count its own: once, the way she came, no hull lost, nothing written to her save', () => {
   const { game } = makeGame();
   const { s, conn } = captain(game, 'Veil Val', false);
+  setVeilWall(game, true);
   s.profile!.campaign!.at = BLIGHT_NEED_AT - 1; // one quest short
   const ship = s.ship!;
   const at = { x: BLIGHT.x + BLIGHT.r - 300, y: BLIGHT.y };
@@ -175,9 +176,44 @@ test('the Veil turns back a captain the sea does not count its own: once, the wa
   assert.ok(!inBlight(ship.state.x, ship.state.y));
 });
 
+test('the Veil stands open until the owner shuts it: a captain the sea has not taken crosses that water as before, and the green water is not there for her', () => {
+  const { game, db } = makeGame();
+  assert.equal(veilWall(game), false, 'open by default: the live sea is not walled off');
+  const a = captain(game, 'Passer Pat', false), b = captain(game, 'Inside Ida');
+  a.s.profile!.campaign!.at = 300;
+  put(game, a.s, INSIDE.x, INSIDE.y, 6, 1);
+  seasoned(game, b.s, 90, 3, { x: INSIDE.x + 200, y: INSIDE.y });
+  const n = a.conn.inbox.length;
+  for (let i = 0; i < 40; i++) {
+    game.now += 1;
+    blightSecond(game, a.s);
+  }
+  assert.deepEqual([a.s.ship!.state.x, a.s.ship!.state.y, a.s.ship!.state.heading], [INSIDE.x, INSIDE.y, 1], 'not moved, not turned');
+  assert.equal(a.s.profile!.blight, undefined);
+  assert.equal(a.conn.inbox.length, n, 'not a word to her');
+  assert.equal(blightView(game, a.s), null);
+  assert.equal(blightTest.state(game).hunters.size > 0 ? [...blightTest.state(game).hunters.values()].some((h) => h.account === a.s.accountId) : false, false, 'nothing is sent after her');
+  // her orders at the Raft are refused; a hunter she sinks pays her nothing
+  put(game, a.s, BLIGHT_RAFT.x + 40, BLIGHT_RAFT.y);
+  blightMessage(game, a.s, { t: 'blight', action: 'moor' });
+  assert.ok(!raftMoored(game, a.s));
+  sinkHunter(game, a.s, 1);
+  assert.equal(a.s.profile!.blight, undefined);
+  // she sinks a captain the green water has taken: that captain's hold is lost to the sea, none of it is hers
+  sink(game, a.s, b.s);
+  assert.equal(rec(b.s).hold, 0);
+  assert.equal(a.s.profile!.blight, undefined);
+  // the switch is the owner's, and it is kept
+  assert.equal(adminBlight(game, a.s, ['veil', 'wall']), BLIGHT_WORDS.adminVeilWall[0]);
+  assert.equal(db.getKv('blight_wall'), true);
+  assert.equal(adminBlight(game, a.s, ['veil', 'open']), BLIGHT_WORDS.adminVeilOpen[0]);
+  assert.equal(veilWall(game), false);
+});
+
 test('no group pass: a cleared captain’s mate is still turned back', () => {
   const { game } = makeGame();
   const a = captain(game, 'Lead Lin'), b = captain(game, 'Mate Mo', false);
+  setVeilWall(game, true);
   put(game, a.s, INSIDE.x, INSIDE.y);
   put(game, b.s, INSIDE.x + 100, INSIDE.y, 5, 0);
   assert.equal(groupInvite(game, a.s, 'Mate Mo'), null);
@@ -253,15 +289,19 @@ test('the Taint: slowly with the time under way, a tier every hundred, every rew
   assert.equal(v.mul, 1.3);
 });
 
-test('the hunters: by her tier — ⚓8, ⚓9, ⚓10, then heavier; one more each three tiers, never more than four; sent out of sight after her', () => {
-  assert.deepEqual(hunterSpec(1), { anchor: 8, n: 1, hull: 1, guns: 1 });
-  assert.equal(hunterSpec(2).anchor, 9);
-  assert.equal(hunterSpec(3).anchor, 10);
+test('the hunters: an elite ⚓10 ghost ship of the tier’s might; one more each three tiers, never more than four; sent out of sight after her; guns only', () => {
+  for (let t = 1; t <= 40; t++) {
+    const h = hunterSpec(t);
+    assert.equal(h.anchor, 10);
+    assert.equal(h.n, Math.min(HUNTERS_MAX, 1 + Math.floor((t - 1) / 3)), `tier ${t}: how many`);
+    assert.ok(h.hull >= 1 && h.guns >= 1);
+    // within a band of the same number each tier is heavier than the last; the last band grows for ever
+    if (t > 1 && hunterSpec(t - 1).n === h.n) assert.ok(h.hull > hunterSpec(t - 1).hull && h.guns > hunterSpec(t - 1).guns, `tier ${t} over tier ${t - 1}`);
+  }
+  assert.equal(hunterSpec(1).n, 1);
   assert.equal(hunterSpec(4).n, 2);
   assert.equal(hunterSpec(7).n, 3);
   assert.equal(hunterSpec(10).n, HUNTERS_MAX);
-  assert.equal(hunterSpec(40).n, HUNTERS_MAX);
-  assert.ok(hunterSpec(8).hull > hunterSpec(4).hull && hunterSpec(8).guns > 1);
   const { game } = makeGame();
   const { s } = captain(game, 'Hunted Hal');
   enter(game, s);
@@ -275,7 +315,11 @@ test('the hunters: by her tier — ⚓8, ⚓9, ⚓10, then heavier; one more eac
   const foe = game.ships.get(id)!;
   assert.equal(h.account, s.accountId);
   assert.equal(game.npcs.get(id)!.huntAccount, s.accountId, 'sent after her');
-  assert.equal(foe.shipLevel, 8);
+  assert.equal(foe.shipLevel, 10);
+  assert.equal(foe.loadout.classId, 'ghost_ship');
+  assert.equal(foe.npcRole, 'hunter', 'a ship of the ladder, on the broadside table');
+  assert.equal(foe.elite, false, 'an elite’s hull and guns, a common ship’s wreck');
+  assert.equal(heartBoardBlocked(game, s.ship!, foe), BLIGHT_WORDS.heartNoBoard[0], 'guns only: no ghost ship is had as a prize');
   assert.ok(inBlight(foe.state.x, foe.state.y), 'within the circle');
   assert.ok(Math.hypot(foe.state.x - s.ship!.state.x, foe.state.y - s.ship!.state.y) > 1500, 'out of sight');
   assert.deepEqual(blightView(game, s)!.hunters, [id]);
@@ -286,10 +330,9 @@ test('the hunters: by her tier — ⚓8, ⚓9, ⚓10, then heavier; one more eac
     blightSecond(game, s);
   }
   assert.equal([...S.hunters.values()].filter((x) => x.account === s.accountId).length, HUNTERS_MAX);
-  // a hunter past ⚓10 is a ⚓10 ship with more hull
-  const plain = blightHunterAt(game, 3, INSIDE.x, INSIDE.y + 900, 0), heavy = blightHunterAt(game, 9, INSIDE.x, INSIDE.y + 1200, 0);
-  assert.equal(plain.shipLevel, 10);
-  assert.equal(heavy.shipLevel, 10);
+  // her hull by the tier's own number, over an elite ⚓10's
+  const one = blightHunterAt(game, 1, INSIDE.x, INSIDE.y + 900, 0), three = blightHunterAt(game, 3, INSIDE.x, INSIDE.y + 1200, 0);
+  assert.ok(Math.abs(three.stats.hullMax / one.stats.hullMax - hunterSpec(3).hull / hunterSpec(1).hull) < 0.01);
   // out across the rim: they give up the chase
   leave(game, s);
   assert.equal(game.npcs.get(id)!.huntAccount, null);
@@ -737,6 +780,16 @@ test('Dead Man’s Dice is played at the Raft too, and nowhere else at sea', () 
   assert.equal(diceLeave(game, s), null);
   assert.equal(s.profile!.gold, 5000);
   assert.equal(RAFT_TABLE, 'blight_raft');
+  // Davy Jones keeps his table here at the sea's midnight (a port of the Abyss never was)
+  const day = 2880;
+  game.now = Math.ceil(game.now / day) * day + day * 0.15; // (constants.ts timeOfDay: the sea's noon)
+  assert.equal(diceAvailableDavy(game, s), false, 'noon');
+  assert.equal(blightView(game, s)!.davy, false);
+  game.now = Math.ceil(game.now / day) * day + day * 0.65 + 5;
+  assert.equal(diceAvailableDavy(game, s), true, 'midnight, moored at the Raft');
+  assert.equal(blightView(game, s)!.davy, true);
+  unmoor(game, s);
+  assert.equal(diceAvailableDavy(game, s), false, 'not at sea');
 });
 
 // ================================================================================================ the shop
@@ -822,10 +875,10 @@ test('the Blight’s Heart: risen by the Raft, guns only, her marks by each capt
   const heart = blightHeartRise(game)!;
   assert.equal(heart.name, 'The Blight’s Heart');
   assert.ok(Math.hypot(heart.state.x - BLIGHT_RAFT.x, heart.state.y - BLIGHT_RAFT.y) < 1500);
-  const plain = blightHunterAt(game, 3, INSIDE.x, INSIDE.y + 1500, 0);
-  assert.ok(heart.stats.hullMax > plain.stats.hullMax * 8, 'a hull many times a hunter’s');
+  const plain = blightHunterAt(game, 1, INSIDE.x, INSIDE.y + 1500, 0);
+  assert.ok(heart.stats.hullMax > plain.stats.hullMax * 4, 'a hull many times a hunter’s');
   assert.equal(heartBoardBlocked(game, a.s.ship!, heart), BLIGHT_WORDS.heartNoBoard[0]);
-  assert.equal(heartBoardBlocked(game, a.s.ship!, plain), null);
+  assert.equal(heartBoardBlocked(game, a.s.ship!, b.s.ship!), null, 'captains board each other as in any lawless water');
   assert.equal(blightHeartRise(game), heart, 'one at a time');
   const v = blightView(game, a.s)!.heart as { id: number; hp: number };
   assert.equal(v.id, heart.id);

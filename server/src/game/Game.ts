@@ -243,7 +243,7 @@ import { stepCastaways } from './castaways.ts'; // seaux: castaways
 import { gyardCancel, gyardGive, gyardStart } from './guildyard.ts';
 import { applyIslandNames, applyPantheon, seasonAction, seasonMods, seasonStat, seasonXp, stepSeasons, warKill } from './seasons.ts';
 import { abyssMap, abyssSecond, abyssView, abyssWind, onAbyssKill, raisingRitual, recordEcho, stepAbyssSea } from './abyss.ts';
-import { blightKill, blightMessage, blightNoBubble, blightSecond, blightSinking, blightView, blightWater, stepBlight } from './blight.ts'; // docs/40: the Blighted Sea
+import { blightKill, blightMessage, blightNoBubble, blightRules, blightSecond, blightSinking, blightView, stepBlight } from './blight.ts'; // docs/40: the Blighted Sea
 import type { AbyssMap } from './abyss.ts';
 import { digNoise, legendEcho, mapAction, mapView, onGhostSunk, stealMaps } from './treasure.ts';
 import { ExpeditionHub, cityHere, cityPrompt, diveMove, diveSurface, expeditionsSecond, onYardCaptainSunk, sendSites, startDive, stepExpeditions } from './expeditions.ts';
@@ -2645,8 +2645,8 @@ export class Game {
     // standing with its flag: fireships cost Free Harbors ten a piece until chapter 4's hub shut its quays, QA 2026-10-23)
     const hb = this.npcs.get(victim.id);
     const sentAfter = !!hb && (hb.fireship === killer.id || hb.huntFor === killer.id || hb.huntAccount === s.accountId);
-    // (docs/40: in the green water no kill costs infamy or standing)
-    if (victim.faction !== 'player' && !victim.cls.monster && !sentAfter && !blightWater(victim)) {
+    // (docs/40: in the green water no kill of a captain it has taken costs her infamy or standing)
+    if (victim.faction !== 'player' && !victim.cls.monster && !sentAfter && !blightRules(this, killer, victim)) {
       const f = FACTIONS[victim.faction];
       if (f.lawful) {
         const zone = REGIONS[victim.region].safety;
