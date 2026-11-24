@@ -18,6 +18,7 @@ import { bandOf, SECTOR_SIZE, SECTORS_PER_SIDE } from '../../../shared/src/world
 import { THREAT_COLOR, shipLevelOf, threatOf } from '../../../shared/src/data/shiplevel.ts';
 import { drawRoamsChart } from '../render/roamers.ts'; // docs/19 D7
 import { drawWaysChart } from '../render/waystations.ts'; // docs/35
+import { drawBlightChart } from '../render/blight.ts'; // docs/40
 import { EN as ROAM_EN, RU as ROAM_RU } from '../lang/ui/roamers.ts';
 /** The chart's key open or folded, as the captain left it. */
 const LEGEND_KEY = 'gravetide.mapLegend';
@@ -1013,6 +1014,7 @@ export class WorldMap {
     // readable from afar).
     if (on('lairs') && this.zoom >= 2) drawRoamsChart(g, state, tx, ty);
     if (on('ports')) drawWaysChart(g, state, tx, ty, this.zoom); // docs/35: the floating waystations about her, close in
+    if (state.self?.blight) drawBlightChart(g, state.self.blight, tx, ty, k, true); // docs/40: the Blighted Sea — a green disc and its name
     // Charted islands.
     for (const id of state.discovered) {
       const is = state.islands.get(id);

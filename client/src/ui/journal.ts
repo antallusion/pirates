@@ -43,6 +43,7 @@ import { weeklyLog } from './renown.ts';
 import { worldGoalsLog } from './social.ts';
 import { bindGoalTaps } from './goaltap.ts'; // route: a goal's line sails to its nearest place
 import { classWord, questClass } from './questclass.ts'; // docs/36 §1: the one taxonomy's words
+import { bindBlightChapter } from './blight.ts'; // docs/40
 import { bookChapters, bookWord, campaignBookHtml } from './campaignbook.ts'; // docs/36: the «Кампания» page
 import { actButton, hereAct } from './questact.ts'; // owner, 2026-10-23: a step done in this port has its own button
 
@@ -239,8 +240,9 @@ export class Journal {
       { id: 'tattoos', icon: 'tattoo_needle', label: L('tattoos'), badge: state.tattoos?.pending.length ?? 0 },
     ];
     if (this.book) {
-      root.innerHTML = logFrame('quests', state, chips, 'cmp', campaignBookHtml(self?.campaign, bookChapters(() => this.book && this.render(root, state))));
+      root.innerHTML = logFrame('quests', state, chips, 'cmp', campaignBookHtml(self?.campaign, bookChapters(() => this.book && this.render(root, state)), self?.blight));
       this.bindChips(root);
+      bindBlightChapter(root, (m) => this.send(m)); // docs/40: the chapter's «Взять» and «Сдать»
       return;
     }
     root.innerHTML = logFrame('quests', state, chips, '', `<div class="journal">

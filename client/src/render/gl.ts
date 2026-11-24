@@ -137,7 +137,7 @@ const SKY_FRAG = `${PRECISION}
 uniform vec2 res; uniform float zoom; uniform float fog; uniform float flash; uniform float night;
 uniform vec2 axis[3]; uniform vec2 off[3]; uniform vec2 warpOff;
 uniform vec2 bolt[8]; uniform float boltOn;
-uniform sampler2D fogTex; uniform float hasFog;
+uniform sampler2D fogTex; uniform float hasFog; uniform vec3 fogTint;
 ${NOISE}
 float seg(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
 void main() {
@@ -166,7 +166,7 @@ void main() {
   a = fog * (0.05 + a * 1.45) * mix(0.32, 1.0, edge);
   // Moonlit mist stays paler than the water it hides, by night as by day.
   vec3 fogc = mix(vec3(0.56, 0.6, 0.64), vec3(0.3, 0.34, 0.39), night);
-  vec3 col = fogc + vec3(0.8, 0.85, 1.0) * flash * 0.35;
+  vec3 col = fogc * fogTint + vec3(0.8, 0.85, 1.0) * flash * 0.35;
   float alpha = clamp(a + flash * 0.1, 0.0, 0.85);
   // A lightning bolt across the sky.
   if (boltOn > 0.0) {
@@ -398,7 +398,7 @@ export class GlSky extends Layer {
     return l ? new GlSky(l.canvas, l.gl, l.prog) : null;
   }
 
-  draw(o: { camX: number; camY: number; zoom: number; time: number; wind: [number, number]; fog: number; flash: number; night: number; bolt: [number, number][] | null; boltOn: number }): void {
+  draw(o: { camX: number; camY: number; zoom: number; time: number; wind: [number, number]; fog: number; flash: number; night: number; bolt: [number, number][] | null; boltOn: number; fogTint?: [number, number, number] }): void {
     const gl = this.gl;
     const k = this.begin();
     const dt = Number.isFinite(this.last) ? Math.min(0.1, Math.max(0, o.time - this.last)) : 0;
@@ -445,6 +445,8 @@ export class GlSky extends Layer {
     gl.uniform1f(this.u('fog'), this.fog);
     gl.uniform1f(this.u('flash'), o.flash);
     gl.uniform1f(this.u('night'), o.night);
+    // (docs/40: the mist's colour, green in the fel water; 1,1,1 everywhere else)
+    gl.uniform3f(this.u('fogTint'), o.fogTint?.[0] ?? 1, o.fogTint?.[1] ?? 1, o.fogTint?.[2] ?? 1);
     const pts = new Float32Array(16);
     if (o.bolt) o.bolt.slice(0, 8).forEach(([x, y], i) => pts.set([x * k, y * k], i * 2));
     gl.uniform2fv(this.u('bolt[0]'), pts);

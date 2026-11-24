@@ -30,6 +30,7 @@ import { GUNS, SHIP_CLASSES, AMMO, CHASER_CONE, isZoneBossClass } from '../../..
 import type { ShipClassId } from '../../../shared/src/data/ships.ts';
 import { nightFactor, SPEED_SCALE, timeOfDay } from '../../../shared/src/constants.ts';
 import { duskOf, gradeOf, lightDir, liveness } from './grade.ts';
+import { drawBlightChart, drawBlightOver, drawBlightUnder, FEL_LAMP, felFog, felGrade, felMix, felTint, felTintCss, felWash, stepFel } from './blight.ts'; // docs/40: the Blighted Sea
 import { damageLook, sway, tornSails } from './shipfx.ts';
 import { clamp, headingVec } from '../../../shared/src/math.ts';
 import { placeName } from '../ui/maps.ts';
@@ -611,6 +612,9 @@ export class Renderer {
     this.nightNow = night;
     const opt0 = settings();
     const region = REGIONS[state.region];
+    // docs/40 §2: the fel water eased in and out at the rim (nothing at all for a captain the green water has not taken).
+    const blight = state.self?.blight ?? null;
+    stepFel(!!blight?.inside, dt, opt0.reduceMotion ? 0 : this.time);
     // The far view (freecam.ts): all chart below CHART_FULL — the painted sea, the shader layers and every sprite rest.
     const mix = (this.farMix = chartMix(this.zoom));
     this.showGl(mix < 1);
@@ -667,6 +671,7 @@ export class Renderer {
     pruneWakes(this.wakes, drawn, this.time);
     for (const id of this.sinkStarts.keys()) if (!drawn.has(id)) this.sinkStarts.delete(id);
     this.drawWakes();
+    if (blight) drawBlightUnder(g, blight, ships, this.blightCtx()); // docs/40: the rim, the Raft, the casks, the hunters' light
     this.stepTrails(ships, state, dt); // docs/32 §12: the cosmetic trails, under the hulls
     this.drawLoot(state);
     drawShoals(g, state.shoals, state.self?.fishing?.traps ?? [], (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, this.w, this.h);
@@ -685,6 +690,7 @@ export class Renderer {
     this.drawCompanions(state, ships);
     this.drawPods(state, ships);
     for (const s of ships) this.drawShip(s, state);
+    if (blight) drawBlightOver(g, blight, ships, own, state.estServerTime(), this.blightCtx());
     drawMuzzles(g, this.fx, (x) => this.sx(x), (y) => this.sy(y), this.zoom);
     drawShoalBirds(g, state.shoals, (x) => this.sx(x), (y) => this.sy(y), this.zoom, opt.reduceMotion ? 0 : this.time, this.w, this.h);
     this.drawStallSigns(stalls);
@@ -709,6 +715,7 @@ export class Renderer {
     this.scrolls = mix < 0.6 ? drawTreasureScrolls(g, state.self?.maps, { sx: (x) => this.sx(x), sy: (y) => this.sy(y), zoom: this.zoom, time: opt.reduceMotion ? 0 : this.time, w: this.w, h: this.h, own: own ? { x: own.x, y: own.y } : null, words: TMW('scroll') }) : [];
     // The far view's chart fading in over the sea (freecam.ts CHART_FROM…CHART_FULL).
     if (mix > 0) drawFarChart(g, state, this.farCtx(own, mix), this.farLayers);
+    if (mix > 0 && blight) this.drawBlightFar(blight, mix);
     // Overlays (not affected by darkness).
     if (own && state.you && state.self) this.drawAim(state, own, aim, ships);
     if (own && state.self) this.drawOwnMark(state, own);
@@ -757,6 +764,7 @@ export class Renderer {
     g.clearRect(-20, -20, this.w + 40, this.h + 40);
     hot.length = 0; // (no tokens on the screen for the hover's aim to keep off: the chart has none)
     drawFarChart(g, state, this.farCtx(own, 1), this.farLayers);
+    if (state.self?.blight) this.drawBlightFar(state.self.blight, 1);
     this.labelBoxes = [];
     if (own) this.drawCourseOf(state, own);
     this.goalMark = null;
@@ -764,6 +772,29 @@ export class Renderer {
       this.hudBand();
       this.drawQuestMark(state, own);
     }
+  }
+
+  // ------------------------------------------------------------------ the Blighted Sea (docs/40, render/blight.ts)
+
+  private readonly blightC = { camX: 0, camY: 0, zoom: 1, w: 0, h: 0, time: 0 };
+  private blightCtx(): { camX: number; camY: number; zoom: number; w: number; h: number; time: number } {
+    const c = this.blightC;
+    c.camX = this.camX;
+    c.camY = this.camY;
+    c.zoom = this.zoom;
+    c.w = this.w;
+    c.h = this.h;
+    c.time = settings().reduceMotion ? 0 : this.time;
+    return c;
+  }
+  private readonly sxF = (x: number): number => this.sx(x);
+  private readonly syF = (y: number): number => this.sy(y);
+  /** The far chart: the green disc with its name. */
+  private drawBlightFar(v: NonNullable<NonNullable<ClientState['self']>['blight']>, mix: number): void {
+    const g = this.g;
+    g.globalAlpha = mix;
+    drawBlightChart(g, v, this.sxF, this.syF, this.zoom, true, settings().reduceMotion ? 0 : this.time);
+    g.globalAlpha = 1;
   }
 
   // ------------------------------------------------------------------ ocean
@@ -788,14 +819,14 @@ export class Renderer {
       const wakes = shaderWakes(this.wakes, this.time, { x0: this.camX - mx, y0: this.camY - my, x1: this.camX + mx, y1: this.camY + my }, MAX_WAKES, this.wakeList);
       const wv = headingVec(state.wind[0]);
       this.sea.draw({
-        camX: this.camX, camY: this.camY, zoom: this.zoom, time: this.time, tint: hexRgb(tint), wind: [wv.x, wv.y, clamp(state.wind[1], 0, 1.4)],
+        camX: this.camX, camY: this.camY, zoom: this.zoom, time: this.time, tint: felMix() > 0 ? felTint(hexRgb(tint)) : hexRgb(tint), wind: [wv.x, wv.y, clamp(state.wind[1], 0, 1.4)],
         night: nightFactor(state.estServerTime()), wakes,
-        live: liveness(settings().reduceMotion, this.ease ? 2 : this.fx.lod, settings().effects === 'low'), sun: lightDir(timeOfDay(state.estServerTime()), nightFactor(state.estServerTime())), grade: gradeOf(state.region).mul,
+        live: liveness(settings().reduceMotion, this.ease ? 2 : this.fx.lod, settings().effects === 'low'), sun: lightDir(timeOfDay(state.estServerTime()), nightFactor(state.estServerTime())), grade: felMix() > 0 ? felGrade(gradeOf(state.region).mul) : gradeOf(state.region).mul,
       });
       this.drawStreaks(state);
       return;
     }
-    g.fillStyle = tint;
+    g.fillStyle = felTintCss(tint); // (docs/40: the canvas sea goes green by the same measure)
     g.fillRect(-20, -20, this.w + 40, this.h + 40);
     const tex = pattern(g, 'tex.ocean');
     const wind = headingVec(state.wind[0]);
@@ -2306,7 +2337,10 @@ export class Renderer {
   private drawShip(s: DrawShip, state: ClientState): void {
     const g = this.g;
     const cls = SHIP_CLASSES[s.classId];
-    const len = cls.length * this.zoom, beam = cls.beam * this.zoom;
+    // docs/40: the Blight's Heart is the same ghost hull drawn larger.
+    const bh = state.self?.blight?.heart;
+    const big = bh && 'id' in bh && bh.id === s.id ? 1.6 : 1;
+    const len = cls.length * this.zoom * big, beam = cls.beam * this.zoom * big;
     const x = this.sx(s.x), y = this.sy(s.y);
     if (x < -len * 2 || y < -len * 2 || x > this.w + len * 2 || y > this.h + len * 2) return;
     if (!s.own && drawGuardShip(g, state, s, len, this.advCtx())) return; // a guard of the adventure map (docs/17 H4)
@@ -3127,7 +3161,7 @@ export class Renderer {
       if (s.own) hole(s.x, s.y, 90, 0.22); // her own deck just readable, no halo
       // A captain's lanterns burn the colour of her look (docs/12 P10 #12).
       const lamp = decodeLook(s.own ? state.self?.look : s.info?.look)?.lamp ?? 0;
-      const fac = s.own || s.info?.isPlayer ? LAMPS[lamp].color : s.info && s.info.faction !== 'player' ? cbColor(opt.colorblind, FACTIONS[s.info.faction]?.lantern ?? '#f2b35a') : '#f2b35a'; // (a flag the table does not know — an admin /spawn's — threw every frame)
+      const fac = felMix() > 0.5 ? FEL_LAMP : s.own || s.info?.isPlayer ? LAMPS[lamp].color : s.info && s.info.faction !== 'player' ? cbColor(opt.colorblind, FACTIONS[s.info.faction]?.lantern ?? '#f2b35a') : '#f2b35a'; // (a flag the table does not know — an admin /spawn's — threw every frame)
       // Lanterns flicker a little (unless the options still them).
       const flick = opt.lanternFlicker ? 0.88 + 0.12 * Math.sin(this.time * 9 + s.id * 1.7) * Math.sin(this.time * 3.1 + s.id) : 1;
       // A lantern is a point of warm light on the water, not a cloud about the hull.
@@ -3207,7 +3241,8 @@ export class Renderer {
     }
     // The sea's own grade: frost blue in the ice, ember among the volcanoes, a green murk in the Abyss and the fogs.
     const gr = gradeOf(state.region);
-    if (gr.a > 0) {
+    if (felMix() > 0) felWash(g, this.w, this.h, gr.wash, gr.a); // docs/40 §2: the same one wash, gone fel green
+    else if (gr.a > 0) {
       g.fillStyle = `rgba(${gr.wash[0]},${gr.wash[1]},${gr.wash[2]},${gr.a})`;
       g.fillRect(0, 0, this.w, this.h);
     }
@@ -3295,7 +3330,7 @@ export class Renderer {
       const wv = headingVec(state.wind[0]);
       this.sky.draw({
         camX: this.camX, camY: this.camY, zoom: this.zoom, time: this.time, wind: [wv.x * (0.5 + state.wind[1]), wv.y * (0.5 + state.wind[1])],
-        fog: clamp(state.fog, 0, 1), flash: settings().reduceFlashes ? this.fx.flash * 0.25 : this.fx.flash, night: nightFactor(state.estServerTime()), bolt: this.bolt, boltOn: settings().reduceFlashes ? 0 : this.lightning,
+        fog: clamp(Math.max(state.fog, 0.24 * felMix()), 0, 1), fogTint: felMix() > 0 ? felFog() : undefined, flash: settings().reduceFlashes ? this.fx.flash * 0.25 : this.fx.flash, night: nightFactor(state.estServerTime()), bolt: this.bolt, boltOn: settings().reduceFlashes ? 0 : this.lightning,
       });
     }
   }

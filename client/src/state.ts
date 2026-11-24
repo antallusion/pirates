@@ -24,6 +24,7 @@ import type { IslesView, RouteView } from '../../shared/src/protocol.ts';
 import type { LogEntry } from '../../shared/src/data/captainlog.ts';
 import type { DwellView, MineView, WeekView } from '../../shared/src/h3proto.ts';
 import type { AdvCardView, AdvView, PuzzleView } from '../../shared/src/h4proto.ts';
+import type { BjView } from '../../shared/src/blightproto.ts'; // docs/40
 import type { AppraisalView, CaravanView, CarcassView, BaseView, EstateView, HuntView, RaidView, ShoalView, SightView, WantedView, TattooView, CompanionView, PetView, PetsOwnView, DiceView, RegattaView, WondersView, DutchmanView, HallView, StormView, DescentView, HolidayView, BazaarShadow } from '../../shared/src/protocol.ts';
 import type { Item } from '../../shared/src/data/items.ts';
 import { noteOwnShip } from './ui/levels.ts';
@@ -242,6 +243,8 @@ export class ClientState {
   /** The dice table she sits at (docs/12 P10 #4). */
   dice: DiceView | null = null;
   diceAt = 0;
+  /** docs/40: the hand of twenty-one on the Raft's table (null: none dealt). */
+  blightBj: BjView | null = null;
   /** The next regatta, and her race when she runs it (docs/12 P10 #5). */
   regatta: RegattaView | null = null;
   /** The Atlas of Sea Wonders (docs/12 P10 #8). */
@@ -691,6 +694,9 @@ export class ClientState {
       case 'dice':
         this.dice = m.view;
         this.diceAt = performance.now();
+        break;
+      case 'blight_bj':
+        this.blightBj = m.view; // docs/40: the dealer's table at the Raft
         break;
       case 'choice':
         this.choice = m.view;

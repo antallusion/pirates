@@ -166,6 +166,7 @@ import { WorldMap } from './ui/worldmap.ts';
 import { Journal, distWords } from './ui/journal.ts';
 import { renderChoice, renderTattoos } from './ui/tattoos.ts';
 import { renderDice, tickDice } from './ui/dice.ts';
+import { BlightHud, blightEvent, raftKey, raftReset, renderRaft, tickRaft } from './ui/blight.ts'; // docs/40: the Blighted Sea
 import { OnboardingUi, playPrologue, renderEdge } from './ui/onboarding.ts';
 import { TutorPointer, shotStage } from './ui/pointer.ts';
 import { keyActsInWindow, leftClickSea, rightClickAct, seaTapPlan, seaTapWhy, soloModifier, wheelZoom, windowTab } from './ui/deskinput.ts';
@@ -260,7 +261,7 @@ const CAPTAIN_KEY = 'gravetide.captain';
 /** A name or sentence that came from the server, in the player's language. */
 const sv = (s: string): string => (lang() === 'ru' ? NAME_RU.get(s) ?? serverText(s) : s);
 
-type Modal = 'port' | 'way' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | 'log' | 'base' | 'away' | 'recruit' | 'hero' | 'puzzle' | 'tame' | 'throne' | 'shop' | 'research' | null;
+type Modal = 'port' | 'way' | 'talents' | 'map' | 'journal' | 'ship' | 'gear' | 'help' | 'boarding' | 'sunk' | 'crew' | 'mutiny' | 'company' | 'barter' | 'edge' | 'options' | 'menu' | 'tattoos' | 'choice' | 'dice' | 'look' | 'hall' | 'descent' | 'saga' | 'log' | 'base' | 'away' | 'recruit' | 'hero' | 'puzzle' | 'tame' | 'throne' | 'shop' | 'research' | 'blight' | null;
 
 bootMark('main');
 watchViewport();
@@ -2639,6 +2640,7 @@ function onMessage(m: ServerMsg): void {
       noteNewQuests(); // ux2: a quest just taken is followed, its mark on the sea
       noteHearsay(state.self); // a whisper just bought becomes her mark (docs/16 #14)
       arenaMoments(); // docs/19 E14: the Colosseum's draft opens its tab, its bout closes the window
+      blightSelf(); // docs/40: the Raft's window opens as she moors, follows what it shows, closes as she casts off
       if (isleScene.isOpen && selfKeyFor('base') !== isleKey) {
         // her silver over the island screen (only when it changed: a redraw on every beat would lose taps)
         isleKey = selfKeyFor('base');
@@ -2943,6 +2945,13 @@ function onMessage(m: ServerMsg): void {
     case 'tattoos':
       if (modal === 'tattoos') refreshModal();
       break;
+    case 'blight_bj':
+      // docs/40: the dealer's table at the Raft (state.blightBj): the window follows it.
+      if (modal === 'blight') refreshModal();
+      break;
+    case 'blight_ev':
+      blightEvent(m, state, (msg, kind) => hud.toast(msg, kind));
+      break;
     case 'dice':
       // The table opens its window; the window follows the table; it closes when she is up.
       if (m.view) {
@@ -3145,6 +3154,7 @@ function onMessage(m: ServerMsg): void {
 // The dice table's clock ticks between the server's words.
 setInterval(() => {
   if (modal === 'dice') tickDice($('modal-panel'), state);
+  if (modal === 'blight') tickRaft($('modal-panel'), state);
   if (modal === 'base') baseWindow.tick($('modal-panel'), state);
   if (isleScene.isOpen && modal !== 'base') isleScene.tick(state);
   if (modal === 'puzzle' && (state.puzzle?.digging || state.puzzle?.wait)) refreshModal(); // the dig's seconds (docs/17 H4)
@@ -3226,6 +3236,26 @@ function arenaMoments(): void {
   arenaDraftWas = drafting;
 }
 
+/** docs/40: the Raft's window by her mooring (nothing for a captain the green water has not taken). */
+let blightMoored = false;
+let blightKey = '';
+const blightHud = new BlightHud((m) => net.send(m), () => {
+  if (!modal) openModal('blight');
+});
+function blightSelf(): void {
+  const moored = !!state.self?.blight?.moored;
+  if (moored && !blightMoored && !modal) {
+    raftReset();
+    openModal('blight');
+  } else if (!moored && modal === 'blight') closeModal();
+  else if (modal === 'blight') {
+    // (drawn again only when what it shows moved: a redraw on every beat of the private state would swallow taps)
+    const key = raftKey(state);
+    if (key !== blightKey) refreshModal();
+  }
+  blightMoored = moored;
+}
+
 function closeModal(): void {
   const was = modal;
   if (was === 'map') worldMap.scoutPick = null; // a scout's pick left untaken
@@ -3250,6 +3280,8 @@ function closeModal(): void {
     net.send({ t: 'way', action: 'leave' });
     state.wayView = null;
   }
+  // docs/40: the dice played at the Raft go back to its window.
+  if (was === 'dice' && state.self?.blight?.moored) return openModal('blight');
   // A window over the island screen closes back into it (its card drawn again: the window shared its selection).
   if (isleScene.isOpen) {
     isleScene.update(state);
@@ -3390,6 +3422,13 @@ function renderModal(root: HTMLElement): void {
     case 'dice':
       if (state.dice) renderDice(root, state, (m) => net.send(m));
       else closeModal();
+      break;
+    case 'blight':
+      // docs/40: the Raft's window (ui/blight.ts).
+      if (state.self?.blight) {
+        blightKey = raftKey(state);
+        renderRaft(root, state, (m) => net.send(m), closeModal);
+      } else closeModal();
       break;
     case 'look':
       renderLook(root, state, (m) => net.send(m));
@@ -3852,7 +3891,9 @@ addEventListener('keydown', (e) => {
       // docs/35: off a floating waystation the same key moors her there.
       const own = state.ownDisplay;
       const way = !docked && own && !state.wayView && !state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS) ? wayAtHand(own) : null;
-      if (way) net.send({ t: 'way', action: 'moor', id: way.id });
+      const bl = !docked ? state.self?.blight : null; // docs/40: off the Raft the same key moors her there
+      if (bl?.atRaft && !bl.moored) net.send({ t: 'blight', action: 'moor' });
+      else if (way) net.send({ t: 'way', action: 'moor', id: way.id });
       else if (docked) departOrAsk(state, (m) => net.send(m), () => net.send({ t: 'undock' }));
       else if (selPlace?.kind === 'port' && own && !state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS)) selGo(); // (owner, 2026-10-26)
       else requestDock(e.shiftKey);
@@ -6290,7 +6331,7 @@ function step(t: number): void {
         combat: !!state.you?.combat,
         chased: hostileNear,
         weather: state.weather,
-        region: state.region,
+        region: state.self?.blight?.inside ? 'the_abyss' : state.region, // (docs/40: the Abyss' theme in the green water)
         anomaly: state.bosses.some((b) => dist(b.x, b.y, own.x, own.y) < 3000),
         isle: !document.getElementById('isle')?.classList.contains('hidden') && !!document.getElementById('isle'),
         tactical: !!state.boardTac,
@@ -6303,6 +6344,7 @@ function step(t: number): void {
     homeBtnFrame();
     hud.hauling = netHaul.active;
     hud.update(state, prompt);
+    blightHud.render(state.self?.dockedAt ? null : state.self?.blight, modal === 'blight'); // docs/40: her tier, Taint and marks in the green water
     if (own && !state.self?.dockedAt) {
       // the treasure search (forum post 34): into a map's circle, and the scroll on the water in sight — once each
       const st = searchStep(tmMemo, state.self?.maps ?? [], own.x, own.y);

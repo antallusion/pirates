@@ -13,6 +13,8 @@ import { esc, icon } from './dom.ts';
 import { artImg } from './artfall.ts';
 import { chapterCard } from '../../../shared/src/data/paintart.ts';
 import { EN, RU } from '../lang/ui/campaignbook.ts';
+import type { BlightView } from '../../../shared/src/blightproto.ts';
+import { blightChapterHtml } from './blight.ts'; // docs/40: «Глава XXXVII. Зелёный огонь», a card of its own after the 36th
 
 const L = dict(EN, RU);
 
@@ -35,7 +37,7 @@ export function bookChapters(then: () => void): ChapterSrc[] | null {
 /** The words of the page (the journal's chip). */
 export const bookWord = (k: 'tab' | 'tabHint' | 'where' | 'nextAt', vars?: Record<string, number>): string => L(k, vars);
 
-export function campaignBookHtml(c: CampaignView | undefined, list: ChapterSrc[] | null): string {
+export function campaignBookHtml(c: CampaignView | undefined, list: ChapterSrc[] | null, blight?: BlightView | null): string {
   if (!list) return `<p class="muted">${esc(L('loading'))}</p>`;
   const ru = lang() === 'ru' ? 1 : 0;
   const at = c?.at ?? 0;
@@ -63,5 +65,6 @@ export function campaignBookHtml(c: CampaignView | undefined, list: ChapterSrc[]
     }).join('')}</ol>`;
     return `<details class="cb-ch cb-${state}"${state === 'now' ? ' open' : ''}>${sum}${blurb}${quests}</details>`;
   }).join('');
-  return `<div class="campaign-book">${head}${rows}</div>`;
+  // (docs/40: only for a captain the green water has taken — for any other the book is as it was)
+  return `<div class="campaign-book">${head}${rows}${blightChapterHtml(blight)}</div>`;
 }
