@@ -3239,7 +3239,23 @@ function arenaMoments(): void {
 /** docs/40: the Raft's window by her mooring (nothing for a captain the green water has not taken). */
 let blightMoored = false;
 let blightKey = '';
-const blightHud = new BlightHud((m) => net.send(m), () => {
+/** «Пришвартоваться» asked while she still has way on: the page's clock till which the mooring is wanted (0: none). The
+ *  Raft takes only a ship hove to — the sails come down first, and the order goes once she has lost her way. */
+let blightMoorWant = 0;
+function blightMoor(): void {
+  allStopHere();
+  blightMoorWant = performance.now() + 15_000;
+}
+function blightMoorFrame(): void {
+  if (!blightMoorWant) return;
+  const b = state.self?.blight, own = state.ownDisplay;
+  // (she set sail again, the lines are fast or being made fast, the time is out: the wish is dropped)
+  if (!b || !own || b.moored || b.mooring > 0 || state.input.sail > 0 || performance.now() > blightMoorWant) return void (blightMoorWant = 0);
+  if (Math.abs(own.speed) > 2 && b.atRaft) return;
+  blightMoorWant = 0;
+  net.send({ t: 'blight', action: 'moor' }); // (drifted out of reach: the server says so)
+}
+const blightHud = new BlightHud(blightMoor, () => {
   if (!modal) openModal('blight');
 });
 function blightSelf(): void {
@@ -3892,7 +3908,7 @@ addEventListener('keydown', (e) => {
       const own = state.ownDisplay;
       const way = !docked && own && !state.wayView && !state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS) ? wayAtHand(own) : null;
       const bl = !docked ? state.self?.blight : null; // docs/40: off the Raft the same key moors her there
-      if (bl?.atRaft && !bl.moored) net.send({ t: 'blight', action: 'moor' });
+      if (bl?.atRaft && !bl.moored) blightMoor();
       else if (way) net.send({ t: 'way', action: 'moor', id: way.id });
       else if (docked) departOrAsk(state, (m) => net.send(m), () => net.send({ t: 'undock' }));
       else if (selPlace?.kind === 'port' && own && !state.ports.some((p) => dist(p.x, p.y, own.x, own.y) < PORT_DOCK_RADIUS)) selGo(); // (owner, 2026-10-26)
@@ -6344,7 +6360,8 @@ function step(t: number): void {
     homeBtnFrame();
     hud.hauling = netHaul.active;
     hud.update(state, prompt);
-    blightHud.render(state.self?.dockedAt ? null : state.self?.blight, modal === 'blight'); // docs/40: her tier, Taint and marks in the green water
+    blightMoorFrame();
+    blightHud.render(state.self?.dockedAt ? null : state.self?.blight, modal === 'blight', blightMoorWant > 0); // docs/40: her tier, Taint and marks in the green water
     if (own && !state.self?.dockedAt) {
       // the treasure search (forum post 34): into a map's circle, and the scroll on the water in sight — once each
       const st = searchStep(tmMemo, state.self?.maps ?? [], own.x, own.y);

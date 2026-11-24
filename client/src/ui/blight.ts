@@ -83,10 +83,12 @@ export function blightEvent(m: Extract<ServerMsg, { t: 'blight_ev' }>, state: Cl
 export class BlightHud {
   private key = '';
   private el: HTMLElement | null = null;
-  private readonly send: Send;
+  private at = 0;
+  private readonly moor: () => void;
   private readonly openRaft: () => void;
-  constructor(send: Send, openRaft: () => void) {
-    this.send = send;
+  /** `moor`: «Пришвартоваться» (main.ts brings her to a stop first); `openRaft`: the Raft's window back up. */
+  constructor(moor: () => void, openRaft: () => void) {
+    this.moor = moor;
     this.openRaft = openRaft;
   }
 
@@ -105,19 +107,23 @@ export class BlightHud {
     el.addEventListener('click', (e) => {
       const b = (e.target as HTMLElement).closest<HTMLElement>('[data-bl]');
       if (!b) return;
-      if (b.dataset.bl === 'moor') this.send({ t: 'blight', action: 'moor' });
+      if (b.dataset.bl === 'moor') this.moor();
       else if (b.dataset.bl === 'raft') this.openRaft();
     });
     return (this.el = el);
   }
 
-  /** Each HUD update. `raftOpen`: the Raft's window is up (its button is not offered twice). */
-  render(v: BlightView | null | undefined, raftOpen: boolean): void {
+  /** Each frame (it looks five times a second: its clocks count seconds). `raftOpen`: the Raft's window is up (its
+   *  button is not offered twice); `stopping`: she is being brought to a stop to moor. */
+  render(v: BlightView | null | undefined, raftOpen: boolean, stopping = false): void {
     // (a captain the green water has not taken: the block is never even made)
     if (!v && !this.el) return;
+    const now = performance.now();
+    if (now - this.at < 200 && !!v === !!this.key) return;
+    this.at = now;
     const el = this.host();
     if (!el) return;
-    const wall = Date.now(), now = performance.now();
+    const wall = Date.now();
     if (flourish && now > flourish.until) flourish = null;
     const heart = v?.heart ?? null;
     // Outside: only the Heart's clock (told ten minutes before) and a flourish just earned (banked across the rim).
@@ -133,7 +139,7 @@ export class BlightHud {
     const heartTxt = !heart ? '' : 'at' in heart ? L('hud.heartIn', { t: clock(heart.at - wall) }) : L('hud.heartUp', { hp: Math.round(heart.hp * 100) });
     const lanternLeft = v.lantern > wall ? clock(v.lantern - wall) : '';
     const taint = Math.round(v.taint);
-    const key = `${lang()}|${v.inside}|${v.tier}|${taint}|${v.hold}|${v.mul}|${v.xpMul}|${v.chosen?.name ?? ''}|${v.chosen?.tier ?? 0}|${v.chosen?.me ?? ''}|${heartTxt}|${lanternLeft}|${v.cask}|${v.atRaft}|${v.moored}|${v.mooring > 0}|${raftOpen}|${flourish?.text ?? ''}`;
+    const key = `${lang()}|${v.inside}|${v.tier}|${taint}|${v.hold}|${v.mul}|${v.xpMul}|${v.chosen?.name ?? ''}|${v.chosen?.tier ?? 0}|${v.chosen?.me ?? ''}|${heartTxt}|${lanternLeft}|${v.cask}|${v.atRaft}|${v.moored}|${v.mooring > 0 || stopping}|${raftOpen}|${flourish?.text ?? ''}`;
     if (key === this.key) return;
     this.key = key;
     el.classList.remove('hidden');
@@ -151,7 +157,7 @@ export class BlightHud {
     if (v.inside && v.cask) chips.push(`<span class="bl-chip">${esc(L('hud.cask'))}</span>`);
     let act = '';
     if (v.inside && v.moored) act = raftOpen ? '' : `<button type="button" class="btn btn-small btn-primary bl-act" data-bl="raft" title="${esc(L('hud.raftTip'))}">${esc(L('hud.raft'))}</button>`;
-    else if (v.inside && v.mooring > 0) act = `<span class="bl-chip bl-mooring">${esc(L('hud.mooring'))}</span>`;
+    else if (v.inside && (v.mooring > 0 || stopping)) act = `<span class="bl-chip bl-mooring">${esc(L('hud.mooring'))}</span>`;
     else if (v.inside && v.atRaft) act = `<button type="button" class="btn btn-small btn-primary bl-act" data-bl="moor">${esc(L('hud.moor'))}</button>`;
     const main = v.inside ? `<span class="bl-tier" title="${esc(L('hud.tierTip'))}">${icon('sk_rot', '', 'ico-sm')}<b>${esc(L('hud.tier', { n: roman(v.tier) }))}</b></span>`
       + `<span class="bl-bar" title="${esc(L('hud.taintTip', { n: taint, of: v.per }))}"><i style="width:${Math.max(0, Math.min(100, (v.taint / Math.max(1, v.per)) * 100)).toFixed(0)}%"></i></span>`
