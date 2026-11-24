@@ -5,6 +5,7 @@ import { warrantHandIn, warrantRefundEarly, warrantSeen } from './warrant.ts';
 import { FISH_FOOD, cookKeeps, eatFish, foodAboard, isleLarder } from './larder.ts';
 import { stepShipFix } from './shipfix.ts';
 import { stepIsleFix } from './islefix.ts';
+import { stepOnceLetters } from './onceletters.ts';
 import { stepCargoFix } from './cargofix.ts';
 import { stepCrewFix } from './crewfix.ts';
 import { stepDescentFix } from './descentfix.ts';
@@ -1197,6 +1198,7 @@ export class Game {
     stepStorms(this); // the heart of the Storm of the Century (docs/12 P10 #14)
     if (Math.floor(this.now) % 2 === 0) stepShipFix(this); // a ship's level put right once (shipfix.ts)
     if (Math.floor(this.now) % 2 === 0) stepIsleFix(this); // an island put right once (islefix.ts)
+    if (Math.floor(this.now) % 2 === 0) stepOnceLetters(this); // a letter sent once (onceletters.ts)
     if (Math.floor(this.now) % 2 === 0) stepCargoFix(this); // a hold a patrol emptied, given back once (cargofix.ts)
     if (Math.floor(this.now) % 2 === 0) stepCrewFix(this); // the trades' practice put right once (crewfix.ts)
     if (Math.floor(this.now) % 2 === 0) stepDescentFix(this); // the Stair's prize given back once (descentfix.ts, forum 140)

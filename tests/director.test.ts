@@ -193,24 +193,24 @@ test('forum 134: a Crown search takes only contraband and the marked plunder, ne
   const p = s.profile!;
   // One plundered biscuit and two plundered casks of rum among an honest hold (the old search took ALL of each kind).
   ship.cargo = { provisions: 200, planks: 60, sailcloth: 60, tar: 10, medicine: 4, rum: 12, iron: 50, dreamleaf: 3 };
-  p.stolen = { provisions: 1, rum: 2, medicine: 9 };
+  p.stolen = { provisions: 1, rum: 2, medicine: 9, iron: 70 };
   const live = startEncounter(game, s, 'patrol_search')!;
   alongside(game, s, live);
   assert.equal(chooseEncounter(game, s, live.id, 'submit'), null);
   const r = c.last('encounter_result')!;
   assert.equal(r.outcome, 'seized');
-  assert.deepEqual(r.vars.goods, { medicine: 4, rum: 2, dreamleaf: 3 }, 'contraband in full, plunder only its marked units (no more than aboard)');
-  assert.equal(r.vars.n, 9);
-  assert.deepEqual(ship.cargo, { provisions: 200, planks: 60, sailcloth: 60, tar: 10, rum: 10, iron: 50 }, 'stores and honest cargo stay');
-  assert.equal(p.stolen.rum, undefined);
-  assert.equal(p.stolen.medicine, undefined, 'a stale mark above the hold is gone with the boat');
+  // (forum 157: what the crew uses up at sea — medicine, rum, tar — is never taken for marked plunder)
+  assert.deepEqual(r.vars.goods, { iron: 50, dreamleaf: 3 }, 'contraband in full, plunder only its marked units (no more than aboard)');
+  assert.equal(r.vars.n, 53);
+  assert.deepEqual(ship.cargo, { provisions: 200, planks: 60, sailcloth: 60, tar: 10, medicine: 4, rum: 12 }, 'stores, the crew’s medicine and rum stay');
+  assert.equal(p.stolen.iron, undefined, 'a stale mark above the hold is gone with the boat');
   // The line names the goods, in Russian too.
   setLang('ru');
   applyDataLocale('ru');
   const ru = outcomeHtml(r);
   applyDataLocale('en');
   setLang('en');
-  assert.match(ru, /ром — 2/);
+  assert.match(ru, /железо — 50/i);
   assert.doesNotMatch(ru.replace(/\{\w+\}/g, ''), /[A-Za-z]{3,}/, ru);
   assert.doesNotMatch(outcomeHtml(r), /\{goods\}/);
   // The ship's stores alone are nothing to search for; a False Bottom hides the contraband.
@@ -221,4 +221,18 @@ test('forum 134: a Crown search takes only contraband and the marked plunder, ne
   assert.equal(fits(game, s, ENCOUNTERS.patrol_search), true);
   ship.stats.flags.add('false_bottom');
   assert.equal(fits(game, s, ENCOUNTERS.patrol_search), false, 'a False Bottom: never found by a patrol');
+});
+
+test('forum 157: a captain in the Crown’s service carries her plunder as prize — a search takes only contraband', async () => {
+  const { hotGoods } = await import('../server/src/game/director.ts');
+  const { game } = makeGame();
+  const { s } = atSea(game, 'Commodore Search', 'leviathan_reach');
+  const p = s.profile!;
+  s.ship!.cargo = { iron: 50, medicine: 45, rum: 30, dreamleaf: 2 };
+  p.stolen = { iron: 20, medicine: 8, rum: 2 };
+  assert.deepEqual(hotGoods(s), { iron: 20, dreamleaf: 2 });
+  p.service = { id: 'crown', merit: 1600, rank: 4, payDay: 0, order: null, bought: [] } as never;
+  assert.deepEqual(hotGoods(s), { dreamleaf: 2 });
+  delete s.ship!.cargo.dreamleaf;
+  assert.deepEqual(hotGoods(s), {}, 'nothing hot aboard: the patrol does not hail her');
 });

@@ -156,15 +156,23 @@ export function quietSea(game: Game, s: PlayerSession, harbour = HARBOUR_R): boo
  *  on the way home): every unit of contraband (none under a False Bottom — the smuggler's promise), and of a plundered
  *  good only the marked units still aboard, never her honest cargo beside them. The ship's stores (provisions,
  *  sailcloth, planks) are never taken: they are the voyage's supply, not trade. */
+/** What the crew uses up at sea beside the ship's stores: a patrol's search never takes it for marked plunder. */
+export const SEARCH_KEEPS: readonly GoodId[] = ['medicine', 'rum', 'tar'];
+
 export function hotGoods(s: PlayerSession): Partial<Record<GoodId, number>> {
   const ship = s.ship!;
   const p = s.profile!;
   const hidden = ship.hasFlag('false_bottom');
   const out: Partial<Record<GoodId, number>> = {};
+  // forum 157 (Эдуард, a Commodore of the Crown, 2026-11-24: eight medicine and two rum he had bought were taken — the
+  // marks were of plunder long since used up at sea): what the crew uses up on the voyage is never searched for marks
+  // (SEARCH_KEEPS), and a captain in the Crown's own service carries her plunder as lawful prize: only contraband goes.
+  const prize = p.service?.id === 'crown';
   for (const g of Object.keys(ship.cargo) as GoodId[]) {
     const have = Math.floor(ship.cargo[g] ?? 0);
     if (have <= 0 || isStore(g)) continue;
-    const n = GOODS[g].contraband ? (hidden ? 0 : have) : Math.min(have, Math.floor(p.stolen[g] ?? 0));
+    const marked = prize || SEARCH_KEEPS.includes(g) ? 0 : Math.min(have, Math.floor(p.stolen[g] ?? 0));
+    const n = GOODS[g].contraband ? (hidden ? 0 : have) : marked;
     if (n > 0) out[g] = n;
   }
   return out;

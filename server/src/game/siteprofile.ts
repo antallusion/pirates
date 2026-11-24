@@ -61,6 +61,8 @@ import type { BuildingId } from '../../../shared/src/data/holdings.ts';
 import { OWN_NAMES } from '../../../shared/src/data/baseships.ts';
 import { DATA_RU, NAME_RU } from '../../../client/src/lang/data.ts';
 import { composedNameRu, personNameRu } from '../../../client/src/lang/names.ts';
+import { lang, setLang } from '../../../client/src/i18n.ts';
+import { serverText } from '../../../client/src/lang/server.ts';
 import { EN as ARMY_EN, RU as ARMY_RU } from '../../../client/src/lang/ui/army.ts';
 import { EN as HUD_EN, RU as HUD_RU } from '../../../client/src/lang/ui/hud.ts';
 import * as M_bosses from '../../../shared/src/data/bosses.ts';
@@ -204,7 +206,20 @@ function ruMap(): Map<string, string> {
   return RU;
 }
 /** A name the server keeps in English (a title, a trophy, a place, a person) in both tongues. */
-const both = (en: string): Tr => [en, ruMap().get(en) ?? composedNameRu(en) ?? personNameRu(en) ?? en];
+const both = (en: string): Tr => [en, ruMap().get(en) ?? composedNameRu(en) ?? personNameRu(en) ?? tableRu(en)];
+/** The game's own table of the server's lines (client/src/lang/server.ts) for a name nothing else knows — a season's
+ *  «Sea-Dog of …», the week's champion, a service's rank (forum 158: nine of her titles stood in English). */
+function tableRu(en: string): string {
+  const was = lang();
+  try {
+    setLang('ru');
+    return serverText(en);
+  } catch {
+    return en;
+  } finally {
+    setLang(was);
+  }
+}
 const dataRu = (key: string, en: string): string => DATA_RU[key] ?? en;
 
 const art = (id: string | null | undefined): Img => (id ? manifestArt(id) : null);
