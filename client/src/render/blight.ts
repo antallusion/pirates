@@ -36,9 +36,12 @@ const fogOut: [number, number, number] = [1, 1, 1];
 let cssKey = -1, cssBase = '', cssOut = '';
 let washKey = -1, washOut = '';
 
-/** Each frame: the fel water eased toward on or off; `time` 0 stills the pulse («меньше движения»). */
-export function stepFel(inside: boolean, dt: number, time: number): number {
-  const step = Math.min(0.25, Math.max(0, dt)) / FEL_EASE_S;
+/** Each frame: the fel water eased toward on or off — by the wall's clock (`now`, ms: the game's own step is capped,
+ *  and on a slow device the rim would take many seconds); `time` 0 stills the pulse («меньше движения»). */
+let felAt = 0;
+export function stepFel(inside: boolean, now: number, time: number): number {
+  const step = (felAt ? Math.min(0.4, Math.max(0, (now - felAt) / 1000)) : 0) / FEL_EASE_S;
+  felAt = now;
   fel.lin = Math.min(1, Math.max(0, fel.lin + (inside ? step : -step)));
   fel.mix = fel.lin * fel.lin * (3 - 2 * fel.lin);
   fel.pulse = 0.5 + 0.5 * Math.sin(time * 0.9);
@@ -80,7 +83,7 @@ export function felTintCss(base: string): string {
     cssBase = base;
     const n = parseInt(base.replace('#', ''), 16);
     const p = 0.8 + 0.2 * fel.pulse;
-    const r = ((n >> 16) & 255) + (10 * p - ((n >> 16) & 255)) * m, gg = ((n >> 8) & 255) + (62 * p - ((n >> 8) & 255)) * m, b = (n & 255) + (26 * p - (n & 255)) * m;
+    const r = ((n >> 16) & 255) + (16 * p - ((n >> 16) & 255)) * m, gg = ((n >> 8) & 255) + (104 * p - ((n >> 8) & 255)) * m, b = (n & 255) + (46 * p - (n & 255)) * m;
     cssOut = `rgb(${Math.round(r)},${Math.round(gg)},${Math.round(b)})`;
   }
   return cssOut;
@@ -185,12 +188,12 @@ export function drawBlightUnder(g: G, v: BlightView, ships: readonly Lit[], c: B
     const p = 0.75 + 0.25 * Math.sin(t * 0.9);
     g.beginPath();
     g.arc(cx, cy, r, 0, Math.PI * 2);
-    g.strokeStyle = 'rgba(70,235,120,0.055)';
-    g.lineWidth = 520 * z;
-    g.stroke();
-    g.strokeStyle = 'rgba(90,245,130,0.08)';
-    g.lineWidth = 180 * z;
-    g.stroke();
+    // (the haze: the same ring stroked ever narrower, each pass faint — a soft fall-off with no edge to it)
+    g.strokeStyle = 'rgba(80,240,125,0.024)';
+    for (let i = 0; i < HAZE.length; i++) {
+      g.lineWidth = HAZE[i] * z;
+      g.stroke();
+    }
     g.strokeStyle = `rgba(140,255,160,${(0.34 * p).toFixed(2)})`;
     g.lineWidth = Math.max(1.5, 5 * z);
     g.stroke();
@@ -274,6 +277,8 @@ export function drawBlightUnder(g: G, v: BlightView, ships: readonly Lit[], c: B
 }
 
 const DASH = [5, 5];
+/** The rim's haze: the widths of its passes, metres. */
+const HAZE = [640, 520, 410, 310, 220, 140, 70];
 const NO_DASH: number[] = [];
 
 /** Over the hulls: the hunters' and the Heart's hulls washed green, the Chosen's mark, the mooring's five-second ring

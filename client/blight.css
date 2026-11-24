@@ -32,9 +32,16 @@ body.simple #hud-stack > #hud-blight { align-self: center !important; width: aut
 @keyframes bl-ev { from { transform: scale(1.15); filter: brightness(1.6); } to { transform: none; filter: none; } }
 @media (prefers-reduced-motion: reduce) { #hud-blight .bl-ev { animation: none; } #hud-blight .bl-bar > i { transition: none; } }
 @media (max-height: 520px) { #hud-blight { font-size: 11px; gap: 2px 6px; } #hud-blight .bl-act { min-height: 26px; } }
+/* a narrow upright window (a phone upright shows the «поверните телефон» lock instead): the top stack there is a
+   150 px slot between her portrait's bars and the minimap — the block takes a strip of its own above the helm */
+@media (max-width: 520px) and (min-height: 521px) {
+  body #hud #hud-stack > #hud-blight { position: fixed !important; left: calc(var(--sa-l) + 8px) !important; right: calc(var(--sa-r) + 8px) !important; top: auto !important;
+    bottom: calc(var(--sa-b) + 236px); width: auto !important; max-width: none !important; justify-content: center; z-index: 2; }
+}
 
 /* ---------------------------------------------------------------------------------------------- the Raft's window */
-#modal-panel[data-modal="blight"] { width: min(740px, 96vw); height: min(660px, 94vh); display: flex; flex-direction: column; }
+#modal-panel[data-modal="blight"] { display: flex; flex-direction: column; }
+@media (min-width: 700px) and (min-height: 521px) { #modal-panel[data-modal="blight"] { width: min(740px, 96vw); height: min(660px, 94vh); } }
 #modal-panel[data-modal="blight"] .modal-head .sub { color: #b9e8b0; }
 #modal-panel[data-modal="blight"] .tabs { flex: none; }
 #modal-panel[data-modal="blight"] .tab.active { color: #a8ff9a; }
@@ -86,7 +93,11 @@ body.simple #hud-stack > #hud-blight { align-self: center !important; width: aut
 .bj-limits { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .bl-raft .money { display: inline-flex; align-items: center; gap: 3px; }
 
+.bj-table.bj-empty { align-items: center; opacity: 0.7; }
+.bj-table.bj-empty .bj-hand { justify-content: center; }
+
 /* the shop */
+.bl-shop-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .bl-shop { display: flex; flex-direction: column; gap: 6px; }
 .bl-ware { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 8px; border: 1px solid rgba(120, 235, 140, 0.25); border-radius: 6px; background: rgba(8, 16, 11, 0.55); }
 .bl-ware.owned { opacity: 0.7; }
@@ -132,6 +143,16 @@ button.bl-piece { width: 100%; text-align: left; cursor: pointer; color: inherit
   .bj-table { padding: 6px 8px; gap: 5px; }
   .bj-row { grid-template-columns: minmax(70px, 100px) minmax(0, 1fr); }
   .bl-stat > b { font-size: 17px; }
+  /* twenty-one beside its buttons: nothing of a hand is scrolled for */
+  .bl-raft[data-tab="bj"] { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(190px, 1fr); grid-template-areas: "rules rules" "table controls" "limits limits"; gap: 5px 10px; align-content: start; }
+  .bl-raft[data-tab="bj"] > .bj-rules { grid-area: rules; margin: 0; font-size: 11px; line-height: 1.25; }
+  .bl-raft[data-tab="bj"] > .bj-table { grid-area: table; }
+  .bl-raft[data-tab="bj"] > .dc-controls, .bl-raft[data-tab="bj"] > .bj-acts { grid-area: controls; align-self: start; }
+  .bl-raft[data-tab="bj"] > .bj-acts { flex-direction: column; }
+  .bl-raft[data-tab="bj"] > .bj-acts .btn { flex: none; }
+  .bl-raft[data-tab="bj"] > .bj-limits { grid-area: limits; }
+  .bj-controls { padding: 6px !important; gap: 6px !important; }
+  .bj-stakes .btn { min-width: 0; }
 }
 @media (max-width: 520px) {
   #modal-panel[data-modal="blight"] .tabs { padding: 0 8px; }

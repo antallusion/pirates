@@ -10,7 +10,7 @@
 
 import type { BjView, BlightTaskView, BlightView } from '../../../shared/src/blightproto.ts';
 import {
-  BJ_STAKES, BLIGHT_CHAPTER, BLIGHT_QUESTS, BLIGHT_SHOP, MARKS_NAME, RAFT_DEALER, RAFT_NAME, bjRank, bjSuit, stepText,
+  BJ_SILVER_DAY, BJ_STAKES, BLIGHT_CHAPTER, BLIGHT_QUESTS, BLIGHT_SHOP, MARKS_NAME, RAFT_DEALER, RAFT_NAME, bjRank, bjSuit, stepText,
 } from '../../../shared/src/data/blight.ts';
 import type { BjCoin, BlightStep, BlightWare } from '../../../shared/src/data/blight.ts';
 import { AFFIXES, itemName } from '../../../shared/src/data/items.ts';
@@ -294,8 +294,8 @@ function bjPage(v: BlightView, bj: BjView | null, silver: number): string {
       <div class="dc-acts"><button class="btn btn-primary" data-bj="deal" ${can ? '' : 'disabled'}>${esc(bj ? L('bj.again') : L('bj.deal'))}</button></div>
       ${closed ? `<p class="bj-kind">${esc(closed)}</p>` : !can ? `<p class="muted bl-small">${esc(L('bj.poor'))}</p>` : ''}</div>`;
   }
-  return `<p class="muted dc-rules">${esc(L('bj.rules'))}</p>${table}${controls}
-    <p class="muted bl-small bj-limits">${esc(L('bj.limits', { hands: v.bj.hands, silver: fmt(v.bj.silver) }))} · ${marksIco()}${fmt(v.marks)}</p>`;
+  return `<p class="muted dc-rules bj-rules">${esc(L('bj.rules'))}</p>${table || `<div class="bj-table bj-empty"><div class="bj-hand">${cardSvg(-1)}${cardSvg(-1)}</div></div>`}${controls}
+    <p class="muted bl-small bj-limits">${esc(L('bj.limits', { hands: v.bj.hands, silver: fmt(Math.max(0, Math.min(BJ_SILVER_DAY, v.bj.silver))) }))} · ${marksIco()}${fmt(v.marks)}</p>`;
 }
 
 /** Her pieces with an extra line: the locker's and the worn. */
@@ -327,7 +327,7 @@ function shopPage(v: BlightView, state: ClientState): string {
     return `<div class="bl-ware${s.owned ? ' owned' : ''}">${icon(w.art, '', 'bl-ware-art')}<div class="bl-ware-t"><b>${esc(tr(w.name))}</b><span class="muted">${esc(tr(w.hint))}</span></div>
       <div class="bl-ware-buy"><span class="bl-price${poor && !s.owned ? ' poor' : ''}">${marksIco()}${fmt(s.price)}</span>${btn}</div></div>`;
   }).join('');
-  return `<p class="muted bl-small">${esc(L('shop.hint'))}</p><div class="bl-shop">${rows}</div>`;
+  return `<p class="muted bl-small bl-shop-h"><span>${esc(L('shop.hint'))}</span><b class="bl-price" title="${esc(L('raft.banked'))}">${marksIco()}${fmt(v.marks)}</b></p><div class="bl-shop">${rows}</div>`;
 }
 
 function dicePage(v: BlightView, silver: number): string {

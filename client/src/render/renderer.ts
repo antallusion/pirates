@@ -614,7 +614,7 @@ export class Renderer {
     const region = REGIONS[state.region];
     // docs/40 §2: the fel water eased in and out at the rim (nothing at all for a captain the green water has not taken).
     const blight = state.self?.blight ?? null;
-    stepFel(!!blight?.inside, dt, opt0.reduceMotion ? 0 : this.time);
+    stepFel(!!blight?.inside, performance.now(), opt0.reduceMotion ? 0 : this.time);
     // The far view (freecam.ts): all chart below CHART_FULL — the painted sea, the shader layers and every sprite rest.
     const mix = (this.farMix = chartMix(this.zoom));
     this.showGl(mix < 1);
@@ -841,7 +841,7 @@ export class Renderer {
       ] as const) {
         const m = new DOMMatrix().translate(this.sx(dx), this.sy(dy)).scale(k * scale);
         tex.setTransform(m);
-        g.globalAlpha = alpha;
+        g.globalAlpha = alpha * (1 - 0.45 * felMix()); // (docs/40: the painted sea thinner over the fel green)
         g.fillStyle = tex;
         g.fillRect(0, 0, this.w, this.h);
       }
@@ -3330,7 +3330,7 @@ export class Renderer {
       const wv = headingVec(state.wind[0]);
       this.sky.draw({
         camX: this.camX, camY: this.camY, zoom: this.zoom, time: this.time, wind: [wv.x * (0.5 + state.wind[1]), wv.y * (0.5 + state.wind[1])],
-        fog: clamp(Math.max(state.fog, 0.24 * felMix()), 0, 1), fogTint: felMix() > 0 ? felFog() : undefined, flash: settings().reduceFlashes ? this.fx.flash * 0.25 : this.fx.flash, night: nightFactor(state.estServerTime()), bolt: this.bolt, boltOn: settings().reduceFlashes ? 0 : this.lightning,
+        fog: clamp(Math.max(state.fog, 0.16 * felMix()), 0, 1), fogTint: felMix() > 0 ? felFog() : undefined, flash: settings().reduceFlashes ? this.fx.flash * 0.25 : this.fx.flash, night: nightFactor(state.estServerTime()), bolt: this.bolt, boltOn: settings().reduceFlashes ? 0 : this.lightning,
       });
     }
   }
