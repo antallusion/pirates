@@ -19,11 +19,11 @@ type G = CanvasRenderingContext2D;
 export const FEL_EASE_S = 1.5;
 /** The fel water's tint and grade at the bottom and the top of the pulse (the shader: base × (0.55 + tint × 6) × grade). */
 const FEL_TINT: readonly [number, number, number] = [0.012, 0.13, 0.04];
-const FEL_GRADE_LO: readonly [number, number, number] = [0.5, 1.16, 0.56];
-const FEL_GRADE_HI: readonly [number, number, number] = [0.6, 1.4, 0.66];
+const FEL_GRADE_LO: readonly [number, number, number] = [0.46, 1.0, 0.52];
+const FEL_GRADE_HI: readonly [number, number, number] = [0.54, 1.2, 0.6];
 /** The wash over the world (soft light) inside: its colour and strength. */
 const FEL_WASH: readonly [number, number, number] = [70, 255, 120];
-const FEL_WASH_A = 0.2;
+const FEL_WASH_A = 0.15;
 /** The mist inside. */
 const FEL_FOG: readonly [number, number, number] = [0.5, 1.25, 0.62];
 /** The lanterns' colour inside. */
@@ -327,6 +327,22 @@ export function drawBlightOver(g: G, v: BlightView, ships: readonly Lit[], own: 
     g.strokeStyle = 'rgba(150,255,160,0.95)';
     g.beginPath();
     g.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + f * Math.PI * 2);
+    g.stroke();
+  }
+}
+
+/** The minimap: the hunters sent after her, each a small green dart's dot ringed dark (those her lookouts hold). */
+export function drawBlightHunters(g: G, v: BlightView, ships: ReadonlyMap<number, { cur: { x: number; y: number } }>, tx: (x: number) => number, ty: (y: number) => number): void {
+  if (!v.hunters.length) return;
+  g.fillStyle = '#9dff6a';
+  g.strokeStyle = 'rgba(0,0,0,0.85)';
+  g.lineWidth = 1;
+  for (let i = 0; i < v.hunters.length; i++) {
+    const s = ships.get(v.hunters[i]);
+    if (!s) continue;
+    g.beginPath();
+    g.arc(tx(s.cur.x), ty(s.cur.y), 3, 0, Math.PI * 2);
+    g.fill();
     g.stroke();
   }
 }

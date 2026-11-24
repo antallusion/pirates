@@ -71,7 +71,7 @@ import { guardOfEntity } from '../render/advmap.ts';
 import { drawDriftsMini } from '../render/drifts.ts';
 import { drawFindsMini } from '../render/seafinds.ts';
 import { drawWaysMini } from '../render/waystations.ts'; // docs/35
-import { drawBlightChart } from '../render/blight.ts'; // docs/40
+import { drawBlightChart, drawBlightHunters } from '../render/blight.ts'; // docs/40
 import { drawRoamsMini } from '../render/roamers.ts';
 import { drawCitadelsMini } from '../render/citadels.ts'; // docs/19 E4 // docs/19 D7
 import { armyGlance } from './army.ts';
@@ -1667,7 +1667,11 @@ export class Hud {
     drawDriftsMini(g, state, tx, ty, own, range); // drifting creatures and their clocks (docs/18 #34)
     drawFindsMini(g, state, tx, ty, own, range); // the sea's small things (docs/19 D5)
     drawWaysMini(g, state, tx, ty, own, range); // docs/35: the floating waystations
-    if (state.self?.blight) drawBlightChart(g, state.self.blight, tx, ty, k, false, performance.now() / 1000); // docs/40: the green disc
+    if (state.self?.blight) {
+      // docs/40: the green disc, the Raft, the Chosen, the Heart; the hunters sent after her
+      drawBlightChart(g, state.self.blight, tx, ty, k, false, performance.now() / 1000);
+      drawBlightHunters(g, state.self.blight, state.ships, tx, ty);
+    }
     drawWrecksMini(g, state.wrecks, state.castaways, tx, ty, own, range); // seaux: her wreckage and castaways
     drawBoatsMini(g, state.self?.boats, state.estServerTime(), tx, ty, own); // «Шлюпы с острова» on their way to her
     drawRoamsMini(g, state, tx, ty, own, range); // the creatures roaming the sea (docs/19 D7)

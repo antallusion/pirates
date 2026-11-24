@@ -34,7 +34,7 @@ body.simple #hud-stack > #hud-blight { align-self: center !important; width: aut
 @media (max-height: 520px) { #hud-blight { font-size: 11px; gap: 2px 6px; } #hud-blight .bl-act { min-height: 26px; } }
 
 /* ---------------------------------------------------------------------------------------------- the Raft's window */
-#modal-panel[data-modal="blight"] { width: min(720px, 96vw); height: min(600px, 94vh); display: flex; flex-direction: column; }
+#modal-panel[data-modal="blight"] { width: min(740px, 96vw); height: min(660px, 94vh); display: flex; flex-direction: column; }
 #modal-panel[data-modal="blight"] .modal-head .sub { color: #b9e8b0; }
 #modal-panel[data-modal="blight"] .tabs { flex: none; }
 #modal-panel[data-modal="blight"] .tab.active { color: #a8ff9a; }
@@ -42,7 +42,9 @@ body.simple #hud-stack > #hud-blight { align-self: center !important; width: aut
 .bl-raft > * { flex: none; }
 .bl-raft p { margin: 0; }
 .bl-small { font-size: 12px; line-height: 1.35; }
-.bl-foot { margin-top: auto !important; padding-top: 8px; gap: 8px; justify-content: space-between !important; position: sticky; bottom: -14px; background: linear-gradient(180deg, rgba(14, 15, 17, 0), rgba(14, 15, 17, 0.96) 35%); padding-bottom: 6px; }
+#modal-panel[data-modal="blight"] .modal-body { min-height: 0; }
+/* the foot is never scrolled away (the owner's rule for the phone held sideways) */
+.bl-foot { flex: none; display: flex; justify-content: space-between; gap: 8px; padding: 8px 18px 12px; border-top: 1px solid rgba(111, 90, 56, 0.4); }
 .bl-art { display: block; width: 100%; aspect-ratio: 4 / 1; object-fit: cover; object-position: center 40%; border: 1px solid rgba(120, 235, 140, 0.35); border-radius: 4px; background: #0b0d10; filter: hue-rotate(55deg) saturate(0.85) brightness(0.9); }
 .bl-welcome { font-family: var(--serif); font-style: italic; font-size: 15px; line-height: 1.35; color: var(--bone); }
 .bl-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
@@ -69,7 +71,9 @@ body.simple #hud-stack > #hud-blight { align-self: center !important; width: aut
 .bj-card.bj-back > rect { fill: #1d3a26; stroke: #7a9a5a; }
 .bj-card.bj-back .bj-in { fill: none; stroke: rgba(160, 230, 150, 0.5); stroke-width: 1.5; }
 .bj-card.bj-back .bj-loz { fill: none; stroke: rgba(160, 230, 150, 0.7); stroke-width: 1.5; }
+.bj-sum { display: flex; align-items: center; justify-content: space-between; gap: 4px 14px; flex-wrap: wrap; min-height: 24px; }
 .bj-pot { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; }
+.bj-pick { display: flex; align-items: center; gap: 6px 16px; flex-wrap: wrap; }
 .bj-result { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font: 600 17px var(--serif); }
 .bj-result.bj-win, .bj-result.bj-blackjack { color: #9be08a; }
 .bj-result.bj-push { color: var(--gold); }
@@ -120,6 +124,7 @@ button.bl-piece { width: 100%; text-align: left; cursor: pointer; color: inherit
 /* a phone held sideways, and upright */
 @media (max-height: 520px) {
   #modal-panel[data-modal="blight"] .tab { padding: 5px 9px; }
+  .bl-foot { padding: 5px 12px 7px; }
   .bl-art { display: none; }
   .bl-welcome { font-size: 13.5px; }
   .bj-card { width: 40px; height: 56px; }

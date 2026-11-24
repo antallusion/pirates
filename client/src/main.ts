@@ -3239,6 +3239,7 @@ function arenaMoments(): void {
 /** docs/40: the Raft's window by her mooring (nothing for a captain the green water has not taken). */
 let blightMoored = false;
 let blightKey = '';
+let blightBookKey = '';
 /** «Пришвартоваться» asked while she still has way on: the page's clock till which the mooring is wanted (0: none). The
  *  Raft takes only a ship hove to — the sails come down first, and the order goes once she has lost her way. */
 let blightMoorWant = 0;
@@ -3270,6 +3271,18 @@ function blightSelf(): void {
     if (key !== blightKey) refreshModal();
   }
   blightMoored = moored;
+  // The campaign book's card follows her chapter (a quest taken or handed in, a step done): the journal itself does
+  // not redraw on the private state's beat.
+  const v = state.self?.blight;
+  if (v) {
+    // (a «survive» step counts seconds: by the minute here, or the page would be drawn anew under her finger each second)
+    const coarse = (t: { progress: number; need: number }) => (t.need > 30 ? Math.floor(t.progress / 60) : t.progress);
+    const bk = JSON.stringify([v.ch.at, v.ch.cur?.step, v.ch.cur && coarse(v.ch.cur), v.ch.canClaim, v.contracts.map((c) => [c.step, c.paid, coarse(c)]), v.moored]);
+    if (bk !== blightBookKey) {
+      if (blightBookKey && modal === 'journal') refreshModal();
+      blightBookKey = bk;
+    }
+  }
 }
 
 function closeModal(): void {
@@ -3304,7 +3317,8 @@ function closeModal(): void {
     return;
   }
   // While docked, closing another screen returns to the harbour (Esc on the harbour itself hides it; P reopens).
-  if (was !== 'port' && state.portView) {
+  // (docs/40: never from the Raft's window — she lies at the Raft, not in a harbour)
+  if (was !== 'port' && was !== 'blight' && state.portView) {
     portReturn = true;
     openModal('port');
   }

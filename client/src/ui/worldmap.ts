@@ -1014,7 +1014,6 @@ export class WorldMap {
     // readable from afar).
     if (on('lairs') && this.zoom >= 2) drawRoamsChart(g, state, tx, ty);
     if (on('ports')) drawWaysChart(g, state, tx, ty, this.zoom); // docs/35: the floating waystations about her, close in
-    if (state.self?.blight) drawBlightChart(g, state.self.blight, tx, ty, k, true); // docs/40: the Blighted Sea — a green disc and its name
     // Charted islands.
     for (const id of state.discovered) {
       const is = state.islands.get(id);
@@ -1338,6 +1337,9 @@ export class WorldMap {
     // her group, her mark, her scouts and her ship stand over it: a quest into the fog still leads there.
     drawFog(g, state.seen, state.seenVer, { x0: this.cx - W / 2 / k, y0: this.cy - H / 2 / k, k, w: W, h: H, time: performance.now() / 1000 });
     fogged = true;
+    // docs/40: the Blighted Sea — a green disc and its name, over the fog as her goals are (it is on her chart from the
+    // day the green water takes her; nothing for any other captain).
+    if (state.self?.blight) drawBlightChart(g, state.self.blight, tx, ty, k, true);
     // Under her fog (Нефигугум, post 26: «новичку надо хотя бы примерно видеть, куда плыть»): a hub of the «Переход» as
     // a dim ⇄ with «Неизвестный порт-узел» — never its name (post 24: an unknown port is not told; the ferry's list keeps
     // it shut till she finds it, ferry.ts). An undiscovered yard is not drawn at all (Эдуард, forum post 68: «вы полностью

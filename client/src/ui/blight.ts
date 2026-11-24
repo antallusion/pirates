@@ -279,8 +279,7 @@ function bjPage(v: BlightView, bj: BjView | null, silver: number): string {
     table = `<div class="bj-table">
       <div class="bj-row"><div class="bj-who"><span class="giver-h">${esc(L('bj.dealer', { name: tr(RAFT_DEALER) }))}</span><b class="bj-n">${bj.dealerTotal}</b></div><div class="bj-hand">${hand(bj.dealer)}</div></div>
       <div class="bj-row"><div class="bj-who"><span class="giver-h">${esc(L('bj.you'))}</span><b class="bj-n">${esc(total)}</b></div><div class="bj-hand">${hand(bj.player)}</div></div>
-      <div class="bj-pot"><span class="muted">${esc(L('bj.onTable'))}</span> ${coinAmount(bj.coin, bj.stake)}${bj.doubled ? ` <small class="muted">(${esc(L('bj.doubled'))})</small>` : ''}</div>
-      ${res}</div>`;
+      <div class="bj-sum"><div class="bj-pot"><span class="muted">${esc(L('bj.onTable'))}</span> ${coinAmount(bj.coin, bj.stake)}${bj.doubled ? ` <small class="muted">(${esc(L('bj.doubled'))})</small>` : ''}</div>${res}</div></div>`;
   }
   let controls: string;
   if (open) {
@@ -290,8 +289,8 @@ function bjPage(v: BlightView, bj: BjView | null, silver: number): string {
     const closed = v.bj.hands <= 0 ? L('bj.noHands') : coin === 'silver' && v.bj.silver <= 0 ? L('bj.noSilver') : '';
     const can = !closed && have >= stake && (coin !== 'silver' || v.bj.silver >= stake);
     controls = `<div class="dc-controls bj-controls">
-      <div class="bj-coins"><span class="giver-h">${esc(L('bj.stake'))}</span>${(['silver', 'marks'] as const).map((c) => `<button class="btn btn-small${c === coin ? ' on' : ''}" data-bjcoin="${c}" aria-pressed="${c === coin}">${esc(L(`bj.${c}`))}</button>`).join('')}</div>
-      <div class="bj-stakes">${BJ_STAKES[coin].map((s) => `<button class="btn btn-small${s === stake ? ' on' : ''}" data-bjstake="${s}" aria-pressed="${s === stake}">${coinAmount(coin, s)}</button>`).join('')}</div>
+      <div class="bj-pick"><div class="bj-coins"><span class="giver-h">${esc(L('bj.stake'))}</span>${(['silver', 'marks'] as const).map((c) => `<button class="btn btn-small${c === coin ? ' on' : ''}" data-bjcoin="${c}" aria-pressed="${c === coin}">${esc(L(`bj.${c}`))}</button>`).join('')}</div>
+      <div class="bj-stakes">${BJ_STAKES[coin].map((s) => `<button class="btn btn-small${s === stake ? ' on' : ''}" data-bjstake="${s}" aria-pressed="${s === stake}">${coinAmount(coin, s)}</button>`).join('')}</div></div>
       <div class="dc-acts"><button class="btn btn-primary" data-bj="deal" ${can ? '' : 'disabled'}>${esc(bj ? L('bj.again') : L('bj.deal'))}</button></div>
       ${closed ? `<p class="bj-kind">${esc(closed)}</p>` : !can ? `<p class="muted bl-small">${esc(L('bj.poor'))}</p>` : ''}</div>`;
   }
@@ -354,9 +353,8 @@ export function renderRaft(root: HTMLElement, state: ClientState, send: Send, cl
     : tab === 'chapter' ? `<div class="bl-chapter"><b class="bl-ch-h">${esc(L('ch.card', { title: tr(BLIGHT_CHAPTER.title) }))}</b>${chapterBody(v)}${contractsHtml(v)}</div>` : weekPage(v);
   root.innerHTML = `<div class="modal-head"><div><h2>${esc(tr(RAFT_NAME))}</h2><div class="sub" title="${esc(tr(MARKS_NAME))}">${esc(L('raft.sub', { n: fmt(v.marks) }))}</div></div></div>
     <div class="tabs bl-tabs" role="tablist">${TABS.map((t) => `<div class="tab${t === tab ? ' active' : ''}" role="tab" tabindex="0" aria-selected="${t === tab}" data-bltab="${t}">${esc(L(`tab.${t}`))}</div>`).join('')}</div>
-    <div class="modal-body dice bl-raft" data-tab="${tab}">${page}
-      <div class="dc-foot bl-foot"><button class="btn btn-small btn-danger" data-blleave>${esc(L('raft.leave'))}</button><button class="btn btn-small" data-blclose>${esc(L('raft.close'))}</button></div>
-    </div>`;
+    <div class="modal-body dice bl-raft" data-tab="${tab}">${page}</div>
+    <div class="bl-foot"><button class="btn btn-small btn-danger" data-blleave>${esc(L('raft.leave'))}</button><button class="btn btn-small" data-blclose>${esc(L('raft.close'))}</button></div>`;
   const body = root.querySelector<HTMLElement>('.modal-body');
   if (body && was === tab) body.scrollTop = keep;
   const redo = () => renderRaft(root, state, send, close);
