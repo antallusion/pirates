@@ -66,9 +66,10 @@ export function blightEvent(m: Extract<ServerMsg, { t: 'blight_ev' }>, state: Cl
     case 'tier': text = L('ev.tier', { n: roman(n) }); kind = 'info'; break;
     case 'quest': {
       text = L('ev.quest', { n: fmt(n) });
-      // (the quest just handed in is the one before her place now)
-      const at = state.self?.blight?.ch.at ?? 0;
-      const q = BLIGHT_QUESTS[Math.max(0, at - 1)];
+      // (the quest just handed in: the server says so before it sends her new place — the one still under way here;
+      // had her place come first, the one before it)
+      const ch = state.self?.blight?.ch;
+      const q = ch ? BLIGHT_QUESTS[ch.cur ? ch.at : ch.at - 1] : undefined;
       if (q) toast(tr(q.d), 'gold');
       break;
     }
@@ -215,12 +216,12 @@ function chapterBody(v: BlightView): string {
   let cur = '';
   if (q) {
     const act = ch.cur
-      ? `<button class="btn btn-primary btn-small" data-blq="claim" ${ch.canClaim ? '' : 'disabled'}>${esc(L('ch.claim'))}</button>${ch.canClaim ? '' : `<small class="muted">${esc(L('ch.claimAt'))}</small>`}`
+      ? `${ch.canClaim ? '' : `<small class="muted">${esc(L('ch.claimAt'))}</small>`}<button class="btn btn-primary btn-small" data-blq="claim" ${ch.canClaim ? '' : 'disabled'}>${esc(L('ch.claim'))}</button>`
       : `<button class="btn btn-primary btn-small" data-blq="take">${esc(L('ch.take'))}</button>`;
     cur = `<div class="bl-quest"><div class="giver-h">${esc(L('ch.quest', { n: ch.at + 1, of: ch.size }))}</div><b class="bl-qt">${esc(tr(q.t))}</b>
       <p class="bl-qb">${esc(tr(q.b))}</p>
       <ol class="cb-quests bl-steps">${q.s.map((s, i) => taskLine(s, ch.cur, i)).join('')}</ol>
-      <div class="bl-qfoot"><span class="muted">${esc(L('ch.reward', { marks: fmt(q.marks) }))}</span>${act}</div></div>`;
+      <div class="bl-qfoot"><span class="muted">${esc(L('ch.reward', { marks: fmt(q.marks) }))}</span><span class="bl-qact">${act}</span></div></div>`;
   }
   return `<p class="cb-blurb">${esc(tr(BLIGHT_CHAPTER.blurb))}</p><p class="muted bl-giver">${esc(tr(BLIGHT_CHAPTER.giver))}${done ? '' : ` · ${esc(L('ch.final', { title: tr(BLIGHT_CHAPTER.reward.title) }))}`}</p>
     ${behind ? `<ol class="cb-quests">${behind}</ol>` : ''}${cur}`;

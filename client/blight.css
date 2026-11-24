@@ -122,6 +122,7 @@ button.bl-piece { width: 100%; text-align: left; cursor: pointer; color: inherit
 .bl-qt { font: 600 17px var(--serif); color: var(--bone); }
 .bl-qb { margin: 0; font-family: var(--serif); font-style: italic; font-size: 14.5px; line-height: 1.35; color: #d9d2c0; }
 .bl-qfoot { display: flex; align-items: center; justify-content: space-between; gap: 6px 10px; flex-wrap: wrap; margin-top: 2px; }
+.bl-qact { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .bl-contract { margin-top: 4px; }
 .bl-contract.paid { opacity: 0.6; }
 

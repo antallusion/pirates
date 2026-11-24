@@ -3330,7 +3330,7 @@ export class Renderer {
       const wv = headingVec(state.wind[0]);
       this.sky.draw({
         camX: this.camX, camY: this.camY, zoom: this.zoom, time: this.time, wind: [wv.x * (0.5 + state.wind[1]), wv.y * (0.5 + state.wind[1])],
-        fog: clamp(Math.max(state.fog, 0.16 * felMix()), 0, 1), fogTint: felMix() > 0 ? felFog() : undefined, flash: settings().reduceFlashes ? this.fx.flash * 0.25 : this.fx.flash, night: nightFactor(state.estServerTime()), bolt: this.bolt, boltOn: settings().reduceFlashes ? 0 : this.lightning,
+        fog: clamp(Math.max(state.fog, 0.1 * felMix()), 0, 1), fogTint: felMix() > 0 ? felFog() : undefined, flash: settings().reduceFlashes ? this.fx.flash * 0.25 : this.fx.flash, night: nightFactor(state.estServerTime()), bolt: this.bolt, boltOn: settings().reduceFlashes ? 0 : this.lightning,
       });
     }
   }

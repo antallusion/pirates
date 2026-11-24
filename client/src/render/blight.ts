@@ -19,13 +19,13 @@ type G = CanvasRenderingContext2D;
 export const FEL_EASE_S = 1.5;
 /** The fel water's tint and grade at the bottom and the top of the pulse (the shader: base × (0.55 + tint × 6) × grade). */
 const FEL_TINT: readonly [number, number, number] = [0.012, 0.13, 0.04];
-const FEL_GRADE_LO: readonly [number, number, number] = [0.46, 1.0, 0.52];
-const FEL_GRADE_HI: readonly [number, number, number] = [0.54, 1.2, 0.6];
+const FEL_GRADE_LO: readonly [number, number, number] = [0.5, 1.16, 0.56];
+const FEL_GRADE_HI: readonly [number, number, number] = [0.6, 1.4, 0.66];
 /** The wash over the world (soft light) inside: its colour and strength. */
 const FEL_WASH: readonly [number, number, number] = [70, 255, 120];
-const FEL_WASH_A = 0.15;
+const FEL_WASH_A = 0.18;
 /** The mist inside. */
-const FEL_FOG: readonly [number, number, number] = [0.5, 1.25, 0.62];
+const FEL_FOG: readonly [number, number, number] = [0.26, 1.15, 0.36];
 /** The lanterns' colour inside. */
 export const FEL_LAMP = '#7dff8a';
 

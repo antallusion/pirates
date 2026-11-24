@@ -318,3 +318,42 @@ roam it»: the sea's own beasts, roamers and drifts of Dead Man's Expanse are th
   A lost boarding to another captain inside loses the hold as a sinking does.
 - Away: the run is kept in her save; back within 5 minutes she goes on, later she is banked with no cut.
 - Silver: the zone mints none. A hunter's wreck is a common ⚓10 ship's, as anywhere.
+
+## 11. As built (step 2): the client
+
+Nothing outside `client/` changed: the server and the shared data are as step 1 left them. A captain whose
+`state.self.blight` is null or absent gets none of what follows — no block, no card, no mark, no tint.
+
+- **The water** (`client/src/render/blight.ts`, hooked in `renderer.ts`): no `GRADES` entry and no new shader pass.
+  The sea shader's own `tint` and `grade` uniforms are blended toward the fel green (`felTint`, `felGrade`, a slow
+  pulse in the grade), the lighting's one soft-light wash turns green in place of the region's (`felWash`), the mist
+  takes a green multiply through one new uniform of the sky shader (`fogTint`, 1·1·1 everywhere else), and the ships'
+  lanterns burn `#7dff8a`. Eased over 1.5 s **by the wall's clock** (the game's step is capped: on a slow device the rim
+  took many seconds). The canvas sea (no WebGL) takes the same measure: a green fill and the painted tile thinner.
+  From outside: the rim as one ring stroked in seven faint passes (a haze with no edge) and a bright line.
+  Unseen water lies under the fog of war's mist there as anywhere.
+- **On the sea**: the Raft (`prop.way_tavern`, four `prop.bd_ghost_lamp` with green light, its name, its reach as a
+  dashed ring), the casks (`prop.bt_barrels` in a green light), the hunters and the Heart lit green from under and
+  over the hull (one glow sprite made once — the hulls' own paint is not re-baked), the Heart drawn 1.6× on
+  `fx.curse_veins` / `fx.curse_growth`, the Chosen's turning ring and name, the mooring's five-second ring.
+- **The charts**: a green disc with «Море Скверны» on the chart (over the fog of war, as her goals are) and on the far
+  view; on the minimap the disc, the Raft, the Heart, the Chosen and the hunters' dots.
+- **The HUD** (`client/src/ui/blight.ts BlightHud`, a block of the top stack as the spot work's pill): tier (Roman),
+  the Taint's bar, the hold, the multiplier; chips for the Chosen, the Heart's clock or hull, the lantern, a cask
+  aboard, and a `blight_ev` just come (3.5 s); «Пришвартоваться» within reach and «Плот» while moored with the window
+  shut. Outside it shows only the Heart's clock. In a narrow upright window it takes a strip of its own above the helm
+  (a phone held upright shows the «поверните телефон» lock as before).
+- **«Пришвартоваться» heaves her to first.** The server refuses a mooring at more than 3 m/s and breaks one a second
+  later, so the button (and the dock key off the Raft) takes her sails down and sends the order once she is under
+  2 m/s (15 s at most). The server was not touched.
+- **The Raft's window** (`Modal 'blight'`, opened as she moors, shut as she casts off; closing it does not cast off):
+  tabs «Плот» (banked, hold, best tier, the week's title, the lantern), «Двадцать одно» (cards drawn in SVG — rank and
+  suit on parchment, a green back; deal / hit / stand / double; silver or marks; the hour's hands and the day's
+  silver told kindly), «Лавка» (prices of the week; the re-forge picks a piece and its line), «Кости» (the port's
+  own `dice` orders; the dice window closes back into the Raft's), «Глава» (the quest, its steps, take / hand in, then
+  the day's contracts), «Неделя». Its foot («Отчалить», «Закрыть») never scrolls away.
+- **The chapter's card** in the campaign book after chapter 36 (`campaignBookHtml(…, blight)`), the same body as the
+  Raft's page; the journal is redrawn when her chapter moves.
+- **Music**: the director is given `the_abyss` for its region while she is inside (no `REGION_THEME` entry).
+- **Words**: `client/src/lang/ui/blight.ts` (EN and RU); the chapter's, the shop's and the steps' words are read from
+  `shared/src/data/blight.ts`.
