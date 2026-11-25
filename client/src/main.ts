@@ -1986,6 +1986,9 @@ let lastGfxKey = '';
 let fpsCap = 0;
 let lastDrawn = 0;
 let capMark = 0;
+let seaFrameAt = -1e9;
+let worldAt = -1e9;
+let worldDt = 0;
 /** The sea's safety net (forum 118, render/seaguard.ts): the costly extras eased while the frames at sea run long. */
 const seaGuard = new SeaGuard();
 const GUARD_L = dict(GUARD_EN, GUARD_RU);
@@ -6336,7 +6339,15 @@ function step(t: number): void {
     const prompt = computePrompt();
     const range = markRange();
     sceneWarm(state, t);
-    renderer.render(state, own, dt, { side: aimSide, dist: aimDistance(), boardTarget, chaser: touch.enabled || held ? null : chaserEndUnderCursor(), charge: held, target: state.pursuit?.target ?? targetId, range });
+    // Behind a window the sea is drawn ten times a second, not with every frame: the window dims and covers it, and
+    // three full canvases under a full-screen sheet cost a weak graphics chip twice what the open sea does (telemetry
+    // of 19–25 November: no phone above 30 frames in port, most seconds at 5–20; a review of 2026-11-23).
+    worldDt += dt;
+    if (modal === null || t - worldAt >= 100 || t < worldAt) {
+      worldAt = t;
+      renderer.render(state, own, worldDt, { side: aimSide, dist: aimDistance(), boardTarget, chaser: touch.enabled || held ? null : chaserEndUnderCursor(), charge: held, target: state.pursuit?.target ?? targetId, range });
+      worldDt = 0;
+    }
     if (($('hud-target').dataset.range ?? '') !== (range ?? '')) {
       if (range) $('hud-target').dataset.range = range;
       else delete $('hud-target').dataset.range;
@@ -6403,7 +6414,13 @@ function step(t: number): void {
       // the arc: the sail she actually carries, by the server — the helmsman's and the auto-battle's too (forum 48)
       const gauge = sailGauge({ docked: !!state.self.dockedAt, you: state.you, helmsman: helmsmanSails(state), step: state.input.sail });
       touch.frame(own?.heading ?? null, state.input.sail, dashLeft / DASH_COOLDOWN, state.you && !state.self.dockedAt ? knots(state.you.spd) : '', gauge);
-      seaFrame();
+      // (the buttons' words and counts twenty times a second, not with every frame: each pass counts her goals and
+      // builds every button's key anew — a tenth of a phone's frame and most of its garbage; the wheel above stays
+      // with the frame)
+      if (t - seaFrameAt >= 50 || t < seaFrameAt) {
+        seaFrameAt = t;
+        seaFrame();
+      }
       autoMount();
     }
     hoverCursor(renderer.mouseX, renderer.mouseY);

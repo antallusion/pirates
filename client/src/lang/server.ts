@@ -323,8 +323,23 @@ function translateLine(s: string): string {
 
 const MONTHS_RU: Record<string, string> = { Jan: 'янв', Feb: 'фев', Mar: 'мар', Apr: 'апр', May: 'мая', Jun: 'июн', Jul: 'июл', Aug: 'авг', Sep: 'сен', Oct: 'окт', Nov: 'ноя', Dec: 'дек' };
 
+/** What was read before, by the line as the server wrote it. A line is put through thousands of templates to be read,
+ *  and a window redrawn with every word from the server asked for the same hundred lines again each second: a phone
+ *  hung a fifth of a second every second with a port's board open (a review of 2026-11-23: «жутко зависает… смена
+ *  настроек графики никакого эффекта не даёт» — it was never the graphics). The tables are filled as the modules
+ *  load; should one grow later, what was read is forgotten. */
+const READ = new Map<string, string>();
+let readOf = -1;
+
 export function serverText(s: string): string {
   if (lang() !== 'ru' || !s) return s;
+  const of = NAME_RU.size + TEXT_RU.size + exact.size;
+  if (of !== readOf || READ.size > 6000) {
+    READ.clear();
+    readOf = of;
+  }
+  const had = READ.get(s);
+  if (had !== undefined) return had;
   // Dates the server writes in English ("04 Oct 2026 00:36 UTC") keep their numbers, lose their English.
   // Thousands the server writes with commas (1,020 silver) take the Russian space that does not break; a fraction of a
   // kilometre takes the Russian comma («4,4 км», late-game QA 2026-10-23: «4.4 км» beside the lookout's «1,6 км»).
@@ -332,7 +347,9 @@ export function serverText(s: string): string {
   // («нападение на ««Фитиль и сало»»», QA 2026-10-09).
   // (a count's noun in the number's form: «22 человека», not the table's one word for all — lang/counts.ts)
   // (a caravan's name «Караван: Эдуард» inside a line that names the caravan again: «Караван «Эдуард»», forum 130)
-  return typeset(feminineRu(s, ruCounts(translateLine(s)))).replace(/(Караван )?«Караван: ([^«»]+)»/g, 'Караван «$2»').replace(/««([^«»]*)»»/g, '«$1»').replace(/(\d),(?=\d{3}(?!\d))/g, '$1\u00a0').replace(/(\d)\.(\d+)(?=\s?(?:\u043a\u043c|\u043c\u00b3|\u0443\u0437\u043b)(?![\u0430-\u044f\u0451]))/g, '$1,$2').replace(/\b(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{4})\b/g, (_, d: string, m: string, y: string) => `${d} ${MONTHS_RU[m]} ${y}`);
+  const out = typeset(feminineRu(s, ruCounts(translateLine(s)))).replace(/(Караван )?«Караван: ([^«»]+)»/g, 'Караван «$2»').replace(/««([^«»]*)»»/g, '«$1»').replace(/(\d),(?=\d{3}(?!\d))/g, '$1\u00a0').replace(/(\d)\.(\d+)(?=\s?(?:\u043a\u043c|\u043c\u00b3|\u0443\u0437\u043b)(?![\u0430-\u044f\u0451]))/g, '$1,$2').replace(/\b(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{4})\b/g, (_, d: string, m: string, y: string) => `${d} ${MONTHS_RU[m]} ${y}`);
+  if (s.length <= 600) READ.set(s, out);
+  return out;
 }
 
 /** For tests: how many patterns are known. */

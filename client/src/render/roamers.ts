@@ -186,14 +186,19 @@ export function drawRoamsWorld(g: G, state: ClientState, c: RoamCtx): void {
  *  ROAM_MINI; a fight's grey and hollow. */
 export function drawRoamsMini(g: G, state: ClientState, tx: (x: number) => number, ty: (y: number) => number, own: { x: number; y: number }, range: number): void {
   if (!state.roams.length) return;
-  const cells = new Set<number>();
-  const list = state.roams.filter((v) => Math.abs(v.x - own.x) <= range && Math.abs(v.y - own.y) <= range)
-    .sort((a, b) => Math.abs(a.x - own.x) + Math.abs(a.y - own.y) - (Math.abs(b.x - own.x) + Math.abs(b.y - own.y)));
-  for (const v of list) {
+  // One pass, the nearest to a cell kept (it was a filter, a sort and her ship's level worked out anew for every mark,
+  // eight times a second: a third of the sea's HUD on a phone — a review of 2026-11-23, «жутко зависает»).
+  MINI_CELL.clear();
+  for (const v of state.roams) {
+    const dx = Math.abs(v.x - own.x), dy = Math.abs(v.y - own.y);
+    if (dx > range || dy > range) continue;
+    const cell = Math.floor(tx(v.x) / 6) * 4096 + Math.floor(ty(v.y) / 6);
+    const had = MINI_CELL.get(cell);
+    if (!had || dx + dy < Math.abs(had.x - own.x) + Math.abs(had.y - own.y)) MINI_CELL.set(cell, v);
+  }
+  const mine = state.self ? shipLevelOf(state.self.loadout) : 1;
+  for (const v of MINI_CELL.values()) {
     const px = tx(v.x), py = ty(v.y);
-    const cell = Math.floor(px / 6) * 4096 + Math.floor(py / 6);
-    if (cells.has(cell)) continue;
-    cells.add(cell);
     const d = Math.max(Math.abs(v.x - own.x), Math.abs(v.y - own.y));
     g.globalAlpha = d > ROAM_MINI ? 0.35 : 1 - 0.45 * (d / ROAM_MINI);
     g.beginPath();
@@ -207,15 +212,17 @@ export function drawRoamsMini(g: G, state: ClientState, tx: (x: number) => numbe
       g.lineWidth = 1.2;
       g.stroke();
     } else {
-      g.fillStyle = colourOf(state, v);
+      g.fillStyle = THREAT_COLOR[threatOf(mine, v.level)];
       g.fill();
       g.strokeStyle = 'rgba(0,0,0,0.75)';
       g.lineWidth = 0.8;
       g.stroke();
     }
   }
+  MINI_CELL.clear();
   g.globalAlpha = 1;
 }
+const MINI_CELL = new Map<number, RoamView>();
 
 /** The world map close in: the stacks she has word of, a small diamond each in the ladder's colour (grey in battle). */
 export function drawRoamsChart(g: G, state: ClientState, tx: (x: number) => number, ty: (y: number) => number): void {

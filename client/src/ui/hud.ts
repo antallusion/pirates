@@ -1082,13 +1082,25 @@ export class Hud {
    *  «слева сверху аватарка и очень удобные красивые уровни жизней, людей»): her face in a round frame, her level on
    *  its rim, three slim bars — hull, men, sails — with their numbers, and the silver as a chip. Nothing else: the law,
    *  the experience, the streak and the rest are in her sheet (a click on a desk; the menu's «Капитан» on a phone). */
+  /** A window, the island or a boarding lies over the sea (asked by the sea's own hints): looked up five times a
+   *  second, not with every frame — two searches of the whole page a frame were a tenth of the sea's frame on a phone. */
+  private coveredAt = -1e9;
+  private coveredWas = false;
+  private seaCovered(): boolean {
+    const t = performance.now();
+    if (t - this.coveredAt > 200) {
+      this.coveredAt = t;
+      this.coveredWas = !document.getElementById('modal')?.classList.contains('hidden') || !!document.querySelector('#isle:not(.hidden), #board-tac:not(.hidden), .k-sheet-root.k-open');
+    }
+    return this.coveredWas;
+  }
+
   /** The weak army's hint (owner, 2026-10-28): a small badge under her frame; a tap opens one line and one button. */
   private drawAdvice(state: ClientState): void {
     const a = state.self?.advice;
     let el = document.getElementById('hud-advice');
     // (never over a window, the island or a boarding: the sea's own hint)
-    const covered = !document.getElementById('modal')?.classList.contains('hidden') || !!document.querySelector('#isle:not(.hidden), #board-tac:not(.hidden), .k-sheet-root.k-open');
-    const show = !!a && a.weak && !!a.step && !covered;
+    const show = !!a && a.weak && !!a.step && !this.seaCovered();
     if (!show) {
       if (el && !el.classList.contains('hidden')) el.classList.add('hidden');
       this.adviceKey = '';
@@ -1142,8 +1154,7 @@ export class Hud {
     const v = state.self?.isleFirst;
     let el = document.getElementById('hud-isle1');
     // (never over a window, the island or a boarding — as the weak army's badge)
-    const covered = !document.getElementById('modal')?.classList.contains('hidden') || !!document.querySelector('#isle:not(.hidden), #board-tac:not(.hidden), .k-sheet-root.k-open');
-    const show = !!v && !covered;
+    const show = !!v && !this.seaCovered();
     if (!show) {
       if (el && !el.classList.contains('hidden')) el.classList.add('hidden');
       this.i1Key = '';
@@ -2679,10 +2690,17 @@ export class Hud {
 
   /** docs/16 #32: the sea's goal nearest its end, one line and a thin bar; a tap opens the journal. */
   private lastWorldKey = '';
+  private worldAt = -1e9;
+  private worldDocked = false;
   onWorldGoal: () => void = () => {};
   private drawWorldGoal(state: ClientState): void {
+    // (the plate's words are made anew to be compared: twice a second is enough for a goal that moves by the hour)
+    const t = performance.now(), docked = !!state.self?.dockedAt;
+    if (t - this.worldAt < 500 && docked === this.worldDocked) return;
+    this.worldAt = t;
+    this.worldDocked = docked;
     const el = $('hud-world');
-    const p = state.self?.dockedAt ? null : worldGoalPlate(state);
+    const p = docked ? null : worldGoalPlate(state);
     const key = p?.key ?? '';
     if (key === this.lastWorldKey) return;
     this.lastWorldKey = key;
